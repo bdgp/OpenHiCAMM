@@ -1,14 +1,7 @@
 package org.bdgp.MMSlide.Modules;
 
-import java.awt.Insets;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Vector;
-
-import javax.swing.JButton;
-
 import org.bdgp.MMSlide.FileLineStorage;
 import org.bdgp.MMSlide.LineItem;
 import org.bdgp.MMSlide.SlideStorage;
@@ -16,23 +9,7 @@ import org.bdgp.MMSlide.SlideStorage.CollectionType;
 import org.micromanager.api.AcquisitionEngine;
 import org.micromanager.api.DeviceControlGUI;
 
-import com.swtdesigner.SwingResourceManager;
-import java.awt.BorderLayout;
-import javax.swing.JTable;
-import java.awt.GridLayout;
-import javax.swing.JPanel;
-import java.awt.FlowLayout;
 import java.io.IOException;
-
-import javax.swing.table.DefaultTableModel;
-import javax.swing.border.EtchedBorder;
-import javax.swing.ButtonGroup;
-import javax.swing.JDialog;
-import javax.swing.JScrollPane;
-import javax.swing.JLabel;
-import javax.swing.JTabbedPane;
-import javax.swing.JRadioButton;
-import javax.swing.BoxLayout;
 
 public class SlidePool extends ModuleBase implements MMModule, WorkerRoot {
 
@@ -44,8 +21,9 @@ public class SlidePool extends ModuleBase implements MMModule, WorkerRoot {
 	DeviceControlGUI mm_gui = null;
 	
 	public SlidePool(SlideStorage storage) {
-		super(storage);		
-		storage.setUnique(this); // there can be only one storage pool per workflow
+		super(storage);	
+		// doesn't work on uninitialized storage
+		// storage.setUnique(this); // there can be only one storage pool per workflow
 
 		// What are we
 		moduleLabel = "Slide pool";
