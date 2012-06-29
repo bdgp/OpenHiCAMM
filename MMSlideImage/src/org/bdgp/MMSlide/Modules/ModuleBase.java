@@ -12,12 +12,12 @@ import javax.swing.JDialog;
 import org.bdgp.MMSlide.FileLineStorage;
 import org.bdgp.MMSlide.LineItem;
 import org.bdgp.MMSlide.MetaStorage;
-import org.bdgp.MMSlide.SlideStorage;
+import org.bdgp.MMSlide.StorageManager;
 import org.bdgp.MMSlide.ModuleInfo.ModuleData;
 
 public abstract class ModuleBase extends JDialog {
 
-	protected SlideStorage storage;
+	protected StorageManager storage;
 //	protected ModuleInfo info;
 	protected String moduleLabel = "unknown";
 	protected String moduleText = "unknown";
@@ -29,7 +29,7 @@ public abstract class ModuleBase extends JDialog {
 
 	protected Vector<ModuleBase> child_workers;
 	
-	public ModuleBase(SlideStorage storage) {
+	public ModuleBase(StorageManager storage) {
 		this.storage = storage;
 		moduleInfo = new FileLineStorage<ModuleData>(ModuleData.class);
 		// moduleInfo.add(new ModuleData(true, "", "")); // add class name as first signature parameter

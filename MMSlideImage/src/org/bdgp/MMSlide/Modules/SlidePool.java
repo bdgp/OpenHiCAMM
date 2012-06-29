@@ -4,8 +4,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import org.bdgp.MMSlide.FileLineStorage;
 import org.bdgp.MMSlide.LineItem;
-import org.bdgp.MMSlide.SlideStorage;
-import org.bdgp.MMSlide.SlideStorage.CollectionType;
+import org.bdgp.MMSlide.StorageManager;
+import org.bdgp.MMSlide.StorageManager.CollectionType;
 import org.micromanager.api.AcquisitionEngine;
 import org.micromanager.api.DeviceControlGUI;
 
@@ -20,9 +20,9 @@ public class SlidePool extends ModuleBase implements MMModule, WorkerRoot {
 	SlidePoolMainDialog confDlg = null;
 	DeviceControlGUI mm_gui = null;
 	
-	public SlidePool(SlideStorage storage) {
+	public SlidePool(StorageManager storage) {
 		super(storage);	
-		// doesn't work on uninitialized storage
+		// TODO doesn't work on uninitialized storage
 		// storage.setUnique(this); // there can be only one storage pool per workflow
 
 		// What are we
@@ -113,6 +113,8 @@ public class SlidePool extends ModuleBase implements MMModule, WorkerRoot {
 	}
 
 	@Override
+	
+	// nees to get a class that handles the storage....?
 	public void confSave() {
 		// TODO Save items independent of storage pool
 		// XY list/selection of ROI

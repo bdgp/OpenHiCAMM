@@ -2,11 +2,11 @@ package org.bdgp.MMSlide.Modules;
 
 import java.util.HashMap;
 
-import org.bdgp.MMSlide.SlideStorage;
+import org.bdgp.MMSlide.StorageManager;
 
 public class SlideAssembleTrakEM2 extends ModuleBase implements WorkerImageCamera {
 
-	public SlideAssembleTrakEM2(SlideStorage storage) {
+	public SlideAssembleTrakEM2(StorageManager storage) {
 		super(storage);
 		moduleLabel = "TrackEM2 image assembly";
 		moduleText = "Assemble images with TrackEM2";

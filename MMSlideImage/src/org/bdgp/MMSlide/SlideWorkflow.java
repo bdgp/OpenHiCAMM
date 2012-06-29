@@ -32,7 +32,7 @@ public class SlideWorkflow extends JDialog {
 
 	protected Vector<WorkModule> workers;
 	protected ModuleFactory factory;
-	protected SlideStorage storage = null;
+	protected StorageManager storage = null;
 	
 	protected JTree treeForModules;
 	protected JTextField storLocText;
@@ -46,7 +46,7 @@ public class SlideWorkflow extends JDialog {
 	{
 		workers = new Vector<WorkModule>();
 		factory = new ModuleFactory();
-		storage = new SlideStorage();
+		storage = new StorageManager();
 		treeRoot = new DefaultMutableTreeNode("JTree");
 		node = new Vector<DefaultMutableTreeNode>();
 		

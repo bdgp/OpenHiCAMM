@@ -10,7 +10,7 @@ import java.util.Vector;
 
 import org.bdgp.MMSlide.Modules.ModuleBase;
 
-public class SlideStorage {
+public class StorageManager {
 	
 	protected final static String CONFIG_DIR = "configuration";
 	protected final static String STORAGE_DIR = "data";
@@ -26,14 +26,14 @@ public class SlideStorage {
 	HashMap<ModuleBase, String> confMap;
 	Vector<ModuleBase> uniqueList;
 	
-	public SlideStorage() {
+	public StorageManager() {
 		baseLocation = null;
 		configDir = null;
 		locMap = new HashMap<ModuleBase, StorageLocation>();
 		confMap = new HashMap<ModuleBase, String>();
 	}
 
-	public SlideStorage(String location) {
+	public StorageManager(String location) {
 		baseLocation = location;
 		// Adjust config in directory hierarchy
 		if ( setConf == false ) {
@@ -75,6 +75,12 @@ public class SlideStorage {
 		}
 		return configDir;
 	}
+	
+	// Called before run, checks if new/resume/...
+	public void initRun(WorkStatus work) {
+		
+	}
+	
 	
 	// Initializes storage locations. creates base directories
 	// returns false if anything fail
@@ -264,23 +270,7 @@ public class SlideStorage {
 		return loc.currentEntry;
 	}
 	
-	
-	public void taskStorageContents(ModuleBase mod) {
 		
-	}	
-	
-	public boolean taskStatus(ModuleBase mod, String id) {
-		return false;
-	}
-	
-	public void taskStorageAdd(ModuleBase mod, String id) {
-		
-	}
-	
-	public void taskStorageFinish(ModuleBase mod, String id, boolean status) {
-		
-	}
-	
 		
 	// Sets the storage for this module to a unique place if module is called again in same workflow
 	// otherwise modules like SlidePool will get a new storage location every time. 
@@ -362,6 +352,8 @@ public class SlideStorage {
 		long maxEntry;
 		boolean unique = false;
 		boolean single = false; 
+		
+		// TODO This class should have some fx associated with it to make it easier
 		
 		public StorageLocation(StorageLocation parent, String cl_name, String shortName, String longName) {
 			this.parent = parent;

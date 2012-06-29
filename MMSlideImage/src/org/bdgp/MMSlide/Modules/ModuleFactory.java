@@ -3,7 +3,7 @@ package org.bdgp.MMSlide.Modules;
 import java.lang.reflect.Constructor;
 import java.util.HashMap;
 
-import org.bdgp.MMSlide.SlideStorage;
+import org.bdgp.MMSlide.StorageManager;
 
 public class ModuleFactory {
 
@@ -51,8 +51,8 @@ public class ModuleFactory {
 			try {
 				// Class cl = Class.forName("org.bdgp.MMSlide.Modules." + mod);
 				Class cl = Class.forName(packageName() + "." + mod);
-				Constructor con = cl.getConstructor(SlideStorage.class);
-				Object moduleFromString = con.newInstance((SlideStorage) null);
+				Constructor con = cl.getConstructor(StorageManager.class);
+				Object moduleFromString = con.newInstance((StorageManager) null);
 				
 				if ( moduleFromString instanceof ModuleBase ) {
 					ModuleBase cmod =  (ModuleBase) moduleFromString;
@@ -76,7 +76,7 @@ public class ModuleFactory {
 	}
 	
 	 
-	public ModuleBase makeModule(String label, SlideStorage stor) {
+	public ModuleBase makeModule(String label, StorageManager stor) {
 		
 		String className = mappedModules.get(label);
 		if ( className == null ) {
@@ -85,7 +85,7 @@ public class ModuleFactory {
 		
 		try {
 			Class cl = Class.forName(packageName() + "." + className);
-			Constructor con = cl.getConstructor(SlideStorage.class);
+			Constructor con = cl.getConstructor(StorageManager.class);
 			Object moduleFromString = con.newInstance(stor);
 			
 			if ( moduleFromString instanceof ModuleBase ) {

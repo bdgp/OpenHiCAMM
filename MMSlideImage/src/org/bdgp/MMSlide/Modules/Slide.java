@@ -3,7 +3,7 @@ package org.bdgp.MMSlide.Modules;
 import java.util.HashMap;
 import java.util.Vector;
 
-import org.bdgp.MMSlide.SlideStorage;
+import org.bdgp.MMSlide.StorageManager;
 import org.micromanager.MMStudioMainFrame;
 import org.micromanager.PositionListDlg;
 import org.micromanager.api.AcquisitionEngine;
@@ -19,7 +19,7 @@ public class Slide extends ModuleBase implements WorkerRoot, WorkerSlide, MMModu
     private PositionList posList_ = null;
     private PositionListDlg posListDlg_;
 
-	public Slide(SlideStorage storage) {
+	public Slide(StorageManager storage) {
 		super(storage);
 		moduleLabel = "Slide imaging";
 		moduleText = "Imaging and/or dealing with all the images from a slide";

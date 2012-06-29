@@ -31,7 +31,7 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 
 import org.bdgp.MMSlide.FileLineStorage;
-import org.bdgp.MMSlide.SlideStorage;
+import org.bdgp.MMSlide.StorageManager;
 import org.micromanager.api.DeviceControlGUI;
 import javax.swing.JTextField;
 import javax.swing.JList;
@@ -58,9 +58,9 @@ public class SlidePoolMainDialog extends JDialog {
 	protected JList listPrevPool;
 	
 	SlidePool slide_pool_module = null;
-	SlideStorage.StorageCollection other_pools;
+	StorageManager.StorageCollection other_pools;
 	
-	public SlidePoolMainDialog(DeviceControlGUI mm_gui, SlidePool sp, SlideStorage.StorageCollection other_pools) {
+	public SlidePoolMainDialog(DeviceControlGUI mm_gui, SlidePool sp, StorageManager.StorageCollection other_pools) {
 		
 		this.gui = mm_gui;
 		slide_pool_module = sp;

@@ -2,12 +2,12 @@ package org.bdgp.MMSlide.Modules;
 
 import java.util.HashMap;
 
-import org.bdgp.MMSlide.SlideStorage;
+import org.bdgp.MMSlide.StorageManager;
 
 public class ProcessImageROI extends ModuleBase implements WorkerImageCamera {
 	// Return x/y/len/width of bounding box surrounding the ROI
 
-	public ProcessImageROI(SlideStorage storage) {
+	public ProcessImageROI(StorageManager storage) {
 		super(storage);
 		moduleLabel = "Detect ROI";
 		moduleText = "Finding the ROI from an image";
