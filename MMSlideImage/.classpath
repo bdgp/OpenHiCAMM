@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/J2SE-1.5"/>
-	<classpathentry kind="lib" path="/Users/erwin/Documents/Fiji/git/201010/fiji/micromanager1.4/dist/plugins/MMJ_.jar"/>
-	<classpathentry kind="lib" path="/Users/erwin/Documents/Fiji/git/201010/fiji/micromanager1.4/dist/jars/swing-layout-1.0.4.jar"/>
-	<classpathentry kind="lib" path="/Users/erwin/Documents/Fiji/git/201010/fiji/micromanager1.4/dist/jars/swingx-0.9.5.jar"/>
-	<classpathentry kind="lib" path="/Users/erwin/Documents/Fiji/git/201010/fiji/jars/ij.jar"/>
-	<classpathentry kind="lib" path="/Users/erwin/Documents/Fiji/git/201010/fiji/jars/commons-math.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/local/src/fiji/fiji/jars/commons-math.jar"/>
+	<classpathentry kind="lib" path="/local/src/fiji/fiji/jars/ij.jar"/>
+	<classpathentry kind="lib" path="/local/src/fiji/fiji/plugins/MMJ_.jar"/>
+	<classpathentry kind="lib" path="/local/src/fiji/fiji/jars/swing-layout-1.0.4.jar"/>
+	<classpathentry kind="lib" path="/local/src/fiji/fiji/jars/swingx-0.9.5.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -5,8 +5,6 @@ import mmcorej.CMMCore;
 import org.micromanager.MMStudioMainFrame;
 import org.micromanager.api.MMPlugin;
 import org.micromanager.api.ScriptInterface;
-import org.micromanager.pixelcalibrator.CalibrationThread;
-import org.micromanager.pixelcalibrator.PixelCalibratorDialog;
 
 public class AcquisitionPlugin implements MMPlugin {
 
