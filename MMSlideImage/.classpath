@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="/local/src/fiji/fiji/jars/commons-math.jar"/>
-	<classpathentry kind="lib" path="/local/src/fiji/fiji/jars/ij.jar"/>
-	<classpathentry kind="lib" path="/local/src/fiji/fiji/plugins/MMJ_.jar"/>
-	<classpathentry kind="lib" path="/local/src/fiji/fiji/jars/swing-layout-1.0.4.jar"/>
-	<classpathentry kind="lib" path="/local/src/fiji/fiji/jars/swingx-0.9.5.jar"/>
-	<classpathentry kind="output" path="bin"/>
+	<classpathentry kind="src" output="target/classes" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
+	<classpathentry kind="con" path="org.eclipse.m2e.MAVEN2_CLASSPATH_CONTAINER"/>
+	<classpathentry kind="output" path="target/classes"/>
 </classpath>

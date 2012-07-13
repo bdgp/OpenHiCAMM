@@ -1,6 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <properties>
-  <fiji.dir>/local/src/fiji/fiji</fiji.dir>
+    <fiji.dir>/local/src/fiji/fiji</fiji.dir>
   </properties>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.bdgp</groupId>
@@ -25,17 +25,62 @@
       </testResource>
     </testResources>
     <directory>target</directory>
-    <finalName>MMSlideImage-0.0.1-SNAPSHOT</finalName>
+    <finalName>MMSlideImage</finalName>
     <plugins>
 	    <plugin>
 		    <artifactId>maven-jar-plugin</artifactId>
 	      <version>2.3.1</version>
 	      <configuration>
 		      <outputDirectory>${fiji.dir}/plugins</outputDirectory>
+		      <archive>
+            <manifest>
+              <addClasspath>true</addClasspath>
+              <mainClass>org.bdgp.MMSlide.Main</mainClass>
+            </manifest>
+            <manifestEntries>
+	            <Class-Path>../jars/commons-math.jar ../jars/ij.jar ../jars/swing-layout-1.0.4.jar ../jars/swingx-0.9.5.jar ./MMJ_.jar</Class-Path>
+		        </manifestEntries>
+          </archive>
 	      </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>1.7.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+<!--               <minimizeJar>true</minimizeJar> -->
+              <minimizeJar>false</minimizeJar>
+              <artifactSet>
+                <includes>
+                  <include>org.hsqldb:hsqldb</include>
+                  <include>com.j256.ormlite:ormlite-core</include>
+                  <include>com.j256.ormlite:ormlite-jdbc</include>
+                </includes>
+              </artifactSet>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
+ <repositories>
+	<repository>
+    <id>lib</id>
+		<releases><enabled>true</enabled><updatePolicy>always</updatePolicy></releases>
+    <snapshots><enabled>true</enabled><updatePolicy>always</updatePolicy></snapshots>
+    <url>file://${basedir}/lib</url>
+  </repository>
+  <repository>
+    <id>ormlite</id> 
+    <url>http://ormlite.com/releases/</url>
+  </repository>
+ </repositories> 
   <dependencies>
   	<dependency>
   		<groupId>commons-math</groupId>
@@ -72,5 +117,20 @@
   		<scope>system</scope>
   		<systemPath>${fiji.dir}/plugins/MMJ_.jar</systemPath>
   	</dependency>
+	  <dependency>
+	  	<groupId>org.hsqldb</groupId>
+	  	<artifactId>hsqldb</artifactId>
+	  	<version>2.2.8</version>
+	  </dependency>
+	  <dependency>
+	  	<groupId>com.j256.ormlite</groupId>
+	  	<artifactId>ormlite-core</artifactId>
+	  	<version>4.41</version>
+	  </dependency>
+	  <dependency>
+	  	<groupId>com.j256.ormlite</groupId>
+	  	<artifactId>ormlite-jdbc</artifactId>
+	  	<version>4.41</version>
+	  </dependency>
   </dependencies>
 </project>

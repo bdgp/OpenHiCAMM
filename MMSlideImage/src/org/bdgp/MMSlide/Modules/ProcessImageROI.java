@@ -3,6 +3,7 @@ package org.bdgp.MMSlide.Modules;
 import java.util.HashMap;
 
 import org.bdgp.MMSlide.StorageManager;
+import org.bdgp.MMSlide.Modules.Interfaces.WorkerImageCamera;
 
 public class ProcessImageROI extends ModuleBase implements WorkerImageCamera {
 	// Return x/y/len/width of bounding box surrounding the ROI

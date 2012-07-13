@@ -11,8 +11,7 @@ public class AcquisitionPlugin implements MMPlugin {
 	public static String menuName = "Slide Acquisiton";
 	private CMMCore core_;
 	private MMStudioMainFrame app_;
-//	private AcquisitionDialog dialog_;
-	private SlideWorkflow dialog_;
+	private SlideWorkflowDialog dialog_;
 
 
 	public void configurationChanged() {
@@ -57,7 +56,7 @@ public class AcquisitionPlugin implements MMPlugin {
 		// TODO Auto-generated method stub
 //		dialog_ = new AcquisitionDialog(app_.getAcquisitionEngine(), null, app_);
 //		dialog_.setVisible(true);
-		dialog_ = new SlideWorkflow();
+		dialog_ = new SlideWorkflowDialog();
 		dialog_.setVisible(true);
 	}
 

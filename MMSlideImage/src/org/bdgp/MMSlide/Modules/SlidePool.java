@@ -5,29 +5,34 @@ import java.util.HashMap;
 import org.bdgp.MMSlide.FileLineStorage;
 import org.bdgp.MMSlide.LineItem;
 import org.bdgp.MMSlide.StorageManager;
+import org.bdgp.MMSlide.Modules.Interfaces.MMModule;
+import org.bdgp.MMSlide.Modules.Interfaces.WorkerImageCamera;
+import org.bdgp.MMSlide.Modules.Interfaces.ModuleRoot;
+import org.bdgp.MMSlide.Modules.Interfaces.WorkerSlide;
 import org.bdgp.MMSlide.StorageManager.CollectionType;
 import org.micromanager.api.AcquisitionEngine;
 import org.micromanager.api.DeviceControlGUI;
 
 import java.io.IOException;
 
-public class SlidePool extends ModuleBase implements MMModule, WorkerRoot {
+public class SlidePool extends ModuleBase implements MMModule, ModuleRoot {
+    private static final long serialVersionUID = -6918485909381241585L;
 
-	// File name will be unique, even if several pool workers in same workflow (use same experiment)
+    // File name will be unique, even if several pool workers in same workflow (use same experiment)
 	protected final String POOL_FILE = "pool_contents";
 	
-	FileLineStorage<PoolData> pool = null;
+	FileLineStorage<PoolData> pool = null; 
 	SlidePoolMainDialog confDlg = null;
 	DeviceControlGUI mm_gui = null;
 	
-	public SlidePool(StorageManager storage) {
+	public SlidePool(StorageManager storage) { 
 		super(storage);	
 		// TODO doesn't work on uninitialized storage
 		// storage.setUnique(this); // there can be only one storage pool per workflow
 
 		// What are we
 		moduleLabel = "Slide pool";
-		moduleText = "Define and load (optional) slides from a pool";		
+		moduleText = "Define and load (optional) slides from a pool";		 
 
 		// storage.get should probably not ever be in the constructor!
 		// Storage locations are possibly initialized after class is created. 
@@ -47,13 +52,8 @@ public class SlidePool extends ModuleBase implements MMModule, WorkerRoot {
 	@Override
 	public
 	boolean compatibleSuccessor(ModuleBase mod) {
-		if ( mod instanceof WorkerSlide ) {
-			return true;
-		}
-		if ( mod instanceof WorkerImageCamera ) {
-			return true;
-		}
-		return false;
+	    return mod instanceof WorkerSlide 
+	        || mod instanceof WorkerImageCamera;
 	}
 
 	@Override
@@ -177,7 +177,4 @@ public class SlidePool extends ModuleBase implements MMModule, WorkerRoot {
 			return experiment;
 		}
 	}
-
-
-	
 }

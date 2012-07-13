@@ -24,14 +24,14 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
 import org.bdgp.MMSlide.Modules.*;
+import org.bdgp.MMSlide.Modules.Interfaces.ModuleRoot;
 
 import java.awt.Component;
 
 
-public class SlideWorkflow extends JDialog {
+public class SlideWorkflowDialog extends JDialog {
 
 	protected Vector<WorkModule> workers;
-	protected ModuleFactory factory;
 	protected StorageManager storage = null;
 	
 	protected JTree treeForModules;
@@ -42,10 +42,9 @@ public class SlideWorkflow extends JDialog {
 	// protected DefaultMutableTreeNode selectedNode;
 	protected String selectedLabel = null;
 	
-	public SlideWorkflow()
+	public SlideWorkflowDialog()
 	{
 		workers = new Vector<WorkModule>();
-		factory = new ModuleFactory();
 		storage = new StorageManager();
 		treeRoot = new DefaultMutableTreeNode("JTree");
 		node = new Vector<DefaultMutableTreeNode>();
@@ -231,6 +230,7 @@ public class SlideWorkflow extends JDialog {
 		
 		// Dialog for asking which one to add
 		// JOptionPane module_dialog = new JOptionPane();
+		
 		Object [] mdlg_values = factory.labels();
 		Object dlg_selected = JOptionPane.showInputDialog( this, "Select module",
 				"Question", JOptionPane.QUESTION_MESSAGE, null, mdlg_values, mdlg_values[0]);		
@@ -259,7 +259,7 @@ public class SlideWorkflow extends JDialog {
 			}			
 		}
 		
-		if ( newWorker.module instanceof WorkerRoot ) {
+		if ( newWorker.module instanceof ModuleRoot ) {
 			// give user choice if previous module found
 			if ( parent != null ) {
 				// Modal Dialog

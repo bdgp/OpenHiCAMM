@@ -3,6 +3,7 @@ package org.bdgp.MMSlide.Modules;
 import java.util.HashMap;
 
 import org.bdgp.MMSlide.StorageManager;
+import org.bdgp.MMSlide.Modules.Interfaces.WorkerImageCamera;
 
 public class SlideAssembleTrakEM2 extends ModuleBase implements WorkerImageCamera {
 

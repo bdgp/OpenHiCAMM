@@ -4,13 +4,17 @@ import java.util.HashMap;
 import java.util.Vector;
 
 import org.bdgp.MMSlide.StorageManager;
+import org.bdgp.MMSlide.Modules.Interfaces.MMModule;
+import org.bdgp.MMSlide.Modules.Interfaces.WorkerImageCamera;
+import org.bdgp.MMSlide.Modules.Interfaces.ModuleRoot;
+import org.bdgp.MMSlide.Modules.Interfaces.WorkerSlide;
 import org.micromanager.MMStudioMainFrame;
 import org.micromanager.PositionListDlg;
 import org.micromanager.api.AcquisitionEngine;
 import org.micromanager.api.DeviceControlGUI;
 import org.micromanager.navigation.PositionList;
 
-public class Slide extends ModuleBase implements WorkerRoot, WorkerSlide, MMModule {
+public class Slide extends ModuleBase implements ModuleRoot, WorkerSlide, MMModule {
 
 	private Vector<WorkerSlide> child_slide;
 	private Vector<WorkerImageCamera> child_camera;
@@ -23,7 +27,6 @@ public class Slide extends ModuleBase implements WorkerRoot, WorkerSlide, MMModu
 		super(storage);
 		moduleLabel = "Slide imaging";
 		moduleText = "Imaging and/or dealing with all the images from a slide";
-		// type_ = MetaStorage.MetaType.SLIDE;
 	}
 		
 	
