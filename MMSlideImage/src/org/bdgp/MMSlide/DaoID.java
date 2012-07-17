@@ -18,24 +18,31 @@ import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.DatabaseTableConfig;
 import com.j256.ormlite.table.TableInfo;
 import com.j256.ormlite.table.TableUtils;
+import com.j256.ormlite.dao.BaseDaoImpl;
 import com.j256.ormlite.dao.DaoManager;
 
-
 /**
- * Class for handling all database-related and logging-related issues.
- * Contains mostly static utility functions and classes for making
- * ORMlite more pleasant to use.
+ * Extend the ORMlite Dao to use improved update methods, and add a
+ * static initializer that handles creating CSV files.
+ * @param <T>
+ * @param <ID>
  */
-public class Session {
+public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
 	protected static final String options = "fs=\\t";
 	private static ConnectionSource connection;
 	
-	private Session() { }
+	protected DaoID(Class<T> class_) throws SQLException {
+	    super(getdb(), class_);
+	}
+	protected DaoID(ConnectionSource connectionSource, Class<T> class_) throws SQLException { 
+	    super(connectionSource, class_);
+	}
 	
-	private static void init() throws SQLException {
+	private static ConnectionSource getdb() throws SQLException {
 	    if (connection == null) {
             connection = new JdbcConnectionSource("jdbc:hsqldb:mem:memdb","SA","");
 	    }
+	    return connection;
 	}
 	
 	/**
@@ -47,13 +54,13 @@ public class Session {
 	 * @return A DAO instance
 	 * @throws SQLException
 	 */
-	public static <L> Dao<L> dao(Class<L> class_, String filename) {
+	public static <T,ID> DaoID<T,ID> getDao(Class<T> class_, String filename) {
 	    try {
-    	    init();
+    	    getdb();
     		File file = new File(filename);
     		
     		// get the table configuration
-    		DatabaseTableConfig<L> tableConfig = DatabaseTableConfig.fromClass(
+    		DatabaseTableConfig<T> tableConfig = DatabaseTableConfig.fromClass(
     		        connection, class_);
     		
     		if (tableConfig == null) {
@@ -66,16 +73,23 @@ public class Session {
         		        dfield = new DatabaseFieldConfig(field.getName());
         		    fieldConfigs.add(dfield);
         		}
-        		tableConfig = new DatabaseTableConfig<L>(class_, fieldConfigs);
+        		tableConfig = new DatabaseTableConfig<T>(class_, fieldConfigs);
     		}
     		
     		// set the table name to the file's path. 
     		// Hopefully the ORM supports quoted identifiers...
     		tableConfig.setTableName(file.getPath());
-    		Dao<L> dao = DaoManager.createDao(connection, tableConfig);
+    		DaoID<T,ID> dao = DaoManager.createDao(connection, tableConfig);
     		
     		// create the table if it doesn't already exist
     		if (!dao.isTableExists()) {
+    		    // make sure the parent directories exist
+    		    File dir = file.getParentFile();
+    		    if (dir != null && !(dir.exists() && dir.isDirectory())) {
+            		if (!dir.mkdirs()) {
+            		    throw new SQLException("Could not create directory "+dir.getPath());
+            		}
+    		    }
     		    // call CREATE TEXT TABLE
         		List<String> create = TableUtils.getCreateTableStatements(connection, tableConfig);
         		for (String c: create) {
@@ -96,53 +110,6 @@ public class Session {
     }
 	
 	/**
-	 * Function to ensure that a query returned only one result.
-	 * @param list The list to check.
-	 * @return The single value from the list to return.
-	 */
-	public static <T> T one(List<T> list) {
-	    if (list.size() == 0) {
-	        throw new RuntimeException("Query returned no rows!");
-	    }
-	    if (list.size() > 1) {
-	        throw new RuntimeException("Query returned multiple rows!");
-	    }
-	    return list.get(0);
-	}
-	
-	/**
-	 * Class and static function for declaring map literals.
-	 * @param <K> The key type
-	 * @param <V>
-	 */
-	@SuppressWarnings("serial")
-    public static class ChainHashMap<K,V> extends HashMap<K,V> {
-	    public ChainHashMap() {
-	        super();
-	    }
-	    public ChainHashMap(K k, V v) {
-	        super();
-	        this.put(k, v);
-	    }
-        public ChainHashMap<K,V> with(K k, V v) { this.put(k, v); return this; }
-        public ChainHashMap<K,V> and(K k, V v) { this.put(k, v); return this; }
-        public ChainHashMap<K,V> map(K k, V v) { this.put(k, v); return this; }
-        public ChainHashMap<K,V> o(K k, V v) { this.put(k, v); return this; }
-	}
-    public static <K,V> ChainHashMap<K,V> map(K k, V v) {
-	    return new ChainHashMap<K,V>(k, v);
-	}
-    public static ChainHashMap<String,Object> where(String k, Object v) {
-        return new ChainHashMap<String,Object>(k, v);
-    }
-	
-	/**
-	 * Simplified Dao interface which doesn't have the ID generic parameter.
-	 * @param <T>
-	 */
-	public static interface Dao<T> extends com.j256.ormlite.dao.Dao<T,Object> {}
-	
-	/**
 	 * Update function which takes a dao, a map of columns to set,
 	 * and a map of columns to query.
 	 * @param dao The dao object to use
@@ -150,13 +117,12 @@ public class Session {
 	 * @param where Which columns to query
 	 * @return the number of rows updated
 	 */
-    public static <T,ID> int update(
-	        com.j256.ormlite.dao.Dao<T,ID> dao, 
+    public int update(
 	        Map<String,Object> set,
 	        Map<String,Object> where) 
 	{
 	    try {
-    	    UpdateBuilder<T,ID> update = dao.updateBuilder();
+    	    UpdateBuilder<T,ID> update = this.updateBuilder();
     	    
     	    // Update all columns, and store the fields in a map
     	    for (Map.Entry<String,Object> entry : set.entrySet()) {
@@ -179,14 +145,13 @@ public class Session {
      * @param where ... The list of lookup columns to use
      * @return the number of rows updated
      */
-	public static <T,ID> int update(
-	        com.j256.ormlite.dao.Dao<T,ID> dao,
+	public int update(
 	        T value,
 	        String ... where) 
 	{
 	    try {
-	        Class<T> class_ = dao.getDataClass();
-    	    TableInfo<T,ID> table = new TableInfo<T,ID>(connection, dao, class_);
+	        Class<T> class_ = this.getDataClass();
+    	    TableInfo<T,ID> table = new TableInfo<T,ID>(connection, this, class_);
     	    Map<String,Object> set = new HashMap<String,Object>();
     	    Map<String,Object> whereMap = new HashMap<String,Object>();
     	    Map<String,FieldType> fields = new HashMap<String,FieldType>();
@@ -208,7 +173,7 @@ public class Session {
     	        whereMap.put(w, fields.get(w).extractJavaFieldValue(value));
     	    }
     	    // call the more generic update function
-            return update(dao, set, whereMap);
+            return this.update(set, whereMap);
 	    } catch (SQLException e) {throw new RuntimeException(e);}
 	}
 	
@@ -220,12 +185,12 @@ public class Session {
 	 * @param where
 	 * @return
 	 */
-	public static <T,ID> com.j256.ormlite.dao.Dao.CreateOrUpdateStatus 
-	    createOrUpdate(com.j256.ormlite.dao.Dao<T,ID> dao, T value, String ... where)
+	public Dao.CreateOrUpdateStatus 
+	    createOrUpdate(T value, String ... where)
 	{
 	    try {
-	        Class<T> class_ = dao.getDataClass();
-	        TableInfo<T,ID> table = new TableInfo<T,ID>(connection, dao, class_);
+	        Class<T> class_ = this.getDataClass();
+	        TableInfo<T,ID> table = new TableInfo<T,ID>(connection, this, class_);
     	    Map<String,FieldType> fields = new HashMap<String,FieldType>();
     	    for (FieldType field : table.getFieldTypes()) {
     	        fields.put(field.getFieldName(), field);
@@ -241,13 +206,13 @@ public class Session {
     	        query.put(w, fields.get(w).extractJavaFieldValue(value));
     	    }
 	        
-    	    if (dao.queryForFieldValuesArgs(query).size() == 0) {
-    	        int rows = dao.create(value);
-    	        return new com.j256.ormlite.dao.Dao.CreateOrUpdateStatus(true, false, rows);
+    	    if (this.queryForFieldValuesArgs(query).size() == 0) {
+    	        int rows = this.create(value);
+    	        return new Dao.CreateOrUpdateStatus(true, false, rows);
     	    }
     	    else {
-    	        int rows = update(dao, value, where);
-    	        return new com.j256.ormlite.dao.Dao.CreateOrUpdateStatus(false, true, rows);
+    	        int rows = this.update(value, where);
+    	        return new Dao.CreateOrUpdateStatus(false, true, rows);
     	    }
 	    } catch (SQLException e) {throw new RuntimeException(e);}
 	}

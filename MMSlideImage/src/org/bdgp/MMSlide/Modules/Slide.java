@@ -6,7 +6,7 @@ import java.util.Vector;
 import org.bdgp.MMSlide.StorageManager;
 import org.bdgp.MMSlide.Modules.Interfaces.MMModule;
 import org.bdgp.MMSlide.Modules.Interfaces.WorkerImageCamera;
-import org.bdgp.MMSlide.Modules.Interfaces.ModuleRoot;
+import org.bdgp.MMSlide.Modules.Interfaces.Root;
 import org.bdgp.MMSlide.Modules.Interfaces.WorkerSlide;
 import org.micromanager.MMStudioMainFrame;
 import org.micromanager.PositionListDlg;
@@ -14,7 +14,7 @@ import org.micromanager.api.AcquisitionEngine;
 import org.micromanager.api.DeviceControlGUI;
 import org.micromanager.navigation.PositionList;
 
-public class Slide extends ModuleBase implements ModuleRoot, WorkerSlide, MMModule {
+public class Slide extends ModuleBase implements Root, WorkerSlide, MMModule {
 
 	private Vector<WorkerSlide> child_slide;
 	private Vector<WorkerImageCamera> child_camera;

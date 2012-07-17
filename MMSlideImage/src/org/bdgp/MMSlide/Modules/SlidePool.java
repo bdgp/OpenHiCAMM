@@ -7,7 +7,7 @@ import org.bdgp.MMSlide.LineItem;
 import org.bdgp.MMSlide.StorageManager;
 import org.bdgp.MMSlide.Modules.Interfaces.MMModule;
 import org.bdgp.MMSlide.Modules.Interfaces.WorkerImageCamera;
-import org.bdgp.MMSlide.Modules.Interfaces.ModuleRoot;
+import org.bdgp.MMSlide.Modules.Interfaces.Root;
 import org.bdgp.MMSlide.Modules.Interfaces.WorkerSlide;
 import org.bdgp.MMSlide.StorageManager.CollectionType;
 import org.micromanager.api.AcquisitionEngine;
@@ -15,7 +15,7 @@ import org.micromanager.api.DeviceControlGUI;
 
 import java.io.IOException;
 
-public class SlidePool extends ModuleBase implements MMModule, ModuleRoot {
+public class SlidePool extends ModuleBase implements MMModule, Root {
     private static final long serialVersionUID = -6918485909381241585L;
 
     // File name will be unique, even if several pool workers in same workflow (use same experiment)

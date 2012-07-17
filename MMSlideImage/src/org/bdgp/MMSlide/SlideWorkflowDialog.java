@@ -24,7 +24,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
 import org.bdgp.MMSlide.Modules.*;
-import org.bdgp.MMSlide.Modules.Interfaces.ModuleRoot;
+import org.bdgp.MMSlide.Modules.Interfaces.Root;
 
 import java.awt.Component;
 
@@ -259,7 +259,7 @@ public class SlideWorkflowDialog extends JDialog {
 			}			
 		}
 		
-		if ( newWorker.module instanceof ModuleRoot ) {
+		if ( newWorker.module instanceof Root ) {
 			// give user choice if previous module found
 			if ( parent != null ) {
 				// Modal Dialog
