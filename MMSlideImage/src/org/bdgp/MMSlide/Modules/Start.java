@@ -2,9 +2,10 @@ package org.bdgp.MMSlide.Modules;
 
 import java.util.Map;
 
+import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.WorkflowRunner;
-import org.bdgp.MMSlide.WorkflowRunner.Config;
-import org.bdgp.MMSlide.WorkflowRunner.Task.Status;
+import org.bdgp.MMSlide.Config;
+import org.bdgp.MMSlide.Task.Status;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.bdgp.MMSlide.Modules.Interfaces.Root;
 
@@ -19,7 +20,7 @@ public class Start implements Module<Root> {
         return true;
     }
 
-    public Status callSuccessor(Root successor, Map<String,Config> config) {
+    public Status callSuccessor(Root successor, Map<String,Config> config, Logger logger) {
         return successor.start(config);
     }
 

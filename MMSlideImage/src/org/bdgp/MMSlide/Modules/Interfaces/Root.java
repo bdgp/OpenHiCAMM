@@ -2,8 +2,8 @@ package org.bdgp.MMSlide.Modules.Interfaces;
 
 import java.util.Map;
 
-import org.bdgp.MMSlide.WorkflowRunner.Config;
-import org.bdgp.MMSlide.WorkflowRunner.Task.Status;
+import org.bdgp.MMSlide.Config;
+import org.bdgp.MMSlide.Task.Status;
 
 /**
  *  Module with no input dependencies - can be run from root if required.

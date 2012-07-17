@@ -78,7 +78,7 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
     		
     		// set the table name to the file's path. 
     		// Hopefully the ORM supports quoted identifiers...
-    		tableConfig.setTableName(file.getPath());
+    		tableConfig.setTableName(file.getAbsolutePath());
     		DaoID<T,ID> dao = DaoManager.createDao(connection, tableConfig);
     		
     		// create the table if it doesn't already exist
@@ -93,7 +93,7 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
     		    // call CREATE TEXT TABLE
         		List<String> create = TableUtils.getCreateTableStatements(connection, tableConfig);
         		for (String c: create) {
-        		    dao.executeRaw(c.replaceFirst("^CREATE TABLE ","CREATE TEXT TABLE "));
+        		    dao.executeRaw(c.replaceFirst("^CREATE TABLE ","CREATE CACHED TEXT TABLE "));
         		}
         		// call SET TABLE
         		if (file.getPath().matches("[;\\]")) 

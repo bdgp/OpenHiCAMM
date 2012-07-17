@@ -2,8 +2,9 @@ package org.bdgp.MMSlide.Modules.Interfaces;
 
 import java.util.Map;
 
-import org.bdgp.MMSlide.WorkflowRunner.Task.Status;
-import org.bdgp.MMSlide.WorkflowRunner.Config;
+import org.bdgp.MMSlide.Logger;
+import org.bdgp.MMSlide.Task.Status;
+import org.bdgp.MMSlide.Config;
 
 /**
  * Interface for workflow modules.
@@ -22,7 +23,7 @@ public interface Module<S> {
     /**
      * Call a successor.
      */
-    public Status callSuccessor(S successor, Map<String,Config> config);
+    public Status callSuccessor(S successor, Map<String,Config> config, Logger logger);
     
     /**
      * Return the successor interface class object

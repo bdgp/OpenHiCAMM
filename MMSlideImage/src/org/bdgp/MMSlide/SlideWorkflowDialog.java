@@ -5,8 +5,6 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.Vector;
 
-import javax.swing.*;
-
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
@@ -17,22 +15,35 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.Font;
 
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JFileChooser;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.JTree;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
-import org.bdgp.MMSlide.Modules.*;
 import org.bdgp.MMSlide.Modules.Interfaces.Root;
 
 import java.awt.Component;
 
 
+@SuppressWarnings("serial")
 public class SlideWorkflowDialog extends JDialog {
 
 	protected Vector<WorkModule> workers;
-	protected StorageManager storage = null;
 	
 	protected JTree treeForModules;
 	protected JTextField storLocText;
@@ -45,7 +56,6 @@ public class SlideWorkflowDialog extends JDialog {
 	public SlideWorkflowDialog()
 	{
 		workers = new Vector<WorkModule>();
-		storage = new StorageManager();
 		treeRoot = new DefaultMutableTreeNode("JTree");
 		node = new Vector<DefaultMutableTreeNode>();
 		
