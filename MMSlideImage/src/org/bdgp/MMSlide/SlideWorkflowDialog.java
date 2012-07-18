@@ -5,6 +5,8 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.Vector;
 
+import javax.swing.*;
+
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
@@ -15,35 +17,22 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.Font;
 
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.DefaultComboBoxModel;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
-import javax.swing.JDialog;
-import javax.swing.JFileChooser;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextField;
-import javax.swing.JTree;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
-import org.bdgp.MMSlide.Modules.Interfaces.Root;
+import org.bdgp.MMSlide.Modules.*;
+//import org.bdgp.MMSlide.Modules.Interfaces.ModuleRoot;
 
 import java.awt.Component;
 
 
-@SuppressWarnings("serial")
 public class SlideWorkflowDialog extends JDialog {
 
 	protected Vector<WorkModule> workers;
+//	protected StorageManager storage = null;
 	
 	protected JTree treeForModules;
 	protected JTextField storLocText;
@@ -56,6 +45,7 @@ public class SlideWorkflowDialog extends JDialog {
 	public SlideWorkflowDialog()
 	{
 		workers = new Vector<WorkModule>();
+//		storage = new StorageManager();
 		treeRoot = new DefaultMutableTreeNode("JTree");
 		node = new Vector<DefaultMutableTreeNode>();
 		
@@ -195,7 +185,7 @@ public class SlideWorkflowDialog extends JDialog {
     	int returnVal = dirChooser.showDialog(this, "Select storage location");
     	if ( returnVal == 0 ) {
     		String dir = dirChooser.getCurrentDirectory().toString() + File.separator + dirChooser.getSelectedFile().toString();
-    		storage.setLocation(dir);
+//    		storage.setLocation(dir);
     		storLocText.setText(dir);
     	}
     	// JTextField storLocText to text
@@ -204,7 +194,7 @@ public class SlideWorkflowDialog extends JDialog {
 	protected void rmModule() {
 		// TODO Auto-generated method stub
 		WorkModule selected_worker = null;
-		ModuleBase selected_module = null;
+//		ModuleBase selected_module = null;
 		DefaultMutableTreeNode selected_node = null;
 		boolean rm_module = false;
 		
@@ -212,22 +202,22 @@ public class SlideWorkflowDialog extends JDialog {
 		if ( selected_worker == null ) {
 			return;
 		}
-		selected_module = selected_worker.module;		
+//		selected_module = selected_worker.module;		
 		
-		if ( selected_module.countSuccessors() > 0 ) {
-			int selected = JOptionPane.showConfirmDialog( this, "The module has children that will be deleted too - continue?",
-					"Delete module?", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null);		
-			if ( selected == 1 ) {
-				rm_module = true;
-			}
-		} else {
-			rm_module = true;
-		}
+//		if ( selected_module.countSuccessors() > 0 ) {
+//			int selected = JOptionPane.showConfirmDialog( this, "The module has children that will be deleted too - continue?",
+//					"Delete module?", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null);		
+//			if ( selected == 1 ) {
+//				rm_module = true;
+//			}
+//		} else {
+//			rm_module = true;
+//		}
 		
 		selected_node = selected_worker.gui_node;
 		
 		if ( rm_module == true ) {
-			selected_module.rmSucessors();
+//			selected_module.rmSucessors();
 			selected_node.removeAllChildren();
 			selected_node.removeFromParent();
 		}
@@ -241,20 +231,21 @@ public class SlideWorkflowDialog extends JDialog {
 		// Dialog for asking which one to add
 		// JOptionPane module_dialog = new JOptionPane();
 		
-		Object [] mdlg_values = factory.labels();
+//		Object [] mdlg_values = factory.labels();
+		Object [] mdlg_values = null;
 		Object dlg_selected = JOptionPane.showInputDialog( this, "Select module",
 				"Question", JOptionPane.QUESTION_MESSAGE, null, mdlg_values, mdlg_values[0]);		
 		label = (String) dlg_selected;
 		
 		WorkModule newWorker = new WorkModule();
 		WorkModule parent = null;
-		newWorker.module = factory.makeModule(label, storage);
+//		newWorker.module = factory.makeModule(label, storage);
 		
-		if ( newWorker.module == null ) {
-			JOptionPane.showMessageDialog( this, "Failed to instantiate the module - programming error",
-					"Error", JOptionPane.ERROR_MESSAGE);
-			return;
-		}
+//		if ( newWorker.module == null ) {
+//			JOptionPane.showMessageDialog( this, "Failed to instantiate the module - programming error",
+//					"Error", JOptionPane.ERROR_MESSAGE);
+//			return;
+//		}
 		
 		if ( workers.size() == 0 ) {
 			newWorker.is_root = true;
@@ -264,27 +255,27 @@ public class SlideWorkflowDialog extends JDialog {
 		
 		for ( WorkModule wm : workers ) {
 			// use last module that's compatible
-			if ( wm.module.compatibleSuccessor(newWorker.module) == true ) {
-				parent = wm;
-			}			
+//			if ( wm.module.compatibleSuccessor(newWorker.module) == true ) {
+//				parent = wm;
+//			}			
 		}
 		
-		if ( newWorker.module instanceof Root ) {
-			// give user choice if previous module found
-			if ( parent != null ) {
-				// Modal Dialog
-				// JOptionPane parent_dialog = new JOptionPane();
-				Object [] pdlg_values = {"Root", parent.module.getLabel() };
-				dlg_selected = JOptionPane.showInputDialog( this, "Please select the parent for the new Module",
-						"Question", JOptionPane.QUESTION_MESSAGE, null, pdlg_values, pdlg_values[1]);
-				if ( dlg_selected == pdlg_values[0] ) {
-					newWorker.is_root = true;
-					addWorkerToTree(newWorker, treeRoot, label, true);
-					newWorker.gui_level = 0;
-					return;
-				}
-			}
-		}
+//		if ( newWorker.module instanceof ModuleRoot ) {
+//			// give user choice if previous module found
+//			if ( parent != null ) {
+//				// Modal Dialog
+//				// JOptionPane parent_dialog = new JOptionPane();
+//				Object [] pdlg_values = {"Root", parent.module.getLabel() };
+//				dlg_selected = JOptionPane.showInputDialog( this, "Please select the parent for the new Module",
+//						"Question", JOptionPane.QUESTION_MESSAGE, null, pdlg_values, pdlg_values[1]);
+//				if ( dlg_selected == pdlg_values[0] ) {
+//					newWorker.is_root = true;
+//					addWorkerToTree(newWorker, treeRoot, label, true);
+//					newWorker.gui_level = 0;
+//					return;
+//				}
+//			}
+//		}
 		
 		if ( parent == null ) {
 			// Error message, don't add
@@ -360,7 +351,7 @@ public class SlideWorkflowDialog extends JDialog {
 			return;
 		}
 		
-		conf_m.module.configure(null);		
+//		conf_m.module.configure(null);		
 	}
 	
 	
@@ -370,7 +361,7 @@ public class SlideWorkflowDialog extends JDialog {
     	int returnVal = confChooser.showDialog(this, "Select configuration");
     	if ( returnVal == 0 ) {
     		String dir = confChooser.getCurrentDirectory().toString() + File.separator + confChooser.getSelectedFile().toString() + ".cnf";
-    		storage.setTempConfig(dir);
+//    		storage.setTempConfig(dir);
     	}
     	
 		for ( WorkModule wm : workers ) {
@@ -378,7 +369,7 @@ public class SlideWorkflowDialog extends JDialog {
 		}
 		// TODO: Save Workflow
 		
-		storage.unsetTempConfig();
+//		storage.unsetTempConfig();
 	}
 	
 	
@@ -395,7 +386,7 @@ public class SlideWorkflowDialog extends JDialog {
 	
 	
 	protected class WorkModule {
-		public ModuleBase module;
+//		public ModuleBase module;
 		public int gui_level;
 		public DefaultMutableTreeNode gui_node; 
 		// public Vector<ModuleBase> successors = new Vector<ModuleBase>();
@@ -409,34 +400,34 @@ public class SlideWorkflowDialog extends JDialog {
 		
 		private JCheckBox [] cb_modules;
 		
-		public ModuleParentsDialog(ModuleBase newModule, Vector<ModuleBase> modules) {
-			
-			int i = 0;
-			cb_modules = new JCheckBox[modules.size()];
-			
-			setTitle("Select parents:");
-			setDefaultCloseOperation( DISPOSE_ON_CLOSE );
-			
-			getContentPane().setLayout(new GridLayout(modules.size(), 1, 0, 0));
-			
-			for ( ModuleBase m : modules ) {
-				if ( m.compatibleSuccessor(newModule) ) {
-					cb_modules[i] = new JCheckBox(m.getLabel(),false);
-					getContentPane().add(cb_modules[i]);
-					i++;
-				}
-			}
-			
-			JPanel btnPanel = new JPanel();
-			btnPanel.setLayout(new FlowLayout());
-			getContentPane().add(btnPanel);
-			
-			JButton btnCancel = new JButton("Cancel");
-			btnPanel.add(btnCancel);		
-			JButton btnOK = new JButton("OK");
-			btnPanel.add(btnOK);		
-			
-		}
+//		public ModuleParentsDialog(ModuleBase newModule, Vector<ModuleBase> modules) {
+//			
+//			int i = 0;
+//			cb_modules = new JCheckBox[modules.size()];
+//			
+//			setTitle("Select parents:");
+//			setDefaultCloseOperation( DISPOSE_ON_CLOSE );
+//			
+//			getContentPane().setLayout(new GridLayout(modules.size(), 1, 0, 0));
+//			
+//			for ( ModuleBase m : modules ) {
+//				if ( m.compatibleSuccessor(newModule) ) {
+//					cb_modules[i] = new JCheckBox(m.getLabel(),false);
+//					getContentPane().add(cb_modules[i]);
+//					i++;
+//				}
+//			}
+//			
+//			JPanel btnPanel = new JPanel();
+//			btnPanel.setLayout(new FlowLayout());
+//			getContentPane().add(btnPanel);
+//			
+//			JButton btnCancel = new JButton("Cancel");
+//			btnPanel.add(btnCancel);		
+//			JButton btnOK = new JButton("OK");
+//			btnPanel.add(btnOK);		
+//			
+//		}
 		
 	}
 	

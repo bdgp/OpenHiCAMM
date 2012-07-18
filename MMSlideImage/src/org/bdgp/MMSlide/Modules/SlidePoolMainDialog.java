@@ -6,9 +6,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Vector;
 
 import javax.swing.BoxLayout;
@@ -23,28 +20,20 @@ import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
-import javax.swing.ListModel;
 import javax.swing.ListSelectionModel;
 import javax.swing.border.EtchedBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 
-import org.bdgp.MMSlide.FileLineStorage;
-import org.bdgp.MMSlide.StorageManager;
 import org.micromanager.api.DeviceControlGUI;
 import javax.swing.JTextField;
 import javax.swing.JList;
 import java.awt.Component;
 import javax.swing.Box;
 
+@SuppressWarnings("serial")
 public class SlidePoolMainDialog extends JDialog {
-	
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = -8903037819713128061L;
-
 	Vector<String> sl_cart, sl_pos, sl_expid;	
 	
 	protected JButton listButton_;
@@ -58,13 +47,14 @@ public class SlidePoolMainDialog extends JDialog {
 	protected JList listPrevPool;
 	
 	SlidePool slide_pool_module = null;
-	StorageManager.StorageCollection other_pools;
+//	StorageManager.StorageCollection other_pools;
 	
-	public SlidePoolMainDialog(DeviceControlGUI mm_gui, SlidePool sp, StorageManager.StorageCollection other_pools) {
+//	public SlidePoolMainDialog(DeviceControlGUI mm_gui, SlidePool sp, StorageManager.StorageCollection other_pools) {
+	public SlidePoolMainDialog(DeviceControlGUI mm_gui, SlidePool sp) {
 		
 		this.gui = mm_gui;
 		slide_pool_module = sp;
-		this.other_pools = other_pools;
+//		this.other_pools = other_pools;
 		
 		setVisible(false); // Not visible until requested
 		setTitle("Configuration: Slide Pool");
@@ -300,12 +290,12 @@ public class SlidePoolMainDialog extends JDialog {
 	protected void populatePools() {
 		DefaultListModel listModel = new DefaultListModel();
 		
-		Collection <String> others = other_pools.get();
+//		Collection <String> others = other_pools.get();
 		
-		Iterator<String> it = others.iterator();
-		while (it.hasNext()) {
-			listModel.addElement(it.next());
-		}
+//		Iterator<String> it = others.iterator();
+//		while (it.hasNext()) {
+//			listModel.addElement(it.next());
+//		}
 		
 		listPrevPool.setModel(listModel);
 		listPrevPool.setEnabled(true);
@@ -347,7 +337,7 @@ public class SlidePoolMainDialog extends JDialog {
 			for (int r=table.getRowCount()-1; r >= 0; r++ ) {
 				deleteRow(r);
 			}
-			slide_pool_module.clearPoolData();
+//			slide_pool_module.clearPoolData();
 		}
 	}
 	
@@ -359,14 +349,14 @@ public class SlidePoolMainDialog extends JDialog {
 	
 	public void setData() {
 		int r = 0;
-		Collection<SlidePool.PoolData> data = slide_pool_module.getPoolData();
+//		Collection<SlidePool.PoolData> data = slide_pool_module.getPoolData();
 		
-		for ( SlidePool.PoolData spd : data ) {
-			table.setValueAt(spd.cartridge, r, 0);
-			table.setValueAt(spd.slide, r, 1);
-			table.setValueAt(spd.experiment, r, 2);
-			r++;
-		}
+//		for ( SlidePool.PoolData spd : data ) {
+//			table.setValueAt(spd.cartridge, r, 0);
+//			table.setValueAt(spd.slide, r, 1);
+//			table.setValueAt(spd.experiment, r, 2);
+//			r++;
+//		}
 	}
 		
 	protected void readTable() {
@@ -379,7 +369,7 @@ public class SlidePoolMainDialog extends JDialog {
 			Integer i_cart = new Integer(s_cart);
 			Integer i_pos = new Integer(s_pos);
 			
-			slide_pool_module.addPoolData(i_cart.intValue(), i_pos.intValue(), s_exp);
+//			slide_pool_module.addPoolData(i_cart.intValue(), i_pos.intValue(), s_exp);
 			
 		}
 	}

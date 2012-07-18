@@ -1,60 +1,58 @@
 package org.bdgp.MMSlide.Modules;
 
-import java.util.HashMap;
+import java.util.Map;
 
-import org.bdgp.MMSlide.StorageManager;
+import org.bdgp.MMSlide.Config;
+import org.bdgp.MMSlide.Logger;
+import org.bdgp.MMSlide.Task.Status;
+import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.bdgp.MMSlide.Modules.Interfaces.WorkerImageCamera;
 
-public class ProcessImageROI extends ModuleBase implements WorkerImageCamera {
-	// Return x/y/len/width of bounding box surrounding the ROI
+/**
+ * Return x/y/len/width of bounding box surrounding the ROI
+ */
+public class ProcessImageROI implements Module<Void>, WorkerImageCamera {
 
-	public ProcessImageROI(StorageManager storage) {
-		super(storage);
-		moduleLabel = "Detect ROI";
-		moduleText = "Finding the ROI from an image";
-	}
+	public ProcessImageROI() { }
 	
 	public void processImage(int x, int y, boolean focus) {
 		// TODO Auto-generated method stub
-
 	}
 
 	@Override
-	public
-	void rmSuccessor(ModuleBase mod) {
-		// TODO Auto-generated method stub
-
+	public boolean test() {
+        return false;
 	}
 
 	@Override
-	public
-	boolean compatibleSuccessor(ModuleBase mod) {
-		// TODO Auto-generated method stub
-		return false;
+	public Map<String,Config> configure() {
+        return null;
 	}
 
-	@Override
-	public void test() {
-		// TODO Auto-generated method stub
+    @Override
+    public boolean canRunInCommandLineMode() {
+        return false;
+    }
 
-	}
+    @Override
+    public Status callSuccessor(Void successor, 
+            Map<String,Config> config, Logger logger) 
+    {
+        return null;
+    }
 
-	@Override
-	public void configure(HashMap<String, String> options) {
-		// TODO Auto-generated method stub
-		
-	}
+    @Override
+    public Class<Void> getSuccessorInterface() {
+        return null;
+    }
 
-	@Override
-	public void confSave() {
-		// TODO Auto-generated method stub
-		
-	}
+    @Override
+    public String getTitle() {
+        return "Detect ROI";
+    }
 
-	@Override
-	public void confLoad() {
-		// TODO Auto-generated method stub
-		
-	}
-
+    @Override
+    public String getDescription() {
+        return "Finding the ROI from an image";
+    }
 }

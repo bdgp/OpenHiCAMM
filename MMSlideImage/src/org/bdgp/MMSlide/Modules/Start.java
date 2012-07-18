@@ -27,4 +27,24 @@ public class Start implements Module<Root> {
     public Class<Root> getSuccessorInterface() {
         return Root.class;
     }
+
+    @Override
+    public String getTitle() {
+        return "Start of workflow.";
+    }
+
+    @Override
+    public String getDescription() {
+        return "Start of workflow.";
+    }
+
+    @Override
+    public boolean test() {
+        return false;
+    }
+
+    @Override
+    public Map<String, Config> configure() {
+        return null;
+    }
 }

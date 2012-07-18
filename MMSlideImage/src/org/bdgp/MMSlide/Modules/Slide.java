@@ -1,10 +1,13 @@
 package org.bdgp.MMSlide.Modules;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Vector;
 
-import org.bdgp.MMSlide.StorageManager;
-import org.bdgp.MMSlide.Modules.Interfaces.MMModule;
+import org.bdgp.MMSlide.Config;
+import org.bdgp.MMSlide.Logger;
+import org.bdgp.MMSlide.Task.Status;
+import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.bdgp.MMSlide.Modules.Interfaces.WorkerImageCamera;
 import org.bdgp.MMSlide.Modules.Interfaces.Root;
 import org.bdgp.MMSlide.Modules.Interfaces.WorkerSlide;
@@ -14,7 +17,7 @@ import org.micromanager.api.AcquisitionEngine;
 import org.micromanager.api.DeviceControlGUI;
 import org.micromanager.navigation.PositionList;
 
-public class Slide extends ModuleBase implements Root, WorkerSlide, MMModule {
+public class Slide implements Module<WorkerSlide>, Root, WorkerSlide {
 
 	private Vector<WorkerSlide> child_slide;
 	private Vector<WorkerImageCamera> child_camera;
@@ -23,10 +26,7 @@ public class Slide extends ModuleBase implements Root, WorkerSlide, MMModule {
     private PositionList posList_ = null;
     private PositionListDlg posListDlg_;
 
-	public Slide(StorageManager storage) {
-		super(storage);
-		moduleLabel = "Slide imaging";
-		moduleText = "Imaging and/or dealing with all the images from a slide";
+	public Slide() {
 	}
 		
 	
@@ -34,9 +34,6 @@ public class Slide extends ModuleBase implements Root, WorkerSlide, MMModule {
 		// call MM acquisition if mm is set
 		
 		// request new storage location from slide storage
-//		long id = storage.create(this);
-		String stor_dir = storage.get(this);
-		
 		// process children
 		for ( WorkerSlide c_slide : child_slide ) {
 			c_slide.processCurrentSlide(posList);
@@ -48,33 +45,9 @@ public class Slide extends ModuleBase implements Root, WorkerSlide, MMModule {
 		}
 	}
 	
-	
 	@Override
-	public
-	void rmSuccessor(ModuleBase mod) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public
-	boolean compatibleSuccessor(ModuleBase mod) {
-		
-		if ( mod instanceof WorkerSlide ) {
-			return true;
-		}
-		if ( mod instanceof WorkerImageCamera ) {
-			return true;
-		}
-		
-		return false;
-		
-	}
-
-	@Override
-	public void test() {
-		// TODO Auto-generated method stub
-
+	public boolean test() {
+	    return false;
 	}
 
 	public void setAcquisitionNew() {
@@ -97,31 +70,46 @@ public class Slide extends ModuleBase implements Root, WorkerSlide, MMModule {
 		
 	}
 
-
-	@Override
-	public void configure(HashMap<String, String> options) {
-		// TODO Auto-generated method stub
-		
-	}
-
-
-	public void start() {
-		// TODO Auto-generated method stub
-		
-	}
+    @Override
+    public Status start(Map<String, Config> config) {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
 
-	@Override
-	public void confSave() {
-		// TODO Auto-generated method stub
-		
-	}
+    @Override
+    public boolean canRunInCommandLineMode() {
+        // TODO Auto-generated method stub
+        return false;
+    }
 
 
-	@Override
-	public void confLoad() {
-		// TODO Auto-generated method stub
-		
-	}
+    @Override
+    public Map configure() {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
+
+    @Override
+    public Status callSuccessor(WorkerSlide successor, Map<String,Config> config, Logger logger) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Class getSuccessorInterface() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public String getTitle() {
+        return "Slide imaging";
+    }
+
+    @Override
+    public String getDescription() {
+        return "Imaging and/or dealing with all the images from a slide";
+    }
 }

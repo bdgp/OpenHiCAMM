@@ -10,15 +10,15 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Level;
 
 import org.bdgp.MMSlide.Dao;
+import org.bdgp.MMSlide.Logger.Level;
 import org.bdgp.MMSlide.Task.Status;
 import org.bdgp.MMSlide.Modules.Start;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.bdgp.MMSlide.Modules.Interfaces.Root;
 
-import static org.bdgp.MMSlide.Dao.where;
+import static org.bdgp.MMSlide.ChainHashMap.where;
 import static org.bdgp.MMSlide.Dao.one;
 
 public class WorkflowRunner {
@@ -55,6 +55,7 @@ public class WorkflowRunner {
     private Dao<WorkflowModule> workflow;
     private Dao<Config> moduleConfig;
     
+    @SuppressWarnings("unused")
     private Logger logger;
     private Level loglevel;
     

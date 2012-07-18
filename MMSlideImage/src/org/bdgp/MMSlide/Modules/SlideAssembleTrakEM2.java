@@ -1,16 +1,17 @@
 package org.bdgp.MMSlide.Modules;
 
 import java.util.HashMap;
+import java.util.Map;
 
-import org.bdgp.MMSlide.StorageManager;
+import org.bdgp.MMSlide.Config;
+import org.bdgp.MMSlide.Logger;
+import org.bdgp.MMSlide.Task.Status;
+import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.bdgp.MMSlide.Modules.Interfaces.WorkerImageCamera;
 
-public class SlideAssembleTrakEM2 extends ModuleBase implements WorkerImageCamera {
+public class SlideAssembleTrakEM2 implements Module<WorkerImageCamera>, WorkerImageCamera {
 
-	public SlideAssembleTrakEM2(StorageManager storage) {
-		super(storage);
-		moduleLabel = "TrackEM2 image assembly";
-		moduleText = "Assemble images with TrackEM2";
+	public SlideAssembleTrakEM2() {
 	}
 
 	public void processImage(int x, int y, boolean focus) {
@@ -19,47 +20,43 @@ public class SlideAssembleTrakEM2 extends ModuleBase implements WorkerImageCamer
 	}
 
 	@Override
-	public
-	void addSuccessor(ModuleBase mod) {
+	public boolean test() {
 		// TODO Auto-generated method stub
-
+	    return false;
 	}
 
-	@Override
-	public void rmSuccessor(ModuleBase mod) {
-		// TODO Auto-generated method stub
+    @Override
+    public boolean canRunInCommandLineMode() {
+        // TODO Auto-generated method stub
+        return false;
+    }
 
-	}
+    @Override
+    public Map<String, Config> configure() {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
-	@Override
-	public boolean compatibleSuccessor(ModuleBase mod) {
-		if ( mod instanceof WorkerImageCamera ) {
-			return true;
-		}
-		return false;
-	}
+    @Override
+    public Status callSuccessor(WorkerImageCamera successor,
+            Map<String, Config> config, Logger logger) {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
-	@Override
-	public void configure(HashMap<String, String> options) {
-		// TODO Auto-generated method stub
-	}
+    @Override
+    public Class<WorkerImageCamera> getSuccessorInterface() {
+        return WorkerImageCamera.class;
+    }
 
-	@Override
-	public void test() {
-		// TODO Auto-generated method stub
+    @Override
+    public String getTitle() {
+		return "TrackEM2 image assembly";
+    }
 
-	}
-
-	@Override
-	public void confSave() {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void confLoad() {
-		// TODO Auto-generated method stub
-		
-	}
+    @Override
+    public String getDescription() {
+        return "Assemble images with TrackEM2";
+    }
 
 }

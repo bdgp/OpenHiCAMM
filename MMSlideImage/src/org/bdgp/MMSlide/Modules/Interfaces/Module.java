@@ -21,6 +21,19 @@ public interface Module<S> {
     public boolean canRunInCommandLineMode();
     
     /**
+     * Perform any relevant tests to ensure the module is properly
+     * configured.
+     * @return 
+     */
+    public boolean test();
+
+    /**
+     * Run the module configuration dialog and return the configuration.
+     * @return
+     */
+    public Map<String,Config> configure();
+    
+    /**
      * Call a successor.
      */
     public Status callSuccessor(S successor, Map<String,Config> config, Logger logger);
@@ -29,4 +42,16 @@ public interface Module<S> {
      * Return the successor interface class object
      */
     public Class<S> getSuccessorInterface();
+    
+    /**
+     * Return the title of this module.
+     * @return
+     */
+    public String getTitle();
+    
+    /**
+     * Return the module's description text.
+     * @return
+     */
+    public String getDescription();
 }

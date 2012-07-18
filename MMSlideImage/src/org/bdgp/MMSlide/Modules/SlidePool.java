@@ -1,65 +1,50 @@
 package org.bdgp.MMSlide.Modules;
 
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
-import org.bdgp.MMSlide.FileLineStorage;
-import org.bdgp.MMSlide.LineItem;
-import org.bdgp.MMSlide.StorageManager;
-import org.bdgp.MMSlide.Modules.Interfaces.MMModule;
+import java.util.List;
+import java.util.Map;
+
+import org.bdgp.MMSlide.Dao;
+import org.bdgp.MMSlide.Config;
+import org.bdgp.MMSlide.Logger;
+import org.bdgp.MMSlide.Task.Status;
+import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.bdgp.MMSlide.Modules.Interfaces.WorkerImageCamera;
 import org.bdgp.MMSlide.Modules.Interfaces.Root;
 import org.bdgp.MMSlide.Modules.Interfaces.WorkerSlide;
-import org.bdgp.MMSlide.StorageManager.CollectionType;
 import org.micromanager.api.AcquisitionEngine;
 import org.micromanager.api.DeviceControlGUI;
 
+import com.j256.ormlite.field.DatabaseField;
+import com.j256.ormlite.table.DatabaseTable;
+
+import java.io.File;
 import java.io.IOException;
 
-public class SlidePool extends ModuleBase implements MMModule, Root {
-    private static final long serialVersionUID = -6918485909381241585L;
+public class SlidePool implements Module<WorkerSlide>, Root {
 
     // File name will be unique, even if several pool workers in same workflow (use same experiment)
-	protected final String POOL_FILE = "pool_contents";
+	protected final String POOL_FILE = "pool_contents.txt";
+	protected Dao<PoolData> pool;
 	
-	FileLineStorage<PoolData> pool = null; 
 	SlidePoolMainDialog confDlg = null;
 	DeviceControlGUI mm_gui = null;
 	
-	public SlidePool(StorageManager storage) { 
-		super(storage);	
+	public SlidePool() { 
 		// TODO doesn't work on uninitialized storage
 		// storage.setUnique(this); // there can be only one storage pool per workflow
-
-		// What are we
-		moduleLabel = "Slide pool";
-		moduleText = "Define and load (optional) slides from a pool";		 
 
 		// storage.get should probably not ever be in the constructor!
 		// Storage locations are possibly initialized after class is created. 
 		// Everywhere else is fine. 
-		
 	}
-	
-	public void init() throws IOException {
-
-		String store_dir = storage.get(this);
-		pool = new FileLineStorage<PoolData>(PoolData.class, store_dir, POOL_FILE);
-		pool.setCache(true);
-		
-	}
-	
 	
 	@Override
-	public
-	boolean compatibleSuccessor(ModuleBase mod) {
-	    return mod instanceof WorkerSlide 
-	        || mod instanceof WorkerImageCamera;
-	}
-
-	@Override
-	public void test() {
+	public boolean test() {
 		// TODO Auto-generated method stub
-
+	    return false;
 	}
 
 	public void setNoAcquisition() {
@@ -72,25 +57,90 @@ public class SlidePool extends ModuleBase implements MMModule, Root {
 		mm_gui = gui;
 	}
 
-	public void start()  {
-		// TODO Auto-generated method stub
+	public void addPoolData(int c, int s, String e) throws SQLException {
+		pool.create(new PoolData(c, s, e));
+	}
+	
+	public List<PoolData> getPoolData() throws SQLException {
+		return pool.queryForAll();
+	}
+	
+	public void clearPoolData() throws SQLException {
+		pool.deleteBuilder().delete();
+	}
+	
+	
+	@DatabaseTable
+	public static class PoolData {
+	    public int getCartridge() {
+            return cartridge;
+        }
+
+        public void setCartridge(int cartridge) {
+            this.cartridge = cartridge;
+        }
+
+        public int getSlide() {
+            return slide;
+        }
+
+        public void setSlide(int slide) {
+            this.slide = slide;
+        }
+
+        public String getExperiment() {
+            return experiment;
+        }
+
+        public void setExperiment(String experiment) {
+            this.experiment = experiment;
+        }
+
+        @DatabaseField
+		public int cartridge = -1;
+	    @DatabaseField
+		public int slide = -1;
+		@DatabaseField(id=true)
+		public String experiment = null;
+		
+		public PoolData() {}
+		
+		public PoolData(int c, int s, String e) {
+			cartridge = c;
+			slide = s;
+			experiment = e;
+		}
+	}
+
+
+    @Override
+    public Status start(Map<String, Config> config) {
 		// if slide loader found, load next slide
 		// else prompt manual loading
 		
 		// pool.setFile(store_dir, POOL_FILE);
-		
-	}
+		String store_dir = config.get("storageLocation").getValue();
+		pool = Dao.get(PoolData.class, new File(store_dir,POOL_FILE).getPath());
+        return null;
+    }
 
-	@Override
-	public void configure(HashMap<String, String> options) {
-		
-		if ( confDlg == null ) {
-			confDlg = new SlidePoolMainDialog(mm_gui, this, storage.getModuleStorage(this, CollectionType.SIBLINGS));
-		}
-		
+    @Override
+    public boolean canRunInCommandLineMode() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public Map<String, Config> configure() {
+        // TODO Save items independent of storage pool
+		// XY list/selection of ROI
+		// Slide loader/manual
+        
+//        if ( confDlg == null ) {
+//			confDlg = new SlidePoolMainDialog(mm_gui, this, storage.getModuleStorage(this, CollectionType.SIBLINGS));
+//		}
 		
 		confDlg.setVisible(true);
-		
 		
 		// TODO Auto-generated method stub
 		// Define GUI
@@ -108,73 +158,30 @@ public class SlidePool extends ModuleBase implements MMModule, Root {
         listButton_.setMargin(new Insets(2, 5, 2, 5));
         listButton_.setFont(new Font("Dialog", Font.PLAIN, 10));
         listButton_.setBounds(42, 25, 136, 26);
-        positionsPanel_.add(listButton_);
-*/
-	}
+        positionsPanel_.add(listButton_); 
+        */
+        return null;
+    }
 
-	@Override
-	
-	// nees to get a class that handles the storage....?
-	public void confSave() {
-		// TODO Save items independent of storage pool
-		// XY list/selection of ROI
-		// Slide loader/manual
-		
-	}
+    @Override
+    public Status callSuccessor(WorkerSlide successor,
+            Map<String, Config> config, Logger logger) {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
-	@Override
-	public void confLoad() {
-		// TODO Auto-generated method stub
-		
-	}
-	
-	public void addPoolData(int c, int s, String e) {
-		try {
-			pool.add(new PoolData(c, s, e));
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-	}
-	
-	public Collection<PoolData> getPoolData() {
-		return pool.cachedValues();
-	}
-	
-	public void clearPoolData() {
-		pool.clear();
-	}
-	
-	
-	public class PoolData implements LineItem {
-		public int cartridge = -1;
-		public int slide = -1;
-		public String experiment = null;
-		
-		public PoolData() {}
-		
-		public PoolData(int c, int s, String e) {
-			cartridge = c;
-			slide = s;
-			experiment = e;
-		}
+    @Override
+    public Class<WorkerSlide> getSuccessorInterface() {
+        return WorkerSlide.class;
+    }
 
-		public String [] toTokens() {
-			String [] t = new String[3];
-			t[0] = new Integer(cartridge).toString();
-			t[1] = new Integer(slide).toString();
-			t[2] = experiment;
-			return t;
-		}
-		
-		public void fromTokens(String [] line) {
-			cartridge = new Integer(line[0]).intValue();
-			slide = new Integer(line[1]).intValue();
-			experiment = line[2];
-		}
+    @Override
+    public String getTitle() {
+        return "Slide pool";
+    }
 
-		public String key() {
-			return experiment;
-		}
-	}
+    @Override
+    public String getDescription() {
+        return "Define and load (optional) slides from a pool";
+    }
 }
