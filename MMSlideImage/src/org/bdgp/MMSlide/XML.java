@@ -1,5 +1,6 @@
 package org.bdgp.MMSlide;
 
+import java.awt.Container;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -17,6 +18,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.swixml.jsr296.SwingApplication;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -111,13 +113,9 @@ public class XML {
                 Text text = doc.createTextNode(String.class.cast(content));
                 element.appendChild(text);
             }
-            else if (Number.class.isAssignableFrom(content.getClass())) {
+            else {
                 Text text = doc.createTextNode(content.toString());
                 element.appendChild(text);
-            }
-            else {
-                throw new IllegalArgumentException(
-                        "Cannot determine type of content "+content.toString());
             }
         }
         return element;
@@ -179,5 +177,40 @@ public class XML {
      */
     public static Reader xmlreader(Document doc) {
         return new StringReader(xmlstring(doc));
+    }
+    
+    /**
+     * Create a swing container using the swixml2 XML description language.
+     * @param container The container to fill.
+     * @param nodes The XML nodes to convert to Swing objects.
+     * @return the container
+     */
+    public static <S extends Container> S xmlswing(S container, Node ... nodes) {
+        return xmlswing(container, xmlreader(nodes));
+    }
+    /**
+     * Create a swing container using the swixml2 XML description language.
+     * @param container The container to fill.
+     * @param doc The XML document to convert to Swing objects.
+     * @return the container
+     */
+    public static <S extends Container> S xmlswing(S container, Document doc) {
+        return xmlswing(container, xmlreader(doc));
+    }
+    /**
+     * Create a swing container using the swixml2 XML description language.
+     * @param container The container to fill.
+     * @param doc The XML StringReader to convert to Swing objects.
+     * @return the container
+     */
+    public static <S extends Container> S xmlswing(S container, Reader reader) {
+        try {
+            return new SwingApplication() {
+                protected void startup() { }
+            }.render(container, reader);
+        } 
+        catch (InstantiationException e) {throw new RuntimeException(e);} 
+        catch (IllegalAccessException e) {throw new RuntimeException(e);} 
+        catch (Exception e) {throw new RuntimeException(e);}
     }
 }

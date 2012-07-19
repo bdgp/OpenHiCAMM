@@ -1,9 +1,9 @@
-package org.bdgp.MMSlide;
+package org.bdgp.MMSlide.Dao;
 
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
+
 
 /**
  * Simplified Dao interface which doesn't have the ID generic parameter.

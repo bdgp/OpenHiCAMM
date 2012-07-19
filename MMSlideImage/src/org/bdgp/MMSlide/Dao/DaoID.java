@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide;
+package org.bdgp.MMSlide.Dao;
 
 import java.io.File;
 import java.lang.reflect.Field;

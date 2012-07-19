@@ -3,8 +3,8 @@ package org.bdgp.MMSlide.Modules.Interfaces;
 import java.util.Map;
 
 import org.bdgp.MMSlide.Logger;
-import org.bdgp.MMSlide.Task.Status;
-import org.bdgp.MMSlide.Config;
+import org.bdgp.MMSlide.Dao.Config;
+import org.bdgp.MMSlide.Dao.Task.Status;
 
 /**
  * Interface for workflow modules.

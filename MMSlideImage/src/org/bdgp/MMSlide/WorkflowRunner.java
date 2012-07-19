@@ -11,15 +11,18 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.bdgp.MMSlide.Dao;
+import org.bdgp.MMSlide.Dao.Config;
+import org.bdgp.MMSlide.Dao.Dao;
+import org.bdgp.MMSlide.Dao.Task;
+import org.bdgp.MMSlide.Dao.WorkflowModule;
+import org.bdgp.MMSlide.Dao.Task.Status;
 import org.bdgp.MMSlide.Logger.Level;
-import org.bdgp.MMSlide.Task.Status;
 import org.bdgp.MMSlide.Modules.Start;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.bdgp.MMSlide.Modules.Interfaces.Root;
 
-import static org.bdgp.MMSlide.ChainHashMap.where;
-import static org.bdgp.MMSlide.Dao.one;
+import static org.bdgp.MMSlide.ChainMap.where;
+import static org.bdgp.MMSlide.Dao.Dao.one;
 
 public class WorkflowRunner {
     /**

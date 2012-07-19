@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide;
+package org.bdgp.MMSlide.Dao;
 
 import java.util.HashMap;
 import java.util.List;
