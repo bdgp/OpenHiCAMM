@@ -1,11 +1,11 @@
 package org.bdgp.MMSlide;
 
 import java.awt.Container;
+import java.io.ByteArrayInputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.charset.Charset;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -19,22 +19,23 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.swixml.jsr296.SwingApplication;
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 
+import cookxml.cookswing.CookSwing;
+
 public class XML {
     private static DocumentBuilderFactory dbfac;
     private static DocumentBuilder docBuilder;
     private static Document doc;
-    private static TransformerFactory transfac;
     static {
         try {
             dbfac = DocumentBuilderFactory.newInstance();
             docBuilder = dbfac.newDocumentBuilder();
             doc = docBuilder.newDocument();
-            transfac = TransformerFactory.newInstance();
         } 
         catch (ParserConfigurationException e) {throw new RuntimeException(e);}
     }
@@ -55,63 +56,38 @@ public class XML {
     public static Text text(String text) {
         return doc.createTextNode(text);
     }
+    
     /**
-     * Create an element node.
-     * @param name The tag name.
-     * @param attrs The attribute key/values.
-     * @param contents The contents of the tag.
+     * Helper function to define attributes as key/value pair maps.
+     * @param values
      * @return
      */
-    public static Node tag(String name, String[][] attrs, Object ... contents) {
-        Map<String,String> attrmap = new HashMap<String,String>();
-        for (String[] attr : attrs) {
-            if (attr.length == 2) {
-                attrmap.put(attr[0], attr[1]);
-            }
-            else {
-                throw new IllegalArgumentException(
-                        "Malformed attribute pair!");
-            }
-        }
-        return tag(name, attrmap, contents);
-    }
-    /**
-     * Create an element node.
-     * @param name the tag name
-     * @param attrs The attribute key/values.
-     * @param contents The contents of the tag.
-     * @return
-     */
-    public static Element tag(String name, String[] attrs, Object ... contents) {
-        Map<String,String> attrmap = new HashMap<String,String>();
-        if (attrs.length % 2 != 0) {
+    public static Object[] attr(Object ... values) {
+        if (values.length % 2 != 0) {
             throw new IllegalArgumentException(
-                    "Attribute pair is missing value!");
+                    "Odd number of key/value arguments passed to attr!");
         }
-        for (int i=0; i<attrs.length-1; i+=2) {
-            attrmap.put(attrs[i], attrs[i+1]);
+        Attr[] attrs = new Attr[values.length/2];
+        for (int i=0; i<values.length-1; i+=2) {
+            Attr attr = doc.createAttribute(values[i].toString());
+            attr.setValue(values[i+1].toString());
+            attrs[i/2] = attr;
         }
-        return tag(name, attrmap, contents);
+        return attrs;
     }
-    /**
-     * Create an element node.
-     * @param name The tag name
-     * @param attrs The attribute key/values.
-     * @param contents The contents of the tag.
-     * @return
-     */
-    public static Element tag(String name, Map<String,String> attrs, Object ... contents) {
-        Element element = doc.createElement(name);
-        for (Map.Entry<String,String> attr : attrs.entrySet()) {
-            element.setAttribute(attr.getKey(), attr.getValue());
-        }
+    public static Object[] a(Object ... values) { return attr(values); }
+    public static Object[] _(Object ... values) { return attr(values); }
+    
+    private static Element addToTag(Element element, Object ... contents) {
         for (Object content : contents) {
-            if (Node.class.isAssignableFrom(content.getClass())) {
-                 element.appendChild(Node.class.cast(content));
+            if (Object[].class.isAssignableFrom(content.getClass())) {
+                addToTag(element, Object[].class.cast(content));
             }
-            else if (String.class.isAssignableFrom(content.getClass())) {
-                Text text = doc.createTextNode(String.class.cast(content));
-                element.appendChild(text);
+            else if (Attr.class.isAssignableFrom(content.getClass())) {
+                element.setAttributeNodeNS(Attr.class.cast(content));
+            }
+            else if (Node.class.isAssignableFrom(content.getClass())) {
+                 element.appendChild(Node.class.cast(content));
             }
             else {
                 Text text = doc.createTextNode(content.toString());
@@ -122,6 +98,21 @@ public class XML {
     }
     
     /**
+     * Create an element node.
+     * @param name The tag name
+     * @param attrs The attribute key/values.
+     * @param contents The contents of the tag.
+     * @return
+     */
+    public static Node tag(String name, Object ... contents) {
+        Element element = doc.createElement(name);
+        return addToTag(element, contents);
+    }
+    public static Node $(String name, Object ... contents) {
+        return tag(name, contents);
+    }
+    
+    /**
      * Create a new XML document from the provided nodes.
      * @param nodes The list of nodes to append to the document.
      * @return
@@ -129,7 +120,7 @@ public class XML {
     public static Document xml(Node ... nodes) {
         Document doc = docBuilder.newDocument();
         for (Node node : nodes) {
-            doc.appendChild(node);
+            doc.appendChild(doc.importNode(node, true));
         }
         return doc;
     }
@@ -148,6 +139,8 @@ public class XML {
      */
     public static String xmlstring(Document doc) {
         try {
+            TransformerFactory transfac= TransformerFactory.newInstance();
+            transfac.setAttribute("indent-number", new Integer(2));
             Transformer trans = transfac.newTransformer();
             trans.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
             trans.setOutputProperty(OutputKeys.INDENT, "yes");
@@ -185,8 +178,8 @@ public class XML {
      * @param nodes The XML nodes to convert to Swing objects.
      * @return the container
      */
-    public static <S extends Container> S xmlswing(S container, Node ... nodes) {
-        return xmlswing(container, xmlreader(nodes));
+    public static <S extends Container> S swixml2(S container, Node ... nodes) {
+        return swixml2(container, xmlreader(nodes));
     }
     /**
      * Create a swing container using the swixml2 XML description language.
@@ -194,8 +187,8 @@ public class XML {
      * @param doc The XML document to convert to Swing objects.
      * @return the container
      */
-    public static <S extends Container> S xmlswing(S container, Document doc) {
-        return xmlswing(container, xmlreader(doc));
+    public static <S extends Container> S swixml2(S container, Document doc) {
+        return swixml2(container, xmlreader(doc));
     }
     /**
      * Create a swing container using the swixml2 XML description language.
@@ -203,7 +196,7 @@ public class XML {
      * @param doc The XML StringReader to convert to Swing objects.
      * @return the container
      */
-    public static <S extends Container> S xmlswing(S container, Reader reader) {
+    public static <S extends Container> S swixml2(S container, Reader reader) {
         try {
             return new SwingApplication() {
                 protected void startup() { }
@@ -212,5 +205,16 @@ public class XML {
         catch (InstantiationException e) {throw new RuntimeException(e);} 
         catch (IllegalAccessException e) {throw new RuntimeException(e);} 
         catch (Exception e) {throw new RuntimeException(e);}
+    }
+    
+    
+    public static Container cookswing(Object varObj, Node ... nodes) {
+        return cookswing(xml(nodes));
+    }
+    public static Container cookswing(Object varObj, Document doc) {
+        return cookswing(xml(doc));
+    }
+    public static Container cookswing(Object varObj, String string) {
+        return new CookSwing(varObj).render(new ByteArrayInputStream(string.getBytes()));
     }
 }
