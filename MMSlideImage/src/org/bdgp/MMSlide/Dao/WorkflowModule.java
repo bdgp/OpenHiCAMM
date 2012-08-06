@@ -1,5 +1,7 @@
 package org.bdgp.MMSlide.Dao;
 
+import javax.swing.tree.DefaultMutableTreeNode;
+
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
 import com.j256.ormlite.field.DatabaseField;
@@ -10,16 +12,31 @@ import com.j256.ormlite.table.DatabaseTable;
  * a module to execute, and the ID of the parent step. Also check
  * that the given module name is valid.
  */
+@SuppressWarnings("serial")
 @DatabaseTable
-public class WorkflowModule {
+public class WorkflowModule extends DefaultMutableTreeNode {
     @DatabaseField(id=true)
     private String id;
     @DatabaseField(canBeNull=false,useGetSet=true) 
     private String moduleName;
     @DatabaseField
+    private int instanceCount;
+    @DatabaseField
     private String parentId;
     
     private Class<Module<?>> module;
+    
+    public WorkflowModule() {
+        super();
+    }
+    public WorkflowModule(String id, String moduleName, int instanceCount, String parentId) {
+        super();
+        this.id = id;
+        setModuleName(moduleName);
+        this.instanceCount = instanceCount;
+        this.parentId = parentId;
+        setUserObject(id + (instanceCount>1 ? " ("+instanceCount+")" : ""));
+    }
     
     public String getId() {
         return id;
@@ -27,6 +44,7 @@ public class WorkflowModule {
 
     public void setId(String id) {
         this.id = id;
+        setUserObject(id + (instanceCount>1 ? " ("+instanceCount+")" : ""));
     }
 
     public String getModuleName() {
@@ -53,6 +71,14 @@ public class WorkflowModule {
     
     public Class<Module<?>> getModule() {
         return module;
+    }
+    
+    public int getInstanceCount() {
+        return instanceCount;
+    }
+    public void setInstanceCount(int instanceCount) {
+        this.instanceCount = instanceCount;
+        setUserObject(id + (instanceCount>1 ? " ("+instanceCount+")" : ""));
     }
 
     public String getParentId() {

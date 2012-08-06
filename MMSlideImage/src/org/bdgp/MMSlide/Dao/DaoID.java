@@ -21,6 +21,8 @@ import com.j256.ormlite.table.TableUtils;
 import com.j256.ormlite.dao.BaseDaoImpl;
 import com.j256.ormlite.dao.DaoManager;
 
+import static org.bdgp.MMSlide.Dao.Dao.one;
+
 /**
  * Extend the ORMlite Dao to use improved update methods, and add a
  * static initializer that handles creating CSV files.
@@ -38,7 +40,7 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
 	    super(connectionSource, class_);
 	}
 	
-	private static ConnectionSource getdb() throws SQLException {
+	private static synchronized ConnectionSource getdb() throws SQLException {
 	    if (connection == null) {
             connection = new JdbcConnectionSource("jdbc:hsqldb:mem:memdb","SA","");
 	    }
@@ -54,7 +56,8 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
 	 * @return A DAO instance
 	 * @throws SQLException
 	 */
-	public static <T,ID> DaoID<T,ID> getDao(Class<T> class_, String filename) {
+	public static synchronized <T,ID> DaoID<T,ID> getDao(Class<T> class_, String filename) 
+	{
 	    try {
     	    getdb();
     		File file = new File(filename);
@@ -69,8 +72,9 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
         		for (Field field : class_.getFields()) {
         		    DatabaseFieldConfig dfield = DatabaseFieldConfig.fromField(
         		            connection.getDatabaseType(), class_.getName(), field);
-        		    if (dfield == null)
+        		    if (dfield == null) {
         		        dfield = new DatabaseFieldConfig(field.getName());
+        		    }
         		    fieldConfigs.add(dfield);
         		}
         		tableConfig = new DatabaseTableConfig<T>(class_, fieldConfigs);
@@ -86,7 +90,8 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
     		    // make sure the parent directories exist
     		    File dir = file.getParentFile();
     		    if (dir != null && !(dir.exists() && dir.isDirectory())) {
-            		if (!dir.mkdirs()) {
+    		        dir.mkdirs();
+            		if (!(dir.exists() && dir.isDirectory())) {
             		    throw new SQLException("Could not create directory "+dir.getPath());
             		}
     		    }
@@ -96,9 +101,9 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
         		    dao.executeRaw(c.replaceFirst("^CREATE TABLE ","CREATE CACHED TEXT TABLE "));
         		}
         		// call SET TABLE
-        		if (file.getPath().matches("[;\\]")) 
+        		if (file.getPath().matches("[;\\]")) {
         		    throw new SQLException("Invalid characters in filename: "+file.getPath());
-        		
+        		}
         		// escape any double quotes
         		String tablename = file.getPath().replaceAll("\"","\"\"");
         		String source = tablename+';'+options.replaceAll("\"","\"\"");
@@ -186,7 +191,7 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
 	 * @return
 	 */
 	public Dao.CreateOrUpdateStatus 
-	    createOrUpdate(T value, String ... where)
+	    insertOrUpdate(T value, String ... where)
 	{
 	    try {
 	        Class<T> class_ = this.getDataClass();
@@ -215,6 +220,71 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
     	        return new Dao.CreateOrUpdateStatus(false, true, rows);
     	    }
 	    } catch (SQLException e) {throw new RuntimeException(e);}
+	}
+	
+	/**
+	 * Insert a value into the database table.
+	 * @param value Object to insert
+	 * @return The number of rows updated in the database. This should be 1.
+	 */
+	public int insert(T value) {
+	    try {
+            return super.create(value);
+        } 
+	    catch (SQLException e) {throw new RuntimeException(e);}
+	}
+	
+	/**
+	 * Delete a value from the database table.
+	 * @return The number of records deleted
+	 */
+	public int delete(T data) {
+	    try {
+    	    return super.delete(data);
+	    }
+        catch (SQLException e) {throw new RuntimeException(e);}
+	}
+	
+	/**
+	 * Delete all records in a table.
+	 * @return The number of records deleted
+	 */
+	public int delete() {
+	    try {
+            return super.delete(super.deleteBuilder().prepare());
+        } 
+	    catch (SQLException e) {throw new RuntimeException(e);}
+	}
+	
+	/**
+	 * Select values from the database table.
+	 * @param fieldValues
+	 * @return
+	 */
+	public List<T> select(Map<String,Object> fieldValues) {
+	    try {
+    	    return super.queryForFieldValuesArgs(fieldValues);
+	    }
+        catch (SQLException e) {throw new RuntimeException(e);}
+	}
+	public List<T> select(T matchObj) {
+	    try {
+    	    return super.queryForMatchingArgs(matchObj);
+	    }
+        catch (SQLException e) {throw new RuntimeException(e);}
+	}
+	public List<T> select() {
+	    try {
+    	    return super.queryForAll();
+	    }
+	    catch (SQLException e) {throw new RuntimeException(e);}
+	}
+	
+	public T selectOne(Map<String,Object> fieldValues) {
+	    return one(select(fieldValues));
+	}
+	public T selectOne(T matchObj) {
+	    return one(select(matchObj));
 	}
 }
 

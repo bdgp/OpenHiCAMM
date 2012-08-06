@@ -1,17 +1,15 @@
 package org.bdgp.MMSlide.Modules;
 
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.bdgp.MMSlide.Logger;
+import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.Dao.Config;
 import org.bdgp.MMSlide.Dao.Dao;
 import org.bdgp.MMSlide.Dao.Task.Status;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
-import org.bdgp.MMSlide.Modules.Interfaces.WorkerImageCamera;
 import org.bdgp.MMSlide.Modules.Interfaces.Root;
 import org.bdgp.MMSlide.Modules.Interfaces.WorkerSlide;
 import org.micromanager.api.AcquisitionEngine;
@@ -21,10 +19,8 @@ import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
 
 import java.io.File;
-import java.io.IOException;
 
 public class SlidePool implements Module<WorkerSlide>, Root {
-
     // File name will be unique, even if several pool workers in same workflow (use same experiment)
 	protected final String POOL_FILE = "pool_contents.txt";
 	protected Dao<PoolData> pool;
@@ -41,12 +37,6 @@ public class SlidePool implements Module<WorkerSlide>, Root {
 		// Everywhere else is fine. 
 	}
 	
-	@Override
-	public boolean test() {
-		// TODO Auto-generated method stub
-	    return false;
-	}
-
 	public void setNoAcquisition() {
 		// TODO Auto-generated method stub
 		
@@ -125,12 +115,6 @@ public class SlidePool implements Module<WorkerSlide>, Root {
     }
 
     @Override
-    public boolean canRunInCommandLineMode() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
     public Map<String, Config> configure() {
         // TODO Save items independent of storage pool
 		// XY list/selection of ROI
@@ -164,8 +148,9 @@ public class SlidePool implements Module<WorkerSlide>, Root {
     }
 
     @Override
-    public Status callSuccessor(WorkerSlide successor,
-            Map<String, Config> config, Logger logger) {
+    public Status callSuccessor(WorkerSlide successor, int instance_id,
+            Map<String, Config> config, Logger logger) 
+    {
         // TODO Auto-generated method stub
         return null;
     }
@@ -183,5 +168,10 @@ public class SlidePool implements Module<WorkerSlide>, Root {
     @Override
     public String getDescription() {
         return "Define and load (optional) slides from a pool";
+    }
+
+    @Override
+    public boolean requiresDataAcquisitionMode() {
+        return true;
     }
 }

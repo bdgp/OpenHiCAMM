@@ -14,13 +14,7 @@ import org.bdgp.MMSlide.Modules.Interfaces.Root;
  *
  */
 public class Start implements Module<Root> {
-    static { WorkflowRunner.addModule(Start.class); }
-    
-    public boolean canRunInCommandLineMode() {
-        return true;
-    }
-
-    public Status callSuccessor(Root successor, Map<String,Config> config, Logger logger) {
+    public Status callSuccessor(Root successor, int instance_id, Map<String,Config> config, Logger logger) {
         return successor.start(config);
     }
 
@@ -39,12 +33,12 @@ public class Start implements Module<Root> {
     }
 
     @Override
-    public boolean test() {
-        return false;
+    public Map<String, Config> configure() {
+        return null;
     }
 
     @Override
-    public Map<String, Config> configure() {
-        return null;
+    public boolean requiresDataAcquisitionMode() {
+        return false;
     }
 }

@@ -69,7 +69,7 @@ public class Config {
      */
     public static Map<String,Config> getMap(List<Config> ... configs) {
         Map<String,Config> map = new HashMap<String,Config>();
-        for (int i=configs.length; i>=0; --i) {
+        for (int i=configs.length-1; i>=0; --i) {
             for (Config c : configs[i]) {
                 map.put(c.getKey(), c);
             }

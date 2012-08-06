@@ -71,13 +71,6 @@
                   <include>org.hsqldb:hsqldb</include>
                   <include>com.j256.ormlite:ormlite-core</include>
                   <include>com.j256.ormlite:ormlite-jdbc</include>
-                  <include>org.swixml:swixml</include>
-                  <include>commons-beanutils:commons-beanutils</include>
-                  <include>commons-logging:commons-logging</include>
-                  <include>javax.jnlp:jnlp</include>
-                  <include>com.apple:ui</include>
-                  <include>org.yuanheng.cookxml:cookxml</include>
-                  <include>org.yuanheng.cookswing:cookswing</include>
                   <include>net.sf.jopt-simple:jopt-simple</include>
                 </includes>
               </artifactSet>
@@ -92,21 +85,6 @@
     <id>ormlite</id> 
     <url>http://ormlite.com/releases/</url>
   </repository>
-  <repository>
-    <id>google-swixml2</id>
-    <url>http://swixml2.googlecode.com/svn/mavenrepo</url>
-  </repository>
-  <repository>
-    <id>el4.elca-services.ch</id>
-    <url>http://el4.elca-services.ch/el4j/maven2repository</url>
-  </repository>
-  <repository>
-     <id>sonatype-repository</id>
-     <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-     <releases>
-     <enabled>false</enabled>
-    </releases>
-  </repository> 
  </repositories> 
   <dependencies>
   	<dependency>
@@ -160,24 +138,9 @@
 	  	<version>4.41</version>
 	  </dependency>
 	  <dependency>
-	  	<groupId>org.swixml</groupId>
-	  	<artifactId>swixml</artifactId>
-	  	<version>2.6-SNAPSHOT</version>
-	  </dependency>
-	  <dependency>
 	  	<groupId>net.sf.jopt-simple</groupId>
 	  	<artifactId>jopt-simple</artifactId>
 	  	<version>4.3</version>
-	  </dependency>
-	  <dependency>
-	  	<groupId>org.yuanheng.cookswing</groupId>
-	  	<artifactId>cookswing</artifactId>
-	  	<version>1.5-patch2</version>
-	  </dependency>
-	  <dependency>
-	  	<groupId>org.yuanheng.cookxml</groupId>
-	  	<artifactId>cookxml</artifactId>
-	  	<version>3.0.1-patch4</version>
 	  </dependency>
   </dependencies>
 </project>

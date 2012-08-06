@@ -15,18 +15,11 @@ import org.bdgp.MMSlide.Dao.Task.Status;
  */
 public interface Module<S> {
     /**
-     * @return True or false depending on whether this module can be run
-     * in command-line mode.
+     * @return True or false depending on whether this module must be
+     * run in data acquisition mode.
      */
-    public boolean canRunInCommandLineMode();
+    public boolean requiresDataAcquisitionMode();
     
-    /**
-     * Perform any relevant tests to ensure the module is properly
-     * configured.
-     * @return 
-     */
-    public boolean test();
-
     /**
      * Run the module configuration dialog and return the configuration.
      * @return
@@ -35,8 +28,9 @@ public interface Module<S> {
     
     /**
      * Call a successor.
+     * @param instance_id 
      */
-    public Status callSuccessor(S successor, Map<String,Config> config, Logger logger);
+    public Status callSuccessor(S successor, int instance_id, Map<String,Config> config, Logger logger);
     
     /**
      * Return the successor interface class object

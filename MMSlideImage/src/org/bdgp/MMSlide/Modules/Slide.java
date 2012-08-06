@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Vector;
 
 import org.bdgp.MMSlide.Logger;
+import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.Dao.Config;
 import org.bdgp.MMSlide.Dao.Task.Status;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
@@ -18,7 +19,6 @@ import org.micromanager.api.DeviceControlGUI;
 import org.micromanager.navigation.PositionList;
 
 public class Slide implements Module<WorkerSlide>, Root, WorkerSlide {
-
 	private Vector<WorkerSlide> child_slide;
 	private Vector<WorkerImageCamera> child_camera;
 	
@@ -45,11 +45,6 @@ public class Slide implements Module<WorkerSlide>, Root, WorkerSlide {
 		}
 	}
 	
-	@Override
-	public boolean test() {
-	    return false;
-	}
-
 	public void setAcquisitionNew() {
 		// TODO Auto-generated method stub
 		
@@ -76,23 +71,16 @@ public class Slide implements Module<WorkerSlide>, Root, WorkerSlide {
         return null;
     }
 
-
-    @Override
-    public boolean canRunInCommandLineMode() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-
     @Override
     public Map configure() {
         // TODO Auto-generated method stub
         return null;
     }
 
-
     @Override
-    public Status callSuccessor(WorkerSlide successor, Map<String,Config> config, Logger logger) {
+    public Status callSuccessor(WorkerSlide successor, int instance_id, 
+            Map<String,Config> config, Logger logger) 
+    {
         // TODO Auto-generated method stub
         return null;
     }
@@ -111,5 +99,11 @@ public class Slide implements Module<WorkerSlide>, Root, WorkerSlide {
     @Override
     public String getDescription() {
         return "Imaging and/or dealing with all the images from a slide";
+    }
+
+
+    @Override
+    public boolean requiresDataAcquisitionMode() {
+        return false;
     }
 }

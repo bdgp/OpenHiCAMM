@@ -17,8 +17,11 @@ public class ChainMap<K,V> implements Map<K,V> {
         this.map_ = map_;
     }
     
+    // Various chained putters
     public ChainMap<K,V> with(K k, V v) { this.put(k, v); return this; }
     public ChainMap<K,V> and(K k, V v) { this.put(k, v); return this; }
+    public ChainMap<K,V> o(K k, V v) { this.put(k, v); return this; }
+    public ChainMap<K,V> _(K k, V v) { this.put(k, v); return this; }
     
     // Map implementation
     @Override

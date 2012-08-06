@@ -14,7 +14,7 @@ public class Logger {
     public Logger(String logfile, String source, Level loglevel) {
         this.logger = Dao.get(Log.class, logfile);
         this.source = source;
-        this.loglevel = loglevel;
+        this.loglevel = loglevel != null ? loglevel : Level.INFO;
     }
     public void log(Level loglevel, String message) {
         if (this.loglevel.compareTo(loglevel) <= 0) {

@@ -1,8 +1,14 @@
 package org.bdgp.MMSlide;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +16,8 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.bdgp.MMSlide.Dao.Config;
 import org.bdgp.MMSlide.Dao.Dao;
@@ -22,7 +30,6 @@ import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.bdgp.MMSlide.Modules.Interfaces.Root;
 
 import static org.bdgp.MMSlide.ChainMap.where;
-import static org.bdgp.MMSlide.Dao.Dao.one;
 
 public class WorkflowRunner {
     /**
@@ -33,26 +40,7 @@ public class WorkflowRunner {
     public static final String TASK_CONFIG_FILE = "taskconfig.txt";
     public static final String TASK_STATUS_FILE = "tasks.txt";
     public static final String LOG_FILE = "log.txt";
-    
-    /**
-     * Keep a registry of all known workflow modules. 
-     * It is the responsibility of each workflow module to register with the 
-     * WorkflowRunner as part of its static initialization.
-     */
-    private static Set<Class<?>> modules = new HashSet<Class<?>>();
-    public static void addModule(Class<?> module) {
-       if (!Module.class.isAssignableFrom(module)) {
-           throw new RuntimeException("Class "+module.getName()+
-                   " does not inherit from module!");
-       }
-       modules.add(module); 
-    }
-    public static void removeModule(Class<?> module) {
-       modules.remove(module); 
-    }
-    public static Set<Class<?>> getModules() {
-        return modules;
-    }
+    public static final String MODULE_LIST = "META-INF/modules.txt";
     
     private File workflowDirectory;
     private Dao<WorkflowModule> workflow;
@@ -65,9 +53,36 @@ public class WorkflowRunner {
     // The list of currently running threads
     private ExecutorService pool;
     
-    public WorkflowRunner(String workflowDirectory) {
-        this(workflowDirectory, Integer.MAX_VALUE, Level.INFO);
+    /**
+     * @return The list of registered modules from the META-INF/modules.txt files.
+     */
+    public static List<String> getModuleNames() {
+        try {
+            Enumeration<URL> configs = ClassLoader.getSystemResources(MODULE_LIST);
+            Set<String> modules = new HashSet<String>();
+            for (URL url : Collections.list(configs)) {
+                BufferedReader r = new BufferedReader(
+                        new InputStreamReader(url.openStream(), "utf-8"));
+                String line;
+                while ((line = r.readLine()) != null) {
+                    Matcher m = Pattern.compile("^\\s*([^#\\s]+)").matcher(line);
+                    if (m.find() && m.groupCount() > 0) {
+                        Class<?> c = Class.forName(m.group(1));
+                        if (!Module.class.isAssignableFrom(c)) {
+                            throw new RuntimeException(
+                                    "Class "+c.getName()+
+                                    " does not implement the Module interface");
+                        }
+                        modules.add(m.group(1));
+                    }
+                }
+            }
+            return new ArrayList<String>(modules);
+        } 
+        catch (IOException e) {throw new RuntimeException(e);}
+        catch (ClassNotFoundException e) {throw new RuntimeException(e);}
     }
+    
     /**
      * Constructor for WorkflowRunner. This loads the workflow.txt file 
      * in the workflow directory and performs some consistency checks 
@@ -89,8 +104,7 @@ public class WorkflowRunner {
             }
             
             // Load the workflow file
-            Dao<WorkflowModule> workflow;
-            workflow = Dao.get(WorkflowModule.class, workflowFile.getPath());
+            Dao<WorkflowModule> workflow = Dao.get(WorkflowModule.class, workflowFile.getPath());
             
             // Check for consistency
             for (WorkflowModule w : workflow.queryForAll()) {
@@ -141,16 +155,86 @@ public class WorkflowRunner {
         catch (IllegalAccessException e) {throw new RuntimeException(e);} 
     }
     
-    public void run(int instance_id) {
-        run(instance_id, true);
+    /**
+     * Initialize the workflow instance's subdirectories and tasks.txt files.
+     * @return the assigned instance_id for the new workflow instance.
+     */
+    public int newWorkflowInstance() {
+        Dao<Task> tasks = Dao.get(Task.class,
+                new File(workflowDirectory, TASK_STATUS_FILE).getPath());
+        // assign a new instance_id
+        int instance_id = 1;
+        for (Task task : tasks.select()) {
+            if (instance_id <= task.getId()) {
+                instance_id  = task.getId() + 1;
+            }
+        }
+        // create a new directory for the workflow instance
+        File instanceDir = new File(workflowDirectory, 
+                "WF"+String.format("%05d", instance_id));
+        if (!instanceDir.mkdirs()) {
+            throw new RuntimeException("Could not create directory "
+                    +instanceDir.getPath());
+        }
+        // make a task record that points to the workflow instance.
+        tasks.insert(new Task(instance_id, null, instanceDir.getName(), Status.NEW));
+        return instance_id;
     }
-    public void run(int instance_id, boolean resume) {
+    
+    public void run(
+            int instance_id, 
+            boolean resume,
+            boolean dataAcquisitionMode) 
+    {
         Task start = new Task(instance_id, null, 
                 this.workflowDirectory.getPath(), Status.NEW);
-        runSuccessors(start, resume, instance_id);
+        runSuccessors(start, resume, dataAcquisitionMode, instance_id);
     }
-    public void runSuccessors(Task task, boolean resume) {
-        runSuccessors(task, resume, null);
+    public void runSuccessors(
+            Task task, 
+            boolean resume, 
+            boolean dataAcquisitionMode) 
+    {
+        runSuccessors(task, resume, dataAcquisitionMode, null);
+    }
+    
+    /**
+     * Initialize the successors' module directories and populate their 
+     * task statuses if necessary, and return the task status Dao object.
+     * @param directory The parent workflow directory
+     * @param successors The list of successor workflow modules.
+     * @return The dao object for the task statuses
+     */
+    synchronized private Dao<Task> getTasks(File directory, List<WorkflowModule> successors) 
+    {
+        if (!directory.exists()) {
+            directory.mkdirs();
+            if (!directory.exists()) {
+                throw new RuntimeException(
+                        "Could not create directory "+directory.getPath());
+            }
+        }
+        File taskFile = new File(directory, TASK_STATUS_FILE);
+        boolean taskFileExists = taskFile.exists();
+        Dao<Task> tasks = Dao.get(Task.class, taskFile.getPath());
+        
+        // If the task file didn't exist, we need to populate it with the 
+        // default task status information.
+        if (!taskFileExists) {
+            for (WorkflowModule module : successors) {
+                for (int i=1; i<=module.getInstanceCount(); ++i) {
+                    File subdir = new File(directory, 
+                            module.getId()+"."+String.format("%03i",i));
+                    subdir.mkdirs();
+                    if (!subdir.exists()) {
+                        throw new RuntimeException("Could not create directory "
+                                +subdir.getPath());
+                    }
+                    tasks.insert(new Task(i, module.getId(), subdir.getName(), Status.NEW));       
+                }
+            }
+        }
+        return tasks;
     }
     
     /**
@@ -159,38 +243,47 @@ public class WorkflowRunner {
      * @param resume
      */
     @SuppressWarnings("unchecked")
-    public void runSuccessors(Task task, final boolean resume, Integer instance_id) {
+    public void runSuccessors(
+            Task task, 
+            final boolean resume, 
+            final boolean dataAcquisitionMode,
+            Integer instance_id) 
+    {
         try {
             @SuppressWarnings("rawtypes")
             final Module module = task.getModuleId() == null
                 ? new Start()
-                : one(this.workflow.queryForFieldValuesArgs(
-                    where("id",task.getModuleId()))).getModule().newInstance();
+                : this.workflow.selectOne(
+                    where("id",task.getModuleId())).getModule().newInstance();
             
-            List<WorkflowModule> successors = this.workflow.queryForFieldValuesArgs(
+            List<WorkflowModule> successors = this.workflow.select(
                     where("parentId", task.getModuleId()));
             
-            final Dao<Task> tasks = Dao.get(Task.class,
-                    new File(task.getStorageLocation(), TASK_STATUS_FILE).getPath());
-            
+            // Init the workflow directory and the status file, then 
+            // return the dao of the status file.
+            final Dao<Task> tasks = getTasks(
+                    new File(task.getStorageLocation()),
+                    successors);
+                
             for (WorkflowModule wf : successors) {
                 // if instance_id was specified, use it to filter out the tasks.
                 List<Task> successorTasks = instance_id == null
-                    ? tasks.queryForFieldValuesArgs(
+                    ? tasks.select(
                         where("moduleId",wf.getId()))
-                    : tasks.queryForFieldValuesArgs(
+                    : tasks.select(
                             where("moduleId",wf.getId()).
                             and("id",instance_id));
                 
                 for (final Task successorTask : successorTasks) {
                     // get the task configuration
                     Dao<Config> taskConfig = Dao.get(Config.class, 
-                            new File(successorTask.getStorageLocation(), TASK_CONFIG_FILE).getPath());
+                            new File(successorTask.getStorageLocation(),
+                                    TASK_CONFIG_FILE).getPath());
                         
                     // merge the task and module configuration
                     final Map<String,Config> config = Config.getMap(
-                            taskConfig.queryForAll(), 
-                            moduleConfig.queryForFieldValuesArgs(
+                            taskConfig.select(), 
+                            moduleConfig.select(
                                     where("moduleId",successorTask.getModuleId())));
                     // make sure all required fields are filled in
                     for (Map.Entry<String,Config> c : config.entrySet()) {
@@ -202,7 +295,7 @@ public class WorkflowRunner {
                         
                     @SuppressWarnings("rawtypes")
                     final Module successor = wf.getModule().newInstance();
-                        
+                    
                     this.pool.submit(new Callable<Status>() {
                         @Override
                         public Status call() throws Exception {
@@ -210,8 +303,8 @@ public class WorkflowRunner {
                             if ((!resume 
                                     || status == Status.NEW 
                                     || status == Status.DEFER)
-                                  && !(Main.isCommandLineMode() 
-                                          && !successor.canRunInCommandLineMode())) 
+                                  && !(!dataAcquisitionMode 
+                                          && successor.requiresDataAcquisitionMode())) 
                             {
                                 // set the task status to IN_PROGRESS
                                 successorTask.setStatus(Status.IN_PROGRESS);
@@ -222,7 +315,9 @@ public class WorkflowRunner {
                                         successorTask.getModuleId(),
                                         loglevel);
                                 // run the successor task
-                                status = module.callSuccessor(successor, config, successorLogger);
+                                status = module.callSuccessor(
+                                        successor, successorTask.getId(), 
+                                        config, successorLogger);
                                 
                                 // update the task status
                                 successorTask.setStatus(status);
@@ -230,17 +325,36 @@ public class WorkflowRunner {
                             }
                             // enqueue the successors of the successor
                             if (status == Status.SUCCESS) {
-                                runSuccessors(successorTask, resume);
+                                runSuccessors(successorTask, resume, dataAcquisitionMode);
                             }
                             return status;
                         }});
                 }
             }
         } 
-        catch (SQLException e) {throw new RuntimeException(e);} 
         catch (InstantiationException e) {throw new RuntimeException(e);}
         catch (IllegalAccessException e) {throw new RuntimeException(e);}
     }
 
-
+    /**
+     * Get a list of the instance ids from the task status file inside
+     * a workflow directory.
+     * @param workflowDirectory
+     * @return
+     */
+    public static List<Integer> getInstanceIds(String workflowDirectory) {
+        List<Integer> instanceIds = new ArrayList<Integer>();
+        File workflowPath = new File(workflowDirectory);
+        if (workflowPath.exists()) {
+            File statusFile = new File(workflowDirectory, TASK_STATUS_FILE);
+            if (statusFile.exists()) {
+                Dao<Task> status = Dao.get(Task.class, statusFile.getPath());
+                for (Task task : status.select()) {
+                    instanceIds.add(task.getId());
+                }
+            }
+        }
+        Collections.sort(instanceIds);
+        return instanceIds;
+    }
 }

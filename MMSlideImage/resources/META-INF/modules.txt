@@ -2,4 +2,3 @@ org.bdgp.MMSlide.Modules.ProcessImageROI
 org.bdgp.MMSlide.Modules.Slide
 org.bdgp.MMSlide.Modules.SlideAssembleTrakEM2
 org.bdgp.MMSlide.Modules.SlidePool
-org.bdgp.MMSlide.Modules.Start
