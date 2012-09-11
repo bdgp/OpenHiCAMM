@@ -30,7 +30,9 @@ import static org.bdgp.MMSlide.Dao.Dao.one;
  * @param <ID>
  */
 public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
-	protected static final String options = "fs=\\t";
+	protected static final String options = 
+	        "fs=\\t;textdb.allow_full_path=true;encoding=UTF-8;quoted=true;"+
+            "cache_rows=10000;cache_size=2000;ignore_first=true";
 	private static ConnectionSource connection;
 	
 	protected DaoID(Class<T> class_) throws SQLException {
@@ -100,14 +102,24 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
         		for (String c: create) {
         		    dao.executeRaw(c.replaceFirst("^CREATE TABLE ","CREATE CACHED TEXT TABLE "));
         		}
+        		
         		// call SET TABLE
         		if (file.getPath().matches("[;\\]")) {
         		    throw new SQLException("Invalid characters in filename: "+file.getPath());
         		}
-        		// escape any double quotes
         		String tablename = file.getPath().replaceAll("\"","\"\"");
         		String source = tablename+';'+options.replaceAll("\"","\"\"");
         		dao.executeRaw("SET TABLE \""+tablename+"\" SOURCE \""+source+"\"");
+        		
+        		// build the header string
+        		StringBuilder headerBuilder = new StringBuilder();
+        		List<DatabaseFieldConfig> fields = tableConfig.getFieldConfigs();
+        		for (int i=0; i<fields.size(); ++i) {
+        		    headerBuilder.append(fields.get(i).getColumnName());
+        		    if (i != fields.size()-1) headerBuilder.append("\t");
+        		}
+        		String header = headerBuilder.toString().replaceAll("'","''");
+        		dao.executeRaw("SET TABLE \""+tablename+"\" SOURCE HEADER '"+header+"'");
     		}
     		return dao;
 	    }
@@ -196,8 +208,8 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
 	    try {
 	        Class<T> class_ = this.getDataClass();
 	        TableInfo<T,ID> table = new TableInfo<T,ID>(connection, this, class_);
-    	    Map<String,FieldType> fields = new HashMap<String,FieldType>();
-    	    for (FieldType field : table.getFieldTypes()) {
+            Map<String,FieldType> fields = new HashMap<String,FieldType>();
+            for (FieldType field : table.getFieldTypes()) {
     	        fields.put(field.getFieldName(), field);
     	    }
     	    

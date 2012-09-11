@@ -26,7 +26,7 @@ public class Task {
     @DatabaseField(canBeNull=false)
     private String storageLocation;
     
-    public static enum Status {NEW, DEFER, IN_PROGRESS, SUCCESS, FAIL};
+    public static enum Status {ERROR, FAIL, SUCCESS, IN_PROGRESS, DEFER, NEW};
     
     @DatabaseField(canBeNull=false)
     private Status status;

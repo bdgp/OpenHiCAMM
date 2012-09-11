@@ -67,12 +67,10 @@ public class Config {
      * @param configs A list of configuration sources to search
      * @return A map of all configurations for the id
      */
-    public static Map<String,Config> getMap(List<Config> ... configs) {
+    public static Map<String,Config> merge(List<Config> configs) {
         Map<String,Config> map = new HashMap<String,Config>();
-        for (int i=configs.length-1; i>=0; --i) {
-            for (Config c : configs[i]) {
-                map.put(c.getKey(), c);
-            }
+        for (Config c : configs) {
+            map.put(c.getKey(), c);
         }
         return map;
     }

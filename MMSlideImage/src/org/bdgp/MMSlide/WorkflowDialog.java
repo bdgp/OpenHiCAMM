@@ -60,6 +60,7 @@ public class WorkflowDialog extends JDialog {
 	protected JComboBox<String> moduleList;
 	protected boolean dataAcquisitionMode;
 	protected Map<String,Config> configuration;
+    protected File workflowFile;
 	
 	public WorkflowDialog() {
 	    this(false);
@@ -274,11 +275,12 @@ public class WorkflowDialog extends JDialog {
                     }
                     @Override
                     public String getDescription() {
-                        return "workflow.txt files";
+                        return "workflow files";
                     }});
 		        if (chooser.showOpenDialog(dialog) == JFileChooser.APPROVE_OPTION) {
+		            workflowFile = chooser.getSelectedFile();
 		            Dao<WorkflowModule> wf = Dao.get(WorkflowModule.class, 
-		                    chooser.getSelectedFile().getName());
+		                    workflowFile.getName());
 		            List<WorkflowModule> modules = wf.select();
 		            if (modules.size() > 0) {
 		                treeRoot.removeAllChildren();
@@ -375,23 +377,27 @@ public class WorkflowDialog extends JDialog {
 		btnRun.setToolTipText("run the workflow");
 		btnRun.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
-		        WorkflowRunner runner = new WorkflowRunner(
-		                storLocText.getText(), 
-		                (Integer)numThreads.getValue(), 
-		                null);
-		        
-		        if (buttonGroup.isSelected(newButton.getModel())) {
-		            int instanceId = runner.newWorkflowInstance();
-		            runner.run(instanceId, false, dataAcquisitionMode);
+		        Integer instanceId = null;
+		        boolean resume = false;
+		        if (buttonGroup.isSelected(newButton.getModel())) { 
+		            instanceId = null;
+		            resume = false;
 		        }
 		        else if (buttonGroup.isSelected(resumeButton.getModel())) {
-		            int instanceId = Integer.parseInt((String)instanceIdList.getSelectedItem());
-		            runner.run(instanceId, true, dataAcquisitionMode);
+		            instanceId = Integer.parseInt((String)instanceIdList.getSelectedItem());
+		            resume = true;
 		        }
 		        else if (buttonGroup.isSelected(redoButton.getModel())) {
-		            int instanceId = Integer.parseInt((String) instanceIdList.getSelectedItem());
-		            runner.run(instanceId, false, dataAcquisitionMode);
+		            instanceId = Integer.parseInt((String) instanceIdList.getSelectedItem());
+		            resume = false;
 		        }
+		        WorkflowRunner runner = new WorkflowRunner(
+		                new File(storLocText.getText()), 
+		                instanceId,
+		                workflowFile,
+		                (Integer)numThreads.getValue(), 
+		                null);
+		        runner.run(resume, dataAcquisitionMode);
 		    }
 		});
 		
