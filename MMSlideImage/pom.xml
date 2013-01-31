@@ -88,32 +88,19 @@
  </repositories> 
   <dependencies>
   	<dependency>
-  		<groupId>commons-math</groupId>
-  		<artifactId>commons-math</artifactId>
-  		<version>3.0-SNAPSHOT</version>
-  		<scope>system</scope>
-	  	<systemPath>${fiji.dir}/jars/commons-math.jar</systemPath>	
-  	</dependency>
-  	<dependency>
   		<groupId>gov.nih.imagej</groupId>
   		<artifactId>imagej</artifactId>
   		<version>1.45</version>
-  		<scope>system</scope>
-  		<systemPath>${fiji.dir}/jars/ij.jar</systemPath>
   	</dependency>
   	<dependency>
   		<groupId>org.swinglabs</groupId>
   		<artifactId>swing-layout</artifactId>
-  		<version>1.0.4</version>
-  		<scope>system</scope>
-  		<systemPath>${fiji.dir}/jars/swing-layout-1.0.4.jar</systemPath>
+  		<version>1.0.3</version>
   	</dependency>
   	<dependency>
   		<groupId>org.swinglabs</groupId>
   		<artifactId>swingx</artifactId>
   		<version>0.9.5</version>
-  		<scope>system</scope>
-  		<systemPath>${fiji.dir}/jars/swingx-0.9.5.jar</systemPath>
   	</dependency>
   	<dependency>
   		<groupId>org.micromanager</groupId>
@@ -141,6 +128,11 @@
 	  	<groupId>net.sf.jopt-simple</groupId>
 	  	<artifactId>jopt-simple</artifactId>
 	  	<version>4.3</version>
+	  </dependency>
+	  <dependency>
+	  	<groupId>org.apache.commons</groupId>
+	  	<artifactId>commons-math3</artifactId>
+	  	<version>3.0</version>
 	  </dependency>
   </dependencies>
 </project>
