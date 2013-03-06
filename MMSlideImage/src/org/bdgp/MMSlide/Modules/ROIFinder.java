@@ -12,30 +12,39 @@ import org.bdgp.MMSlide.Dao.Task;
 import org.bdgp.MMSlide.Dao.Task.Status;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
-public class Start implements Module {
+/**
+ * Return x/y/len/width of bounding box surrounding the ROI
+ */
+public class ROIFinder implements Module {
+	public ROIFinder() { }
+	
+	public void processImage(int x, int y, boolean focus) {
+		// TODO Auto-generated method stub
+	}
+
+    @Override
+    public String getTitle() {
+        return "Detect ROI";
+    }
+
+    @Override
+    public String getDescription() {
+        return "Finding the ROI from an image";
+    }
+
     @Override
     public boolean requiresDataAcquisitionMode() {
         return false;
     }
 
     @Override
+    public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
+        return null;
+    }
+
+    @Override
     public JPanel configure(Configuration config) {
-        return null;
-    }
-
-    @Override
-    public Status run(WorkflowRunner workflow, Task task,
-            Map<String, Config> config, Logger logger) {
-        return null;
-    }
-
-    @Override
-    public String getTitle() {
-        return null;
-    }
-
-    @Override
-    public String getDescription() {
+        // TODO Auto-generated method stub
         return null;
     }
 

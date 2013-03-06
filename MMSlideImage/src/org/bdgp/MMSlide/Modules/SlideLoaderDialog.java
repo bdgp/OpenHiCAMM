@@ -31,9 +31,10 @@ import javax.swing.JTextField;
 import javax.swing.JList;
 import java.awt.Component;
 import javax.swing.Box;
+import java.awt.FlowLayout;
 
 @SuppressWarnings("serial")
-public class SlidePoolMainDialog extends JDialog {
+public class SlideLoaderDialog extends JDialog {
 	Vector<String> sl_cart, sl_pos, sl_expid;	
 	
 	protected JButton listButton_;
@@ -46,11 +47,11 @@ public class SlidePoolMainDialog extends JDialog {
 	private JTextField textField;
 	protected JList listPrevPool;
 	
-	SlidePool slide_pool_module = null;
+	SlideLoader slide_pool_module = null;
 //	StorageManager.StorageCollection other_pools;
 	
 //	public SlidePoolMainDialog(DeviceControlGUI mm_gui, SlidePool sp, StorageManager.StorageCollection other_pools) {
-	public SlidePoolMainDialog(DeviceControlGUI mm_gui, SlidePool sp) {
+	public SlideLoaderDialog(DeviceControlGUI mm_gui, SlideLoader sp) {
 		
 		this.gui = mm_gui;
 		slide_pool_module = sp;
@@ -78,7 +79,7 @@ public class SlidePoolMainDialog extends JDialog {
 		
 		JPanel poolPanel = new JPanel();
 		tabbedPanel.addTab("Pool", null, poolPanel, null);
-		poolPanel.setLayout(new GridLayout(2, 1, 0, 0));
+		poolPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
 		
 		JPanel panelNewPool = new JPanel();
 		poolPanel.add(panelNewPool);
@@ -96,7 +97,7 @@ public class SlidePoolMainDialog extends JDialog {
 		Component horizontalStrut = Box.createHorizontalStrut(20);
 		panelNewPool.add(horizontalStrut);
 		
-		JLabel lblTitle = new JLabel("Optional name:");
+		JLabel lblTitle = new JLabel("Name: ");
 		panelNewPool.add(lblTitle);
 		
 		textField = new JTextField();
@@ -249,10 +250,10 @@ public class SlidePoolMainDialog extends JDialog {
 		tabbedPanel.addTab("Positions", posPanel);
 
 		JPanel posChoicePanel = new JPanel();
-		posChoicePanel.setLayout(new GridLayout(2, 2, 0, 0));
 		posPanel.add(posChoicePanel, BorderLayout.CENTER);
 
 		ButtonGroup roiButtons = new ButtonGroup();
+		posChoicePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
 
 		JRadioButton radioSlideButton = new JRadioButton("Whole slide");
 		radioSlideButton.setSelected(true);
@@ -276,7 +277,6 @@ public class SlidePoolMainDialog extends JDialog {
 		if ( gui == null ) {
 			posPanel.setEnabled(false);
 		}
-
 	}
 	
 	protected void close() {
@@ -366,11 +366,8 @@ public class SlidePoolMainDialog extends JDialog {
 			String s_pos  = (String) table.getValueAt(r,1);
 			String s_exp  = (String) table.getValueAt(r,2);
 			
-			Integer i_cart = new Integer(s_cart);
 			Integer i_pos = new Integer(s_pos);
-			
-//			slide_pool_module.addPoolData(i_cart.intValue(), i_pos.intValue(), s_exp);
-			
+//			slide_pool_module.addPoolData(s_cart, i_pos.intValue(), s_exp);
 		}
 	}
 }

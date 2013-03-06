@@ -21,26 +21,14 @@ public class Log {
     public String getSource() {
         return source;
     }
-    public void setSource(String source) {
-        this.source = source;
-    }
     public Date getTime() {
         return time;
-    }
-    public void setTime(Date time) {
-        this.time = time;
     }
     public Level getLoglevel() {
         return loglevel;
     }
-    public void setLoglevel(Level loglevel) {
-        this.loglevel = loglevel;
-    }
     public String getMessage() {
         return message;
-    }
-    public void setMessage(String message) {
-        this.message = message;
     }
     @DatabaseField
     private String source;

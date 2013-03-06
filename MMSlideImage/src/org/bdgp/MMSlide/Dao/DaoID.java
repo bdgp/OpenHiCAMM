@@ -11,6 +11,7 @@ import java.util.Map;
 import com.j256.ormlite.field.DatabaseFieldConfig;
 import com.j256.ormlite.field.FieldType;
 import com.j256.ormlite.jdbc.JdbcConnectionSource;
+import com.j256.ormlite.stmt.DeleteBuilder;
 import com.j256.ormlite.stmt.SelectArg;
 import com.j256.ormlite.stmt.UpdateBuilder;
 import com.j256.ormlite.stmt.Where;
@@ -266,6 +267,26 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
             return super.delete(super.deleteBuilder().prepare());
         } 
 	    catch (SQLException e) {throw new RuntimeException(e);}
+	}
+	
+	/**
+	 * Delete any records in the table whose values match the where clause
+	 * map.
+	 * @param where The where clause map.
+	 * @return The number of rows deleted.
+	 */
+	public int delete(Map<String,Object> where) {
+	    try {
+    	    DeleteBuilder<T,ID> delete = this.deleteBuilder();
+    	    
+    	    // Add the where clause
+    	    Where<T,ID> whereClause = delete.where();
+    	    for (Map.Entry<String,Object> entry : where.entrySet()) {
+    	        whereClause.eq(entry.getKey(), new SelectArg(entry.getValue()));
+    	    }
+    	    whereClause.and(where.size());
+    	    return delete.delete();
+	    } catch (SQLException e) {throw new RuntimeException(e);}
 	}
 	
 	/**

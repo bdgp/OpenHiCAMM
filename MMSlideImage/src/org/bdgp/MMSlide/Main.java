@@ -1,19 +1,13 @@
 package org.bdgp.MMSlide;
 
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.lang.reflect.InvocationTargetException;
 
-import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
-public class Main implements Runnable {
-    private static boolean commandLineMode = false;
-    
+public class Main {
     public static void main(String[] args) throws InvocationTargetException, InterruptedException {
-        commandLineMode = true;
-        
         // try to set look and feel on Linux OS
         if (System.getProperty("os.name").equals("Linux")) {
             try {
@@ -23,21 +17,18 @@ public class Main implements Runnable {
         }
         
         // open the slide workflow dialog
-        SwingUtilities.invokeAndWait(new Main());
-    }
-    public static boolean isCommandLineMode() {
-       return commandLineMode; 
-    }
-    
-    @Override
-    public void run() {
-        final WorkflowDialog d = new WorkflowDialog();
-        d.setVisible(true);
-        d.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        d.addWindowListener(new WindowAdapter() {
-            public void windowClosing(WindowEvent e) {
-                d.setVisible(false);
-                System.exit(0);
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                final WorkflowDialog dialog = new WorkflowDialog();
+                dialog.pack();
+                dialog.setVisible(true);
+                
+                Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+                    public void uncaughtException(Thread t, Throwable e) {
+                        System.err.println(e.toString());
+                        JOptionPane.showMessageDialog(dialog, e.toString());
+                    }
+                });
             }
         });
     }

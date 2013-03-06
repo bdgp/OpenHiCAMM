@@ -9,7 +9,6 @@ import com.j256.ormlite.table.DatabaseTable;
  */
 @DatabaseTable
 public class Task {
-    public Task() {}
     public Task(int id, String moduleId, String storageLocation, Status status) {
        this.id = id;
        this.moduleId = moduleId;
@@ -34,25 +33,16 @@ public class Task {
     public int getId() {
         return id;
     }
-    public void setId(int id) {
-        this.id = id;
-    }
     public Status getStatus() {
         return status;
-    }
-    public void setStatus(Status status) {
-        this.status = status;
     }
     public String getStorageLocation() {
         return storageLocation;
     }
-    public void setStorageLocation(String storageLocation) {
-        this.storageLocation = storageLocation;
-    }
     public String getModuleId() {
         return moduleId;
     }
-    public void setModuleId(String moduleId) {
-        this.moduleId = moduleId;
+    public void setStatus(Status status) {
+        this.status = status;
     }
 };

@@ -72,6 +72,7 @@
                   <include>com.j256.ormlite:ormlite-core</include>
                   <include>com.j256.ormlite:ormlite-jdbc</include>
                   <include>net.sf.jopt-simple:jopt-simple</include>
+                  <include>com.miglayout:miglayout</include>
                 </includes>
               </artifactSet>
             </configuration>
@@ -130,9 +131,9 @@
 	  	<version>4.3</version>
 	  </dependency>
 	  <dependency>
-	  	<groupId>org.apache.commons</groupId>
-	  	<artifactId>commons-math3</artifactId>
-	  	<version>3.0</version>
+	  	<groupId>com.miglayout</groupId>
+	  	<artifactId>miglayout</artifactId>
+	  	<version>3.7.4</version>
 	  </dependency>
   </dependencies>
 </project>

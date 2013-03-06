@@ -12,30 +12,34 @@ import org.bdgp.MMSlide.Dao.Task;
 import org.bdgp.MMSlide.Dao.Task.Status;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
-public class Start implements Module {
+public class SlideImager implements Module {
+	public SlideImager() { }
+		
+    @Override
+    public String getTitle() {
+        return "Slide imaging";
+    }
+
+    @Override
+    public String getDescription() {
+        return "Imaging and/or dealing with all the images from a slide";
+    }
+
+
     @Override
     public boolean requiresDataAcquisitionMode() {
         return false;
     }
 
     @Override
+    public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
     public JPanel configure(Configuration config) {
-        return null;
-    }
-
-    @Override
-    public Status run(WorkflowRunner workflow, Task task,
-            Map<String, Config> config, Logger logger) {
-        return null;
-    }
-
-    @Override
-    public String getTitle() {
-        return null;
-    }
-
-    @Override
-    public String getDescription() {
+        // TODO Auto-generated method stub
         return null;
     }
 

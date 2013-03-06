@@ -20,33 +20,27 @@ public class WorkflowModule extends DefaultMutableTreeNode {
     @DatabaseField(canBeNull=false,useGetSet=true) 
     private String moduleName;
     @DatabaseField
-    private int instanceCount;
-    @DatabaseField
     private String parentId;
+    @DatabaseField 
+    private TaskType taskType;
     
-    private Class<Module<?>> module;
+    public static enum TaskType {SERIAL, PARALLEL};
+    
+    private Class<Module> module;
     
     public WorkflowModule() {
         super();
     }
-    public WorkflowModule(String id, String moduleName, int instanceCount, String parentId) {
+    public WorkflowModule(String id, String moduleName, String parentId, TaskType taskType) {
         super();
         this.id = id;
         setModuleName(moduleName);
-        this.instanceCount = instanceCount;
         this.parentId = parentId;
-        setUserObject(id + (instanceCount>1 ? " ("+instanceCount+")" : ""));
     }
     
     public String getId() {
         return id;
     }
-
-    public void setId(String id) {
-        this.id = id;
-        setUserObject(id + (instanceCount>1 ? " ("+instanceCount+")" : ""));
-    }
-
     public String getModuleName() {
         return moduleName;
     }
@@ -69,23 +63,13 @@ public class WorkflowModule extends DefaultMutableTreeNode {
         }
     }
     
-    public Class<Module<?>> getModule() {
+    public Class<Module> getModule() {
         return module;
     }
-    
-    public int getInstanceCount() {
-        return instanceCount;
-    }
-    public void setInstanceCount(int instanceCount) {
-        this.instanceCount = instanceCount;
-        setUserObject(id + (instanceCount>1 ? " ("+instanceCount+")" : ""));
-    }
-
     public String getParentId() {
         return parentId;
     }
-
-    public void setParentId(String parentId) {
-        this.parentId = parentId;
+    public TaskType getTaskType() {
+        return taskType;
     }
 }

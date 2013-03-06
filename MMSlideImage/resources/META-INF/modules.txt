@@ -1,4 +1,4 @@
-org.bdgp.MMSlide.Modules.ProcessImageROI
-org.bdgp.MMSlide.Modules.Slide
-org.bdgp.MMSlide.Modules.SlideAssembleTrakEM2
-org.bdgp.MMSlide.Modules.SlidePool
+org.bdgp.MMSlide.Modules.SlideLoader
+org.bdgp.MMSlide.Modules.SlideImager
+org.bdgp.MMSlide.Modules.ROIFinder
+org.bdgp.MMSlide.Modules.TIGenerator

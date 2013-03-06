@@ -12,30 +12,35 @@ import org.bdgp.MMSlide.Dao.Task;
 import org.bdgp.MMSlide.Dao.Task.Status;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
-public class Start implements Module {
+public class TIGenerator implements Module {
+
     @Override
     public boolean requiresDataAcquisitionMode() {
+        // TODO Auto-generated method stub
         return false;
     }
 
     @Override
-    public JPanel configure(Configuration config) {
-        return null;
-    }
-
-    @Override
-    public Status run(WorkflowRunner workflow, Task task,
-            Map<String, Config> config, Logger logger) {
+    public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
+        // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     public String getTitle() {
+        // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     public String getDescription() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public JPanel configure(Configuration config) {
+        // TODO Auto-generated method stub
         return null;
     }
 
@@ -44,4 +49,5 @@ public class Start implements Module {
         // TODO Auto-generated method stub
         
     }
+
 }
