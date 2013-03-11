@@ -44,11 +44,6 @@ public class SlideLoader implements Module {
     }
 
     @Override
-    public boolean requiresDataAcquisitionMode() {
-        return true;
-    }
-
-    @Override
     public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
         // TODO Auto-generated method stub
         return null;
@@ -64,5 +59,11 @@ public class SlideLoader implements Module {
     public void createTaskRecords(WorkflowRunner workflow, String moduleId) {
         // TODO Auto-generated method stub
         
+    }
+
+    @Override
+    public Map<String, Integer> getResources() {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

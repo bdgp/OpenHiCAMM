@@ -33,11 +33,6 @@ public class ROIFinder implements Module {
     }
 
     @Override
-    public boolean requiresDataAcquisitionMode() {
-        return false;
-    }
-
-    @Override
     public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
         return null;
     }
@@ -52,5 +47,11 @@ public class ROIFinder implements Module {
     public void createTaskRecords(WorkflowRunner workflow, String moduleId) {
         // TODO Auto-generated method stub
         
+    }
+
+    @Override
+    public Map<String, Integer> getResources() {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

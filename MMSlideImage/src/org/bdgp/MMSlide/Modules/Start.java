@@ -14,11 +14,6 @@ import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
 public class Start implements Module {
     @Override
-    public boolean requiresDataAcquisitionMode() {
-        return false;
-    }
-
-    @Override
     public JPanel configure(Configuration config) {
         return null;
     }
@@ -43,5 +38,11 @@ public class Start implements Module {
     public void createTaskRecords(WorkflowRunner workflow, String moduleId) {
         // TODO Auto-generated method stub
         
+    }
+
+    @Override
+    public Map<String, Integer> getResources() {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

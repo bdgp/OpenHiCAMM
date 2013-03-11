@@ -1,5 +1,6 @@
 package org.bdgp.MMSlide;
 
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -9,12 +10,15 @@ import javax.swing.JComboBox;
 
 import org.bdgp.MMSlide.Dao.Dao;
 import org.bdgp.MMSlide.Dao.Task;
+import org.bdgp.MMSlide.Dao.WorkflowModule;
+import org.bdgp.MMSlide.Modules.Start;
 
 import net.miginfocom.swing.MigLayout;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @SuppressWarnings("serial")
@@ -72,9 +76,29 @@ public class WorkflowDialog extends JFrame {
                     workflowInstances.add("-Create new Instance-");
                     Dao<Task> workflowStatus = Dao.get(Task.class, 
                             new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_STATUS_FILE).getPath());
+                    for (Task task : workflowStatus.select()) {
+                        workflowInstances.add(task.getStorageLocation());
+                    }
+                    Collections.sort(workflowInstances);
+                    workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
                     workflowInstance.setEnabled(true);
-                    // get list of starting tasks
+                    
+                    // get list of starting modules
+                    List<String> startModules = new ArrayList<String>();
+                    Dao<WorkflowModule> modules = Dao.get(WorkflowModule.class, 
+                            new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_FILE).getPath());
+                    for (WorkflowModule module : modules) {
+                        if (Start.class.isAssignableFrom(module.getModule())) {
+                            startModules.add(module.getId());
+                        }
+                    }
+                    Collections.sort(startModules);
+                    startTask.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
                     startTask.setEnabled(true);
+                    
+                    startButton.setEnabled(true);
+                    resumeButton.setEnabled(false);
+                    redoButton.setEnabled(false);
                 }
             }
         });

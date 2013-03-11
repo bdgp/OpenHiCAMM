@@ -25,12 +25,6 @@ public class SlideImager implements Module {
         return "Imaging and/or dealing with all the images from a slide";
     }
 
-
-    @Override
-    public boolean requiresDataAcquisitionMode() {
-        return false;
-    }
-
     @Override
     public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
         // TODO Auto-generated method stub
@@ -47,5 +41,11 @@ public class SlideImager implements Module {
     public void createTaskRecords(WorkflowRunner workflow, String moduleId) {
         // TODO Auto-generated method stub
         
+    }
+
+    @Override
+    public Map<String, Integer> getResources() {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

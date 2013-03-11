@@ -16,12 +16,6 @@ import org.bdgp.MMSlide.Dao.Task.Status;
  */
 public interface Module {
     /**
-     * @return True or false depending on whether this module must be
-     * run in data acquisition mode.
-     */
-    public boolean requiresDataAcquisitionMode();
-    
-    /**
      * Run the module configuration dialog and return the configuration.
      * @return
      */
@@ -48,4 +42,9 @@ public interface Module {
      * @return
      */
     public String getDescription();
+    
+    /**
+     * Return a map of the resources this module requires.
+     */
+    public Map<String,Integer> getResources();
 }

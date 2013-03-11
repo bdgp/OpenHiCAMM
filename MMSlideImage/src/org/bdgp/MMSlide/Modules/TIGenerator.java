@@ -13,13 +13,6 @@ import org.bdgp.MMSlide.Dao.Task.Status;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
 public class TIGenerator implements Module {
-
-    @Override
-    public boolean requiresDataAcquisitionMode() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
     @Override
     public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
         // TODO Auto-generated method stub
@@ -48,6 +41,12 @@ public class TIGenerator implements Module {
     public void createTaskRecords(WorkflowRunner workflow, String moduleId) {
         // TODO Auto-generated method stub
         
+    }
+
+    @Override
+    public Map<String, Integer> getResources() {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }
