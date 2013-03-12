@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide.Dao;
+package org.bdgp.MMSlide;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -8,9 +8,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
 import com.j256.ormlite.field.DatabaseFieldConfig;
 import com.j256.ormlite.field.FieldType;
-import com.j256.ormlite.jdbc.JdbcConnectionSource;
 import com.j256.ormlite.stmt.DeleteBuilder;
 import com.j256.ormlite.stmt.SelectArg;
 import com.j256.ormlite.stmt.UpdateBuilder;
@@ -22,8 +22,6 @@ import com.j256.ormlite.table.TableUtils;
 import com.j256.ormlite.dao.BaseDaoImpl;
 import com.j256.ormlite.dao.DaoManager;
 
-import static org.bdgp.MMSlide.Dao.Dao.one;
-
 /**
  * Extend the ORMlite Dao to use improved update methods, and add a
  * static initializer that handles creating CSV files.
@@ -34,21 +32,81 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
 	protected static final String options = 
 	        "fs=\\t;textdb.allow_full_path=true;encoding=UTF-8;quoted=true;"+
             "cache_rows=10000;cache_size=2000;ignore_first=true";
-	private static ConnectionSource connection;
+	private static Connection connection;
 	
 	protected DaoID(Class<T> class_) throws SQLException {
-	    super(getdb(), class_);
+	    super(getmemdb(), class_);
 	}
-	protected DaoID(ConnectionSource connectionSource, Class<T> class_) throws SQLException { 
+	protected DaoID(Connection connectionSource, Class<T> class_) throws SQLException { 
 	    super(connectionSource, class_);
 	}
 	
-	private static synchronized ConnectionSource getdb() throws SQLException {
+	private static synchronized ConnectionSource getmemdb() throws SQLException {
 	    if (connection == null) {
-            connection = new JdbcConnectionSource("jdbc:hsqldb:mem:memdb","SA","");
+            connection = new Connection("jdbc:hsqldb:mem:memdb");
 	    }
 	    return connection;
 	}
+	
+	/**
+	 * Return a DAO instance for a database table.
+	 * 
+	 * @param class_ The class to wrap
+	 * @param connection The database connection
+	 * @param tablename The name of the table to access
+	 * @return A DAO instance
+	 * @throws SQLException
+	 */
+	public static synchronized <T,ID> DaoID<T,ID> getTable(Class<T> class_, Connection connection, String tablename) 
+	{
+	    try {
+    		// get the table configuration
+    		DatabaseTableConfig<T> tableConfig = DatabaseTableConfig.fromClass(
+    		        connection, class_);
+    		
+    		if (tableConfig == null) {
+        		// get the field configurations
+        		List<DatabaseFieldConfig> fieldConfigs = new ArrayList<DatabaseFieldConfig>();
+        		for (Field field : class_.getFields()) {
+        		    DatabaseFieldConfig dfield = DatabaseFieldConfig.fromField(
+        		            connection.getDatabaseType(), class_.getName(), field);
+        		    if (dfield == null) {
+        		        dfield = new DatabaseFieldConfig(field.getName());
+        		    }
+        		    fieldConfigs.add(dfield);
+        		}
+        		tableConfig = new DatabaseTableConfig<T>(class_, fieldConfigs);
+    		}
+    		
+    		tableConfig.setTableName(tablename);
+    		DaoID<T,ID> dao = DaoManager.createDao(connection, tableConfig);
+    		
+    		// create the table if it doesn't already exist
+    		if (!dao.isTableExists()) {
+    		    // call CREATE TABLE
+        		List<String> create = TableUtils.getCreateTableStatements(connection, tableConfig);
+        		for (String c: create) {
+        		    dao.executeRaw(c);
+        		}
+    		}
+    		return dao;
+	    }
+	    catch (SQLException e) { throw new RuntimeException(e); }
+    }
+	
+	/**
+	 * Return a DAO instance for a database table.
+	 * 
+	 * @param class_ The class to wrap
+	 * @param connection The database connection
+	 * @param tablename The name of the table to access
+	 * @return A DAO instance
+	 * @throws SQLException
+	 */
+	public static synchronized <T,ID> DaoID<T,ID> getTable(Class<T> class_, String dbPath, String tablename) 
+	{
+        return getTable(class_, Connection.get(dbPath), tablename);
+    }
 	
 	/**
 	 * Return a DAO instance for a CSV file.
@@ -59,10 +117,10 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
 	 * @return A DAO instance
 	 * @throws SQLException
 	 */
-	public static synchronized <T,ID> DaoID<T,ID> getDao(Class<T> class_, String filename) 
+	public static synchronized <T,ID> DaoID<T,ID> getFile(Class<T> class_, String filename) 
 	{
 	    try {
-    	    getdb();
+    	    getmemdb();
     		File file = new File(filename);
     		
     		// get the table configuration
@@ -319,5 +377,31 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
 	public T selectOne(T matchObj) {
 	    return one(select(matchObj));
 	}
+	
+    /**
+     * Function to ensure that a query returned only one result.
+     * @param list The list to check.
+     * @return The single value from the list to return.
+     */
+    public static <T> T one(List<T> list, 
+            String noneErrorMessage, 
+            String multipleErrorMessage) 
+    {
+        if (noneErrorMessage == null)
+            noneErrorMessage = "Query returned no rows!";
+        if (multipleErrorMessage == null)
+            multipleErrorMessage = "Query returned multiple rows!";
+        
+        if (list.size() == 0) {
+            throw new RuntimeException(noneErrorMessage);
+        }
+        if (list.size() > 1) {
+            throw new RuntimeException(multipleErrorMessage);
+        }
+        return list.get(0);
+    }
+    public static <T> T one(List<T> list) {
+        return one(list, null, null);
+    }
 }
 

@@ -1,7 +1,9 @@
 package org.bdgp.MMSlide;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -61,5 +63,14 @@ public class ChainMap<K,V> implements Map<K,V> {
     }
     public static ChainMap<String,String> attr(String k, String v) {
         return new ChainMap<String,String>(new HashMap<String,String>()).with(k, v);
+    }
+    
+    /**
+     * Simple static function for list literals.
+     * @param values The list of things to turn into a list literal.
+     * @return
+     */
+    public static <V> List<V> list(V ... values) {
+        return Arrays.asList(values);
     }
 }

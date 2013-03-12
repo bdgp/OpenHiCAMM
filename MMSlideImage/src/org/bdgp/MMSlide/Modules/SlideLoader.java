@@ -7,25 +7,25 @@ import java.util.Map;
 import javax.swing.JPanel;
 
 import org.bdgp.MMSlide.Configuration;
+import org.bdgp.MMSlide.Dao;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.WorkflowRunner;
-import org.bdgp.MMSlide.Dao.Config;
-import org.bdgp.MMSlide.Dao.Dao;
-import org.bdgp.MMSlide.Dao.Pool;
-import org.bdgp.MMSlide.Dao.PoolData;
-import org.bdgp.MMSlide.Dao.Task;
-import org.bdgp.MMSlide.Dao.Task.Status;
+import org.bdgp.MMSlide.DB.Config;
+import org.bdgp.MMSlide.DB.Pool;
+import org.bdgp.MMSlide.DB.Slide;
+import org.bdgp.MMSlide.DB.Task;
+import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
 public class SlideLoader implements Module {
 	protected final String POOL = "pool.txt";
 	protected final String POOL_DATA_FILE = "pool_contents.txt";
 	protected Dao<Pool> pool;
-	protected Dao<PoolData> poolData;
+	protected Dao<Slide> poolData;
 	
 	public SlideLoader() { }
 	
-	public List<PoolData> getPoolData() throws SQLException {
+	public List<Slide> getPoolData() throws SQLException {
 		return poolData.select();
 	}
 	

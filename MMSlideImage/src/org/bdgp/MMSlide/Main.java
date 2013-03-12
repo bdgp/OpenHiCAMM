@@ -1,6 +1,5 @@
 package org.bdgp.MMSlide;
 
-import java.awt.Window;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;

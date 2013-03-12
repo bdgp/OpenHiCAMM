@@ -7,9 +7,9 @@ import javax.swing.JPanel;
 import org.bdgp.MMSlide.Configuration;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.WorkflowRunner;
-import org.bdgp.MMSlide.Dao.Config;
-import org.bdgp.MMSlide.Dao.Task;
-import org.bdgp.MMSlide.Dao.Task.Status;
+import org.bdgp.MMSlide.DB.Config;
+import org.bdgp.MMSlide.DB.Task;
+import org.bdgp.MMSlide.DB.Task.Status;
 
 /**
  * Interface for workflow modules.

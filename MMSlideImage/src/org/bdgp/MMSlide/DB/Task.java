@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide.Dao;
+package org.bdgp.MMSlide.DB;
 
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
@@ -9,17 +9,16 @@ import com.j256.ormlite.table.DatabaseTable;
  */
 @DatabaseTable
 public class Task {
-    public Task(int id, String moduleId, String storageLocation, Status status) {
-       this.id = id;
+    public Task(String moduleId, String storageLocation, Status status) {
        this.moduleId = moduleId;
        this.storageLocation = storageLocation;
        this.status = status;
     }
     
-    @DatabaseField(canBeNull=false,uniqueCombo=true)
+    @DatabaseField(generatedId=true,canBeNull=false)
     private int id;
     
-    @DatabaseField(canBeNull=false,uniqueCombo=true)
+    @DatabaseField(canBeNull=false)
     private String moduleId;
     
     @DatabaseField(canBeNull=false)

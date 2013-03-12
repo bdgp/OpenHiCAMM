@@ -24,13 +24,13 @@ import java.util.concurrent.Semaphore;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.bdgp.MMSlide.Dao.Config;
-import org.bdgp.MMSlide.Dao.Dao;
-import org.bdgp.MMSlide.Dao.Task;
-import org.bdgp.MMSlide.Dao.TaskDispatch;
-import org.bdgp.MMSlide.Dao.WorkflowModule;
-import org.bdgp.MMSlide.Dao.Task.Status;
-import org.bdgp.MMSlide.Dao.WorkflowModule.TaskType;
+import org.bdgp.MMSlide.DB.Config;
+import org.bdgp.MMSlide.DB.Task;
+import org.bdgp.MMSlide.DB.TaskDispatch;
+import org.bdgp.MMSlide.DB.WorkflowInstance;
+import org.bdgp.MMSlide.DB.WorkflowModule;
+import org.bdgp.MMSlide.DB.Task.Status;
+import org.bdgp.MMSlide.DB.WorkflowModule.TaskType;
 import org.bdgp.MMSlide.Logger.Level;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
@@ -40,14 +40,17 @@ public class WorkflowRunner {
     /**
      * Default file names for the metadata files.
      */
-    public static final String WORKFLOW_FILE = "workflow.txt";
-    public static final String WORKFLOW_STATUS_FILE = "workflow_status.txt";
-    public static final String MODULE_CONFIG_FILE = "module_config.txt";
-    public static final String TASK_CONFIG_FILE = "task_config.txt";
-    public static final String TASK_DISPATCH_FILE = "task_dispatch.txt";
-    public static final String TASK_STATUS_FILE = "tasks.txt";
+    public static final String WORKFLOW = "workflow";
+    public static final String WORKFLOW_INSTANCE = "workflow_instance";
+    public static final String MODULE_CONFIG = "module_config";
+    public static final String TASK_CONFIG = "task_config";
+    public static final String TASK_DISPATCH = "task_dispatch";
+    public static final String TASK_STATUS = "tasks";
     public static final String LOG_FILE = "log.txt";
     public static final String MODULE_LIST = "META-INF/modules.txt";
+    
+    private Connection workflowDb;
+    private Connection instanceDb;
     
     private File workflowDirectory;
     private File instanceDir;
@@ -55,7 +58,7 @@ public class WorkflowRunner {
     
     private Dao<WorkflowModule> workflow;
     private Dao<Config> moduleConfig;
-    private Dao<Task> workflowStatus;
+    private Dao<WorkflowInstance> workflowInstance;
     private Dao<TaskDispatch> taskDispatch;
     private Dao<Config> taskConfig;
     private Dao<Task> taskStatus;
@@ -93,7 +96,7 @@ public class WorkflowRunner {
             }
             
             // Load the workflow file
-            Dao<WorkflowModule> workflow = Dao.get(WorkflowModule.class, workflowFile.getPath());
+            Dao<WorkflowModule> workflow = Connection.file(WorkflowModule.class, workflowFile.getPath());
             
             // Make sure parent IDs are defined and that all successors are compatible.
             for (WorkflowModule w : workflow.queryForAll()) {
@@ -128,16 +131,16 @@ public class WorkflowRunner {
                 this.resources.put(entry.getKey(), new Semaphore(entry.getValue()));
             }
             if (!this.resources.containsKey("CPU")) {
-                this.resources.put("CPU",new Semaphore(4));
+                this.resources.put("CPU",new Semaphore(Runtime.getRuntime().availableProcessors()));
             }
             if (!this.resources.containsKey("microscope")) {
                 this.resources.put("microscope",new Semaphore(1));
             }
-                    
-            this.moduleConfig = Dao.get(Config.class, 
-                new File(workflowDirectory, MODULE_CONFIG_FILE).getPath());
-            this.workflowStatus = Dao.get(Task.class, 
-                new File(workflowDirectory, WORKFLOW_STATUS_FILE).getPath());
+            
+            this.workflowDb = Connection.get(new File(workflowDirectory, "workflow.db").getPath());
+            
+            this.moduleConfig = this.workflowDb.table(Config.class, MODULE_CONFIG);
+            this.workflowInstance = this.workflowDb.table(WorkflowInstance.class, WORKFLOW_INSTANCE);
             this.workflowDirectory = workflowDirectory;
             this.workflow = workflow;
             this.logger = new Logger(new File(workflowDirectory, LOG_FILE).getPath(), 
@@ -147,17 +150,10 @@ public class WorkflowRunner {
                 instanceId = newWorkflowInstance();
             }
             this.instanceId = instanceId;
-            
-            // task configuration
-            this.taskConfig = Dao.get(Config.class, 
-                    new File(instanceDir, TASK_CONFIG_FILE).getPath());
-            // task statuses
-            this.taskStatus = Dao.get(Task.class, 
-                    new File(instanceDir, TASK_STATUS_FILE).getPath());
-            // task statuses
-            this.taskDispatch = Dao.get(TaskDispatch.class, 
-                    new File(instanceDir, TASK_DISPATCH_FILE).getPath());
-            
+            this.instanceDb = Connection.get(new File(this.instanceDir, "instance.db").getPath());
+            this.taskConfig = this.instanceDb.table(Config.class, TASK_CONFIG);
+            this.taskStatus = this.instanceDb.table(Task.class, TASK_STATUS);
+            this.taskDispatch = this.instanceDb.table(TaskDispatch.class, TASK_DISPATCH);
         }
         catch (IOException e) {throw new RuntimeException(e);}
         catch (SQLException e) {throw new RuntimeException(e);}
@@ -168,24 +164,16 @@ public class WorkflowRunner {
      * @return the assigned instance_id for the new workflow instance.
      */
     private int newWorkflowInstance() {
-        // assign a new instance_id
-        int instance_id = 1;
-        for (Task task : workflowStatus.select()) {
-            if (instance_id <= task.getId()) {
-                instance_id  = task.getId() + 1;
-            }
-        }
+        WorkflowInstance instance = new WorkflowInstance(this.workflowDirectory.getPath());
+        workflowInstance.insert(instance);
         // create a new directory for the workflow instance
-        File instanceDir = new File(workflowDirectory, 
-                "WF"+String.format("%05d", instance_id));
         if (!instanceDir.mkdirs()) {
             throw new RuntimeException("Could not create directory "
                     +instanceDir.getPath());
         }
         // make a task record that points to the workflow instance.
-        workflowStatus.insert(new Task(instance_id, null, instanceDir.getName(), Status.NEW));
-        this.instanceDir = instanceDir;
-        return instance_id;
+        this.instanceDir = new File(instance.getStorageLocation());
+        return instance.getId();
     }
     
     public Future<Status> run(
@@ -389,30 +377,26 @@ public class WorkflowRunner {
         if (statuses.size() > 0) {
             Collections.sort(statuses);
             return statuses.get(0);
-            
         }
         return Status.SUCCESS;
     }
 
     /**
-     * Get a list of the instance ids from the workflow status file inside
+     * Get a list of the instance ids from the workflow instance file inside
      * a workflow directory.
      * @param workflowDirectory
      * @return
      */
     public static List<Integer> getInstanceIds(String workflowDirectory) {
         List<Integer> instanceIds = new ArrayList<Integer>();
-        File workflowPath = new File(workflowDirectory);
-        if (workflowPath.exists()) {
-            File statusFile = new File(workflowDirectory, WORKFLOW_STATUS_FILE);
-            if (statusFile.exists()) {
-                Dao<Task> status = Dao.get(Task.class, statusFile.getPath());
-                for (Task task : status.select()) {
-                    instanceIds.add(task.getId());
-                }
+        Connection workflowDb = Connection.get(new File(workflowDirectory, "workflow.db").getPath(), false);
+        if (workflowDb != null) {
+            Dao<WorkflowInstance> workflowInstance = workflowDb.table(WorkflowInstance.class, WORKFLOW_INSTANCE);
+            for (WorkflowInstance instance : workflowInstance.select()) {
+                instanceIds.add(instance.getId());
             }
+            Collections.sort(instanceIds);
         }
-        Collections.sort(instanceIds);
         return instanceIds;
     }
     
@@ -449,7 +433,7 @@ public class WorkflowRunner {
     public File getWorkflowDirectory() { return workflowDirectory; }
     public Dao<WorkflowModule> getWorkflow() { return workflow; }
     public Dao<Config> getModuleConfig() { return moduleConfig; }
-    public Dao<Task> getWorkflowStatus() { return workflowStatus; }
+    public Dao<WorkflowInstance> getWorkflowInstance() { return workflowInstance; }
     public Logger getLogger() { return logger; }
     public Level getLogLevel() { return logLevel; }
     public void setLogLevel(Level logLevel) { this.logLevel = logLevel; }

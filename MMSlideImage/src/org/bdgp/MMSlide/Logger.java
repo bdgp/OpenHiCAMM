@@ -3,8 +3,7 @@ package org.bdgp.MMSlide;
 import java.util.Date;
 import java.util.List;
 
-import org.bdgp.MMSlide.Dao.Dao;
-import org.bdgp.MMSlide.Dao.Log;
+import org.bdgp.MMSlide.DB.Log;
 
 public class Logger {
     public static enum Level {ALL, SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST, OFF};
@@ -13,7 +12,7 @@ public class Logger {
     private String source;
     private Level loglevel;
     public Logger(String logfile, String source, Level loglevel) {
-        this.logger = Dao.get(Log.class, logfile);
+        this.logger = Connection.file(Log.class, logfile);
         this.source = source;
         this.loglevel = loglevel != null ? loglevel : Level.INFO;
     }

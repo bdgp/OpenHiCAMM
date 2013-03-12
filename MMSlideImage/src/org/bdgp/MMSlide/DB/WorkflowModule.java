@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide.Dao;
+package org.bdgp.MMSlide.DB;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 
@@ -15,13 +15,13 @@ import com.j256.ormlite.table.DatabaseTable;
 @SuppressWarnings("serial")
 @DatabaseTable
 public class WorkflowModule extends DefaultMutableTreeNode {
-    @DatabaseField(id=true)
+    @DatabaseField(generatedId=true,canBeNull=false)
     private String id;
     @DatabaseField(canBeNull=false,useGetSet=true) 
     private String moduleName;
     @DatabaseField
     private String parentId;
-    @DatabaseField 
+    @DatabaseField(canBeNull=false)
     private TaskType taskType;
     
     public static enum TaskType {SERIAL, PARALLEL};

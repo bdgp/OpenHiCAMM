@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide.Dao;
+package org.bdgp.MMSlide.DB;
 
 import java.util.Date;
 
