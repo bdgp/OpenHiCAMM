@@ -34,12 +34,13 @@ import org.bdgp.MMSlide.DB.WorkflowModule.TaskType;
 import org.bdgp.MMSlide.Logger.Level;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
-import static org.bdgp.MMSlide.ChainMap.where;
+import static org.bdgp.MMSlide.Util.where;
 
 public class WorkflowRunner {
     /**
      * Default file names for the metadata files.
      */
+    public static final String WORKFLOW_DB = "workflow.db";
     public static final String WORKFLOW = "workflow";
     public static final String WORKFLOW_INSTANCE = "workflow_instance";
     public static final String MODULE_CONFIG = "module_config";
@@ -70,7 +71,6 @@ public class WorkflowRunner {
     private int maxThreads;
     private Map<String,Semaphore> resources;
     
-    
     /**
      * Constructor for WorkflowRunner. This loads the workflow.txt file 
      * in the workflow directory and performs some consistency checks 
@@ -95,8 +95,10 @@ public class WorkflowRunner {
                         +" was not found.");
             }
             
+            this.workflowDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath());
+            
             // Load the workflow file
-            Dao<WorkflowModule> workflow = Connection.file(WorkflowModule.class, workflowFile.getPath());
+            Dao<WorkflowModule> workflow = this.workflowDb.file(WorkflowModule.class, workflowFile.getPath());
             
             // Make sure parent IDs are defined and that all successors are compatible.
             for (WorkflowModule w : workflow.queryForAll()) {
@@ -136,8 +138,6 @@ public class WorkflowRunner {
             if (!this.resources.containsKey("microscope")) {
                 this.resources.put("microscope",new Semaphore(1));
             }
-            
-            this.workflowDb = Connection.get(new File(workflowDirectory, "workflow.db").getPath());
             
             this.moduleConfig = this.workflowDb.table(Config.class, MODULE_CONFIG);
             this.workflowInstance = this.workflowDb.table(WorkflowInstance.class, WORKFLOW_INSTANCE);

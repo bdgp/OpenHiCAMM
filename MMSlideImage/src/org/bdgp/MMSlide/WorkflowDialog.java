@@ -32,7 +32,7 @@ public class WorkflowDialog extends JFrame {
         
         directoryChooser = new JFileChooser();
         directoryChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        getContentPane().setLayout(new MigLayout("", "[][grow]", "[][][][][grow][]"));
+        getContentPane().setLayout(new MigLayout("", "[][grow]", "[][][][][200px:n,grow][]"));
         
         JLabel lblChooseWorkflowDirectory = new JLabel("Workflow Directory");
         getContentPane().add(lblChooseWorkflowDirectory, "cell 0 0,alignx trailing");
@@ -40,8 +40,8 @@ public class WorkflowDialog extends JFrame {
         workflowDir.setEditable(false);
         workflowDir.setColumns(40);
         getContentPane().add(workflowDir, "flowx,cell 1 0,growx");
-        JButton chooseWorkflowDirButton = new JButton("Choose");
-        getContentPane().add(chooseWorkflowDirButton, "cell 1 0");
+        JButton openWorkflowButton = new JButton("Choose");
+        getContentPane().add(openWorkflowButton, "cell 1 0");
         
         JLabel lblChooseWorkflowInstance = new JLabel("Workflow Instance");
         getContentPane().add(lblChooseWorkflowInstance, "cell 0 1,alignx trailing");
@@ -88,15 +88,22 @@ public class WorkflowDialog extends JFrame {
         JProgressBar progressBar = new JProgressBar();
         getContentPane().add(progressBar, "cell 1 5,growx");
         
-        chooseWorkflowDirButton.addActionListener(new ActionListener() {
+        JButton editWorkflowButton = new JButton("Edit...");
+        editWorkflowButton.setEnabled(false);
+        getContentPane().add(editWorkflowButton, "cell 1 0");
+        
+        openWorkflowButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                if (directoryChooser.showOpenDialog(thisDialog) == JFileChooser.APPROVE_OPTION) {
+                if (directoryChooser.showDialog(thisDialog,"Choose Workflow Directory") == JFileChooser.APPROVE_OPTION) {
                     workflowDir.setText(directoryChooser.getSelectedFile().getPath());
+                    
+                    Connection connection = Connection.get(
+                            new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
                     
                     // get the list of workflow instances
                     List<String> workflowInstances = new ArrayList<String>();
                     workflowInstances.add("-Create new Instance-");
-                    Dao<Task> workflowStatus = Connection.file(Task.class, 
+                    Dao<Task> workflowStatus = connection.file(Task.class, 
                             new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_INSTANCE).getPath());
                     for (Task task : workflowStatus.select()) {
                         workflowInstances.add(task.getStorageLocation());
@@ -107,8 +114,7 @@ public class WorkflowDialog extends JFrame {
                     
                     // get list of starting modules
                     List<String> startModules = new ArrayList<String>();
-                    Dao<WorkflowModule> modules = Connection.file(WorkflowModule.class, 
-                            new File(workflowDir.getText(), WorkflowRunner.WORKFLOW).getPath());
+                    Dao<WorkflowModule> modules = connection.table(WorkflowModule.class, WorkflowRunner.WORKFLOW);
                     for (WorkflowModule module : modules) {
                         if (Start.class.isAssignableFrom(module.getModule())) {
                             startModules.add(module.getId());
