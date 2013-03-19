@@ -2,6 +2,7 @@ package org.bdgp.MMSlide.DB;
 
 import java.io.File;
 
+import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
 
@@ -11,12 +12,13 @@ import com.j256.ormlite.table.DatabaseTable;
  */
 @DatabaseTable
 public class WorkflowInstance {
+    public WorkflowInstance() {}
     public WorkflowInstance(String directory) {
        this.directory = directory;
     }
     
     @DatabaseField(generatedId=true,canBeNull=false) private int id;
-    @DatabaseField(canBeNull=false) private String directory;
+    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) private String directory;
     
     public int getId() { return id; }
     public String getStorageLocation() { return new File(this.directory, getName()).getPath(); }

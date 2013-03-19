@@ -12,6 +12,7 @@ import com.j256.ormlite.table.DatabaseTable;
      */
 @DatabaseTable
 public class Log {
+    public Log() {}
     public Log(String source, Date time, Level loglevel, String message) {
         this.source = source;
         this.time = time;
@@ -30,12 +31,15 @@ public class Log {
     public String getMessage() {
         return message;
     }
-    @DatabaseField
+    public String toString() {
+        return String.format("%s\t%s\t%s\t%s",source,time,loglevel,message);
+    }
+    @DatabaseField(width=Integer.MAX_VALUE)
     private String source;
-    @DatabaseField
+    @DatabaseField(width=Integer.MAX_VALUE)
     private Date time;
-    @DatabaseField
+    @DatabaseField(width=Integer.MAX_VALUE)
     private Level loglevel;
-    @DatabaseField
+    @DatabaseField(width=Integer.MAX_VALUE)
     private String message;
 }

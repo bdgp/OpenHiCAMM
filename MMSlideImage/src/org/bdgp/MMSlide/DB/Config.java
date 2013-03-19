@@ -3,8 +3,8 @@ package org.bdgp.MMSlide.DB;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
+import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
 
@@ -15,19 +15,25 @@ import com.j256.ormlite.table.DatabaseTable;
  */
 @DatabaseTable
 public class Config {
-    @DatabaseField(canBeNull=false,uniqueCombo=true)
-    private int id;
+    public Config() {}
+    public Config(String id, String key, String value) {
+        this.id = id;
+        this.key = key;
+        this.value = value;
+    }
+    @DatabaseField(canBeNull=false,uniqueCombo=true,dataType=DataType.LONG_STRING)
+    private String id;
     
-    @DatabaseField(canBeNull=false,uniqueCombo=true)
+    @DatabaseField(canBeNull=false,uniqueCombo=true,dataType=DataType.LONG_STRING)
     private String key;
     
-    @DatabaseField
+    @DatabaseField(dataType=DataType.LONG_STRING)
     private String value;
     
     @DatabaseField(canBeNull=false)
     private boolean required;
 
-    public int getId() {
+    public String getId() {
         return id;
     }
     public String getKey() {

@@ -4,6 +4,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
+import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
 
@@ -15,13 +16,13 @@ import com.j256.ormlite.table.DatabaseTable;
 @SuppressWarnings("serial")
 @DatabaseTable
 public class WorkflowModule extends DefaultMutableTreeNode {
-    @DatabaseField(generatedId=true,canBeNull=false)
+    @DatabaseField(generatedId=true,canBeNull=false,dataType=DataType.LONG_STRING)
     private String id;
-    @DatabaseField(canBeNull=false,useGetSet=true) 
+    @DatabaseField(canBeNull=false,useGetSet=true,dataType=DataType.LONG_STRING) 
     private String moduleName;
-    @DatabaseField
+    @DatabaseField(dataType=DataType.LONG_STRING)
     private String parentId;
-    @DatabaseField(canBeNull=false)
+    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING)
     private TaskType taskType;
     
     public static enum TaskType {SERIAL, PARALLEL};
@@ -32,7 +33,7 @@ public class WorkflowModule extends DefaultMutableTreeNode {
         super();
     }
     public WorkflowModule(String id, String moduleName, String parentId, TaskType taskType) {
-        super();
+        super(id);
         this.id = id;
         setModuleName(moduleName);
         this.parentId = parentId;

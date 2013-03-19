@@ -8,6 +8,7 @@ public class TaskDispatch {
     @DatabaseField(canBeNull=false, uniqueCombo=true) private int parentTaskId;
     @DatabaseField(canBeNull=false, uniqueCombo=true) private int taskId;
 
+    public TaskDispatch() {}
     public TaskDispatch(int taskId, int parentTaskId) {
         this.taskId = taskId;
         this.parentTaskId = parentTaskId;

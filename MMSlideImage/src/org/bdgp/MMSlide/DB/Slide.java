@@ -11,6 +11,7 @@ public class Slide {
     @DatabaseField(canBeNull=false, uniqueCombo=true)
     private int slideNumber;
     
+    public Slide() {}
     public Slide(int cartridgeId, int slideNumber) {
         this.cartridgeId = cartridgeId;
         this.slideNumber = slideNumber;

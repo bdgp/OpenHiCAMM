@@ -11,6 +11,7 @@ public class ROI {
     @DatabaseField private long x2;
     @DatabaseField private long y2;
 
+    public ROI() {}
     public ROI(int id, int imageId, long x1, long y1, long x2, long y2) {
         this.id = id;
         this.x1 = x1;
