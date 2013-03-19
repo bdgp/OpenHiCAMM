@@ -6,6 +6,7 @@ import java.lang.reflect.InvocationTargetException;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
@@ -13,10 +14,8 @@ public class Main {
     public static void main(String[] args) throws InvocationTargetException, InterruptedException {
         // try to set look and feel on Linux OS
         if (System.getProperty("os.name").equals("Linux")) {
-            try {
-//                UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
-                UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-            } catch (Exception e) {}
+            try { UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel"); } catch (Exception e) {}
+            try { UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel"); } catch (Exception e) {}
         }
         
         // open the slide workflow dialog
@@ -34,7 +33,9 @@ public class Main {
                         e.printStackTrace(pw);
                         System.err.println(sw.toString());
                         
-                        JOptionPane.showMessageDialog(dialog, sw.toString());
+                        JTextArea text = new JTextArea(sw.toString());
+                        text.setEditable(false);
+                        JOptionPane.showMessageDialog(dialog, text);
                         dialog.dispose();
                     }
                 });
