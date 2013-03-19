@@ -15,12 +15,10 @@ import com.j256.ormlite.stmt.DeleteBuilder;
 import com.j256.ormlite.stmt.SelectArg;
 import com.j256.ormlite.stmt.UpdateBuilder;
 import com.j256.ormlite.stmt.Where;
-import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.DatabaseTableConfig;
 import com.j256.ormlite.table.TableInfo;
 import com.j256.ormlite.table.TableUtils;
 import com.j256.ormlite.dao.BaseDaoImpl;
-import com.j256.ormlite.dao.DaoManager;
 
 /**
  * Extend the ORMlite Dao to use improved update methods, and add a
@@ -32,20 +30,15 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
 	protected static final String options = 
 	        "fs=\\t;textdb.allow_full_path=true;encoding=UTF-8;quoted=true;"+
             "cache_rows=10000;cache_size=2000;ignore_first=true";
-	private static Connection connection;
+	private Connection connection;
 	
-	protected DaoID(Class<T> class_) throws SQLException {
-	    super(getmemdb(), class_);
+	protected DaoID(Connection connection, Class<T> class_) throws SQLException { 
+	    super(connection, class_);
+	    this.connection = connection;
 	}
-	protected DaoID(Connection connectionSource, Class<T> class_) throws SQLException { 
-	    super(connectionSource, class_);
-	}
-	
-	private static synchronized ConnectionSource getmemdb() throws SQLException {
-	    if (connection == null) {
-            connection = new Connection("jdbc:hsqldb:mem:memdb");
-	    }
-	    return connection;
+	protected DaoID(Connection connection, DatabaseTableConfig<T> tableConfig) throws SQLException { 
+	    super(connection, tableConfig);
+	    this.connection = connection;
 	}
 	
 	/**
@@ -79,7 +72,7 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
     		}
     		
     		tableConfig.setTableName(tablename);
-    		DaoID<T,ID> dao = DaoManager.createDao(connection, tableConfig);
+    		DaoID<T,ID> dao = new DaoID<T,ID>(connection, tableConfig);
     		
     		// create the table if it doesn't already exist
     		if (!dao.isTableExists()) {
@@ -117,10 +110,9 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
 	 * @return A DAO instance
 	 * @throws SQLException
 	 */
-	public static synchronized <T,ID> DaoID<T,ID> getFile(Class<T> class_, String filename) 
+	public static synchronized <T,ID> DaoID<T,ID> getFile(Class<T> class_, Connection connection, String filename) 
 	{
 	    try {
-    	    getmemdb();
     		File file = new File(filename);
     		
     		// get the table configuration
@@ -144,7 +136,7 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
     		// set the table name to the file's path. 
     		// Hopefully the ORM supports quoted identifiers...
     		tableConfig.setTableName(file.getAbsolutePath());
-    		DaoID<T,ID> dao = DaoManager.createDao(connection, tableConfig);
+    		DaoID<T,ID> dao = new DaoID<T,ID>(connection, tableConfig);
     		
     		// create the table if it doesn't already exist
     		if (!dao.isTableExists()) {
@@ -159,7 +151,7 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
     		    // call CREATE TEXT TABLE
         		List<String> create = TableUtils.getCreateTableStatements(connection, tableConfig);
         		for (String c: create) {
-        		    dao.executeRaw(c.replaceFirst("^CREATE TABLE ","CREATE CACHED TEXT TABLE "));
+        		    dao.executeRaw(c.replaceFirst("^CREATE TABLE ","CREATE TEXT TABLE "));
         		}
         		
         		// call SET TABLE

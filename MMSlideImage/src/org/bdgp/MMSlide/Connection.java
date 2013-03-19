@@ -54,8 +54,8 @@ public class Connection extends JdbcPooledConnectionSource {
         catch (SQLException e) {throw new RuntimeException(e);}
     }
     
-    public static <T> Dao<T> file(Class<T> class_, String filename) {
-        return (Dao<T>) DaoID.getFile(class_, filename);
+    public <T> Dao<T> file(Class<T> class_, String filename) {
+        return (Dao<T>) DaoID.getFile(class_, this, filename);
     }
     
 }
