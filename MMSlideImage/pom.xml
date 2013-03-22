@@ -86,6 +86,11 @@
     <id>ormlite</id> 
     <url>http://ormlite.com/releases/</url>
   </repository>
+    <repository>
+        <id>bam.lbl.gov</id>
+        <name>bam.lbl.gov-releases</name>
+        <url>http://bam.lbl.gov:8081/artifactory/libs-release-local</url>
+    </repository>
  </repositories> 
   <dependencies>
   	<dependency>
