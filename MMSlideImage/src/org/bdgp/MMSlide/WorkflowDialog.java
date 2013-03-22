@@ -103,8 +103,7 @@ public class WorkflowDialog extends JFrame {
                     // get the list of workflow instances
                     List<String> workflowInstances = new ArrayList<String>();
                     workflowInstances.add("-Create new Instance-");
-                    Dao<Task> workflowStatus = connection.file(Task.class, 
-                            new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_INSTANCE).getPath());
+                    Dao<Task> workflowStatus = connection.table(Task.class, WorkflowRunner.WORKFLOW_INSTANCE);
                     for (Task task : workflowStatus.select()) {
                         workflowInstances.add(task.getStorageLocation());
                     }

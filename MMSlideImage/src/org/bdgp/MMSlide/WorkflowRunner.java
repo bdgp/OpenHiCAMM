@@ -54,8 +54,7 @@ public class WorkflowRunner {
     private Connection instanceDb;
     
     private File workflowDirectory;
-    private File instanceDir;
-    private int instanceId;
+    private WorkflowInstance instance;
     
     private Dao<WorkflowModule> workflow;
     private Dao<Config> moduleConfig;
@@ -146,11 +145,12 @@ public class WorkflowRunner {
             this.logger = new Logger(new File(workflowDirectory, LOG_FILE).getPath(), 
                     "workflow", loglevel);
             
-            if (instanceId == null) {
-                instanceId = newWorkflowInstance();
+            if (instance == null) {
+                this.instance = newWorkflowInstance();
             }
-            this.instanceId = instanceId;
-            this.instanceDb = Connection.get(new File(this.instanceDir, "instance.db").getPath());
+            this.instanceDb = Connection.get(
+                    new File(this.instance.getStorageLocation(), 
+                    new File(this.instance.getStorageLocation()).getName()+".db").getPath());
             this.taskConfig = this.instanceDb.table(Config.class, TASK_CONFIG);
             this.taskStatus = this.instanceDb.table(Task.class, TASK_STATUS);
             this.taskDispatch = this.instanceDb.table(TaskDispatch.class, TASK_DISPATCH);
@@ -163,17 +163,15 @@ public class WorkflowRunner {
      * Initialize the workflow instance's subdirectories and tasks.txt files.
      * @return the assigned instance_id for the new workflow instance.
      */
-    private int newWorkflowInstance() {
+    private WorkflowInstance newWorkflowInstance() {
         WorkflowInstance instance = new WorkflowInstance(this.workflowDirectory.getPath());
         workflowInstance.insert(instance);
         // create a new directory for the workflow instance
-        if (!instanceDir.mkdirs()) {
+        if (!new File(instance.getStorageLocation()).mkdirs()) {
             throw new RuntimeException("Could not create directory "
-                    +instanceDir.getPath());
+                    +instance.getStorageLocation());
         }
-        // make a task record that points to the workflow instance.
-        this.instanceDir = new File(instance.getStorageLocation());
-        return instance.getId();
+        return instance;
     }
     
     public Future<Status> run(
@@ -183,7 +181,7 @@ public class WorkflowRunner {
         Future<Status> future = pool.submit(new Callable<Status>() {
             @Override
             public Status call() {
-                Future<Status> future = run(start, resume, instanceDir, null);
+                Future<Status> future = run(start, resume, new File(instance.getStorageLocation()), null);
                 Status status;
                 try { status = future.get(); } 
                 catch (ExecutionException e) {throw new RuntimeException(e);}
@@ -252,8 +250,8 @@ public class WorkflowRunner {
                         taskStatus.update(task, "id","moduleId");
                         
                         // instantiate a logger for the task
-                        Logger taskLogger = new Logger(
-                                new File(instanceDir, LOG_FILE).getPath(),
+                        Logger taskLogger = Logger.create(
+                                new File(instance.getStorageLocation(), LOG_FILE).getPath(),
                                 task.getModuleId(),
                                 logLevel);
                         
@@ -277,7 +275,7 @@ public class WorkflowRunner {
                             }
                         }
                         
-                        // run the successor task
+                        // run the task
                         try {
                             status = taskModule.run(workflowRunner, task, config, taskLogger);
                         } 
@@ -299,9 +297,22 @@ public class WorkflowRunner {
                                 where("parentTaskId",task.getId()));
                                     
                         List<Future<Status>> childFutures = new ArrayList<Future<Status>>();
+                        childTask:
                         for (TaskDispatch childTaskId : childTaskIds) {
                             Task childTask = taskStatus.selectOne(
                                     where("id",childTaskId.getTaskId()));
+                            
+                            // do not run the child task unless all of its parent tasks 
+                            // have already been run and have status Success.
+                            List<TaskDispatch> parentTaskIds = taskDispatch.select(
+                                    where("taskId",childTaskId.getTaskId()));
+                            for (TaskDispatch parentTaskId : parentTaskIds) {
+                                Task parentTask = taskStatus.selectOne(
+                                        where("id",parentTaskId.getTaskId()));
+                                if (parentTask.getStatus() != Status.SUCCESS) {
+                                    continue childTask;
+                                }
+                            }
                             
                             WorkflowModule childModule = workflow.selectOne(
                                     where("id",childTask.getModuleId()));
@@ -389,7 +400,7 @@ public class WorkflowRunner {
      */
     public static List<Integer> getInstanceIds(String workflowDirectory) {
         List<Integer> instanceIds = new ArrayList<Integer>();
-        Connection workflowDb = Connection.get(new File(workflowDirectory, "workflow.db").getPath(), false);
+        Connection workflowDb = Connection.get(new File(workflowDirectory, "workflow.db").getPath());
         if (workflowDb != null) {
             Dao<WorkflowInstance> workflowInstance = workflowDb.table(WorkflowInstance.class, WORKFLOW_INSTANCE);
             for (WorkflowInstance instance : workflowInstance.select()) {
@@ -438,7 +449,7 @@ public class WorkflowRunner {
     public Level getLogLevel() { return logLevel; }
     public void setLogLevel(Level logLevel) { this.logLevel = logLevel; }
     public int getMaxThreads() { return maxThreads; }
-    public int getInstanceId() { return instanceId; }
+    public WorkflowInstance getInstance() { return instance; }
     public Dao<Task> getTaskStatus() { return taskStatus; }
     public Dao<TaskDispatch> getTaskDispatch() { return taskDispatch; }
     public Dao<Config> getTaskConfig() { return taskConfig; }

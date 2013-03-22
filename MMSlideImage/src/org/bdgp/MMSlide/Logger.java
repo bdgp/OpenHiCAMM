@@ -1,25 +1,26 @@
 package org.bdgp.MMSlide;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.Date;
 import java.util.List;
 
 import org.bdgp.MMSlide.DB.Log;
 
-public class Logger {
+public class Logger extends PrintWriter {
     public static enum Level {ALL, SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST, OFF};
     private List<LogListener> logListeners;
     private String source;
     private Level loglevel;
-    private BufferedWriter log;
     
-    public Logger(String logfile, String source, Level loglevel) {
+    public static Logger create(String logfile, String source, Level loglevel) {
+        try { return new Logger(logfile, source, loglevel); }
+        catch (Exception e) {throw new RuntimeException(e);}
+    }
+    public Logger(String logfile, String source, Level loglevel) throws FileNotFoundException {
+        super(logfile);
         this.source = source;
         this.loglevel = loglevel != null ? loglevel : Level.INFO;
-        try { this.log = new BufferedWriter(new FileWriter(logfile)); }
-        catch (IOException e) { throw new RuntimeException(e); }
     }
     public void addListener(LogListener listener) {
         this.logListeners.add(listener);
@@ -30,8 +31,7 @@ public class Logger {
     public void log(Level loglevel, String message) {
         if (this.loglevel.compareTo(loglevel) <= 0) {
             Log log = new Log(source, new Date(), loglevel, message);
-            try { this.log.write(log.toString()); this.log.newLine(); } 
-            catch (IOException e) { throw new RuntimeException(e); }
+            this.println(log.toString());
             
             for (LogListener logListener : logListeners) {
                 logListener.log(log);

@@ -2,9 +2,7 @@ package org.bdgp.MMSlide;
 
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,7 +22,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import org.bdgp.MMSlide.Dao;
-import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.DB.WorkflowModule.TaskType;
 
@@ -41,14 +38,11 @@ public class WorkflowDesignerDialog extends JDialog {
 	private JButton btnMinus;
 	private JTextField moduleName;
 	private JComboBox<String> moduleList;
-	private Map<String,Config> configuration;
-    private File workflowFile;
     private JComboBox<String> taskType;
     private Connection connection;
 	
 	public WorkflowDesignerDialog(final File workflowDirectory) {
 	    dialog = this;
-	    configuration = new HashMap<String,Config>();
 	    
 	    this.connection = Connection.get(
 	            new File(workflowDirectory, WorkflowRunner.WORKFLOW_DB).getPath());

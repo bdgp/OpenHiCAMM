@@ -3,6 +3,7 @@ package org.bdgp.MMSlide;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Map;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -10,7 +11,12 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
+import static org.bdgp.MMSlide.Util.map;
+
 public class Main {
+    public static Map<String,String> getConfig() {
+        return map("server.port","9001");
+    }
     public static void main(String[] args) throws InvocationTargetException, InterruptedException {
         // try to set look and feel on Linux OS
         if (System.getProperty("os.name").equals("Linux")) {
