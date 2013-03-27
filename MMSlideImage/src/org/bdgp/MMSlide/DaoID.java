@@ -205,6 +205,12 @@ public class DaoID<T,ID> extends BaseDaoImpl<T,ID> {
     	    return update.update();
 	    } catch (SQLException e) {throw new RuntimeException(e);}
 	}
+    
+    @Override
+    public int update(T value) {
+        try { return super.update(value); } 
+        catch (SQLException e) {throw new RuntimeException(e);}
+    }
 	
     /**
      * Update a value object using a supplied list of lookup columns.
