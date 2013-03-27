@@ -73,4 +73,22 @@ public class Util {
         list.addAll(l);
         return list;
     }
+    
+    /**
+     * String join helper function
+     * @param list The list of strings to join
+     * @param joiner The string to put inbetween the lists
+     */
+    public static String join(List<String> list) {
+        return join("", list);
+    }
+    public static String join(String joiner, List<String> list) {
+        StringBuilder sb = new StringBuilder();
+        for (int i=0; i<list.size()-1; ++i) {
+            sb.append(list.get(i));
+            sb.append(joiner);
+        }
+        sb.append(list.get(list.size()-1));
+        return sb.toString();
+    }
 }
