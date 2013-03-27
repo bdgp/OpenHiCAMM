@@ -10,10 +10,8 @@ import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.Task.Status;
-import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
-import static org.bdgp.MMSlide.Util.where;
 import static org.bdgp.MMSlide.Util.map;
 
 public class Start implements Module {
