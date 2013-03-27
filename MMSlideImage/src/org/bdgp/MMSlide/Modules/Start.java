@@ -10,39 +10,43 @@ import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.Task.Status;
+import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
+
+import static org.bdgp.MMSlide.Util.where;
+import static org.bdgp.MMSlide.Util.map;
 
 public class Start implements Module {
     @Override
-    public JPanel configure(Configuration config) {
-        return null;
-    }
-
-    @Override
-    public Status run(WorkflowRunner workflow, Task task,
-            Map<String, Config> config, Logger logger) {
-        return null;
+    public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
+        return Status.SUCCESS;
     }
 
     @Override
     public String getTitle() {
-        return null;
+        return this.getClass().getName();
     }
 
     @Override
     public String getDescription() {
-        return null;
+        return this.getClass().getName();
+    }
+
+    @Override
+    public JPanel configure(Configuration config) {
+        return new JPanel();
     }
 
     @Override
     public void createTaskRecords(WorkflowRunner workflow, String moduleId) {
-        // TODO Auto-generated method stub
-        
+        Task task = new Task(moduleId, workflow.getInstance().getStorageLocation(), Status.NEW);
+        workflow.getTaskStatus().insert(task);
+        task.update(workflow.getTaskStatus());
     }
 
     @Override
     public Map<String, Integer> getResources() {
-        // TODO Auto-generated method stub
-        return null;
+        return map("cpu",1);
     }
+
 }

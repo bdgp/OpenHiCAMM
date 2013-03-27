@@ -1,5 +1,7 @@
 package org.bdgp.MMSlide.Modules;
 
+import java.util.List;
+
 import java.util.Map;
 
 import javax.swing.JPanel;
@@ -10,48 +12,61 @@ import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.Task.Status;
+import org.bdgp.MMSlide.DB.TaskDispatch;
+import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
+
+import static org.bdgp.MMSlide.Util.where;
+import static org.bdgp.MMSlide.Util.map;
 
 /**
  * Return x/y/len/width of bounding box surrounding the ROI
  */
 public class ROIFinder implements Module {
-	public ROIFinder() { }
-	
-	public void processImage(int x, int y, boolean focus) {
-		// TODO Auto-generated method stub
-	}
+    @Override
+    public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
+        return Status.SUCCESS;
+    }
 
     @Override
     public String getTitle() {
-        return "Detect ROI";
+        return this.getClass().getName();
     }
 
     @Override
     public String getDescription() {
-        return "Finding the ROI from an image";
-    }
-
-    @Override
-    public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
-        return null;
+        return this.getClass().getName();
     }
 
     @Override
     public JPanel configure(Configuration config) {
-        // TODO Auto-generated method stub
-        return null;
+        return new JPanel();
     }
 
     @Override
     public void createTaskRecords(WorkflowRunner workflow, String moduleId) {
-        // TODO Auto-generated method stub
-        
+        WorkflowModule module = workflow.getWorkflow().selectOne(where("id",moduleId));
+        if (module.getParentId() != null) {
+            List<Task> parentTasks = workflow.getTaskStatus().select(where("moduleId",module.getParentId()));
+            for (Task parentTask : parentTasks) {
+                Task task = new Task(moduleId, parentTask.getStorageLocation(), Status.NEW);
+                workflow.getTaskStatus().insert(task);
+                task.update(workflow.getTaskStatus());
+                
+                TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
+                workflow.getTaskDispatch().insert(dispatch);
+            }
+        }
+        else {
+            Task task = new Task(moduleId, workflow.getInstance().getStorageLocation(), Status.NEW);
+            workflow.getTaskStatus().insert(task);
+            task.update(workflow.getTaskStatus());
+        }
     }
 
     @Override
     public Map<String, Integer> getResources() {
-        // TODO Auto-generated method stub
-        return null;
+        return map("cpu",1);
     }
+
 }
