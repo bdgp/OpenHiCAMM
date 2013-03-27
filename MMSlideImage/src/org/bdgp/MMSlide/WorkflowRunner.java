@@ -149,8 +149,9 @@ public class WorkflowRunner {
                 this.instance = newWorkflowInstance();
             }
             this.instanceDb = Connection.get(
+                    this.workflowDirectory.getPath(),
                     new File(this.instance.getStorageLocation(), 
-                    new File(this.instance.getStorageLocation()).getName()+".db").getPath());
+                        this.instance.getName()+".db").getPath());
             this.taskConfig = this.instanceDb.table(Config.class, TASK_CONFIG);
             this.taskStatus = this.instanceDb.table(Task.class, TASK_STATUS);
             this.taskDispatch = this.instanceDb.table(TaskDispatch.class, TASK_DISPATCH);
@@ -166,6 +167,7 @@ public class WorkflowRunner {
     private WorkflowInstance newWorkflowInstance() {
         WorkflowInstance instance = new WorkflowInstance(this.workflowDirectory.getPath());
         workflowInstance.insert(instance);
+        instance.update(workflowInstance); // update storageLocation field
         // create a new directory for the workflow instance
         if (!new File(instance.getStorageLocation()).mkdirs()) {
             throw new RuntimeException("Could not create directory "
@@ -182,11 +184,24 @@ public class WorkflowRunner {
             @Override
             public Status call() {
                 Future<Status> future = run(start, resume, new File(instance.getStorageLocation()), null);
-                Status status;
-                try { status = future.get(); } 
+                File lockfile = null;
+                try { 
+                    lockfile = new File(instance.getStorageLocation(), ".instance.lock");
+                    if (lockfile.createNewFile()) {
+                        return future.get(); 
+                    }
+                    else {
+                        throw new LockFileCreationException("Could not lock file: "+lockfile.getPath());
+                    }
+                } 
                 catch (ExecutionException e) {throw new RuntimeException(e);}
                 catch (InterruptedException e) {throw new RuntimeException(e);}
-                return status;
+                catch (IOException e) {throw new RuntimeException(e);}
+                finally {
+                    if (lockfile != null && lockfile.exists()) {
+                        lockfile.delete();
+                    }
+                }
             }
         });
         return future;
@@ -303,7 +318,7 @@ public class WorkflowRunner {
                                     where("id",childTaskId.getTaskId()));
                             
                             // do not run the child task unless all of its parent tasks 
-                            // have already been run and have status Success.
+                            // have been successfully completed
                             List<TaskDispatch> parentTaskIds = taskDispatch.select(
                                     where("taskId",childTaskId.getTaskId()));
                             for (TaskDispatch parentTaskId : parentTaskIds) {

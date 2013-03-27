@@ -23,6 +23,7 @@ import static org.bdgp.MMSlide.Util.map;
 public class Connection extends JdbcPooledConnectionSource {
     private static Map<String,String> serverDefaults = map("server.port","9001");
     private static Server server;
+    private static URL serverURL;
     
     public static Server getServer() {
         return server;
@@ -36,20 +37,32 @@ public class Connection extends JdbcPooledConnectionSource {
     }
     
     public static Connection get(String dbPath) {
-        return get(dbPath,"SA","");
+        return get(dbPath,dbPath);
     }
-    public static Connection get(String dbPath, String user, String pw) {
+    public static Connection get(String serverPath, String dbPath) {
+        return get(serverPath,dbPath,"SA","");
+    }
+    public static Connection get(String serverPath, String dbPath, String user, String pw) {
         try {
-    	    File dir = new File(dbPath).getParentFile();
-    	    if (!(dir.exists() && dir.isDirectory())) {
-    	        dir.mkdirs();
-        		if (!(dir.exists() && dir.isDirectory())) {
-        		    throw new RuntimeException("Could not create directory "+dir.getPath());
+            // create the server and db directories if they do not exist
+    	    File serverDir = new File(serverPath);
+    	    if (!(serverDir.exists() && serverDir.isDirectory())) {
+    	        serverDir.mkdirs();
+        		if (!(serverDir.exists() && serverDir.isDirectory())) {
+        		    throw new RuntimeException("Could not create directory "+serverDir.getPath());
         		}
     	    }
+    	    File dbDir = new File(dbPath);
+    	    if (!(dbDir.exists() && dbDir.isDirectory())) {
+    	        dbDir.mkdirs();
+        		if (!(dbDir.exists() && dbDir.isDirectory())) {
+        		    throw new RuntimeException("Could not create directory "+dbDir.getPath());
+        		}
+    	    }
+    	    
     	    // start a new HSQLDB server if one hasn't been started yet.
-    	    if (server == null) {
-        	    File lockfile = new File(dir, ".lock");
+    	    if (serverURL == null) {
+        	    File lockfile = new File(serverDir, ".lock");
                 if (lockfile.createNewFile()) {
                     // set server properties
                     HsqlProperties p = new HsqlProperties();
@@ -57,42 +70,42 @@ public class Connection extends JdbcPooledConnectionSource {
                     p.setProperty("server.port", map(serverDefaults).merge(Main.getConfig()).get("server.port"));
                     p.setProperty("server.no_system_exit","true");
                     // writer server output to a log file
-                    Logger logger = Logger.create(new File(dir, WorkflowRunner.LOG_FILE).getPath(), "HSQLDB", Level.INFO);
+                    Logger logger = Logger.create(new File(serverDir, WorkflowRunner.LOG_FILE).getPath(), 
+                            "HSQLDB", Level.INFO);
                     // instantiate a new database server
                     server = new Server();
-                    try { server.setProperties(p); } 
-                    catch (AclFormatException e) {throw new RuntimeException(e);}
+                    server.setProperties(p);
                     server.setLogWriter(logger);
                     server.setErrWriter(logger);
                     server.start();
                     // write the server connection URL to the lock file
-                    String dbURL = "jdbc:hsqldb:"+
-                            new URL("hsql", server.getAddress(), server.getPort(), "/"+new File(dbPath).getName())+
-                            ";file:"+dbPath;
+                    serverURL = new URL("hsql",server.getAddress(),server.getPort(),"");
+                    URL dbURL = new URL(serverURL.getProtocol(), serverURL.getHost(), serverURL.getPort(), 
+                            new File(dbPath).getName().replace("\\.db$",""));
                     PrintWriter lock = new PrintWriter(lockfile);
-                    lock.print(dbURL);
+                    lock.print(serverURL);
                     lock.close();
                     lockfile.deleteOnExit();
-                    return new Connection(dbURL, user, pw);
+                    return new Connection("jdbc:hsqldb:"+dbURL, user, pw);
                 }
                 else {
                     // use the connection URL stored in the existing .lock file
-                    return new Connection(
-                            new String(Files.readAllBytes(FileSystems.getDefault().getPath(lockfile.getPath()))),
-                            user, pw);
+                    serverURL = new URL(new String(Files.readAllBytes(FileSystems.getDefault().getPath(lockfile.getPath()))));
+                    URL dbURL = new URL(serverURL.getProtocol(), serverURL.getHost(), serverURL.getPort(), 
+                            new File(dbPath).getName().replace("\\.db$",""));
+                    return new Connection("jdbc:hsqldb:"+dbURL, user, pw);
                 }
     	    }
     	    else {
-    	        // connect to the server running in this process
-                String dbURL = "jdbc:hsqldb:"+
-                        new URL("hsql", server.getAddress(), server.getPort(), "/"+new File(dbPath).getName())+
-                        ";file:"+dbPath;
-                return new Connection(dbURL, user, pw);
+                URL dbURL = new URL(serverURL.getProtocol(), serverURL.getHost(), serverURL.getPort(), 
+                        new File(dbPath).getName().replace("\\.db$",""));
+                return new Connection("jdbc:hsqldb:"+dbURL, user, pw);
     	    }
         }
         catch (SQLException e) {throw new RuntimeException(e);} 
         catch (MalformedURLException e) {throw new RuntimeException(e);}
 	    catch (IOException e) {throw new RuntimeException(e);}
+        catch (AclFormatException e) {throw new RuntimeException(e);}
     }
     
     public <T> Dao<T> table(Class<T> class_, String tablename) {
