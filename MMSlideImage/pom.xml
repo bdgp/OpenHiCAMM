@@ -108,13 +108,11 @@
   		<artifactId>swingx</artifactId>
   		<version>0.9.5</version>
   	</dependency>
-  	<dependency>
-  		<groupId>org.micromanager</groupId>
-  		<artifactId>MMJ</artifactId>
-  		<version>1.4</version>
-  		<scope>system</scope>
-  		<systemPath>${fiji.dir}/plugins/MMJ_.jar</systemPath>
-  	</dependency>
+	<dependency>
+	    <groupId>MicroManager</groupId>
+	    <artifactId>MMJ_</artifactId>
+	    <version>1.4</version>
+	</dependency>
 	  <dependency>
 	  	<groupId>org.hsqldb</groupId>
 	  	<artifactId>hsqldb</artifactId>
