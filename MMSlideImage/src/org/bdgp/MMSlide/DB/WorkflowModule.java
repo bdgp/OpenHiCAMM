@@ -16,7 +16,7 @@ import com.j256.ormlite.table.DatabaseTable;
 @SuppressWarnings("serial")
 @DatabaseTable
 public class WorkflowModule extends DefaultMutableTreeNode {
-    @DatabaseField(generatedId=true,canBeNull=false,dataType=DataType.LONG_STRING)
+    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING)
     private String id;
     @DatabaseField(canBeNull=false,useGetSet=true,dataType=DataType.LONG_STRING) 
     private String moduleName;
