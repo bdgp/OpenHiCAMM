@@ -1,5 +1,9 @@
 package org.bdgp.MMSlide.DB;
 
+import java.io.File;
+
+import org.bdgp.MMSlide.Dao;
+
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
@@ -11,11 +15,13 @@ import com.j256.ormlite.table.DatabaseTable;
 @DatabaseTable
 public class Task {
     public Task() {}
-    public Task(String moduleId, String storageLocation, Status status) {
+    public Task(String moduleId, String parentStorageLocation, Status status) {
        this.moduleId = moduleId;
-       this.storageLocation = storageLocation;
+       this.parentStorageLocation = parentStorageLocation;
        this.status = status;
     }
+    
+    private String parentStorageLocation;
     
     @DatabaseField(generatedId=true,canBeNull=false)
     private int id;
@@ -45,5 +51,14 @@ public class Task {
     }
     public void setStatus(Status status) {
         this.status = status;
+    }
+    public String getName() { 
+        return String.format("%s.T%05d",this.moduleId,this.id); 
+    }
+    public void update(Dao<Task> t) {
+        if (this.parentStorageLocation != null && this.storageLocation == null && this.id != 0) {
+            this.storageLocation = new File(this.parentStorageLocation, this.getName()).getPath();
+            t.update(this);
+        }
     }
 };
