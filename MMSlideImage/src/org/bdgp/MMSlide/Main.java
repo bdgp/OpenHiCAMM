@@ -1,5 +1,6 @@
 package org.bdgp.MMSlide;
 
+import java.awt.Dimension;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
@@ -7,6 +8,7 @@ import java.util.Map;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
@@ -32,7 +34,10 @@ public class Main {
                 dialog.pack();
                 dialog.setVisible(true);
                 
+                // Handle uncaught exceptions by print to stderr and displaying a GUI
+                // window with the stack trace.
                 Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+                    @Override
                     public void uncaughtException(Thread t, Throwable e) {
                         StringWriter sw = new StringWriter();
                         PrintWriter pw = new PrintWriter(sw);
@@ -41,7 +46,10 @@ public class Main {
                         
                         JTextArea text = new JTextArea(sw.toString());
                         text.setEditable(false);
-                        JOptionPane.showMessageDialog(dialog, text);
+                        JScrollPane textScrollPane = new JScrollPane(text);
+                        textScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+                        textScrollPane.setPreferredSize(new Dimension(800, 600));
+                        JOptionPane.showMessageDialog(dialog, textScrollPane);
                         dialog.dispose();
                     }
                 });
