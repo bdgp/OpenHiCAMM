@@ -37,6 +37,7 @@ public class WorkflowModule extends DefaultMutableTreeNode {
         this.id = id;
         setModuleName(moduleName);
         this.parentId = parentId;
+        this.taskType = taskType;
     }
     
     public String getId() {
