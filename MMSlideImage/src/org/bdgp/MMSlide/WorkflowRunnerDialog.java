@@ -1,5 +1,7 @@
 package org.bdgp.MMSlide;
 
+import java.awt.Dimension;
+
 import javax.swing.JDialog;
 import net.miginfocom.swing.MigLayout;
 import javax.swing.JTextPane;
@@ -11,6 +13,7 @@ import javax.swing.JLabel;
 public class WorkflowRunnerDialog extends JDialog {
     public WorkflowRunnerDialog() {
         getContentPane().setLayout(new MigLayout("", "[][grow]", "[grow][][]"));
+        setPreferredSize(new Dimension(800,600));
         
         JLabel lblLogOutput = new JLabel("Log Output");
         getContentPane().add(lblLogOutput, "cell 0 0");
