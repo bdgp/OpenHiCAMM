@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 
 import javax.swing.*;
 
+import java.awt.Dialog;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
@@ -41,7 +42,8 @@ public class WorkflowDesignerDialog extends JDialog {
     private JComboBox<String> taskType;
     private Connection connection;
 	
-	public WorkflowDesignerDialog(final File workflowDirectory) {
+	public WorkflowDesignerDialog(JFrame parent, final File workflowDirectory) {
+	    super(parent, "Workflow Designer", Dialog.ModalityType.APPLICATION_MODAL);
 	    dialog = this;
 	    
 	    this.connection = Connection.get(
@@ -155,13 +157,13 @@ public class WorkflowDesignerDialog extends JDialog {
 		        if (path != null) {
 		            WorkflowModule module = (WorkflowModule) path.getLastPathComponent();
 		            if (module != treeRoot) {
-	            DefaultTreeModel model = (DefaultTreeModel) (treeForModules.getModel());
-	            WorkflowModule parent = (WorkflowModule) module.getParent();
-	            model.removeNodeFromParent(module);
-	            treeForModules.makeVisible(new TreePath(parent.getPath()));
-	            
-	            moduleName.setText(
-	                    chooseModuleName((String)moduleList.getSelectedItem()));
+        	            DefaultTreeModel model = (DefaultTreeModel) (treeForModules.getModel());
+        	            WorkflowModule parent = (WorkflowModule) module.getParent();
+        	            model.removeNodeFromParent(module);
+        	            treeForModules.makeVisible(new TreePath(parent.getPath()));
+        	            
+        	            moduleName.setText(
+        	                    chooseModuleName((String)moduleList.getSelectedItem()));
 		            }
 		        }
 		    }
