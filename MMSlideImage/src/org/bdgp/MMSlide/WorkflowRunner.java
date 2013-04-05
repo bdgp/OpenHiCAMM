@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.Semaphore;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,7 +32,6 @@ import org.bdgp.MMSlide.DB.WorkflowInstance;
 import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.DB.WorkflowModule.TaskType;
-import org.bdgp.MMSlide.Logger.Level;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
 import static org.bdgp.MMSlide.Util.where;
@@ -218,7 +218,7 @@ public class WorkflowRunner {
             final File taskDir,
             final Map<String,Integer> inheritedResources) 
     {
-        final WorkflowModule module = this.workflow.selectOne(
+        final WorkflowModule module = this.workflow.selectOneOrDie(
                 where("id",task.getModuleId()));
         
         // create the task storage location
@@ -314,7 +314,7 @@ public class WorkflowRunner {
                         List<Future<Status>> childFutures = new ArrayList<Future<Status>>();
                         childTask:
                         for (TaskDispatch childTaskId : childTaskIds) {
-                            Task childTask = taskStatus.selectOne(
+                            Task childTask = taskStatus.selectOneOrDie(
                                     where("id",childTaskId.getTaskId()));
                             
                             // do not run the child task unless all of its parent tasks 
@@ -322,14 +322,14 @@ public class WorkflowRunner {
                             List<TaskDispatch> parentTaskIds = taskDispatch.select(
                                     where("taskId",childTaskId.getTaskId()));
                             for (TaskDispatch parentTaskId : parentTaskIds) {
-                                Task parentTask = taskStatus.selectOne(
+                                Task parentTask = taskStatus.selectOneOrDie(
                                         where("id",parentTaskId.getTaskId()));
                                 if (parentTask.getStatus() != Status.SUCCESS) {
                                     continue childTask;
                                 }
                             }
                             
-                            WorkflowModule childModule = workflow.selectOne(
+                            WorkflowModule childModule = workflow.selectOneOrDie(
                                     where("id",childTask.getModuleId()));
                             File childDir = new File(taskDir, childModule.getId());
                             
