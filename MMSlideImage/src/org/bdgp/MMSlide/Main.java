@@ -13,6 +13,8 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
+import com.j256.ormlite.logger.LocalLog;
+
 import static org.bdgp.MMSlide.Util.map;
 
 public class Main {
@@ -20,6 +22,10 @@ public class Main {
         return map("server.port","9001");
     }
     public static void main(String[] args) throws InvocationTargetException, InterruptedException {
+        // Turn off ORMlite logging since it's too inflexible to integrate into
+        // our logging system.
+        System.setProperty(LocalLog.LOCAL_LOG_LEVEL_PROPERTY, "FATAL");
+        
         // try to set look and feel on Linux OS
         if (System.getProperty("os.name").equals("Linux")) {
             try { UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel"); } catch (Exception e) {}
