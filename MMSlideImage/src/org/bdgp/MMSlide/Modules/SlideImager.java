@@ -41,7 +41,7 @@ public class SlideImager implements Module {
 
     @Override
     public void createTaskRecords(WorkflowRunner workflow, String moduleId) {
-        WorkflowModule module = workflow.getWorkflow().selectOne(where("id",moduleId));
+        WorkflowModule module = workflow.getWorkflow().selectOneOrDie(where("id",moduleId));
         if (module.getParentId() != null) {
             List<Task> parentTasks = workflow.getTaskStatus().select(where("moduleId",module.getParentId()));
             for (Task parentTask : parentTasks) {

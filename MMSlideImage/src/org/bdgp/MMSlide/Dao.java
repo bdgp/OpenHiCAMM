@@ -50,7 +50,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	 * @return A DAO instance
 	 * @throws SQLException
 	 */
-	public static synchronized <T,ID> Dao<T> getTable(Class<T> class_, Connection connection, String tablename) 
+	public static synchronized <T> Dao<T> getTable(Class<T> class_, Connection connection, String tablename) 
 	{
 	    try {
     		// get the table configuration
@@ -96,7 +96,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	 * @return A DAO instance
 	 * @throws SQLException
 	 */
-	public static synchronized <T,ID> Dao<T> getTable(Class<T> class_, String dbPath, String tablename) 
+	public static synchronized <T> Dao<T> getTable(Class<T> class_, String dbPath, String tablename) 
 	{
         return getTable(class_, Connection.get(dbPath), tablename);
     }
@@ -110,7 +110,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	 * @return A DAO instance
 	 * @throws SQLException
 	 */
-	public static synchronized <T,ID> Dao<T> getFile(Class<T> class_, Connection connection, String filename) 
+	public static synchronized <T> Dao<T> getFile(Class<T> class_, Connection connection, String filename) 
 	{
 	    try {
     		File file = new File(filename);
@@ -351,21 +351,15 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	 * @return
 	 */
 	public List<T> select(Map<String,Object> fieldValues) {
-	    try {
-    	    return super.queryForFieldValuesArgs(fieldValues);
-	    }
+	    try { return super.queryForFieldValuesArgs(fieldValues); }
         catch (SQLException e) {throw new RuntimeException(e);}
 	}
 	public List<T> select(T matchObj) {
-	    try {
-    	    return super.queryForMatchingArgs(matchObj);
-	    }
+	    try { return super.queryForMatchingArgs(matchObj); }
         catch (SQLException e) {throw new RuntimeException(e);}
 	}
 	public List<T> select() {
-	    try {
-    	    return super.queryForAll();
-	    }
+	    try { return super.queryForAll(); }
 	    catch (SQLException e) {throw new RuntimeException(e);}
 	}
 	
@@ -374,6 +368,12 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	}
 	public T selectOne(T matchObj) {
 	    return one(select(matchObj));
+	}
+	public T selectOneOrDie(Map<String,Object> fieldValues) {
+	    return oneOrDie(select(fieldValues));
+	}
+	public T selectOneOrDie(T matchObj) {
+	    return oneOrDie(select(matchObj));
 	}
 	
     /**
@@ -385,21 +385,19 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
             String noneErrorMessage, 
             String multipleErrorMessage) 
     {
-        if (noneErrorMessage == null)
-            noneErrorMessage = "Query returned no rows!";
-        if (multipleErrorMessage == null)
-            multipleErrorMessage = "Query returned multiple rows!";
-        
-        if (list.size() == 0) {
+        if (list.size() == 0 && noneErrorMessage != null) {
             throw new RuntimeException(noneErrorMessage);
         }
-        if (list.size() > 1) {
+        if (list.size() > 1 && multipleErrorMessage != null) {
             throw new RuntimeException(multipleErrorMessage);
         }
         return list.get(0);
     }
+    public static <T> T oneOrDie(List<T> list) {
+        return one(list, "Query returned no rows!", "Query returned multiple rows!");
+    }
     public static <T> T one(List<T> list) {
-        return one(list, null, null);
+        return one(list, null, "Query returned multiple rows!");
     }
 }
 
