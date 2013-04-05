@@ -1,49 +1,67 @@
 package org.bdgp.MMSlide;
 
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
-import java.util.Date;
-import java.util.List;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.SimpleFormatter;
 
-import org.bdgp.MMSlide.DB.Log;
+import com.j256.ormlite.logger.LocalLog;
 
-public class Logger extends PrintWriter {
-    public static enum Level {ALL, SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST, OFF};
-    private List<LogListener> logListeners;
-    private String source;
-    private Level loglevel;
+public class Logger extends java.util.logging.Logger {
+    // Turn off ORMlite logging since it's too inflexible to integrate into
+    // our logging system.
+    static {
+        System.setProperty(LocalLog.LOCAL_LOG_LEVEL_PROPERTY, "FATAL");
+    }
     
     public static Logger create(String logfile, String source, Level loglevel) {
         try { return new Logger(logfile, source, loglevel); }
         catch (Exception e) {throw new RuntimeException(e);}
     }
-    public Logger(String logfile, String source, Level loglevel) throws FileNotFoundException {
-        super(logfile);
-        this.source = source;
-        this.loglevel = loglevel != null ? loglevel : Level.INFO;
+    public Logger(String logfile, String source, Level loglevel) {
+        super(source, null);
+        try { 
+            FileHandler fh = new FileHandler(logfile);
+            fh.setFormatter(new SimpleFormatter());
+            this.addHandler(fh); 
+        }
+        catch (IOException e) {throw new RuntimeException(e);}
+        this.setLevel(loglevel);
     }
-    public void addListener(LogListener listener) {
-        this.logListeners.add(listener);
+    public LoggerOutputStream getOutputStream() {
+        return new LoggerOutputStream(this, this.getLevel());
     }
-    public void removeListener(LogListener listener) {
-        this.logListeners.remove(listener);
+    public LoggerOutputStream getOutputStream(Level level) {
+        return new LoggerOutputStream(this, level);
     }
-    public void log(Level loglevel, String message) {
-        if (this.loglevel.compareTo(loglevel) <= 0) {
-            Log log = new Log(source, new Date(), loglevel, message);
-            this.println(log.toString());
-            
-            for (LogListener logListener : logListeners) {
-                logListener.log(log);
+    
+    public class LoggerOutputStream extends OutputStream {
+        private Logger logger;
+        private Level level;
+        private StringBuilder buffer;
+        
+        public LoggerOutputStream(Logger logger, Level level) {
+            this.logger = logger;
+            this.level = level;
+            this.buffer = new StringBuilder();
+        }
+        @Override public void write(int b) throws IOException {
+            if (b == '\n') {
+                logger.log(level, buffer.toString());
+                buffer.setLength(0);
+            }
+            else {
+                buffer.append((char)b);
             }
         }
+        @Override public void close() throws IOException {
+            flush();
+        }
+        @Override public void flush() throws IOException {
+            if (buffer.length() > 0) {
+                write('\n');
+            }
+        }    
     }
-    public void severe(String message) {log(Level.SEVERE, message);}
-    public void warning(String message) {log(Level.WARNING, message);}
-    public void info(String message) {log(Level.INFO, message);}
-    public void config(String message) {log(Level.CONFIG, message);}
-    public void fine(String message) {log(Level.FINE, message);}
-    public void finer(String message) {log(Level.FINER, message);}
-    public void finest(String message) {log(Level.FINEST, message);}
-    
 }
