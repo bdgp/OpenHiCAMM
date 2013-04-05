@@ -3,14 +3,16 @@ package org.bdgp.MMSlide;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 
-import org.bdgp.MMSlide.Logger.Level;
 import org.hsqldb.Server;
 import org.hsqldb.persist.HsqlProperties;
 import org.hsqldb.server.ServerAcl.AclFormatException;
@@ -22,12 +24,9 @@ import static org.bdgp.MMSlide.Util.map;
 
 public class Connection extends JdbcPooledConnectionSource {
     private static Map<String,String> serverDefaults = map("server.port","9001");
-    private static Server server;
-    private static URI serverURI;
     
-    public static Server getServer() {
-        return server;
-    }
+    private static Map<String,Server> servers = new HashMap<String,Server>();
+    private static Map<String,URI> serverURIs = new HashMap<String,URI>();
     
     public Connection(String string) throws SQLException {
         super(string);
@@ -40,19 +39,18 @@ public class Connection extends JdbcPooledConnectionSource {
         return get(dbPath,dbPath);
     }
     public static Connection get(String serverPath, String dbPath) {
-        return get(serverPath,dbPath,"SA","");
-    }
-    public static Connection get(String serverPath, String dbPath, String user, String pw) {
         try {
+            String user = "SA";
+            String pw = "";
             // create the server and db directories if they do not exist
-    	    File serverDir = new File(serverPath);
+    	    File serverDir = new File(new File(serverPath).getParent());
     	    if (!(serverDir.exists() && serverDir.isDirectory())) {
     	        serverDir.mkdirs();
         		if (!(serverDir.exists() && serverDir.isDirectory())) {
         		    throw new RuntimeException("Could not create directory "+serverDir.getPath());
         		}
     	    }
-    	    File dbDir = new File(dbPath);
+    	    File dbDir = new File(new File(dbPath).getParent());
     	    if (!(dbDir.exists() && dbDir.isDirectory())) {
     	        dbDir.mkdirs();
         		if (!(dbDir.exists() && dbDir.isDirectory())) {
@@ -61,45 +59,50 @@ public class Connection extends JdbcPooledConnectionSource {
     	    }
     	    
     	    // start a new HSQLDB server if one hasn't been started yet.
-    	    if (serverURI == null) {
-        	    File lockfile = new File(serverDir.getParent(), ".lock");
+    	    if (serverURIs.get(serverPath) == null) {
+        	    File lockfile = new File(serverDir, new File(dbPath).getName().replaceFirst("\\.db$","")+".lock");
                 if (lockfile.createNewFile()) {
                     // set server properties
                     HsqlProperties p = new HsqlProperties();
                     p.setProperty("server.remote_open","true");
+                    p.setProperty("server.address", InetAddress.getLocalHost().getHostAddress());
                     p.setProperty("server.port", map(serverDefaults).merge(Main.getConfig()).get("server.port"));
                     p.setProperty("server.no_system_exit","true");
                     // writer server output to a log file
                     Logger logger = Logger.create(new File(serverDir, WorkflowRunner.LOG_FILE).getPath(), 
                             "HSQLDB", Level.INFO);
                     // instantiate a new database server
-                    server = new Server();
+                    Server server = new Server();
+                    server.setLogWriter(new PrintWriter(logger.getOutputStream(Level.INFO)));
+                    server.setErrWriter(new PrintWriter(logger.getOutputStream(Level.WARNING)));
                     server.setProperties(p);
-                    server.setLogWriter(logger);
-                    server.setErrWriter(logger);
                     server.start();
+                    servers.put(serverPath,server);
                     // write the server connection URL to the lock file
-                    serverURI = new URI("hsql",null,server.getAddress(),server.getPort(),null,null,null);
+                    URI serverURI = new URI("hsql",null,server.getAddress(),server.getPort(),null,null,null);
+                    serverURIs.put(serverPath,serverURI);
                     URI dbURI = new URI(serverURI.getScheme(), serverURI.getUserInfo(), serverURI.getHost(), serverURI.getPort(), 
-                            new File("", new File(dbPath).getName().replace("\\.db$","")).getPath(), serverURI.getQuery(), serverURI.getFragment());
+                            new File("", new File(dbPath).getName().replaceFirst("\\.db$","")).getPath(), serverURI.getQuery(), serverURI.getFragment());
                     PrintWriter lock = new PrintWriter(lockfile);
                     lock.print(serverURI);
                     lock.close();
                     lockfile.deleteOnExit();
-                    return new Connection("jdbc:hsqldb:"+dbURI, user, pw);
+                    return new Connection("jdbc:hsqldb:"+dbURI+";file:"+dbPath, user, pw);
                 }
                 else {
                     // use the connection URL stored in the existing .lock file
-                    serverURI = new URI(new String(Files.readAllBytes(FileSystems.getDefault().getPath(lockfile.getPath()))));
+                    URI serverURI = new URI(new String(Files.readAllBytes(FileSystems.getDefault().getPath(lockfile.getPath()))));
+                    serverURIs.put(serverPath,serverURI);
                     URI dbURI = new URI(serverURI.getScheme(), serverURI.getUserInfo(), serverURI.getHost(), serverURI.getPort(), 
-                            new File("", new File(dbPath).getName().replace("\\.db$","")).getPath(), serverURI.getQuery(), serverURI.getFragment());
-                    return new Connection("jdbc:hsqldb:"+dbURI, user, pw);
+                            new File("", new File(dbPath).getName().replaceFirst("\\.db$","")).getPath(), serverURI.getQuery(), serverURI.getFragment());
+                    return new Connection("jdbc:hsqldb:"+dbURI+";file:"+dbPath, user, pw);
                 }
     	    }
     	    else {
+    	        URI serverURI = serverURIs.get(serverPath);
                 URI dbURI = new URI(serverURI.getScheme(), serverURI.getUserInfo(), serverURI.getHost(), serverURI.getPort(), 
-                        new File("", new File(dbPath).getName().replace("\\.db$","")).getPath(), serverURI.getQuery(), serverURI.getFragment());
-                return new Connection("jdbc:hsqldb:"+dbURI, user, pw);
+                        new File("", new File(dbPath).getName().replaceFirst("\\.db$","")).getPath(), serverURI.getQuery(), serverURI.getFragment());
+                return new Connection("jdbc:hsqldb:"+dbURI+";file:"+dbPath, user, pw);
     	    }
         }
         catch (SQLException e) {throw new RuntimeException(e);} 
