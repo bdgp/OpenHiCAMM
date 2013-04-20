@@ -12,6 +12,7 @@ import javax.swing.JComboBox;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.WorkflowModule;
+import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
 import net.miginfocom.swing.MigLayout;

@@ -6,7 +6,6 @@ import java.util.Map;
 
 import javax.swing.JPanel;
 
-import org.bdgp.MMSlide.Configuration;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
@@ -14,6 +13,7 @@ import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.DB.TaskDispatch;
 import org.bdgp.MMSlide.DB.WorkflowModule;
+import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
 import static org.bdgp.MMSlide.Util.where;
