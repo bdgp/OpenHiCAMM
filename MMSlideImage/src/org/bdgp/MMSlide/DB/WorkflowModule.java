@@ -22,7 +22,7 @@ public class WorkflowModule extends DefaultMutableTreeNode {
     private String moduleName;
     @DatabaseField(dataType=DataType.LONG_STRING)
     private String parentId;
-    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING)
+    @DatabaseField(canBeNull=false)
     private TaskType taskType;
     
     public static enum TaskType {SERIAL, PARALLEL};

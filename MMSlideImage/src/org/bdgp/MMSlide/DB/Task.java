@@ -34,7 +34,7 @@ public class Task {
     
     public static enum Status {ERROR, FAIL, SUCCESS, IN_PROGRESS, DEFER, NEW};
     
-    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING)
+    @DatabaseField(canBeNull=false)
     private Status status;
     
     public int getId() {

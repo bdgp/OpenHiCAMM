@@ -15,9 +15,12 @@ public class WorkflowInstance {
        this.directory = directory;
     }
     
-    @DatabaseField(generatedId=true,canBeNull=false) private int id;
     private String directory;
-    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) private String storageLocation;
+    
+    @DatabaseField(generatedId=true,canBeNull=false) 
+    private int id;
+    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) 
+    private String storageLocation;
     
     public int getId() { return id; }
     public String getStorageLocation() { return this.storageLocation; }
