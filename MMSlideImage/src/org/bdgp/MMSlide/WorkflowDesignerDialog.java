@@ -30,6 +30,8 @@ import javax.swing.event.TreeSelectionListener;
 import javax.swing.event.TreeSelectionEvent;
 import net.miginfocom.swing.MigLayout;
 
+import static org.bdgp.MMSlide.Util.where;
+
 @SuppressWarnings("serial")
 public class WorkflowDesignerDialog extends JDialog {
     private WorkflowDesignerDialog dialog;
@@ -172,12 +174,12 @@ public class WorkflowDesignerDialog extends JDialog {
 		moduleName.setText(
 		        chooseModuleName((String)moduleList.getSelectedItem()));
 		
-		JButton btnSave = new JButton("Done");
-		getContentPane().add(btnSave, "cell 1 2,alignx trailing");
-		btnSave.addActionListener(new ActionListener() {
+		JButton doneButton = new JButton("Done");
+		getContentPane().add(doneButton, "cell 1 2,alignx trailing");
+		doneButton.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
 	            Dao<WorkflowModule> wf = connection.table(WorkflowModule.class, WorkflowRunner.WORKFLOW);
-						        // clear the file of any existing records 
+		        // clear the file of any existing records 
 	            wf.delete();
 	            // create the WorkflowModule records
 	            for (@SuppressWarnings("unchecked")
@@ -189,8 +191,26 @@ public class WorkflowDesignerDialog extends JDialog {
 		                wf.insert(node);
 	                }
 	            }
+	            dialog.dispose();
             }
 	    });
+		
+		// Populate the tree model
+        Dao<WorkflowModule> wf = connection.table(WorkflowModule.class, WorkflowRunner.WORKFLOW);
+        DefaultTreeModel model = (DefaultTreeModel) treeForModules.getModel();
+		List<WorkflowModule> modules = new ArrayList<WorkflowModule>();
+		modules.add(treeRoot);
+		while (modules.size() > 0) {
+		    List<WorkflowModule> nextModules = new ArrayList<WorkflowModule>();
+		    for (WorkflowModule module : modules) {
+        		List<WorkflowModule> childModules = wf.select(where("parentId",module.getId()));
+        		for (WorkflowModule child : childModules) {
+    		        model.insertNodeInto(child, module, module.getChildCount());
+        		}
+        		nextModules.addAll(childModules);
+		    }
+		    modules = nextModules;
+		}
 		
 		setEnabledControls();
 	}
