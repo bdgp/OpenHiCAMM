@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
 import java.util.logging.SimpleFormatter;
 
 import com.j256.ormlite.logger.LocalLog;
@@ -23,7 +24,11 @@ public class Logger extends java.util.logging.Logger {
         super(source, null);
         try { 
             FileHandler fh = new FileHandler(logfile);
-            fh.setFormatter(new SimpleFormatter());
+            fh.setFormatter(new SimpleFormatter() {
+                	public String format(LogRecord record) {
+                	    return String.format("%s %s %s%n", new java.util.Date(), record.getLevel(), record.getMessage());
+                	}
+            });
             this.addHandler(fh); 
         }
         catch (IOException e) {throw new RuntimeException(e);}
