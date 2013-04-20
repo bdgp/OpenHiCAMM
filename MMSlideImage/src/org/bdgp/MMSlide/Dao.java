@@ -4,14 +4,15 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 import com.j256.ormlite.field.DatabaseFieldConfig;
 import com.j256.ormlite.field.FieldType;
 import com.j256.ormlite.stmt.DeleteBuilder;
+import com.j256.ormlite.stmt.QueryBuilder;
 import com.j256.ormlite.stmt.SelectArg;
 import com.j256.ormlite.stmt.UpdateBuilder;
 import com.j256.ormlite.stmt.Where;
@@ -199,7 +200,12 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     	    // Add the where clause
     	    Where<T,Object> whereClause = update.where();
     	    for (Map.Entry<String,Object> entry : where.entrySet()) {
-    	        whereClause.eq(entry.getKey(), new SelectArg(entry.getValue()));
+    	        if (entry.getValue() == null) {
+    	            whereClause.isNull(entry.getKey());
+    	        }
+    	        else {
+        	        whereClause.eq(entry.getKey(), new SelectArg(entry.getValue()));
+    	        }
     	    }
     	    whereClause.and(where.size());
     	    return update.update();
@@ -292,6 +298,39 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	}
 	
 	/**
+	 * Override queryForFieldValues and queryForFieldValuesArgs to handle nulls
+	 */
+	public List<T> queryForFieldValues(Map<String, Object> fieldValues) throws SQLException {
+		return queryForFieldValues(fieldValues, false);
+	}
+	public List<T> queryForFieldValuesArgs(Map<String, Object> fieldValues) throws SQLException {
+		return queryForFieldValues(fieldValues, true);
+	}
+	private List<T> queryForFieldValues(Map<String, Object> fieldValues, boolean useArgs) throws SQLException {
+		checkForInitialized();
+		QueryBuilder<T, Object> qb = queryBuilder();
+		Where<T, Object> where = qb.where();
+		for (Map.Entry<String, Object> entry : fieldValues.entrySet()) {
+			Object fieldValue = entry.getValue();
+			if (useArgs) {
+				fieldValue = new SelectArg(fieldValue);
+			}
+			if (entry.getValue() == null) {
+			    where.isNull(entry.getKey());
+			}
+			else {
+    			where.eq(entry.getKey(), fieldValue);
+			}
+		}
+		if (fieldValues.size() == 0) {
+			return Collections.emptyList();
+		} else {
+			where.and(fieldValues.size());
+			return qb.query();
+		}
+	}
+	
+	/**
 	 * Insert a value into the database table.
 	 * @param value Object to insert
 	 * @return The number of rows updated in the database. This should be 1.
@@ -338,7 +377,12 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     	    // Add the where clause
     	    Where<T,Object> whereClause = delete.where();
     	    for (Map.Entry<String,Object> entry : where.entrySet()) {
-    	        whereClause.eq(entry.getKey(), new SelectArg(entry.getValue()));
+    	        if (entry.getValue() == null) {
+    	            whereClause.isNull(entry.getKey());
+    	        }
+    	        else {
+        	        whereClause.eq(entry.getKey(), new SelectArg(entry.getValue()));
+    	        }
     	    }
     	    whereClause.and(where.size());
     	    return delete.delete();
