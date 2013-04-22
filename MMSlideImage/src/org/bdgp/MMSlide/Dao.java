@@ -337,7 +337,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	 */
 	public int insert(T value) {
 	    try {
-            return super.create(value);
+            return create(value);
         } 
 	    catch (SQLException e) {throw new RuntimeException(e);}
 	}
@@ -359,7 +359,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	 */
 	public int delete() {
 	    try {
-            return super.delete(super.deleteBuilder().prepare());
+            return super.delete(deleteBuilder().prepare());
         } 
 	    catch (SQLException e) {throw new RuntimeException(e);}
 	}
@@ -395,15 +395,15 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	 * @return
 	 */
 	public List<T> select(Map<String,Object> fieldValues) {
-	    try { return super.queryForFieldValuesArgs(fieldValues); }
+	    try { return queryForFieldValuesArgs(fieldValues); }
         catch (SQLException e) {throw new RuntimeException(e);}
 	}
 	public List<T> select(T matchObj) {
-	    try { return super.queryForMatchingArgs(matchObj); }
+	    try { return queryForMatchingArgs(matchObj); }
         catch (SQLException e) {throw new RuntimeException(e);}
 	}
 	public List<T> select() {
-	    try { return super.queryForAll(); }
+	    try { return queryForAll(); }
 	    catch (SQLException e) {throw new RuntimeException(e);}
 	}
 	
