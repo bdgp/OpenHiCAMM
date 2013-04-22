@@ -1,5 +1,6 @@
 package org.bdgp.MMSlide.Modules;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -35,8 +36,16 @@ public class TIGenerator implements Module {
     }
 
     @Override
-    public JPanel configure(Configuration config) {
-        return new JPanel();
+    public Configuration configure() {
+        return new Configuration() {
+            @Override
+            public List<Config> retrieve() {
+                return new ArrayList<Config>();
+            }
+            @Override
+            public JPanel display() {
+                return new JPanel();
+            }};
     }
 
     @Override

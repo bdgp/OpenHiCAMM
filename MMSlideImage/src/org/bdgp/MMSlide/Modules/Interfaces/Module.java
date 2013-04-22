@@ -18,7 +18,7 @@ public interface Module {
      * Run the module configuration dialog and return the configuration.
      * @return
      */
-    public JPanel configure(Configuration config);
+    public Configuration configure();
     
     /**
      * Create the task records before running the workflow.

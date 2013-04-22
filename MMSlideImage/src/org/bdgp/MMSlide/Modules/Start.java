@@ -1,5 +1,6 @@
 package org.bdgp.MMSlide.Modules;
 
+import java.util.List;
 import java.util.Map;
 
 import javax.swing.JPanel;
@@ -31,8 +32,16 @@ public class Start implements Module {
     }
 
     @Override
-    public JPanel configure(Configuration config) {
-        return new JPanel();
+    public Configuration configure() {
+        return new Configuration() {
+            @Override
+            public List<Config> retrieve() {
+                return null;
+            }
+            @Override
+            public JPanel display() {
+                return null;
+            }};
     }
 
     @Override
