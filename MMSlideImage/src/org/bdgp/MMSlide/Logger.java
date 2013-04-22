@@ -3,6 +3,7 @@ package org.bdgp.MMSlide;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.logging.FileHandler;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.SimpleFormatter;
@@ -23,7 +24,7 @@ public class Logger extends java.util.logging.Logger {
     public Logger(String logfile, String source, Level loglevel) {
         super(source, null);
         try { 
-            FileHandler fh = new FileHandler(logfile);
+            FileHandler fh = new FileHandler(logfile, 10000000, 10, true);
             fh.setFormatter(new SimpleFormatter() {
                 	public String format(LogRecord record) {
                 	    return String.format("%s %s %s%n", new java.util.Date(), record.getLevel(), record.getMessage());
@@ -33,7 +34,18 @@ public class Logger extends java.util.logging.Logger {
         }
         catch (IOException e) {throw new RuntimeException(e);}
         this.setLevel(loglevel);
+        
+        // close handlers on exit
+        final Logger thisLogger = this;
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                for (Handler h : thisLogger.getHandlers()) {
+                    h.close();
+                }
+            }
+        });
     }
+    
     public LoggerOutputStream getOutputStream() {
         return new LoggerOutputStream(this, this.getLevel());
     }
