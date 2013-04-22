@@ -206,6 +206,7 @@ public class WorkflowDesignerDialog extends JDialog {
         		List<WorkflowModule> childModules = wf.select(where("parentId",module.getId()));
         		for (WorkflowModule child : childModules) {
     		        model.insertNodeInto(child, module, module.getChildCount());
+    	            treeForModules.makeVisible(new TreePath(child.getPath()));
         		}
         		nextModules.addAll(childModules);
 		    }
