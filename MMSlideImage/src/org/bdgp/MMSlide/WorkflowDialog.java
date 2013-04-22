@@ -4,7 +4,6 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -97,8 +96,7 @@ public class WorkflowDialog extends JFrame {
                         new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
                 
                 // get list of JPanels and load them with the configuration interfaces
-                final List<Config> configs = new ArrayList<Config>();
-                Map<String,JPanel> jpanels = new LinkedHashMap<String,JPanel>();
+                Map<String,Configuration> configurations = new LinkedHashMap<String,Configuration>();
                 Dao<WorkflowModule> modules = connection.table(WorkflowModule.class, WorkflowRunner.WORKFLOW);
                 List<WorkflowModule> ms = modules.select(where("id",startTask.getItemAt(startTask.getSelectedIndex())));
                 
@@ -107,12 +105,7 @@ public class WorkflowDialog extends JFrame {
                     for (WorkflowModule m : ms) {
                         try {
                             Module module = m.getModule().newInstance();
-                            
-                            JPanel jpanel = module.configure(new Configuration() {
-                                @Override public void store(List<Config> config) {
-                                    configs.addAll(config);
-                                }});
-                            if (jpanel != null) jpanels.put(m.getId(), jpanel);
+                            configurations.put(m.getId(), module.configure());
                         }
                         catch (InstantiationException e1) {throw new RuntimeException(e1);} 
                         catch (IllegalAccessException e1) {throw new RuntimeException(e1);}
@@ -122,11 +115,12 @@ public class WorkflowDialog extends JFrame {
                     ms = newms;
                 }
                 
-                if (jpanels.size() > 0) {
+                if (configurations.size() > 0) {
                     thisDialog.setVisible(false);
                     WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                             thisDialog, 
-                            jpanels);
+                            configurations,
+                            connection.table(Config.class));
                     config.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                     config.pack();
                     config.setVisible(true);
@@ -186,6 +180,7 @@ public class WorkflowDialog extends JFrame {
                     @Override public void windowClosing(WindowEvent e) { }
                     @Override public void windowClosed(WindowEvent e) { 
                         thisDialog.setVisible(true);
+                        refresh();
                     }
                     @Override public void windowIconified(WindowEvent e) { }
                     @Override public void windowDeiconified(WindowEvent e) { }
@@ -198,43 +193,45 @@ public class WorkflowDialog extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 if (directoryChooser.showDialog(thisDialog,"Choose Workflow Directory") == JFileChooser.APPROVE_OPTION) {
                     workflowDir.setText(directoryChooser.getSelectedFile().getPath());
-                    
                     editWorkflowButton.setEnabled(true);
-                    
-                    Connection connection = Connection.get(
-                            new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
-                    
-                    // get list of starting modules
-                    List<String> startModules = new ArrayList<String>();
-                    Dao<WorkflowModule> modules = connection.table(WorkflowModule.class, WorkflowRunner.WORKFLOW);
-                    for (WorkflowModule module : modules.select()) {
-                        if (module.getParentId() == null) {
-                            startModules.add(module.getId());
-                        }
-                    }
-                    if (startModules.size() > 0) {
-                        Collections.sort(startModules);
-                        startTask.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
-                        startTask.setEnabled(true);
-                        
-                        // get the list of workflow instances
-                        List<String> workflowInstances = new ArrayList<String>();
-                        workflowInstances.add("-Create new Instance-");
-                        Dao<Task> workflowStatus = connection.table(Task.class, WorkflowRunner.WORKFLOW_INSTANCE);
-                        for (Task task : workflowStatus.select()) {
-                            workflowInstances.add(task.getStorageLocation());
-                        }
-                        Collections.sort(workflowInstances);
-                        workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
-                        workflowInstance.setEnabled(true);
-                        
-                        startButton.setEnabled(true);
-                    }
+                    refresh();
                 }
                 else {
                     editWorkflowButton.setVisible(false);
                 }
             }
         });
+    }
+    public void refresh() {
+        Connection connection = Connection.get(
+                new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
+        // get list of starting modules
+        List<String> startModules = new ArrayList<String>();
+        Dao<WorkflowModule> modules = connection.table(WorkflowModule.class, WorkflowRunner.WORKFLOW);
+        for (WorkflowModule module : modules.select()) {
+            if (module.getParentId() == null) {
+                startModules.add(module.getId());
+            }
+        }
+        if (startModules.size() > 0) {
+            Collections.sort(startModules);
+            startTask.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
+            startTask.setEnabled(true);
+            
+            // get the list of workflow instances
+            List<String> workflowInstances = new ArrayList<String>();
+            workflowInstances.add("-Create new Instance-");
+            Dao<Task> workflowStatus = connection.table(Task.class, WorkflowRunner.WORKFLOW_INSTANCE);
+            for (Task task : workflowStatus.select()) {
+                workflowInstances.add(task.getStorageLocation());
+            }
+            Collections.sort(workflowInstances);
+            workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
+            workflowInstance.setEnabled(true);
+            
+            btnConfigure.setEnabled(true);
+            startButton.setEnabled(true);
+        }
+        
     }
 }
