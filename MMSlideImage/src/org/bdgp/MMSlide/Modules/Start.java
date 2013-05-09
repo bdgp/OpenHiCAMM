@@ -1,5 +1,6 @@
 package org.bdgp.MMSlide.Modules;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -36,11 +37,11 @@ public class Start implements Module {
         return new Configuration() {
             @Override
             public List<Config> retrieve() {
-                return null;
+                return new ArrayList<Config>();
             }
             @Override
             public JPanel display() {
-                return null;
+                return new JPanel();
             }};
     }
 
