@@ -2,8 +2,6 @@ package org.bdgp.MMSlide.Modules.Interfaces;
 
 import java.util.Map;
 
-import javax.swing.JPanel;
-
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
