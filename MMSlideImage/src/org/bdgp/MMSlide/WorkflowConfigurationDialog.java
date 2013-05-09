@@ -9,6 +9,7 @@ import javax.swing.JDialog;
 import net.miginfocom.swing.MigLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
 import org.bdgp.MMSlide.DB.Config;
@@ -33,7 +34,10 @@ public class WorkflowConfigurationDialog extends JDialog {
         
         final JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
         for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
-            tabbedPane.add(entry.getKey(), entry.getValue().display());
+            JPanel panel = entry.getValue().display();
+            if (panel != null) {
+                tabbedPane.add(entry.getKey(), panel);
+            }
         }
         getContentPane().add(tabbedPane, "cell 0 0 2 1,grow");
         
@@ -91,8 +95,10 @@ public class WorkflowConfigurationDialog extends JDialog {
             public void actionPerformed(ActionEvent e) {
                 for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
                     List<Config> configs = entry.getValue().retrieve();
-                    for (Config c : configs) {
-                        config.insertOrUpdate(c,"id","key");
+                    if (configs != null) {
+                        for (Config c : configs) {
+                            config.insertOrUpdate(c,"id","key");
+                        }
                     }
                 }
                 thisDialog.dispose();
