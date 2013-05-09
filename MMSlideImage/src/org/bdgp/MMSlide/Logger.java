@@ -2,6 +2,7 @@ package org.bdgp.MMSlide;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Date;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -27,7 +28,7 @@ public class Logger extends java.util.logging.Logger {
             FileHandler fh = new FileHandler(logfile, 10000000, 10, true);
             fh.setFormatter(new SimpleFormatter() {
                 	public String format(LogRecord record) {
-                	    return String.format("%s %s %s%n", new java.util.Date(), record.getLevel(), record.getMessage());
+                	    return String.format("%s %s %s%n", new Date(record.getMillis()), record.getLevel(), record.getMessage());
                 	}
             });
             this.addHandler(fh); 
