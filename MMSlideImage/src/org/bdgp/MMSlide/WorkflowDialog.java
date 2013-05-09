@@ -35,7 +35,7 @@ public class WorkflowDialog extends JFrame {
     private JTextField workflowDir;
     private JFileChooser directoryChooser;
     private JComboBox<String> workflowInstance;
-    private JComboBox<String> startTask;
+    private JComboBox<String> startModule;
     private JButton editWorkflowButton;
     private JButton startButton;
     private JLabel lblConfigure;
@@ -75,15 +75,15 @@ public class WorkflowDialog extends JFrame {
         
         JLabel lblChooseStartTask = new JLabel("Start Task");
         getContentPane().add(lblChooseStartTask, "cell 0 2,alignx trailing");
-        startTask = new JComboBox<String>();
-        startTask.setEnabled(false);
-        startTask.addItemListener(new ItemListener() {
+        startModule = new JComboBox<String>();
+        startModule.setEnabled(false);
+        startModule.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
                 }
             }});
-        getContentPane().add(startTask, "cell 1 2,alignx trailing");
+        getContentPane().add(startModule, "cell 1 2,alignx trailing");
         
         lblConfigure = new JLabel("Configure Modules");
         getContentPane().add(lblConfigure, "cell 0 3,alignx trailing");
@@ -98,7 +98,7 @@ public class WorkflowDialog extends JFrame {
                 // get list of JPanels and load them with the configuration interfaces
                 Map<String,Configuration> configurations = new LinkedHashMap<String,Configuration>();
                 Dao<WorkflowModule> modules = connection.table(WorkflowModule.class, WorkflowRunner.WORKFLOW);
-                List<WorkflowModule> ms = modules.select(where("id",startTask.getItemAt(startTask.getSelectedIndex())));
+                List<WorkflowModule> ms = modules.select(where("id",startModule.getItemAt(startModule.getSelectedIndex())));
                 
                 while (ms.size() > 0) {
                     List<WorkflowModule> newms = new ArrayList<WorkflowModule>();
@@ -118,9 +118,7 @@ public class WorkflowDialog extends JFrame {
                 if (configurations.size() > 0) {
                     thisDialog.setVisible(false);
                     WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
-                            thisDialog, 
-                            configurations,
-                            connection.table(Config.class));
+                            thisDialog, configurations, connection.table(Config.class));
                     config.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                     config.pack();
                     config.setVisible(true);
@@ -144,7 +142,12 @@ public class WorkflowDialog extends JFrame {
         startButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 thisDialog.setVisible(false);
-                WorkflowRunnerDialog wrd = new WorkflowRunnerDialog();
+                Integer instanceId = Integer.parseInt(workflowInstance.getItemAt(workflowInstance.getSelectedIndex()));
+                String startModuleId = startModule.getItemAt(startModule.getSelectedIndex());
+                        
+                // TODO: add gui widget to set resume
+                boolean resume = true;
+                WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(new File(workflowDir.getText()), instanceId, startModuleId, resume);
                 wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 wrd.pack();
                 wrd.setVisible(true);
@@ -215,15 +218,15 @@ public class WorkflowDialog extends JFrame {
         }
         if (startModules.size() > 0) {
             Collections.sort(startModules);
-            startTask.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
-            startTask.setEnabled(true);
+            startModule.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
+            startModule.setEnabled(true);
             
             // get the list of workflow instances
             List<String> workflowInstances = new ArrayList<String>();
             workflowInstances.add("-Create new Instance-");
             Dao<Task> workflowStatus = connection.table(Task.class, WorkflowRunner.WORKFLOW_INSTANCE);
             for (Task task : workflowStatus.select()) {
-                workflowInstances.add(task.getStorageLocation());
+                workflowInstances.add(Integer.toString(task.getId()));
             }
             Collections.sort(workflowInstances);
             workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
