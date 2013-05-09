@@ -33,6 +33,7 @@ import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.DB.WorkflowModule.TaskType;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
+import org.bdgp.MMSlide.Modules.Interfaces.TaskListener;
 
 import static org.bdgp.MMSlide.Util.where;
 
@@ -70,6 +71,8 @@ public class WorkflowRunner {
     private int maxThreads;
     private Map<String,Semaphore> resources;
     
+    private List<TaskListener> taskListeners;
+    
     /**
      * Constructor for WorkflowRunner. This loads the workflow.txt file 
      * in the workflow directory and performs some consistency checks 
@@ -79,49 +82,35 @@ public class WorkflowRunner {
     public WorkflowRunner(
             File workflowDirectory, 
             Integer instanceId, 
-            File workflowFile, 
             Map<String,Integer> resources,
             Level loglevel) 
     {
         try {
-            // Get the workflow directory
+            // Load the workflow database and workflow table
             if (workflowDirectory == null || !workflowDirectory.exists() || !workflowDirectory.isDirectory()) {
                 throw new IOException("Directory "+workflowDirectory+" is not a valid directory.");
             }
-            // Get the workflow file
-            if (workflowFile == null || !workflowFile.exists()) {
-                throw new IOException("Workflow file "+workflowFile.getPath()
-                        +" was not found.");
-            }
-            
             this.workflowDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath());
+            Dao<WorkflowModule> workflow = this.workflowDb.table(WorkflowModule.class);
             
-            // Load the workflow file
-            Dao<WorkflowModule> workflow = this.workflowDb.file(WorkflowModule.class, workflowFile.getPath());
-            
-            // Make sure parent IDs are defined and that all successors are compatible.
+            // Make sure parent IDs are defined
             for (WorkflowModule w : workflow.queryForAll()) {
                 if (w.getParentId() != null) {
                     List<WorkflowModule> parent = workflow.queryForEq("id", w.getParentId());
                     if (parent.size() == 0) {
-                        throw new SQLException("Workflow "+workflowFile.getPath()
-                                +" references unknown parent ID "+w.getParentId());
+                        throw new SQLException("Workflow references unknown parent ID "+w.getParentId());
                     }
                 }
             }
             // Find the first workflow modules
-            List<WorkflowModule> first = workflow.queryForEq("parent",null);
-            if (first.size() == 0) {
-                throw new SQLException("Workflow "+workflowFile.getPath()
-                        +" is an empty workflow.");
+            if (workflow.queryForEq("parent",null).size() == 0) {
+                throw new SQLException("Workflow is an empty workflow.");
             }
-            
-            // Make sure the first modules all inherit WorkerRoot
-            for (WorkflowModule f : first) {
+            // Make sure all modules implement Module
+            for (WorkflowModule f : workflow.select()) {
                 if (!Module.class.isAssignableFrom(f.getModule())) {
                     throw new SQLException("First module "+f.getModuleName()
-                            +" in Workflow "+workflowFile.getPath()
-                            +" does not inherit the Module interface.");
+                            +" in Workflow does not inherit the Module interface.");
                 }
             }
             
@@ -145,9 +134,8 @@ public class WorkflowRunner {
             this.logger = new Logger(new File(workflowDirectory, LOG_FILE).getPath(), 
                     "workflow", loglevel);
             
-            if (instance == null) {
-                this.instance = newWorkflowInstance();
-            }
+            this.instance = instanceId == null? newWorkflowInstance() :
+                            workflowInstance.selectOneOrDie(where("id",instanceId));
             this.instanceDb = Connection.get(
                     this.workflowDirectory.getPath(),
                     new File(this.instance.getStorageLocation(), 
@@ -155,6 +143,8 @@ public class WorkflowRunner {
             this.taskConfig = this.instanceDb.table(Config.class, TASK_CONFIG);
             this.taskStatus = this.instanceDb.table(Task.class, TASK_STATUS);
             this.taskDispatch = this.instanceDb.table(TaskDispatch.class, TASK_DISPATCH);
+            
+            this.taskListeners = new ArrayList<TaskListener>();
         }
         catch (IOException e) {throw new RuntimeException(e);}
         catch (SQLException e) {throw new RuntimeException(e);}
@@ -177,12 +167,13 @@ public class WorkflowRunner {
     }
     
     public Future<Status> run(
-            final Task start,
+            final String startModuleId,
             final boolean resume) 
     {
         Future<Status> future = pool.submit(new Callable<Status>() {
             @Override
             public Status call() {
+                Task start = taskStatus.selectOneOrDie(where("moduleId",startModuleId));
                 Future<Status> future = run(start, resume, new File(instance.getStorageLocation()), null);
                 File lockfile = null;
                 try { 
@@ -296,8 +287,8 @@ public class WorkflowRunner {
                         } 
                         // Uncaught exceptions set the status to ERROR
                         catch (Exception e) {
-                            taskLogger.severe("Error reported during task "
-                                    +task.toString()+": \n"+e.toString());
+                            taskLogger.severe(String.format("Error reported during task %s:%n%s", 
+                                    task.toString(), e.toString()));
                             status = Status.ERROR;
                         }
                     }
@@ -305,6 +296,10 @@ public class WorkflowRunner {
                     // update the task status
                     task.setStatus(status);
                     taskStatus.update(task, "id","moduleId");
+                    // notify any task listeners
+                    for (TaskListener listener : taskListeners) {
+                        listener.notifyTask(task);
+                    }
                     
                     // enqueue the child tasks
                     if (status == Status.SUCCESS) {
@@ -406,7 +401,21 @@ public class WorkflowRunner {
         }
         return Status.SUCCESS;
     }
+    
+    /** 
+     * Stop any new tasks from getting queued up.
+     */
+    public void stop() {
+        pool.shutdown();
+    }
 
+    /** 
+     * Stop all actively executing tasks and stop processing any waiting tasks.
+     */
+    public List<Runnable> kill() {
+        return pool.shutdownNow();
+    }
+    
     /**
      * Get a list of the instance ids from the workflow instance file inside
      * a workflow directory.
@@ -468,4 +477,11 @@ public class WorkflowRunner {
     public Dao<Task> getTaskStatus() { return taskStatus; }
     public Dao<TaskDispatch> getTaskDispatch() { return taskDispatch; }
     public Dao<Config> getTaskConfig() { return taskConfig; }
+    
+    public void addTaskListener(TaskListener listener) {
+        taskListeners.add(listener);
+    }
+    public void removeTaskListener(TaskListener listener) {
+        taskListeners.remove(listener);
+    }
 }
