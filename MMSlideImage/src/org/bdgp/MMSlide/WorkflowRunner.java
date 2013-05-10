@@ -175,24 +175,9 @@ public class WorkflowRunner {
             public Status call() {
                 Task start = taskStatus.selectOneOrDie(where("moduleId",startModuleId));
                 Future<Status> future = run(start, resume, new File(instance.getStorageLocation()), null);
-                File lockfile = null;
-                try { 
-                    lockfile = new File(instance.getStorageLocation(), ".instance.lock");
-                    if (lockfile.createNewFile()) {
-                        return future.get(); 
-                    }
-                    else {
-                        throw new LockFileCreationException("Could not lock file: "+lockfile.getPath());
-                    }
-                } 
-                catch (ExecutionException e) {throw new RuntimeException(e);}
-                catch (InterruptedException e) {throw new RuntimeException(e);}
-                catch (IOException e) {throw new RuntimeException(e);}
-                finally {
-                    if (lockfile != null && lockfile.exists()) {
-                        lockfile.delete();
-                    }
-                }
+                try { return future.get(); }
+                catch (InterruptedException e) {throw new RuntimeException(e);} 
+                catch (ExecutionException e) {throw new RuntimeException(e);} 
             }
         });
         return future;
