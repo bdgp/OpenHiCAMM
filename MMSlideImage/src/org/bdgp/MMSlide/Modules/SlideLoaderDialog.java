@@ -1,20 +1,14 @@
 package org.bdgp.MMSlide.Modules;
 
-import java.awt.BorderLayout;
-import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.util.List;
 import java.util.Vector;
 
-import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
-import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
@@ -29,13 +23,11 @@ import javax.swing.table.DefaultTableModel;
 import org.micromanager.api.DeviceControlGUI;
 import javax.swing.JTextField;
 import javax.swing.JList;
-import java.awt.Component;
-import javax.swing.Box;
-import java.awt.FlowLayout;
+import net.miginfocom.swing.MigLayout;
 
 @SuppressWarnings("serial")
 public class SlideLoaderDialog extends JDialog {
-	Vector<String> sl_cart, sl_pos, sl_expid;	
+	List<String> sl_cart, sl_pos, sl_expid;	
 	
 	protected JButton listButton_;
 	private JTabbedPane tabbedPanel;
@@ -45,116 +37,71 @@ public class SlideLoaderDialog extends JDialog {
 	
 	protected DeviceControlGUI gui;
 	private JTextField textField;
-	protected JList listPrevPool;
+	protected JList<String> listPrevPool;
 	
-	SlideLoader slide_pool_module = null;
-//	StorageManager.StorageCollection other_pools;
-	
-//	public SlidePoolMainDialog(DeviceControlGUI mm_gui, SlidePool sp, StorageManager.StorageCollection other_pools) {
 	public SlideLoaderDialog(DeviceControlGUI mm_gui, SlideLoader sp) {
-		
-		this.gui = mm_gui;
-		slide_pool_module = sp;
-//		this.other_pools = other_pools;
-		
-		setVisible(false); // Not visible until requested
-		setTitle("Configuration: Slide Pool");
-        setSize(600,400);
-        setLocationRelativeTo(null);
-
-        addWindowListener(new WindowAdapter() {
-
-            public void windowClosing(final WindowEvent e) {
-                close();
-            }
-
-        });
-		
 		tabbedPanel = new JTabbedPane();
-		getContentPane().setLayout(new BorderLayout(0, 0));
-		getContentPane().add(tabbedPanel, BorderLayout.CENTER);
-
-		//
-		// Pool (define new pool or select previous one)
+		getContentPane().add(tabbedPanel);
 		
+		ButtonGroup poolSelGroup = new ButtonGroup();
+		// Pool (define new pool or select previous one)
 		JPanel poolPanel = new JPanel();
 		tabbedPanel.addTab("Pool", null, poolPanel, null);
-		poolPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+		poolPanel.setLayout(new MigLayout("", "[256px][1px]", "[64px,center]"));
 		
-		JPanel panelNewPool = new JPanel();
-		poolPanel.add(panelNewPool);
-		panelNewPool.setLayout(new BoxLayout(panelNewPool, BoxLayout.X_AXIS));
+		JPanel panelSelectPool = new JPanel();
+		poolPanel.add(panelSelectPool, "cell 0 0,alignx left,aligny top");
+		panelSelectPool.setLayout(new MigLayout("", "[77px][41px][114px]", "[22px][]"));
 		
 		JRadioButton radioButtonNewPool = new JRadioButton("New pool");
 		radioButtonNewPool.setSelected(true);
-		panelNewPool.add(radioButtonNewPool);
+		panelSelectPool.add(radioButtonNewPool, "flowy,cell 0 0,alignx left,aligny center");
 		radioButtonNewPool.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				setPool(null);
 			}
 		});
-		
-		Component horizontalStrut = Box.createHorizontalStrut(20);
-		panelNewPool.add(horizontalStrut);
 		
 		JLabel lblTitle = new JLabel("Name: ");
-		panelNewPool.add(lblTitle);
+		panelSelectPool.add(lblTitle, "cell 1 0,alignx left,aligny center");
 		
 		textField = new JTextField();
-		panelNewPool.add(textField);
+		panelSelectPool.add(textField, "cell 2 0,alignx center,growy");
 		textField.setColumns(10);
-		
-		JPanel panelPrevPool = new JPanel();
-		poolPanel.add(panelPrevPool);
-		panelPrevPool.setLayout(new BoxLayout(panelPrevPool, BoxLayout.X_AXIS));
+		poolSelGroup.add(radioButtonNewPool);
 		
 		JRadioButton radioButtonPrevPool = new JRadioButton("Previous pool");
-		panelPrevPool.add(radioButtonPrevPool);
+		panelSelectPool.add(radioButtonPrevPool, "cell 0 1 2 1");
 		radioButtonPrevPool.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				populatePools();
 			}
 		});
-	
-		JScrollPane scrollPane_prevPool = new JScrollPane();
-		panelPrevPool.add(scrollPane_prevPool);
+		poolSelGroup.add(radioButtonPrevPool);
 		
-		listPrevPool = new JList();
+		JScrollPane scrollPane_prevPool = new JScrollPane();
+		panelSelectPool.add(scrollPane_prevPool, "cell 2 1");
+		
+		listPrevPool = new JList<String>();
 		listPrevPool.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		listPrevPool.setLayoutOrientation(JList.VERTICAL);
 		listPrevPool.setVisibleRowCount(-1);
-
+		
 		scrollPane_prevPool.setViewportView(listPrevPool);
 		listPrevPool.setEnabled(false);
 		listPrevPool.addListSelectionListener(new ListSelectionListener() {
 			public void valueChanged(ListSelectionEvent e) {
-				 // Make sure value is final
-				 if (e.getValueIsAdjusting() == false) {
-					 setPool((String) listPrevPool.getSelectedValue());
-				 }
 			}
 		});
-		
-		
-		ButtonGroup poolSelGroup = new ButtonGroup();
-		poolSelGroup.add(radioButtonNewPool);
-		poolSelGroup.add(radioButtonPrevPool);
 
-
-		
-		//
-		// Loading (Slide loader or manual)
-		
 		JPanel loaderPanel = new JPanel();
 		tabbedPanel.addTab("Loading", null, loaderPanel, null);
-		loaderPanel.setLayout(new BoxLayout(loaderPanel, BoxLayout.Y_AXIS));
+		loaderPanel.setLayout(new MigLayout("", "[195px]", "[22px][22px]"));
 		
 		JRadioButton radioButtonSlideLoader = new JRadioButton("Slide loader");
-		loaderPanel.add(radioButtonSlideLoader);
+		loaderPanel.add(radioButtonSlideLoader, "cell 0 0,alignx left,aligny center");
 		
 		JRadioButton radioButtonSlideManual = new JRadioButton("Manual (will prompt for slides)");
 		radioButtonSlideManual.setSelected(true);
-		loaderPanel.add(radioButtonSlideManual);
+		loaderPanel.add(radioButtonSlideManual, "cell 0 1,alignx left,aligny center");
 		if ( gui == null ) {
 			loaderPanel.setEnabled(false);
 		}
@@ -162,21 +109,8 @@ public class SlideLoaderDialog extends JDialog {
 		//
 		// Data (what is in the pool)
 		
-		DefaultTableModel tabModel;
-
+		DefaultTableModel tabModel = new DefaultTableModel();
 		JPanel dataPanel = new JPanel();
-		dataPanel.setLayout(new BorderLayout(0, 0));
-
-		dataRows=new Vector<Vector<String>>();
-		dataColumns= new Vector<String>();
-		String[] columnNames = { "Cartridge", "Slide position", "Experiment id"	};
-		for(int i=0;i<columnNames.length;i++)
-			dataColumns.addElement((String) columnNames[i]);
-
-
-		tabModel=new DefaultTableModel();
-		tabModel.setDataVector(dataRows,dataColumns);
-
 		table = new JTable();
 		table.setBorder(new EtchedBorder(EtchedBorder.LOWERED, null, null));
 		table.setModel(tabModel);
@@ -184,91 +118,95 @@ public class SlideLoaderDialog extends JDialog {
 		table.getColumnModel().getColumn(1).setPreferredWidth(135);
 		table.getColumnModel().getColumn(2).setPreferredWidth(104);
 		table.getColumnModel().getColumn(2).setMinWidth(100);
+		dataPanel.setLayout(new MigLayout("", "[554px][41px]", "[323px][24px]"));
 
 		JScrollPane scrollPane = new JScrollPane();
-		dataPanel.add(scrollPane, BorderLayout.CENTER);
+		dataPanel.add(scrollPane, "cell 0 0,grow");
 		scrollPane.add(table);
 
 		JPanel dataLoadPanel = new JPanel();
-		dataPanel.add(dataLoadPanel, BorderLayout.SOUTH);
-		dataLoadPanel.setLayout(new BoxLayout(dataLoadPanel, BoxLayout.X_AXIS));
+		dataPanel.add(dataLoadPanel, "cell 0 1 2 1,growx,aligny top");
+		dataLoadPanel.setLayout(new MigLayout("", "[123px][54px][89px][93px][][][][]", "[24px]"));
 
 		JLabel lblLoadContentsFrom = new JLabel("Load contents from ...");
-		dataLoadPanel.add(lblLoadContentsFrom);
+		dataLoadPanel.add(lblLoadContentsFrom, "cell 0 0,alignx left,aligny center");
 
 		JButton btnFile = new JButton("File");
-		dataLoadPanel.add(btnFile);
+		btnFile.addActionListener(new ActionListener() {
+		    public void actionPerformed(ActionEvent e) {
+		    }
+		});
+		dataLoadPanel.add(btnFile, "cell 1 0,alignx left,aligny center");
 
 		JButton btnDatabase = new JButton("Database");
+		btnDatabase.addActionListener(new ActionListener() {
+		    public void actionPerformed(ActionEvent e) {
+		    }
+		});
 		// database should update the database about the Pool-id
 		// perhaps even send the metadata to the database (file location of the slides, etc).
 		// Could be encapsuled in db object in Slide storage or passed around
-		dataLoadPanel.add(btnDatabase);
-		
-		Component horizontalGlue = Box.createHorizontalGlue();
-		dataLoadPanel.add(horizontalGlue);
+		dataLoadPanel.add(btnDatabase, "cell 2 0,alignx left,aligny center");
 		
 		JButton btnClear = new JButton("Clear data");
 		btnClear.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				clearData();
 			}
 		});
-		dataLoadPanel.add(btnClear);
+		dataLoadPanel.add(btnClear, "cell 7 0,alignx left,aligny center");
 
 		JPanel dataEntryPanel = new JPanel();
-		dataPanel.add(dataEntryPanel, BorderLayout.EAST);
-		dataEntryPanel.setLayout(new BoxLayout(dataEntryPanel, BoxLayout.Y_AXIS));
+		dataPanel.add(dataEntryPanel, "cell 1 0,alignx left,growy");
+		dataEntryPanel.setLayout(new MigLayout("", "[41px]", "[14px][24px][24px]"));
 
 		JLabel lblData = new JLabel("Rows:");
-		dataEntryPanel.add(lblData);
+		dataEntryPanel.add(lblData, "cell 0 0,alignx left,aligny center");
 		
 		JButton addRowBut = new JButton("+");
 		addRowBut.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				addRow();
 			}
 		});
-		dataEntryPanel.add(addRowBut);
+		dataEntryPanel.add(addRowBut, "cell 0 1,alignx left,aligny center");
 
 		JButton rmRowBut = new JButton("-");
 		rmRowBut.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				deleteRow(table.getSelectedRow());
 			}
 		});
-		dataEntryPanel.add(rmRowBut);
+		dataEntryPanel.add(rmRowBut, "cell 0 2,alignx left,aligny center");
 
 		tabbedPanel.addTab("Data", dataPanel);
 
-		//
 		// Positions (what to image: entire slide, previously defined positions)
-		
 		JPanel posPanel = new JPanel();
-		posPanel.setLayout(new BorderLayout(0, 0));
 
 		tabbedPanel.addTab("Positions", posPanel);
+		posPanel.setLayout(new MigLayout("", "[595px]", "[347px]"));
 
 		JPanel posChoicePanel = new JPanel();
-		posPanel.add(posChoicePanel, BorderLayout.CENTER);
+		posPanel.add(posChoicePanel, "cell 0 0,grow");
 
 		ButtonGroup roiButtons = new ButtonGroup();
-		posChoicePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+		posChoicePanel.setLayout(new MigLayout("", "[90px][148px][53px][115px]", "[24px][]"));
 
 		JRadioButton radioSlideButton = new JRadioButton("Whole slide");
 		radioSlideButton.setSelected(true);
 		roiButtons.add(radioSlideButton);
-		posChoicePanel.add(radioSlideButton);
+		posChoicePanel.add(radioSlideButton, "cell 0 0,alignx left,aligny center");
 		JButton posButton = new JButton("Define imaging area");
-		posChoicePanel.add(posButton);
-
+		posButton.addActionListener(new ActionListener() {
+		    public void actionPerformed(ActionEvent e) {
+		    }
+		});
+		posChoicePanel.add(posButton, "cell 1 0,alignx left,aligny top");
+		
 		JRadioButton radioRoiButton = new JRadioButton("ROIs");
 		roiButtons.add(radioRoiButton);
-		posChoicePanel.add(radioRoiButton);
+		posChoicePanel.add(radioRoiButton, "cell 0 1,alignx left,aligny center");
 		JButton roiButton = new JButton("Define ROI list");
-		posChoicePanel.add(roiButton);
+		posChoicePanel.add(roiButton, "cell 1 1,alignx left,aligny top");
 		roiButton.addActionListener(new ActionListener() {
-
             public void actionPerformed(ActionEvent e) {
                 gui.showXYPositionList();
             }
@@ -276,98 +214,6 @@ public class SlideLoaderDialog extends JDialog {
 		
 		if ( gui == null ) {
 			posPanel.setEnabled(false);
-		}
-	}
-	
-	protected void close() {
-		// TODO Auto-generated method stub
-		getData();
-	}
-	
-	
-	// Data pool methods
-	
-	protected void populatePools() {
-		DefaultListModel listModel = new DefaultListModel();
-		
-//		Collection <String> others = other_pools.get();
-		
-//		Iterator<String> it = others.iterator();
-//		while (it.hasNext()) {
-//			listModel.addElement(it.next());
-//		}
-		
-		listPrevPool.setModel(listModel);
-		listPrevPool.setEnabled(true);
-	}
-	
-	protected void setPool(String poolValue) {
-		
-	}
-	
-	
-	// Data table methods
-	
-	protected void addRow() //Add Row
-	{
-		Vector<String> r = new Vector<String>();
-		r.addElement(" ");
-		r.addElement(" ");
-		r.addElement(" ");
-		dataRows.addElement(r);
-		table.addNotify();
-		
-	}
-		
-	protected void deleteRow(int index) 
-	{
-		if(index!=-1)//At least one Row in Table
-		{ 
-			dataRows.removeElementAt(index);
-			table.addNotify();
-		}
-		
-	}//Delete Row
-
-	
-	public void clearData() {
-		int selected = JOptionPane.showConfirmDialog( this, "Delete all pool contents?",
-				"Delete pool?", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null);		
-		if ( selected == 1 ) {			
-			for (int r=table.getRowCount()-1; r >= 0; r++ ) {
-				deleteRow(r);
-			}
-//			slide_pool_module.clearPoolData();
-		}
-	}
-	
-	
-	public void getData() {		
-		readTable();
-	}
-	
-	
-	public void setData() {
-		int r = 0;
-//		Collection<SlidePool.PoolData> data = slide_pool_module.getPoolData();
-		
-//		for ( SlidePool.PoolData spd : data ) {
-//			table.setValueAt(spd.cartridge, r, 0);
-//			table.setValueAt(spd.slide, r, 1);
-//			table.setValueAt(spd.experiment, r, 2);
-//			r++;
-//		}
-	}
-		
-	protected void readTable() {
-		// TODO Sanity check of data
-		for (int r=0; r < table.getRowCount(); r++ ) {
-			String s_cart = (String) table.getValueAt(r,0);
-			String s_pos  = (String) table.getValueAt(r,1);
-			String s_exp  = (String) table.getValueAt(r,2);
-			
-			Integer i_pos = new Integer(s_pos);
-//			slide_pool_module.addPoolData(s_cart, i_pos.intValue(), s_exp);
 		}
 	}
 }

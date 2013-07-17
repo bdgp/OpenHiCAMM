@@ -38,6 +38,7 @@ public class WorkflowDialog extends JFrame {
     private JComboBox<String> startModule;
     private JButton editWorkflowButton;
     private JButton startButton;
+    private JButton resumeButton;
     private JLabel lblConfigure;
     private JButton btnConfigure;
 
@@ -141,31 +142,20 @@ public class WorkflowDialog extends JFrame {
         startButton = new JButton("Start");
         startButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                thisDialog.setVisible(false);
-                Integer instanceId = Integer.parseInt(workflowInstance.getItemAt(workflowInstance.getSelectedIndex()));
-                String startModuleId = startModule.getItemAt(startModule.getSelectedIndex());
-                        
-                // TODO: add gui widget to set resume
-                boolean resume = true;
-                WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(new File(workflowDir.getText()), instanceId, startModuleId, resume);
-                wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-                wrd.pack();
-                wrd.setVisible(true);
-                wrd.addWindowListener(new WindowListener() {
-                    @Override public void windowOpened(WindowEvent e) { }
-                    @Override public void windowClosing(WindowEvent e) { }
-                    @Override public void windowClosed(WindowEvent e) { 
-                        thisDialog.setVisible(true);
-                    }
-                    @Override public void windowIconified(WindowEvent e) { }
-                    @Override public void windowDeiconified(WindowEvent e) { }
-                    @Override public void windowActivated(WindowEvent e) { }
-                    @Override public void windowDeactivated(WindowEvent e) { }
-                });
+                start(false);
             }
         });
         startButton.setEnabled(false);
         getContentPane().add(startButton, "flowx,cell 1 4,alignx trailing");
+        
+        resumeButton = new JButton("Resume");
+        resumeButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                start(true);
+            }
+        });
+        resumeButton.setEnabled(false);
+        getContentPane().add(resumeButton, "flowx,cell 1 4, alignx trailing");
         
         editWorkflowButton = new JButton("Edit Workflow...");
         editWorkflowButton.setEnabled(false);
@@ -236,5 +226,28 @@ public class WorkflowDialog extends JFrame {
             startButton.setEnabled(true);
         }
         
+    }
+    public void start(boolean resume) {
+        final WorkflowDialog thisDialog = this;
+        thisDialog.setVisible(false);
+        Integer instanceId = Integer.parseInt(workflowInstance.getItemAt(workflowInstance.getSelectedIndex()));
+        String startModuleId = startModule.getItemAt(startModule.getSelectedIndex());
+                
+        // TODO: add gui widget to set resume
+        WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(new File(workflowDir.getText()), instanceId, startModuleId, resume);
+        wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        wrd.pack();
+        wrd.setVisible(true);
+        wrd.addWindowListener(new WindowListener() {
+            @Override public void windowOpened(WindowEvent e) { }
+            @Override public void windowClosing(WindowEvent e) { }
+            @Override public void windowClosed(WindowEvent e) { 
+                thisDialog.setVisible(true);
+            }
+            @Override public void windowIconified(WindowEvent e) { }
+            @Override public void windowDeiconified(WindowEvent e) { }
+            @Override public void windowActivated(WindowEvent e) { }
+            @Override public void windowDeactivated(WindowEvent e) { }
+        });
     }
 }
