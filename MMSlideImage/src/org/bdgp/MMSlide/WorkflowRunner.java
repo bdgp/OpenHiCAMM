@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -34,6 +35,8 @@ import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.DB.WorkflowModule.TaskType;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.bdgp.MMSlide.Modules.Interfaces.TaskListener;
+
+import com.j256.ormlite.support.DatabaseConnection;
 
 import static org.bdgp.MMSlide.Util.where;
 
@@ -278,77 +281,105 @@ public class WorkflowRunner {
                         }
                     }
                     
-                    // update the task status
-                    task.setStatus(status);
-                    taskStatus.update(task, "id","moduleId");
+                    // This section must be synchronized both in java and in the backend database 
+                    // to avoid any race conditions.
+                    List<Future<Status>> childFutures = new ArrayList<Future<Status>>();
+                    synchronized (workflowRunner) {
+                        DatabaseConnection db = instanceDb.getReadWriteConnection();
+                        instanceDb.saveSpecialConnection(db);
+                        Savepoint savePoint = null;
+                        try {
+                            // explicitly lock the task status and dispatch tables to avoid deadlock exceptions
+                            // See: http://hsqldb.org/doc/guide/sessions-chapt.html
+                            db.setAutoCommit(false);
+                            savePoint = db.setSavePoint("task");
+                            db.executeStatement("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE", 
+                                    DatabaseConnection.DEFAULT_RESULT_FLAGS);
+                            db.executeStatement("LOCK TABLE task_status WRITE, task_dispatch WRITE", 
+                                    DatabaseConnection.DEFAULT_RESULT_FLAGS);
+                            
+                            // update the task status
+                            task.setStatus(status);
+                            taskStatus.update(task, "id","moduleId");
+        
+                            // enqueue the child tasks
+                            if (status == Status.SUCCESS) {
+                                List<TaskDispatch> childTaskIds = taskDispatch.select(
+                                        where("parentTaskId",task.getId()));
+                                            
+                                childTask:
+                                for (TaskDispatch childTaskId : childTaskIds) {
+                                    Task childTask = taskStatus.selectOneOrDie(
+                                            where("id",childTaskId.getTaskId()));
+                                    
+                                    // do not run the child task unless all of its parent tasks 
+                                    // have been successfully completed
+                                    List<TaskDispatch> parentTaskIds = taskDispatch.select(
+                                            where("taskId",childTaskId.getTaskId()));
+                                    for (TaskDispatch parentTaskId : parentTaskIds) {
+                                        Task parentTask = taskStatus.selectOneOrDie(
+                                                where("id",parentTaskId.getTaskId()));
+                                        if (parentTask.getStatus() != Status.SUCCESS) {
+                                            continue childTask;
+                                        }
+                                    }
+                                    
+                                    WorkflowModule childModule = workflow.selectOneOrDie(
+                                            where("id",childTask.getModuleId()));
+                                    File childDir = new File(taskDir, childModule.getId());
+                                    
+                                    if (module.getTaskType() == TaskType.SERIAL) {
+                                        // combine any inherited and acquired resources and pass them to the child task.
+                                        Map<String,Integer> childResources = new HashMap<String,Integer>();
+                                        if (inheritedResources != null) {
+                                            childResources.putAll(inheritedResources);
+                                        }
+                                        for (Map.Entry<String,Integer> resource : acquiredResources.entrySet()) {
+                                            Integer childResource = childResources.get(resource.getKey());
+                                            childResources.put(resource.getKey(), 
+                                                    resource.getValue() + (childResource != null? childResource : 0));
+                                        }
+                                        childFutures.add(run(childTask, resume, childDir, childResources));
+                                    }
+                                    else if (module.getTaskType() == TaskType.PARALLEL) {
+                                        childFutures.add(run(childTask, resume, childDir, null));
+                                    }
+                                    else {
+                                        throw new RuntimeException("Unknown task type: "+module.getTaskType());
+                                    }
+                                }
+                            }
+                            db.commit(savePoint);
+                        }
+                        catch (Exception e) {
+                            if (savePoint != null) db.rollback(savePoint);
+                            throw new RuntimeException(e);
+                        }
+                        finally {
+                           instanceDb.clearSpecialConnection(db);
+                        }
+                    }
+
                     // notify any task listeners
                     for (TaskListener listener : taskListeners) {
                         listener.notifyTask(task);
                     }
                     
-                    // enqueue the child tasks
-                    if (status == Status.SUCCESS) {
-                        List<TaskDispatch> childTaskIds = taskDispatch.select(
-                                where("parentTaskId",task.getId()));
-                                    
-                        List<Future<Status>> childFutures = new ArrayList<Future<Status>>();
-                        childTask:
-                        for (TaskDispatch childTaskId : childTaskIds) {
-                            Task childTask = taskStatus.selectOneOrDie(
-                                    where("id",childTaskId.getTaskId()));
-                            
-                            // do not run the child task unless all of its parent tasks 
-                            // have been successfully completed
-                            List<TaskDispatch> parentTaskIds = taskDispatch.select(
-                                    where("taskId",childTaskId.getTaskId()));
-                            for (TaskDispatch parentTaskId : parentTaskIds) {
-                                Task parentTask = taskStatus.selectOneOrDie(
-                                        where("id",parentTaskId.getTaskId()));
-                                if (parentTask.getStatus() != Status.SUCCESS) {
-                                    continue childTask;
-                                }
-                            }
-                            
-                            WorkflowModule childModule = workflow.selectOneOrDie(
-                                    where("id",childTask.getModuleId()));
-                            File childDir = new File(taskDir, childModule.getId());
-                            
-                            if (module.getTaskType() == TaskType.SERIAL) {
-                                // combine any inherited and acquired resources and pass them to the child task.
-                                Map<String,Integer> childResources = new HashMap<String,Integer>();
-                                if (inheritedResources != null) {
-                                    childResources.putAll(inheritedResources);
-                                }
-                                for (Map.Entry<String,Integer> resource : acquiredResources.entrySet()) {
-                                    Integer childResource = childResources.get(resource.getKey());
-                                    childResources.put(resource.getKey(), 
-                                            resource.getValue() + (childResource != null? childResource : 0));
-                                }
-                                childFutures.add(run(childTask, resume, childDir, childResources));
-                            }
-                            else if (module.getTaskType() == TaskType.PARALLEL) {
-                                childFutures.add(run(childTask, resume, childDir, null));
-                            }
-                            else {
-                                throw new RuntimeException("Unknown task type: "+module.getTaskType());
-                            }
-                        }
-                        // resolve all the futures into statuses
-                        List<Status> statuses = new ArrayList<Status>();
-                        statuses.add(status);
-                        for (Future<Status> f : childFutures) {
-                            try {
-                                Status s = f.get();
-                                statuses.add(s);
-                            } 
-                            catch (ExecutionException e) {throw new RuntimeException(e);}
-                            catch (InterruptedException e) {throw new RuntimeException(e);}
-                        }
-                        // return the coalesced status
-                        status = coalesceStatuses(statuses);
+                    // resolve all the futures into statuses
+                    List<Status> statuses = new ArrayList<Status>();
+                    statuses.add(status);
+                    for (Future<Status> f : childFutures) {
+                        try {
+                            Status s = f.get();
+                            statuses.add(s);
+                        } 
+                        catch (ExecutionException e) {throw new RuntimeException(e);}
+                        catch (InterruptedException e) {throw new RuntimeException(e);}
                     }
-                    return status;
+                    // return the coalesced status
+                    return coalesceStatuses(statuses);
                 } 
+                catch (SQLException e) {throw new RuntimeException(e);}
                 finally {
                     // relinquish any acquired resources
                     for (Map.Entry<String,Integer> resource : acquiredResources.entrySet()) {
