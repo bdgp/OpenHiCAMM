@@ -73,6 +73,7 @@
                   <include>com.j256.ormlite:ormlite-jdbc</include>
                   <include>net.sf.jopt-simple:jopt-simple</include>
                   <include>com.miglayout:miglayout</include>
+                  <include>javax.json:javax.json-api</include>
                 </includes>
               </artifactSet>
             </configuration>
@@ -138,5 +139,10 @@
 	  	<artifactId>miglayout</artifactId>
 	  	<version>3.7.4</version>
 	  </dependency>
+		<dependency>
+			<groupId>javax.json</groupId>
+			<artifactId>javax.json-api</artifactId>
+			<version>1.0</version>
+		</dependency>
   </dependencies>
 </project>

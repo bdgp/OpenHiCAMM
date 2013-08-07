@@ -43,7 +43,7 @@ public class SlideImager implements Module {
                 return new ArrayList<Config>();
             }
             @Override
-            public JPanel display() {
+            public JPanel display(List<Config> configs) {
                 return new JPanel();
             }
         };

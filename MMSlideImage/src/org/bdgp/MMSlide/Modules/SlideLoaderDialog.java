@@ -26,7 +26,7 @@ import javax.swing.JList;
 import net.miginfocom.swing.MigLayout;
 
 @SuppressWarnings("serial")
-public class SlideLoaderDialog extends JDialog {
+public class SlideLoaderDialog extends JPanel {
 	List<String> sl_cart, sl_pos, sl_expid;	
 	
 	protected JButton listButton_;
@@ -39,9 +39,9 @@ public class SlideLoaderDialog extends JDialog {
 	private JTextField textField;
 	protected JList<String> listPrevPool;
 	
-	public SlideLoaderDialog(DeviceControlGUI mm_gui, SlideLoader sp) {
+	public SlideLoaderDialog() {
 		tabbedPanel = new JTabbedPane();
-		getContentPane().add(tabbedPanel);
+		getRootPane().add(tabbedPanel);
 		
 		ButtonGroup poolSelGroup = new ButtonGroup();
 		// Pool (define new pool or select previous one)

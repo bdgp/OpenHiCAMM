@@ -1,12 +1,10 @@
 package org.bdgp.MMSlide.Modules;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.JPanel;
-
 import org.bdgp.MMSlide.Logger;
+import org.bdgp.MMSlide.ReflectedConfiguration;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Task;
@@ -37,16 +35,7 @@ public class SlideLoader implements Module {
 
     @Override
     public Configuration configure() {
-        return new Configuration() {
-            @Override
-            public List<Config> retrieve() {
-                return new ArrayList<Config>();
-            }
-            @Override
-            public JPanel display() {
-                return new JPanel();
-            }
-        };
+        return new ReflectedConfiguration(new SlideLoaderDialog());
     }
 
     @Override

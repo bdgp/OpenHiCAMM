@@ -8,5 +8,5 @@ import org.bdgp.MMSlide.DB.Config;
 
 public interface Configuration {
     public List<Config> retrieve();
-    public JPanel display();
+    public JPanel display(List<Config> configs);
 }

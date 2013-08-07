@@ -20,6 +20,8 @@ import java.awt.event.ActionEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ChangeEvent;
 
+import static org.bdgp.MMSlide.Util.where;
+
 @SuppressWarnings("serial")
 public class WorkflowConfigurationDialog extends JDialog {
     public WorkflowConfigurationDialog(
@@ -34,7 +36,8 @@ public class WorkflowConfigurationDialog extends JDialog {
         
         final JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
         for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
-            JPanel panel = entry.getValue().display();
+            List<Config> configs = config.select(where("id",entry.getKey()));
+            JPanel panel = entry.getValue().display(configs);
             if (panel != null) {
                 tabbedPane.add(entry.getKey(), panel);
             }
@@ -97,7 +100,8 @@ public class WorkflowConfigurationDialog extends JDialog {
                     List<Config> configs = entry.getValue().retrieve();
                     if (configs != null) {
                         for (Config c : configs) {
-                            config.insertOrUpdate(c,"id","key");
+                            Config setId = new Config(entry.getKey(), c.getKey(), c.getValue());
+                            config.insertOrUpdate(setId,"id","key");
                         }
                     }
                 }
