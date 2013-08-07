@@ -77,18 +77,23 @@ public class Util {
     /**
      * String join helper function
      * @param list The list of strings to join
-     * @param joiner The string to put inbetween the lists
+     * @param delim The string to put inbetween the lists
      */
-    public static String join(List<String> list) {
+    public static String join(List<Object> list) {
         return join("", list);
     }
-    public static String join(String joiner, List<String> list) {
-        StringBuilder sb = new StringBuilder();
-        for (int i=0; i<list.size()-1; ++i) {
-            sb.append(list.get(i));
-            sb.append(joiner);
+    public static String join(Object ... list) {
+        return join("", Arrays.asList(list));
+    }
+    public static String join(String delim, Object ... list) {
+        return join(delim, Arrays.asList(list));
+    }
+    public static String join(String delim, List<Object> list) {
+        StringBuilder sb = new StringBuilder(list.size()>0? list.get(0).toString() : "");
+        for (int i = 1; i < list.size(); i++) {
+            sb.append(delim);
+            sb.append(list.get(i).toString());
         }
-        sb.append(list.get(list.size()-1));
         return sb.toString();
     }
 }
