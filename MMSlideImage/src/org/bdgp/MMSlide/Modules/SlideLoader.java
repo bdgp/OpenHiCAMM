@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.bdgp.MMSlide.Logger;
-import org.bdgp.MMSlide.ReflectedConfiguration;
+import org.bdgp.MMSlide.StorableConfiguration;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Task;
@@ -35,7 +35,7 @@ public class SlideLoader implements Module {
 
     @Override
     public Configuration configure() {
-        return new ReflectedConfiguration(new SlideLoaderDialog());
+        return new StorableConfiguration(new SlideLoaderDialog());
     }
 
     @Override

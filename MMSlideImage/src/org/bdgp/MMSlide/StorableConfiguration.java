@@ -1,6 +1,7 @@
 package org.bdgp.MMSlide;
 
 import java.io.StringReader;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,10 +32,12 @@ import javax.swing.table.TableModel;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 
-public class ReflectedConfiguration implements Configuration {
+public class StorableConfiguration implements Configuration {
     private JPanel panel;
+    
+    public static interface Storable extends Annotation {};
 
-    public ReflectedConfiguration(JPanel panel) {
+    public StorableConfiguration(JPanel panel) {
         this.panel = panel;
     }
 
@@ -48,6 +51,7 @@ public class ReflectedConfiguration implements Configuration {
         Field[] fields = this.panel.getClass().getDeclaredFields();
         try {
             for (Field field : fields) {
+                if (!field.isAnnotationPresent(Storable.class)) continue;
                 String value = null;
                 if (JTextField.class.isAssignableFrom(field.getClass())) {
                     value = ((JTextField)(field.get(this.panel))).getText();
@@ -129,6 +133,7 @@ public class ReflectedConfiguration implements Configuration {
 
         try {
             for (Field field : fields) {
+                if (!field.isAnnotationPresent(Storable.class)) continue;
                 Config config = conf.get(field.getName());
                 if (config == null || config.getValue() == null) continue;
                 String value = config.getValue();
