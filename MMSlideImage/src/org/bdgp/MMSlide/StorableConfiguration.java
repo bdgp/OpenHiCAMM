@@ -1,9 +1,13 @@
 package org.bdgp.MMSlide;
 
 import java.io.StringReader;
-import java.lang.annotation.Annotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +16,8 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonReader;
+import javax.swing.AbstractButton;
+import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JEditorPane;
@@ -27,6 +33,7 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.JToggleButton;
+import javax.swing.ListModel;
 import javax.swing.table.TableModel;
 
 import org.bdgp.MMSlide.DB.Config;
@@ -35,7 +42,9 @@ import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 public class StorableConfiguration implements Configuration {
     private JPanel panel;
     
-    public static interface Storable extends Annotation {};
+    @Target(ElementType.FIELD)
+    @Retention(RetentionPolicy.RUNTIME)
+    public static @interface Storable {};
 
     public StorableConfiguration(JPanel panel) {
         this.panel = panel;
@@ -92,10 +101,13 @@ public class StorableConfiguration implements Configuration {
                     value = new Integer(((JSlider)(field.get(this.panel))).getValue()).toString();
                 }
                 else if (JList.class.isAssignableFrom(field.getClass())) {
+                    // TODO: Handle non-string models
                     int[] indices = ((JList)(field.get(this.panel))).getSelectedIndices();
+                    ListModel model = ((JList)(field.get(this.panel))).getModel();
                     JsonArrayBuilder j = Json.createArrayBuilder();
                     for (int i=1; i < indices.length; ++i) {
-                        j.add(i);
+                        Object o = model.getElementAt(i);
+                        j.add(o.toString());
                     }
                     value = j.build().toString();
                 }
@@ -177,14 +189,14 @@ public class StorableConfiguration implements Configuration {
                     ((JSlider)(field.get(this.panel))).setValue(new Integer(value));
                 }
                 else if (JList.class.isAssignableFrom(field.getClass())) {
+                    // TODO: handle non-string Models
                     JsonReader reader = Json.createReader(new StringReader(value));
                     JsonArray array = reader.readArray();
-                    int[] indices = new int[array.size()];
                     for (int i=0; i<array.size(); ++i) {
-                        indices[i] = array.getInt(i);
+                        String s = array.getString(i);
+                        ((JList)(field.get(this.panel))).setSelectedValue(s, true);
                     }
                     reader.close();
-                    ((JList)(field.get(this.panel))).setSelectedIndices(indices);
                 }
                 else if (JTable.class.isAssignableFrom(field.getClass())) { 
                     // TODO: handle non-string Models
