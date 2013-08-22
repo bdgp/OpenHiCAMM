@@ -96,4 +96,12 @@ public class Util {
         }
         return sb.toString();
     }
+
+    public static void sleep(int minwait, int maxwait) {
+        try { Thread.sleep(minwait + (int)(Math.random()*(maxwait-minwait))); } 
+        catch (InterruptedException e) { }
+    }
+    public static void sleep() {
+        sleep(1000,3000);
+    }
 }

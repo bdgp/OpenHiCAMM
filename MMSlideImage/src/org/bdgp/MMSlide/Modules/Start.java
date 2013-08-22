@@ -6,7 +6,9 @@ import java.util.Map;
 
 import javax.swing.JPanel;
 
+import org.bdgp.MMSlide.Connection;
 import org.bdgp.MMSlide.Logger;
+import org.bdgp.MMSlide.Util;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Task;
@@ -19,6 +21,7 @@ import static org.bdgp.MMSlide.Util.map;
 public class Start implements Module {
     @Override
     public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
+        Util.sleep();
         return Status.SUCCESS;
     }
 
