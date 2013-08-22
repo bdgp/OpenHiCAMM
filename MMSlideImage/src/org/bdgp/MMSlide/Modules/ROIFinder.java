@@ -40,7 +40,7 @@ public class ROIFinder implements Module {
     }
 
     @Override
-    public Configuration configure() {
+    public Configuration configure(Connection connection) {
         return new Configuration() {
             @Override
             public List<Config> retrieve() {

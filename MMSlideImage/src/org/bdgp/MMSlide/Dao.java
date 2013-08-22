@@ -42,6 +42,10 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	    this.connection = connection;
 	}
 	
+	public Connection getConnection() {
+	    return connection;
+	}
+	
 	/**
 	 * Return a DAO instance for a database table.
 	 * 

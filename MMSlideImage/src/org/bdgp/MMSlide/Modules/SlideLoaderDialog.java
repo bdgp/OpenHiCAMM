@@ -2,12 +2,12 @@ package org.bdgp.MMSlide.Modules;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Vector;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
-import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
@@ -20,26 +20,32 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 
+import org.bdgp.MMSlide.Connection;
+import org.bdgp.MMSlide.Dao;
+import org.bdgp.MMSlide.DB.Pool;
 import org.micromanager.api.DeviceControlGUI;
+
 import javax.swing.JTextField;
 import javax.swing.JList;
+
 import net.miginfocom.swing.MigLayout;
+import static org.bdgp.MMSlide.StorableConfiguration.Storable;
 
 @SuppressWarnings("serial")
 public class SlideLoaderDialog extends JPanel {
 	List<String> sl_cart, sl_pos, sl_expid;	
 	
-	protected JButton listButton_;
-	private JTabbedPane tabbedPanel;
-	private JTable table;
-	protected Vector<String> dataColumns;
-	protected Vector<Vector<String>> dataRows;
+	JTabbedPane tabbedPanel;
 	
-	protected DeviceControlGUI gui;
-	private JTextField textField;
-	protected JList<String> listPrevPool;
+	DeviceControlGUI gui;
+	JTextField textField;
+	JList<String> listPrevPool;
+	JButton listButton_;
+
+	@Storable JTable table;
+	JRadioButton radioButtonNewPool;
 	
-	public SlideLoaderDialog() {
+	public SlideLoaderDialog(Connection connection) {
 		tabbedPanel = new JTabbedPane();
 		getRootPane().add(tabbedPanel);
 		
@@ -53,7 +59,7 @@ public class SlideLoaderDialog extends JPanel {
 		poolPanel.add(panelSelectPool, "cell 0 0,alignx left,aligny top");
 		panelSelectPool.setLayout(new MigLayout("", "[77px][41px][114px]", "[22px][]"));
 		
-		JRadioButton radioButtonNewPool = new JRadioButton("New pool");
+		radioButtonNewPool = new JRadioButton("New pool");
 		radioButtonNewPool.setSelected(true);
 		panelSelectPool.add(radioButtonNewPool, "flowy,cell 0 0,alignx left,aligny center");
 		radioButtonNewPool.addActionListener(new ActionListener() {
@@ -80,7 +86,17 @@ public class SlideLoaderDialog extends JPanel {
 		JScrollPane scrollPane_prevPool = new JScrollPane();
 		panelSelectPool.add(scrollPane_prevPool, "cell 2 1");
 		
+		// Populate the previous pool list from the Pool table
+		Dao<Pool> pool = connection.table(Pool.class);
+		List<Pool> pools = pool.select();
+		List<String> pool_names = new ArrayList<String>();
+		for (Pool p : pools) {
+		    pool_names.add(p.getName());
+		}
+		Collections.sort(pool_names);
+		
 		listPrevPool = new JList<String>();
+		listPrevPool.setListData(pool_names.toArray(new String[0]));
 		listPrevPool.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		listPrevPool.setLayoutOrientation(JList.VERTICAL);
 		listPrevPool.setVisibleRowCount(-1);

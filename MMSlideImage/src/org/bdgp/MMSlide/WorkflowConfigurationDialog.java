@@ -27,7 +27,7 @@ public class WorkflowConfigurationDialog extends JDialog {
     public WorkflowConfigurationDialog(
             JFrame parentFrame, 
             final Map<String,Configuration> configurations, 
-            final Dao<Config> config) 
+            final Dao<Config> config)
     {
 	    super(parentFrame, "Module Configuration", Dialog.ModalityType.APPLICATION_MODAL);
 	    this.setPreferredSize(new Dimension(800,600));

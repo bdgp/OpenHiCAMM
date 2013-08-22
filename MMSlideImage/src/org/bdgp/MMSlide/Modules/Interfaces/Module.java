@@ -2,6 +2,7 @@ package org.bdgp.MMSlide.Modules.Interfaces;
 
 import java.util.Map;
 
+import org.bdgp.MMSlide.Connection;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
@@ -16,7 +17,7 @@ public interface Module {
      * Run the module configuration dialog and return the configuration.
      * @return
      */
-    public Configuration configure();
+    public Configuration configure(Connection connection);
     
     /**
      * Create the task records before running the workflow.

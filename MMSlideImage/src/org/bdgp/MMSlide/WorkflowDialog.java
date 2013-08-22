@@ -106,7 +106,7 @@ public class WorkflowDialog extends JFrame {
                     for (WorkflowModule m : ms) {
                         try {
                             Module module = m.getModule().newInstance();
-                            configurations.put(m.getId(), module.configure());
+                            configurations.put(m.getId(), module.configure(connection));
                         }
                         catch (InstantiationException e1) {throw new RuntimeException(e1);} 
                         catch (IllegalAccessException e1) {throw new RuntimeException(e1);}

@@ -34,8 +34,8 @@ public class SlideLoader implements Module {
     }
 
     @Override
-    public Configuration configure() {
-        return new StorableConfiguration(new SlideLoaderDialog());
+    public Configuration configure(Connection connection) {
+        return new StorableConfiguration(new SlideLoaderDialog(connection));
     }
 
     @Override
