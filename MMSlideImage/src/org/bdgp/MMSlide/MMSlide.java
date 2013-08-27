@@ -13,7 +13,8 @@ public class MMSlide implements MMPlugin {
 	*  can obtain it without instantiating the plugin
 	*/
    public static String menuName = "MMSlideImage";	
-	
+   public static String tooltipDescription = "Automated microscope imaging workflow tool";
+
    /**
     * The main app calls this method to remove the module window
     */
