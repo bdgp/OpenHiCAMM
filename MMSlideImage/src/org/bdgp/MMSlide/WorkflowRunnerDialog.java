@@ -86,7 +86,11 @@ public class WorkflowRunnerDialog extends JDialog {
                 progressBar.setValue(completedTasks[0]);
             }});
         
-        workflowRunner.run(startModuleId, resume);
+        if (!resume) {
+            workflowRunner.deleteTaskRecords();
+            workflowRunner.createTaskRecords();
+        }
+        workflowRunner.run(startModuleId);
     }
 
 }
