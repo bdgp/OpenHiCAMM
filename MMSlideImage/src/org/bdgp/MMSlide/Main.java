@@ -35,7 +35,7 @@ public class Main {
         // open the slide workflow dialog
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                final WorkflowDialog dialog = new WorkflowDialog();
+                final WorkflowDialog dialog = new WorkflowDialog(new MMSlide());
                 dialog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 dialog.pack();
                 dialog.setVisible(true);

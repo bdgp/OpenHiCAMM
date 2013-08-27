@@ -41,8 +41,10 @@ public class WorkflowDialog extends JFrame {
     private JButton resumeButton;
     private JLabel lblConfigure;
     private JButton btnConfigure;
+    private MMSlide mmslide;
 
-    public WorkflowDialog() {
+    public WorkflowDialog(MMSlide mmslide) {
+        this.mmslide = mmslide;
         final WorkflowDialog thisDialog = this;
         
         directoryChooser = new JFileChooser();
