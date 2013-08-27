@@ -88,69 +88,63 @@ public class WorkflowRunner {
             Map<String,Integer> resources,
             Level loglevel) 
     {
-        try {
-            // Load the workflow database and workflow table
-            if (workflowDirectory == null || !workflowDirectory.exists() || !workflowDirectory.isDirectory()) {
-                throw new IOException("Directory "+workflowDirectory+" is not a valid directory.");
-            }
-            this.workflowDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath());
-            Dao<WorkflowModule> workflow = this.workflowDb.table(WorkflowModule.class);
-            
+        // Load the workflow database and workflow table
+        if (workflowDirectory == null || !workflowDirectory.exists() || !workflowDirectory.isDirectory()) {
+            throw new RuntimeException("Directory "+workflowDirectory+" is not a valid directory.");
+        }
+        this.workflowDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath());
+        Dao<WorkflowModule> workflow = this.workflowDb.table(WorkflowModule.class);
+        
+        for (WorkflowModule w : workflow.select()) {
             // Make sure parent IDs are defined
-            for (WorkflowModule w : workflow.queryForAll()) {
-                if (w.getParentId() != null) {
-                    List<WorkflowModule> parent = workflow.queryForEq("id", w.getParentId());
-                    if (parent.size() == 0) {
-                        throw new SQLException("Workflow references unknown parent ID "+w.getParentId());
-                    }
+            if (w.getParentId() != null) {
+                List<WorkflowModule> parent = workflow.select(where("id", w.getParentId()));
+                if (parent.size() == 0) {
+                    throw new RuntimeException("Workflow references unknown parent ID "+w.getParentId());
                 }
-            }
-            // Find the first workflow modules
-            if (workflow.queryForEq("parent",null).size() == 0) {
-                throw new SQLException("Workflow is an empty workflow.");
             }
             // Make sure all modules implement Module
-            for (WorkflowModule f : workflow.select()) {
-                if (!Module.class.isAssignableFrom(f.getModule())) {
-                    throw new SQLException("First module "+f.getModuleName()
-                            +" in Workflow does not inherit the Module interface.");
-                }
+            if (!Module.class.isAssignableFrom(w.getModule())) {
+                throw new RuntimeException("First module "+w.getModuleName()
+                        +" in Workflow does not inherit the Module interface.");
             }
-            
-            this.pool = Executors.newCachedThreadPool();
-            
-            this.resources = new HashMap<String,Semaphore>();
-            for (Map.Entry<String,Integer> entry : resources.entrySet()) {
-                this.resources.put(entry.getKey(), new Semaphore(entry.getValue()));
-            }
-            if (!this.resources.containsKey("CPU")) {
-                this.resources.put("CPU",new Semaphore(Runtime.getRuntime().availableProcessors()));
-            }
-            if (!this.resources.containsKey("microscope")) {
-                this.resources.put("microscope",new Semaphore(1));
-            }
-            
-            this.moduleConfig = this.workflowDb.table(Config.class, MODULE_CONFIG);
-            this.workflowInstance = this.workflowDb.table(WorkflowInstance.class, WORKFLOW_INSTANCE);
-            this.workflowDirectory = workflowDirectory;
-            this.workflow = workflow;
-            this.logger = new Logger(new File(workflowDirectory, LOG_FILE).getPath(), 
-                    "workflow", loglevel);
-            
-            this.instance = instanceId == null? newWorkflowInstance() :
-                            workflowInstance.selectOneOrDie(where("id",instanceId));
-            this.instanceDb = Connection.get(
-                    this.workflowDirectory.getPath(),
-                    new File(this.instance.getStorageLocation(), 
-                        this.instance.getName()+".db").getPath());
-            this.taskConfig = this.instanceDb.table(Config.class, TASK_CONFIG);
-            this.taskStatus = this.instanceDb.table(Task.class, TASK_STATUS);
-            this.taskDispatch = this.instanceDb.table(TaskDispatch.class, TASK_DISPATCH);
-            
-            this.taskListeners = new ArrayList<TaskListener>();
         }
-        catch (IOException e) {throw new RuntimeException(e);}
-        catch (SQLException e) {throw new RuntimeException(e);}
+        // Find the first workflow modules
+        if (workflow.select(where("parent",null)).size() == 0) {
+            throw new RuntimeException("Workflow is an empty workflow.");
+        }
+        
+        this.pool = Executors.newCachedThreadPool();
+        
+        this.resources = new HashMap<String,Semaphore>();
+        for (Map.Entry<String,Integer> entry : resources.entrySet()) {
+            this.resources.put(entry.getKey(), new Semaphore(entry.getValue()));
+        }
+        if (!this.resources.containsKey("CPU")) {
+            this.resources.put("CPU",new Semaphore(Runtime.getRuntime().availableProcessors()));
+        }
+        if (!this.resources.containsKey("microscope")) {
+            this.resources.put("microscope",new Semaphore(1));
+        }
+        
+        this.moduleConfig = this.workflowDb.table(Config.class, MODULE_CONFIG);
+        this.workflowInstance = this.workflowDb.table(WorkflowInstance.class, WORKFLOW_INSTANCE);
+        this.workflowDirectory = workflowDirectory;
+        this.workflow = workflow;
+        this.logger = new Logger(new File(workflowDirectory, LOG_FILE).getPath(), 
+                "workflow", loglevel);
+        
+        this.instance = instanceId == null? newWorkflowInstance() :
+                        workflowInstance.selectOneOrDie(where("id",instanceId));
+        this.instanceDb = Connection.get(
+                this.workflowDirectory.getPath(),
+                new File(this.instance.getStorageLocation(), 
+                    this.instance.getName()+".db").getPath());
+        this.taskConfig = this.instanceDb.table(Config.class, TASK_CONFIG);
+        this.taskStatus = this.instanceDb.table(Task.class, TASK_STATUS);
+        this.taskDispatch = this.instanceDb.table(TaskDispatch.class, TASK_DISPATCH);
+        
+        this.taskListeners = new ArrayList<TaskListener>();
     }
     
     /**
@@ -169,15 +163,47 @@ public class WorkflowRunner {
         return instance;
     }
     
-    public Future<Status> run(
-            final String startModuleId,
-            final boolean resume) 
-    {
+    public void deleteTaskRecords() {
+        List<WorkflowModule> modules = workflow.select(where("parentId",null));
+        for (WorkflowModule module : modules) {
+            deleteTaskRecords(module);
+        }
+    }
+    public void deleteTaskRecords(WorkflowModule module) {
+        // Delete any child task/dispatch records
+        List<WorkflowModule> childModules = workflow.select(where("parentId",module.getId()));
+        for (WorkflowModule child : childModules) {
+            deleteTaskRecords(child);
+        }
+        // Delete task dispatch records
+        List<Task> tasks = taskStatus.select(where("moduleId",module.getId()));
+        for (Task task : tasks) {
+            taskDispatch.delete(where("taskId",task.getId()));
+        }
+        // Then delete task records
+        taskStatus.delete(where("moduleId",module.getId()));
+    }
+    
+    public void createTaskRecords() {
+        List<WorkflowModule> modules = workflow.select(where("parentId",null));
+        while (modules.size() > 0) {
+            List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
+            for (WorkflowModule module : modules) {
+                try { module.getModule().newInstance().createTaskRecords(this, module.getId()); } 
+                catch (InstantiationException e) {throw new RuntimeException(e);} 
+                catch (IllegalAccessException e) {throw new RuntimeException(e);}
+                childModules.addAll(workflow.select(where("parentId",module.getId())));
+            }
+            modules = childModules;
+        }
+    }
+    
+    public Future<Status> run(final String startModuleId) {
         Future<Status> future = pool.submit(new Callable<Status>() {
             @Override
             public Status call() {
                 Task start = taskStatus.selectOneOrDie(where("moduleId",startModuleId));
-                Future<Status> future = run(start, resume, new File(instance.getStorageLocation()), null);
+                Future<Status> future = run(start, new File(instance.getStorageLocation()), null);
                 try { return future.get(); }
                 catch (InterruptedException e) {throw new RuntimeException(e);} 
                 catch (ExecutionException e) {throw new RuntimeException(e);} 
@@ -193,7 +219,6 @@ public class WorkflowRunner {
      */
     private Future<Status> run(
             final Task task, 
-            final boolean resume,
             final File taskDir,
             final Map<String,Integer> inheritedResources) 
     {
@@ -238,7 +263,7 @@ public class WorkflowRunner {
                 
                 Map<String,Integer> acquiredResources = new HashMap<String,Integer>();
                 try {
-                    if (!resume || status == Status.NEW || status == Status.DEFER) {
+                    if (status == Status.NEW || status == Status.DEFER) {
                         // set the task status to IN_PROGRESS
                         task.setStatus(Status.IN_PROGRESS);
                         taskStatus.update(task, "id","moduleId");
@@ -339,10 +364,10 @@ public class WorkflowRunner {
                                             childResources.put(resource.getKey(), 
                                                     resource.getValue() + (childResource != null? childResource : 0));
                                         }
-                                        childFutures.add(run(childTask, resume, childDir, childResources));
+                                        childFutures.add(run(childTask, childDir, childResources));
                                     }
                                     else if (module.getTaskType() == TaskType.PARALLEL) {
-                                        childFutures.add(run(childTask, resume, childDir, null));
+                                        childFutures.add(run(childTask, childDir, null));
                                     }
                                     else {
                                         throw new RuntimeException("Unknown task type: "+module.getTaskType());
