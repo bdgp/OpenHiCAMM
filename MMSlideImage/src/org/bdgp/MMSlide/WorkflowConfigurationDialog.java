@@ -111,12 +111,12 @@ public class WorkflowConfigurationDialog extends JDialog {
                     }
                 }
                 if (errors.size() > 0) {
-                    StringBuilder errorMessage = new StringBuilder("Please fix the following validation errors:\n\n");
+                    StringBuilder errorMessage = new StringBuilder("Please fix the following configuration errors:\n\n");
                     for (String error : errors) {
                         errorMessage.append(error);
                         errorMessage.append("\n\n");
                     }
-                    JOptionPane.showMessageDialog(self, errorMessage.toString(), "Validation Errors", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(self, errorMessage.toString(), "Configuration Errors", JOptionPane.ERROR_MESSAGE);
                 }
                 else {
                     for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {

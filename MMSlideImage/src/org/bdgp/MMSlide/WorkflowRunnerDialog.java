@@ -1,13 +1,9 @@
 package org.bdgp.MMSlide;
 
 import java.awt.Dimension;
-import java.io.File;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Handler;
-import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
 import javax.swing.JDialog;
@@ -28,8 +24,7 @@ public class WorkflowRunnerDialog extends JDialog {
     private WorkflowRunner workflowRunner;
     
     public WorkflowRunnerDialog(WorkflowDialog workflowDialog, 
-            File workflowDirectory, 
-            Integer instanceId, 
+            WorkflowRunner runner,
             String startModuleId,
             boolean resume) 
     {
@@ -65,10 +60,6 @@ public class WorkflowRunnerDialog extends JDialog {
             }
         });
         getContentPane().add(btnKill, "cell 1 2");
-        
-        Map<String,Integer> resources = new HashMap<String,Integer>();
-        Level loglevel = Level.INFO;
-        workflowRunner = new WorkflowRunner(workflowDirectory, instanceId, resources, loglevel);
         
         // logging output
         workflowRunner.getLogger().addHandler(new Handler() {

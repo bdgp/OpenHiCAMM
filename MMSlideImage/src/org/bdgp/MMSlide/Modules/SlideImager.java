@@ -82,4 +82,8 @@ public class SlideImager implements Module {
         return map("cpu",1);
     }
 
+    @Override
+    public String[] validate(WorkflowRunner workflow) {
+        return null;
+    }
 }

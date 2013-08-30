@@ -15,9 +15,14 @@ import org.bdgp.MMSlide.DB.Task.Status;
 public interface Module {
     /**
      * Run the module configuration dialog and return the configuration.
-     * @return
      */
     public Configuration configure(Connection connection);
+    
+    /**
+     * Validate the database records this module uses to ensure that they
+     * are correctly filled in.
+     */
+    public String[] validate(WorkflowRunner workflow);
     
     /**
      * Create the task records before running the workflow.

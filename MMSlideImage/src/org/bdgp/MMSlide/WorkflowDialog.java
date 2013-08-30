@@ -4,6 +4,7 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -15,6 +16,7 @@ import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
 import net.miginfocom.swing.MigLayout;
+
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
@@ -24,9 +26,11 @@ import java.awt.event.WindowListener;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 
 import static org.bdgp.MMSlide.Util.where;
 
@@ -235,22 +239,36 @@ public class WorkflowDialog extends JFrame {
         thisDialog.setVisible(false);
         Integer instanceId = Integer.parseInt(workflowInstance.getItemAt(workflowInstance.getSelectedIndex()));
         String startModuleId = startModule.getItemAt(startModule.getSelectedIndex());
-                
-        // TODO: add gui widget to set resume
-        WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(this, new File(workflowDir.getText()), instanceId, startModuleId, resume);
-        wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        wrd.pack();
-        wrd.setVisible(true);
-        wrd.addWindowListener(new WindowListener() {
-            @Override public void windowOpened(WindowEvent e) { }
-            @Override public void windowClosing(WindowEvent e) { }
-            @Override public void windowClosed(WindowEvent e) { 
-                thisDialog.setVisible(true);
+
+        Map<String,Integer> resources = new HashMap<String,Integer>();
+        Level loglevel = Level.INFO;
+        WorkflowRunner workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, resources, loglevel);
+        
+        String[] errors = workflowRunner.validate();
+        if (errors != null && errors.length > 0) {
+            StringBuilder errorMessage = new StringBuilder("Please fix the following validation errors:\n\n");
+            for (String error : errors) {
+                errorMessage.append(error);
+                errorMessage.append("\n\n");
             }
-            @Override public void windowIconified(WindowEvent e) { }
-            @Override public void windowDeiconified(WindowEvent e) { }
-            @Override public void windowActivated(WindowEvent e) { }
-            @Override public void windowDeactivated(WindowEvent e) { }
-        });
+            JOptionPane.showMessageDialog(this, errorMessage.toString(), "Validation Errors", JOptionPane.ERROR_MESSAGE);
+        }
+        else {
+            WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(this, workflowRunner, startModuleId, resume);
+            wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            wrd.pack();
+            wrd.setVisible(true);
+            wrd.addWindowListener(new WindowListener() {
+                @Override public void windowOpened(WindowEvent e) { }
+                @Override public void windowClosing(WindowEvent e) { }
+                @Override public void windowClosed(WindowEvent e) { 
+                    thisDialog.setVisible(true);
+                }
+                @Override public void windowIconified(WindowEvent e) { }
+                @Override public void windowDeiconified(WindowEvent e) { }
+                @Override public void windowActivated(WindowEvent e) { }
+                @Override public void windowDeactivated(WindowEvent e) { }
+            });
+        }
     }
 }

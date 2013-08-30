@@ -8,6 +8,7 @@ import java.net.URL;
 import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -145,6 +146,20 @@ public class WorkflowRunner {
         this.taskDispatch = this.instanceDb.table(TaskDispatch.class, TASK_DISPATCH);
         
         this.taskListeners = new ArrayList<TaskListener>();
+    }
+    
+    /**
+     * Allow each module to perform a validation step on its database records.
+     * @return a list of validation errors, if any.
+     */
+    public String[] validate() {
+        List<String> errors = new ArrayList<String>();
+        for (WorkflowModule w : workflow.select()) {
+            try { errors.addAll(Arrays.asList(w.getModule().newInstance().validate(this))); } 
+            catch (InstantiationException e) {throw new RuntimeException(e);} 
+            catch (IllegalAccessException e) {throw new RuntimeException(e);}
+        }
+        return errors.toArray(new String[0]);
     }
     
     /**
