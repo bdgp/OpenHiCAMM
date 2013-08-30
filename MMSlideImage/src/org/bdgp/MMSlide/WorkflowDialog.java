@@ -44,6 +44,7 @@ public class WorkflowDialog extends JFrame {
     private MMSlide mmslide;
 
     public WorkflowDialog(MMSlide mmslide) {
+        super("MMSlide");
         this.mmslide = mmslide;
         final WorkflowDialog thisDialog = this;
         
@@ -236,7 +237,7 @@ public class WorkflowDialog extends JFrame {
         String startModuleId = startModule.getItemAt(startModule.getSelectedIndex());
                 
         // TODO: add gui widget to set resume
-        WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(new File(workflowDir.getText()), instanceId, startModuleId, resume);
+        WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(this, new File(workflowDir.getText()), instanceId, startModuleId, resume);
         wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         wrd.pack();
         wrd.setVisible(true);

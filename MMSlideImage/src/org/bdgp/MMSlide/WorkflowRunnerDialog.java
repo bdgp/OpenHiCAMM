@@ -27,7 +27,13 @@ import java.awt.event.ActionEvent;
 public class WorkflowRunnerDialog extends JDialog {
     private WorkflowRunner workflowRunner;
     
-    public WorkflowRunnerDialog(File workflowDirectory, Integer instanceId, String startModuleId, boolean resume) {
+    public WorkflowRunnerDialog(WorkflowDialog workflowDialog, 
+            File workflowDirectory, 
+            Integer instanceId, 
+            String startModuleId,
+            boolean resume) 
+    {
+        super(workflowDialog, "Workflow Runner");
         getContentPane().setLayout(new MigLayout("", "[][grow]", "[grow][][]"));
         setPreferredSize(new Dimension(800,600));
         
