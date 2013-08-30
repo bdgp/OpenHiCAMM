@@ -358,7 +358,7 @@ public class WorkflowRunner {
                                 List<TaskDispatch> childTaskIds = taskDispatch.select(
                                         where("parentTaskId",task.getId()));
                                             
-                                childTask:
+                                CHILD_TASK:
                                 for (TaskDispatch childTaskId : childTaskIds) {
                                     Task childTask = taskStatus.selectOneOrDie(
                                             where("id",childTaskId.getTaskId()));
@@ -371,7 +371,7 @@ public class WorkflowRunner {
                                         Task parentTask = taskStatus.selectOneOrDie(
                                                 where("id",parentTaskId.getTaskId()));
                                         if (parentTask.getStatus() != Status.SUCCESS) {
-                                            continue childTask;
+                                            continue CHILD_TASK;
                                         }
                                     }
                                     
