@@ -39,7 +39,10 @@ public class MMSlide implements MMPlugin {
     * Open the module window
     */
    public void show() {
-       if (dialog == null) dialog = new WorkflowDialog(this);
+       if (dialog == null) {
+           dialog = new WorkflowDialog(this);
+           dialog.pack();
+       }
        dialog.setVisible(true);
    }
    
