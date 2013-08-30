@@ -23,6 +23,11 @@ import static org.bdgp.MMSlide.Util.map;
 
 public class SlideImager implements Module {
     @Override
+    public void initialize(WorkflowRunner workflow) {
+        
+    }
+
+    @Override
     public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
         Util.sleep();
         return Status.SUCCESS;

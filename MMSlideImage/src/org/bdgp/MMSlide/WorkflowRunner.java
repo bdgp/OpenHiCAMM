@@ -68,6 +68,8 @@ public class WorkflowRunner {
     private Dao<Config> taskConfig;
     private Dao<Task> taskStatus;
     
+    private Map<String,Module> moduleInstances;
+    
     private Logger logger;
     private Level logLevel;
     
@@ -96,6 +98,7 @@ public class WorkflowRunner {
         this.workflowDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath());
         Dao<WorkflowModule> workflow = this.workflowDb.table(WorkflowModule.class);
         
+        this.moduleInstances = new HashMap<String,Module>();
         for (WorkflowModule w : workflow.select()) {
             // Make sure parent IDs are defined
             if (w.getParentId() != null) {
@@ -109,6 +112,10 @@ public class WorkflowRunner {
                 throw new RuntimeException("First module "+w.getModuleName()
                         +" in Workflow does not inherit the Module interface.");
             }
+            // Instantiate the module instances and put them in a hash
+            try { moduleInstances.put(w.getId(), w.getModule().newInstance()); } 
+            catch (InstantiationException e) {throw new RuntimeException(e);} 
+            catch (IllegalAccessException e) {throw new RuntimeException(e);}
         }
         // Find the first workflow modules
         if (workflow.select(where("parent",null)).size() == 0) {
@@ -155,9 +162,11 @@ public class WorkflowRunner {
     public String[] validate() {
         List<String> errors = new ArrayList<String>();
         for (WorkflowModule w : workflow.select()) {
-            try { errors.addAll(Arrays.asList(w.getModule().newInstance().validate(this))); } 
-            catch (InstantiationException e) {throw new RuntimeException(e);} 
-            catch (IllegalAccessException e) {throw new RuntimeException(e);}
+            Module m = moduleInstances.get(w.getId());
+            if (m == null) {
+                throw new RuntimeException("No instantiated module found with ID: "+w.getId());
+            }
+            m.validate(this);
         }
         return errors.toArray(new String[0]);
     }
@@ -204,9 +213,11 @@ public class WorkflowRunner {
         while (modules.size() > 0) {
             List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
             for (WorkflowModule module : modules) {
-                try { module.getModule().newInstance().createTaskRecords(this, module.getId()); } 
-                catch (InstantiationException e) {throw new RuntimeException(e);} 
-                catch (IllegalAccessException e) {throw new RuntimeException(e);}
+                Module m = moduleInstances.get(module.getId());
+                if (m == null) {
+                    throw new RuntimeException("No instantiated module found with ID: "+module.getId());
+                }
+                m.createTaskRecords(this, module.getId());
                 childModules.addAll(workflow.select(where("parentId",module.getId())));
             }
             modules = childModules;
@@ -271,10 +282,10 @@ public class WorkflowRunner {
                 Status status = task.getStatus();
                 
                 // get an instance of the module
-                Module taskModule = null;
-                try { taskModule = module.getModule().newInstance(); } 
-                catch (InstantiationException e) {throw new RuntimeException(e);} 
-                catch (IllegalAccessException e) {throw new RuntimeException(e);}
+                Module taskModule = moduleInstances.get(module.getId());
+                if (taskModule == null) {
+                    throw new RuntimeException("No instantiated module found with ID: "+module.getId());
+                }
                 
                 Map<String,Integer> acquiredResources = new HashMap<String,Integer>();
                 try {

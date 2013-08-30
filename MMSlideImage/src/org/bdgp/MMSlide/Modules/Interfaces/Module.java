@@ -14,6 +14,11 @@ import org.bdgp.MMSlide.DB.Task.Status;
  */
 public interface Module {
     /**
+     * Initialize this module instance.
+     */
+    public void initialize(WorkflowRunner workflow);
+
+    /**
      * Run the module configuration dialog and return the configuration.
      */
     public Configuration configure(Connection connection);
