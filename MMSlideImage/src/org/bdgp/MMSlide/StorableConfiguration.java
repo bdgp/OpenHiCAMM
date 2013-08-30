@@ -217,4 +217,9 @@ public class StorableConfiguration implements Configuration {
         catch (IllegalAccessException e) {throw new RuntimeException(e);}
         return this.panel;
     }
+    
+    @Override
+    public String[] validate() {
+        return null;
+    }
 }

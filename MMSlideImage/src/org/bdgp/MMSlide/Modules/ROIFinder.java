@@ -52,6 +52,10 @@ public class ROIFinder implements Module {
             public JPanel display(List<Config> configs) {
                 return new JPanel();
             }
+            @Override
+            public String[] validate() {
+                return null;
+            }
         };
     }
 

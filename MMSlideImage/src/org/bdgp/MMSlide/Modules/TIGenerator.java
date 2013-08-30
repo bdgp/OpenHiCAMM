@@ -48,6 +48,10 @@ public class TIGenerator implements Module {
             @Override
             public JPanel display(List<Config> configs) {
                 return new JPanel();
+            }
+            @Override
+            public String[] validate() {
+                return null;
             }};
     }
 
