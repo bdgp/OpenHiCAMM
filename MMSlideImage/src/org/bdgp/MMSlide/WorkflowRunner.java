@@ -1,20 +1,13 @@
 package org.bdgp.MMSlide;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
 import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -23,8 +16,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Task;
@@ -77,6 +68,7 @@ public class WorkflowRunner {
     private Map<String,Semaphore> resources;
     
     private List<TaskListener> taskListeners;
+    private MMSlide mmslide;
     
     /**
      * Constructor for WorkflowRunner. This loads the workflow.txt file 
@@ -88,7 +80,8 @@ public class WorkflowRunner {
             File workflowDirectory, 
             Integer instanceId, 
             Map<String,Integer> resources,
-            Level loglevel) 
+            Level loglevel,
+            MMSlide mmslide) 
     {
         // Load the workflow database and workflow table
         if (workflowDirectory == null || !workflowDirectory.exists() || !workflowDirectory.isDirectory()) {
@@ -112,7 +105,11 @@ public class WorkflowRunner {
                         +" in Workflow does not inherit the Module interface.");
             }
             // Instantiate the module instances and put them in a hash
-            try { moduleInstances.put(w.getId(), w.getModule().newInstance()); } 
+            try { 
+                Module m = w.getModule().newInstance();
+                m.initialize(this, w.getId());
+                moduleInstances.put(w.getId(), m); 
+            } 
             catch (InstantiationException e) {throw new RuntimeException(e);} 
             catch (IllegalAccessException e) {throw new RuntimeException(e);}
         }
@@ -152,22 +149,7 @@ public class WorkflowRunner {
         this.taskDispatch = this.instanceDb.table(TaskDispatch.class, TASK_DISPATCH);
         
         this.taskListeners = new ArrayList<TaskListener>();
-    }
-    
-    /**
-     * Allow each module to perform a validation step on its database records.
-     * @return a list of validation errors, if any.
-     */
-    public String[] validate() {
-        List<String> errors = new ArrayList<String>();
-        for (WorkflowModule w : workflow.select()) {
-            Module m = moduleInstances.get(w.getId());
-            if (m == null) {
-                throw new RuntimeException("No instantiated module found with ID: "+w.getId());
-            }
-            m.validate(this);
-        }
-        return errors.toArray(new String[0]);
+        this.mmslide = mmslide;
     }
     
     /**
@@ -216,7 +198,7 @@ public class WorkflowRunner {
                 if (m == null) {
                     throw new RuntimeException("No instantiated module found with ID: "+module.getId());
                 }
-                m.createTaskRecords(this, module.getId());
+                m.createTaskRecords();
                 childModules.addAll(workflow.select(where("parentId",module.getId())));
             }
             modules = childModules;
@@ -321,7 +303,7 @@ public class WorkflowRunner {
                         
                         // run the task
                         try {
-                            status = taskModule.run(workflowRunner, task, config, taskLogger);
+                            status = taskModule.run(task, config, taskLogger);
                         } 
                         // Uncaught exceptions set the status to ERROR
                         catch (Exception e) {
@@ -501,36 +483,7 @@ public class WorkflowRunner {
         return instanceIds;
     }
     
-    /**
-     * @return The list of registered modules from the META-INF/modules.txt files.
-     */
-    public static List<String> getModuleNames() {
-        try {
-            Enumeration<URL> configs = ClassLoader.getSystemResources(MODULE_LIST);
-            Set<String> modules = new HashSet<String>();
-            for (URL url : Collections.list(configs)) {
-                BufferedReader r = new BufferedReader(
-                        new InputStreamReader(url.openStream(), "utf-8"));
-                String line;
-                while ((line = r.readLine()) != null) {
-                    Matcher m = Pattern.compile("^\\s*([^#\\s]+)").matcher(line);
-                    if (m.find() && m.groupCount() > 0) {
-                        Class<?> c = Class.forName(m.group(1));
-                        if (!Module.class.isAssignableFrom(c)) {
-                            throw new RuntimeException(
-                                    "Class "+c.getName()+
-                                    " does not implement the Module interface");
-                        }
-                        modules.add(m.group(1));
-                    }
-                }
-            }
-            return new ArrayList<String>(modules);
-        } 
-        catch (IOException e) {throw new RuntimeException(e);}
-        catch (ClassNotFoundException e) {throw new RuntimeException(e);}
-    }
-    
+    // Various getters/setters
     public File getWorkflowDirectory() { return workflowDirectory; }
     public Dao<WorkflowModule> getWorkflow() { return workflow; }
     public Dao<Config> getModuleConfig() { return moduleConfig; }
@@ -543,6 +496,9 @@ public class WorkflowRunner {
     public Dao<Task> getTaskStatus() { return taskStatus; }
     public Dao<TaskDispatch> getTaskDispatch() { return taskDispatch; }
     public Dao<Config> getTaskConfig() { return taskConfig; }
+    public Connection getWorkflowDb() { return workflowDb; }
+    public Connection getInstanceDb() { return instanceDb; }
+    public MMSlide getMMSlide() { return mmslide; }
     
     public void addTaskListener(TaskListener listener) {
         taskListeners.add(listener);
