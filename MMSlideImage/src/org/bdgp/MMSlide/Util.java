@@ -54,7 +54,8 @@ public class Util {
             this.addAll(l);
             return this;
         }
-        public ArrayList<V> push(V ... values) {
+        @SafeVarargs
+        final public ArrayList<V> push(V ... values) {
             this.addAll(Arrays.asList(values));
             return this;
         }
@@ -65,6 +66,7 @@ public class Util {
      * @param values The list of things to turn into a list literal.
      * @return
      */
+    @SafeVarargs
     public static <V> List<V> list(V ... values) {
         return Arrays.asList(values);
     }
