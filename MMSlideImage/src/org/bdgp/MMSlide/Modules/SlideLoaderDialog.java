@@ -44,7 +44,6 @@ import javax.swing.JLabel;
 import javax.swing.JTextArea;
 
 import static org.bdgp.MMSlide.Util.where;
-import javax.swing.SwingConstants;
 
 @SuppressWarnings("serial")
 public class SlideLoaderDialog extends JPanel {
