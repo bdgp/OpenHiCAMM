@@ -12,7 +12,7 @@ public class ROI {
     @DatabaseField private double y2;
 
     public ROI() {}
-    public ROI(int id, int imageId, long x1, long y1, long x2, long y2) {
+    public ROI(int id, int imageId, double x1, double y1, double x2, double y2) {
         this.id = id;
         this.x1 = x1;
         this.y1 = y1;
