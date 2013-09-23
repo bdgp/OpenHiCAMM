@@ -103,17 +103,17 @@ public class WorkflowConfigurationDialog extends JDialog {
         JButton btnFinish = new JButton("Finish");
         btnFinish.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                List<String> errors = new ArrayList<String>();
+                List<ValidationError> errors = new ArrayList<ValidationError>();
                 for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
-                    String[] error = entry.getValue().validate();
+                    ValidationError[] error = entry.getValue().validate();
                     if (error != null) {
                         errors.addAll(Arrays.asList(error));
                     }
                 }
                 if (errors.size() > 0) {
                     StringBuilder errorMessage = new StringBuilder("Please fix the following configuration errors:\n\n");
-                    for (String error : errors) {
-                        errorMessage.append(error);
+                    for (ValidationError error : errors) {
+                        errorMessage.append(error.getMessage());
                         errorMessage.append("\n\n");
                     }
                     JOptionPane.showMessageDialog(self, errorMessage.toString(), "Configuration Errors", JOptionPane.ERROR_MESSAGE);

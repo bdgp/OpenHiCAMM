@@ -1,12 +1,13 @@
 package org.bdgp.MMSlide.Modules;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.bdgp.MMSlide.Connection;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.StorableConfiguration;
 import org.bdgp.MMSlide.Util;
+import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Task;
@@ -20,13 +21,17 @@ import static org.bdgp.MMSlide.Util.where;
 import static org.bdgp.MMSlide.Util.map;
 
 public class SlideLoader implements Module {
+    WorkflowRunner workflowRunner;
+    String moduleId;
+
     @Override
-    public void initialize(WorkflowRunner workflow) {
-        
+    public void initialize(WorkflowRunner workflowRunner, String moduleId) {
+        this.workflowRunner = workflowRunner;
+        this.moduleId = moduleId;
     }
 
     @Override
-    public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
+    public Status run(Task task, Map<String,Config> config, Logger logger) {
         Util.sleep();
         return Status.SUCCESS;
     }
@@ -42,38 +47,43 @@ public class SlideLoader implements Module {
     }
 
     @Override
-    public Configuration configure(Connection connection) {
-        return new StorableConfiguration(new SlideLoaderDialog(connection));
+    public Configuration configure() {
+        final SlideLoaderDialog dialog = new SlideLoaderDialog(workflowRunner.getInstanceDb(), workflowRunner.getMMSlide());
+        return new StorableConfiguration(dialog) {
+            @Override
+            public ValidationError[] validate() {
+                List<ValidationError> errors = new ArrayList<ValidationError>();
+                if (dialog.poolList.getSelectedValue() == null) {
+                    errors.add(new ValidationError(null, "Please select a pool"));
+                }
+                return errors.toArray(new ValidationError[0]);
+            }
+        };
     }
 
     @Override
-    public void createTaskRecords(WorkflowRunner workflow, String moduleId) {
-        WorkflowModule module = workflow.getWorkflow().selectOneOrDie(where("id",moduleId));
+    public void createTaskRecords() {
+        WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",moduleId));
         if (module.getParentId() != null) {
-            List<Task> parentTasks = workflow.getTaskStatus().select(where("moduleId",module.getParentId()));
+            List<Task> parentTasks = workflowRunner.getTaskStatus().select(where("moduleId",module.getParentId()));
             for (Task parentTask : parentTasks) {
                 Task task = new Task(moduleId, parentTask.getStorageLocation(), Status.NEW);
-                workflow.getTaskStatus().insert(task);
-                task.update(workflow.getTaskStatus());
+                workflowRunner.getTaskStatus().insert(task);
+                task.update(workflowRunner.getTaskStatus());
                 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
-                workflow.getTaskDispatch().insert(dispatch);
+                workflowRunner.getTaskDispatch().insert(dispatch);
             }
         }
         else {
-            Task task = new Task(moduleId, workflow.getInstance().getStorageLocation(), Status.NEW);
-            workflow.getTaskStatus().insert(task);
-            task.update(workflow.getTaskStatus());
+            Task task = new Task(moduleId, workflowRunner.getInstance().getStorageLocation(), Status.NEW);
+            workflowRunner.getTaskStatus().insert(task);
+            task.update(workflowRunner.getTaskStatus());
         }
     }
 
     @Override
     public Map<String, Integer> getResources() {
         return map("cpu",1);
-    }
-
-    @Override
-    public String[] validate(WorkflowRunner workflow) {
-        return null;
     }
 }

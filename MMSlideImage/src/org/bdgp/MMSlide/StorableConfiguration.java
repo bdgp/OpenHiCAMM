@@ -37,7 +37,7 @@ import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 
 public class StorableConfiguration implements Configuration {
-    private JPanel panel;
+    protected JPanel panel;
     
     @Target(ElementType.FIELD)
     @Retention(RetentionPolicy.RUNTIME)
@@ -219,7 +219,7 @@ public class StorableConfiguration implements Configuration {
     }
     
     @Override
-    public String[] validate() {
+    public ValidationError[] validate() {
         return null;
     }
 }

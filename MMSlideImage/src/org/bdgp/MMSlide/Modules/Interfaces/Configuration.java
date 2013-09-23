@@ -4,6 +4,7 @@ import java.util.List;
 
 import javax.swing.JPanel;
 
+import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.DB.Config;
 
 public interface Configuration {
@@ -19,5 +20,5 @@ public interface Configuration {
      * Validate the configuration settings.
      * @return A list of validation errors, if any.
      */
-    public String[] validate();
+    public ValidationError[] validate();
 }
