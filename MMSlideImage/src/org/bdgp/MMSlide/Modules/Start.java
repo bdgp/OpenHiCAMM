@@ -6,9 +6,9 @@ import java.util.Map;
 
 import javax.swing.JPanel;
 
-import org.bdgp.MMSlide.Connection;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.Util;
+import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Task;
@@ -19,13 +19,17 @@ import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import static org.bdgp.MMSlide.Util.map;
 
 public class Start implements Module {
+    WorkflowRunner workflowRunner;
+    String moduleId;
+
     @Override
-    public void initialize(WorkflowRunner workflow) {
-        
+    public void initialize(WorkflowRunner workflowRunner, String moduleId) { 
+        this.workflowRunner = workflowRunner;
+        this.moduleId = moduleId;
     }
 
     @Override
-    public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
+    public Status run(Task task, Map<String,Config> config, Logger logger) {
         Util.sleep();
         return Status.SUCCESS;
     }
@@ -41,7 +45,7 @@ public class Start implements Module {
     }
 
     @Override
-    public Configuration configure(Connection connection) {
+    public Configuration configure() {
         return new Configuration() {
             @Override
             public List<Config> retrieve() {
@@ -52,26 +56,20 @@ public class Start implements Module {
                 return new JPanel();
             }
             @Override
-            public String[] validate() {
+            public ValidationError[] validate() {
                 return null;
             }};
     }
 
     @Override
-    public void createTaskRecords(WorkflowRunner workflow, String moduleId) {
-        Task task = new Task(moduleId, workflow.getInstance().getStorageLocation(), Status.NEW);
-        workflow.getTaskStatus().insert(task);
-        task.update(workflow.getTaskStatus());
+    public void createTaskRecords() {
+        Task task = new Task(moduleId, workflowRunner.getInstance().getStorageLocation(), Status.NEW);
+        workflowRunner.getTaskStatus().insert(task);
+        task.update(workflowRunner.getTaskStatus());
     }
 
     @Override
     public Map<String, Integer> getResources() {
         return map("cpu",1);
     }
-
-    @Override
-    public String[] validate(WorkflowRunner workflow) {
-        return null;
-    }
-
 }

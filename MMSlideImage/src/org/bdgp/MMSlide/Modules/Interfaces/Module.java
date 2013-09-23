@@ -2,7 +2,6 @@ package org.bdgp.MMSlide.Modules.Interfaces;
 
 import java.util.Map;
 
-import org.bdgp.MMSlide.Connection;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
@@ -16,28 +15,22 @@ public interface Module {
     /**
      * Initialize this module instance.
      */
-    public void initialize(WorkflowRunner workflow);
+    public void initialize(WorkflowRunner workflow, String moduleId);
 
     /**
      * Run the module configuration dialog and return the configuration.
      */
-    public Configuration configure(Connection connection);
-    
-    /**
-     * Validate the database records this module uses to ensure that they
-     * are correctly filled in.
-     */
-    public String[] validate(WorkflowRunner workflow);
+    public Configuration configure();
     
     /**
      * Create the task records before running the workflow.
      */
-    public void createTaskRecords(WorkflowRunner workflow, String moduleId);
+    public void createTaskRecords();
     
     /**
      * Run the task.
      */
-    public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger);
+    public Status run(Task task, Map<String,Config> config, Logger logger);
     
     /**
      * Return the title of this module.

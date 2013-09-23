@@ -6,9 +6,9 @@ import java.util.Map;
 
 import javax.swing.JPanel;
 
-import org.bdgp.MMSlide.Connection;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.Util;
+import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Task;
@@ -25,13 +25,17 @@ import static org.bdgp.MMSlide.Util.map;
  * Return x/y/len/width of bounding box surrounding the ROI
  */
 public class ROIFinder implements Module {
+    WorkflowRunner workflowRunner;
+    String moduleId;
+
     @Override
-    public void initialize(WorkflowRunner workflow) {
-        
+    public void initialize(WorkflowRunner workflowRunner, String moduleId) {
+        this.workflowRunner = workflowRunner;
+        this.moduleId = moduleId;
     }
 
     @Override
-    public Status run(WorkflowRunner workflow, Task task, Map<String,Config> config, Logger logger) {
+    public Status run(Task task, Map<String,Config> config, Logger logger) {
         Util.sleep();
         return Status.SUCCESS;
     }
@@ -47,7 +51,7 @@ public class ROIFinder implements Module {
     }
 
     @Override
-    public Configuration configure(Connection connection) {
+    public Configuration configure() {
         return new Configuration() {
             @Override
             public List<Config> retrieve() {
@@ -58,30 +62,30 @@ public class ROIFinder implements Module {
                 return new JPanel();
             }
             @Override
-            public String[] validate() {
+            public ValidationError[] validate() {
                 return null;
             }
         };
     }
 
     @Override
-    public void createTaskRecords(WorkflowRunner workflow, String moduleId) {
-        WorkflowModule module = workflow.getWorkflow().selectOneOrDie(where("id",moduleId));
+    public void createTaskRecords() {
+        WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",moduleId));
         if (module.getParentId() != null) {
-            List<Task> parentTasks = workflow.getTaskStatus().select(where("moduleId",module.getParentId()));
+            List<Task> parentTasks = workflowRunner.getTaskStatus().select(where("moduleId",module.getParentId()));
             for (Task parentTask : parentTasks) {
                 Task task = new Task(moduleId, parentTask.getStorageLocation(), Status.NEW);
-                workflow.getTaskStatus().insert(task);
-                task.update(workflow.getTaskStatus());
+                workflowRunner.getTaskStatus().insert(task);
+                task.update(workflowRunner.getTaskStatus());
                 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
-                workflow.getTaskDispatch().insert(dispatch);
+                workflowRunner.getTaskDispatch().insert(dispatch);
             }
         }
         else {
-            Task task = new Task(moduleId, workflow.getInstance().getStorageLocation(), Status.NEW);
-            workflow.getTaskStatus().insert(task);
-            task.update(workflow.getTaskStatus());
+            Task task = new Task(moduleId, workflowRunner.getInstance().getStorageLocation(), Status.NEW);
+            workflowRunner.getTaskStatus().insert(task);
+            task.update(workflowRunner.getTaskStatus());
         }
     }
 
@@ -89,10 +93,4 @@ public class ROIFinder implements Module {
     public Map<String, Integer> getResources() {
         return map("cpu",1);
     }
-
-    @Override
-    public String[] validate(WorkflowRunner workflow) {
-        return null;
-    }
-
 }
