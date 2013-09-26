@@ -1,27 +1,30 @@
 package org.bdgp.MMSlide.DB;
-
+ 
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
-
+ 
 @DatabaseTable
 public class ROI {
     @DatabaseField(generatedId=true) private int id;
-    @DatabaseField private double x1;
-    @DatabaseField private double y1;
-    @DatabaseField private double x2;
-    @DatabaseField private double y2;
-
+    @DatabaseField(canBeNull=false) private int imageId;
+    @DatabaseField(canBeNull=false) private int x1;
+    @DatabaseField(canBeNull=false) private int y1;
+    @DatabaseField(canBeNull=false) private int x2;
+    @DatabaseField(canBeNull=false) private int y2;
+ 
     public ROI() {}
-    public ROI(int id, int imageId, double x1, double y1, double x2, double y2) {
+    public ROI(int id, int imageId, int x1, int y1, int x2, int y2) {
         this.id = id;
+        this.imageId = imageId;
         this.x1 = x1;
         this.y1 = y1;
         this.x2 = x2;
         this.y2 = y2;
     }
     public int getId() {return this.id;}
-    public double getX1() {return this.x1;}
-    public double getY1() {return this.y1;}
-    public double getX2() {return this.x2;}
-    public double getY2() {return this.y2;}
+    public int getImageId() {return this.imageId;}
+    public int getX1() {return this.x1;}
+    public int getY1() {return this.y1;}
+    public int getX2() {return this.x2;}
+    public int getY2() {return this.y2;}
 }
