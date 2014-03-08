@@ -118,7 +118,8 @@ public class WorkflowRunner {
             throw new RuntimeException("Workflow is an empty workflow.");
         }
         
-        this.pool = Executors.newCachedThreadPool();
+        int cores = Runtime.getRuntime().availableProcessors();
+        this.pool = Executors.newFixedThreadPool(cores);
         
         this.resources = new HashMap<String,Semaphore>();
         for (Map.Entry<String,Integer> entry : resources.entrySet()) {
