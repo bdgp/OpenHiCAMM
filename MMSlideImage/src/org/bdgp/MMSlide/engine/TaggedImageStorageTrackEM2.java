@@ -8,7 +8,7 @@ import java.io.Writer;
 import org.json.JSONException;
 import org.json.JSONObject;
 // import org.micromanager.acquisition.TaggedImageStorageDiskDefault;
-import org.micromanager.api.AcquisitionEngine;
+import org.micromanager.acquisition.AcquisitionEngine;
 import org.micromanager.utils.ReportingUtils;
 
 public class TaggedImageStorageTrackEM2 extends TaggedImageStorageDiskDefault {

@@ -33,16 +33,16 @@ import org.micromanager.MMStudioMainFrame;
 //import org.micromanager.acquisition.engine.ProcessorStack;
 //import org.micromanager.acquisition.engine.SequenceGenerator;
 //import org.micromanager.acquisition.engine.SequenceSettings;
-import org.micromanager.api.AcquisitionEngine;
+import org.micromanager.acquisition.AcquisitionEngine;
 import org.micromanager.api.DataProcessor;
-import org.micromanager.api.DeviceControlGUI;
+//import org.micromanager.api.DeviceControlGUI;
 import org.micromanager.api.ImageCache;
 import org.micromanager.api.ScriptInterface;
 import org.micromanager.internalinterfaces.AcqSettingsListener;
 //import org.micromanager.metadata.MMAcqDataException;
 //import org.micromanager.metadata.WellAcquisitionData;
-import org.micromanager.navigation.MultiStagePosition;
-import org.micromanager.navigation.PositionList;
+import org.micromanager.api.MultiStagePosition;
+import org.micromanager.api.PositionList;
 import org.micromanager.utils.AutofocusManager;
 import org.micromanager.utils.ChannelSpec;
 import org.micromanager.utils.ContrastSettings;
@@ -124,8 +124,8 @@ public class AcquisitionSlideEngine implements AcquisitionEngine {
          BlockingQueue<TaggedImage> imageProcessorStackOutput = imageProcessorStack.begin();
 
          // ...Display and Save...
-         display_ = new LiveMonitoringDisplay(core_, imageProcessorStackOutput,
-                 acquisitionSettings, acquisitionSettings.channels, saveFiles_, gui_, this);
+//         display_ = new LiveMonitoringDisplay(core_, imageProcessorStackOutput,
+//                 acquisitionSettings, acquisitionSettings.channels, saveFiles_, gui_, this);
          display_.start();
       } catch (Exception ex) {
          ReportingUtils.logError(ex);
@@ -178,15 +178,15 @@ public class AcquisitionSlideEngine implements AcquisitionEngine {
 
       acquisitionSettings.channels = new ArrayList<ChannelSpec>();
       if (this.useChannels_) {
-         for (ChannelSpec channel:channels_)
-            if (channel.useChannel_)
-               acquisitionSettings.channels.add(channel);
+//         for (ChannelSpec channel:channels_)
+//            if (channel.useChannel_)
+//               acquisitionSettings.channels.add(channel);
       }
 
       // Positions
-      acquisitionSettings.positions = new ArrayList<MultiStagePosition>();
-      if (this.useMultiPosition_)
-         acquisitionSettings.positions.addAll(Arrays.asList(posList_.getPositions()));
+//      acquisitionSettings.positions = new ArrayList<MultiStagePosition>();
+//      if (this.useMultiPosition_)
+//         acquisitionSettings.positions.addAll(Arrays.asList(posList_.getPositions()));
 
       // Other
 
@@ -281,9 +281,9 @@ public class AcquisitionSlideEngine implements AcquisitionEngine {
       posList_ = posList;
    }
 
-   public void setParentGUI(DeviceControlGUI parent) {
-      gui_ = (MMStudioMainFrame) parent;
-   }
+//   public void setParentGUI(DeviceControlGUI parent) {
+//      gui_ = (MMStudioMainFrame) parent;
+//   }
 
    public void setZStageDevice(String stageLabel_) {
       zstage_ = stageLabel_;
@@ -490,14 +490,14 @@ public class AcquisitionSlideEngine implements AcquisitionEngine {
    public boolean addChannel(String config, double exp, Boolean doZStack, double zOffset, ContrastSettings c8, ContrastSettings c16, int skip, Color c) {
       if (isConfigAvailable(config)) {
          ChannelSpec channel = new ChannelSpec();
-         channel.config_ = config;
-         channel.exposure_ = exp;
-         channel.doZStack_ = doZStack;
-         channel.zOffset_ = zOffset;
+//         channel.config_ = config;
+//         channel.exposure_ = exp;
+//         channel.doZStack_ = doZStack;
+//         channel.zOffset_ = zOffset;
 //         channel.contrast8_ = c8;
 //         channel.contrast16_ = c16;
-         channel.color_ = c;
-         channel.skipFactorFrame_ = skip;
+//         channel.color_ = c;
+//         channel.skipFactorFrame_ = skip;
          channels_.add(channel);
          return true;
       } else {
@@ -602,9 +602,9 @@ public class AcquisitionSlideEngine implements AcquisitionEngine {
 
       int numChannels = 0;
       if (useChannels_) {
-         for (ChannelSpec channel:channels_)
-            if (channel.useChannel_)
-               ++numChannels;
+//         for (ChannelSpec channel:channels_)
+//            if (channel.useChannel_)
+//               ++numChannels;
          }
       else {
          numChannels = 1;

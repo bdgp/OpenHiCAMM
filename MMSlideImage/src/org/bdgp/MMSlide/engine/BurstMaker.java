@@ -55,7 +55,7 @@ public class BurstMaker extends DataProcessor<ImageRequest> {
    private boolean burstValid(ImageRequest aRequest, ImageRequest nextRequest) {
       return
               ((aRequest.exposure == nextRequest.exposure)
-           && (aRequest.Position == nextRequest.Position)
+//           && (aRequest.Position == nextRequest.Position)
            && (aRequest.SliceIndex  == nextRequest.SliceIndex)
            && (aRequest.ChannelIndex == nextRequest.ChannelIndex)
            && (nextRequest.WaitTime <= lastRequest_.exposure)

@@ -5,7 +5,7 @@
 
 package org.bdgp.MMSlide.engine;
 
-import org.micromanager.navigation.MultiStagePosition;
+import org.micromanager.api.MultiStagePosition;
 import org.micromanager.utils.ChannelSpec;
 
 /**

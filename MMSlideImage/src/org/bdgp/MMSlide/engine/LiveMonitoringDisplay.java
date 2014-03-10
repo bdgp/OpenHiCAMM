@@ -21,7 +21,7 @@ import org.json.JSONObject;
 import org.micromanager.MMStudioMainFrame;
 import org.micromanager.acquisition.MMImageCache;
 // import org.micromanager.acquisition.engine.SequenceSettings;
-import org.micromanager.api.AcquisitionEngine;
+import org.micromanager.acquisition.AcquisitionEngine;
 import org.micromanager.api.TaggedImageStorage;
 import org.micromanager.utils.ChannelSpec;
 import org.micromanager.utils.JavaUtils;
@@ -95,7 +95,7 @@ public class LiveMonitoringDisplay extends Thread {
       md.put("Slices", acqSettings.slices.size());
       md.put("Frames", acqSettings.numFrames);
       md.put("Channels", acqSettings.channels.size());
-      md.put("Positions", acqSettings.positions.size());
+//      md.put("Positions", acqSettings.positions.size());
       md.put("Comment", acqSettings.comment);
       md.put("MetadataVersion", 10);
       md.put("Source", "Micro-Manager");
@@ -142,8 +142,8 @@ public class LiveMonitoringDisplay extends Thread {
       JSONArray channelColors = new JSONArray();
       JSONArray channelNames = new JSONArray();
       for (ChannelSpec channel : acqSettings.channels) {
-         channelColors.put(channel.color_.getRGB());
-         channelNames.put(channel.config_);
+//         channelColors.put(channel.color_.getRGB());
+//         channelNames.put(channel.config_);
       }
       try {
          md.put("ChColors", channelColors);

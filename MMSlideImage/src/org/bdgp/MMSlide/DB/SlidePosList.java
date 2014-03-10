@@ -1,6 +1,6 @@
 package org.bdgp.MMSlide.DB;
 
-import org.micromanager.navigation.PositionList;
+import org.micromanager.api.PositionList;
 import org.micromanager.utils.MMSerializationException;
 
 import com.j256.ormlite.field.DataType;

@@ -6,7 +6,7 @@
 package org.bdgp.MMSlide.engine;
 
 import java.util.ArrayList;
-import org.micromanager.navigation.MultiStagePosition;
+import org.micromanager.api.MultiStagePosition;
 import org.micromanager.utils.ChannelSpec;
 
 /**

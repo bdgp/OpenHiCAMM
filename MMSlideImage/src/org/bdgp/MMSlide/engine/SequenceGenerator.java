@@ -42,12 +42,13 @@ public class SequenceGenerator extends Thread {
       boolean skipImage;
       boolean skipLastImage = true;
 
-      int numPositions = Math.max(1, (int) sequenceSettings_.positions.size());
+//      int numPositions = Math.max(1, (int) sequenceSettings_.positions.size());
       int numFrames = Math.max(1, (int) sequenceSettings_.numFrames);
       int numChannels = Math.max(1, (int) sequenceSettings_.channels.size());
       int numSlices = Math.max(1, (int) sequenceSettings_.slices.size());
-      int numImages = numPositions * numFrames * numChannels * numSlices;
+//      int numImages = numPositions * numFrames * numChannels * numSlices;
 
+      /*
       for (int imageIndex = 0; imageIndex < (1 + numImages); ++imageIndex) {
          ImageRequest imageRequest = new ImageRequest();
          imageRequest.UsePosition = (sequenceSettings_.positions.size() > 0);
@@ -151,6 +152,7 @@ public class SequenceGenerator extends Thread {
          }
          skipLastImage = skipImage;
       }
+      */
       putRequest(stopRequest_);
    }
 

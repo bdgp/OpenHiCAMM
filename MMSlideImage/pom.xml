@@ -142,11 +142,16 @@
 			<id>ormlite</id>
 			<url>http://ormlite.com/releases/</url>
 		</repository>
-		<repository>
+		<!--repository>
 			<id>bam.lbl.gov</id>
 			<name>bam.lbl.gov-releases</name>
 			<url>http://bam.lbl.gov:8081/artifactory/libs-release-local</url>
-		</repository>
+		</repository-->
+    <repository>
+      <id>local-repository</id>
+      <name>Project-local repository</name>
+      <url>file://${project.basedir}/repository</url>
+    </repository>
 	</repositories>
 	<dependencies>
 		<dependency>
@@ -167,7 +172,7 @@
 		<dependency>
 			<groupId>MicroManager</groupId>
 			<artifactId>MMJ_</artifactId>
-			<version>1.4</version>
+			<version>1.4.16</version>
 		</dependency>
 		<dependency>
 			<groupId>org.hsqldb</groupId>

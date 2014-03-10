@@ -13,8 +13,8 @@ import mmcorej.CMMCore;
 import mmcorej.Configuration;
 import mmcorej.TaggedImage;
 import org.json.JSONObject;
-import org.micromanager.navigation.MultiStagePosition;
-import org.micromanager.navigation.StagePosition;
+import org.micromanager.api.MultiStagePosition;
+import org.micromanager.api.StagePosition;
 import org.micromanager.utils.JavaUtils;
 import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.ReportingUtils;
@@ -72,14 +72,14 @@ public class ImageTask implements EngineTask {
    void updateChannel() {
       if (imageRequest_.UseChannel) {
          try {
-            core_.setExposure(imageRequest_.Channel.exposure_);
-            imageRequest_.exposure = imageRequest_.Channel.exposure_;
-            String chanGroup = imageRequest_.Channel.name_;
-            if (chanGroup.length() == 0) {
-               chanGroup = core_.getChannelGroup();
-            }
-            core_.setConfig(chanGroup, imageRequest_.Channel.config_);
-            core_.waitForConfig(chanGroup,imageRequest_.Channel.config_);
+//            core_.setExposure(imageRequest_.Channel.exposure_);
+//            imageRequest_.exposure = imageRequest_.Channel.exposure_;
+//            String chanGroup = imageRequest_.Channel.name_;
+//            if (chanGroup.length() == 0) {
+//               chanGroup = core_.getChannelGroup();
+//            }
+//            core_.setConfig(chanGroup, imageRequest_.Channel.config_);
+//            core_.waitForConfig(chanGroup,imageRequest_.Channel.config_);
             log("channel set");
          } catch (Exception ex) {
             ReportingUtils.logError(ex, "Channel setting failed.");
@@ -103,7 +103,7 @@ public class ImageTask implements EngineTask {
 
          if (imageRequest_.UseChannel) {
             setZPosition_ = true;
-            zPosition_ += imageRequest_.Channel.zOffset_;
+//            zPosition_ += imageRequest_.Channel.zOffset_;
          }
 
          if (setZPosition_) {
@@ -214,7 +214,7 @@ public class ImageTask implements EngineTask {
       try {
       md_.put("Slice", imageRequest_.SliceIndex);
       if (imageRequest_.UseChannel) {
-         md_.put("Channel", imageRequest_.Channel.config_);
+//         md_.put("Channel", imageRequest_.Channel.config_);
       }
       md_.put("PositionIndex", imageRequest_.PositionIndex);
       md_.put("ChannelIndex", imageRequest_.ChannelIndex);
