@@ -294,6 +294,7 @@ public class WorkflowRunner {
                         }
                         
                         // run the task
+                        taskLogger.info("Running module "+module.getId()+", task ID "+task.getId());
                         try {
                             status = taskModule.run(task, config, taskLogger);
                         } 
@@ -303,6 +304,7 @@ public class WorkflowRunner {
                                     task.toString(), e.toString()));
                             status = Status.ERROR;
                         }
+                        taskLogger.info("Finished module "+module.getId()+", task ID "+task.getId());
                     }
                     
                     // This section must be synchronized both in java and in the backend database 

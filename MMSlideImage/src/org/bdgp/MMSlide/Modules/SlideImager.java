@@ -72,7 +72,6 @@ public class SlideImager implements Module {
             for (Task parentTask : parentTasks) {
                 Task task = new Task(moduleId, parentTask.getStorageLocation(), Status.NEW);
                 workflowRunner.getTaskStatus().insert(task);
-                task.update(workflowRunner.getTaskStatus());
                 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
                 workflowRunner.getTaskDispatch().insert(dispatch);
@@ -81,7 +80,6 @@ public class SlideImager implements Module {
         else {
             Task task = new Task(moduleId, workflowRunner.getInstance().getStorageLocation(), Status.NEW);
             workflowRunner.getTaskStatus().insert(task);
-            task.update(workflowRunner.getTaskStatus());
         }
     }
 

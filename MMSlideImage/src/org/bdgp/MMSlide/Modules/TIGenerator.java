@@ -71,7 +71,6 @@ public class TIGenerator implements Module {
             for (Task parentTask : parentTasks) {
                 Task task = new Task(moduleId, parentTask.getStorageLocation(), Status.NEW);
                 workflow.getTaskStatus().insert(task);
-                task.update(workflow.getTaskStatus());
                 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
                 workflow.getTaskDispatch().insert(dispatch);
@@ -80,7 +79,6 @@ public class TIGenerator implements Module {
         else {
             Task task = new Task(moduleId, workflow.getInstance().getStorageLocation(), Status.NEW);
             workflow.getTaskStatus().insert(task);
-            task.update(workflow.getTaskStatus());
         }
     }
 

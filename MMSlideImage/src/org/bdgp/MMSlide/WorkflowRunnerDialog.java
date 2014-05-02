@@ -29,6 +29,7 @@ public class WorkflowRunnerDialog extends JDialog {
             boolean resume) 
     {
         super(workflowDialog, "Workflow Runner");
+        this.workflowRunner = runner;
         getContentPane().setLayout(new MigLayout("", "[][grow]", "[grow][][]"));
         setPreferredSize(new Dimension(800,600));
         

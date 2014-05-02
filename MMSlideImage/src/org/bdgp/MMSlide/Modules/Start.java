@@ -63,7 +63,6 @@ public class Start implements Module {
     public void createTaskRecords() {
         Task task = new Task(moduleId, workflowRunner.getInstance().getStorageLocation(), Status.NEW);
         workflowRunner.getTaskStatus().insert(task);
-        task.update(workflowRunner.getTaskStatus());
     }
 
     @Override
