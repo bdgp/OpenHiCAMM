@@ -75,7 +75,7 @@ public class ROIFinder implements Module {
             for (Task parentTask : parentTasks) {
                 Task task = new Task(moduleId, Status.NEW);
                 workflowRunner.getTaskStatus().insert(task);
-                task.createStorageLocation(parentTask.getStorageLocation());
+                task.createStorageLocation(parentTask.getStorageLocation(), workflowRunner.getWorkflowDirectory().getPath());
                 workflowRunner.getTaskStatus().update(task,"id");
                 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
@@ -85,7 +85,7 @@ public class ROIFinder implements Module {
         else {
             Task task = new Task(moduleId, Status.NEW);
             workflowRunner.getTaskStatus().insert(task);
-            task.createStorageLocation(workflowRunner.getInstance().getStorageLocation());
+            task.createStorageLocation(workflowRunner.getInstance().getStorageLocation(), workflowRunner.getWorkflowDirectory().getPath());
             workflowRunner.getTaskStatus().update(task,"id");
         }
     }

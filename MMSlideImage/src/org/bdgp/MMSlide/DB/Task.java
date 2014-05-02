@@ -46,11 +46,12 @@ public class Task {
     public String getStorageLocation() {
         return storageLocation;
     }
-    public String createStorageLocation(String parent) {
+    public String createStorageLocation(String parent, String toplevel) {
         // create a new directory for the task instance
-        File dir = new File(parent, this.getName());
-        if (!dir.exists() && !dir.mkdirs()) {
-            throw new RuntimeException("Could not create directory "+dir.toString());
+    	File dir = new File(parent, this.getName());
+        File path = new File(toplevel, new File(parent, this.getName()).getPath());
+        if (!path.exists() && !path.mkdirs()) {
+            throw new RuntimeException("Could not create directory "+path.toString());
         }
         this.storageLocation = dir.toString();
         return this.storageLocation;

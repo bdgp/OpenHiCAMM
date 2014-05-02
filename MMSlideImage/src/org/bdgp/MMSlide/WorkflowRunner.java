@@ -133,9 +133,10 @@ public class WorkflowRunner {
         this.instance = instanceId == null? newWorkflowInstance() :
                         workflowInstance.selectOneOrDie(where("id",instanceId));
         this.instanceDb = Connection.get(
-                this.workflowDirectory.getPath(),
-                new File(this.instance.getStorageLocation(), 
-                    this.instance.getName()+".db").getPath());
+                new File(workflowDirectory, WORKFLOW_DB).getPath(),
+                new File(this.workflowDirectory, 
+                		new File(this.instance.getStorageLocation(), 
+                				this.instance.getName()+".db").getPath()).getPath());
         this.taskConfig = this.instanceDb.table(TaskConfig.class);
         this.taskStatus = this.instanceDb.table(Task.class);
         this.taskDispatch = this.instanceDb.table(TaskDispatch.class);
@@ -151,7 +152,7 @@ public class WorkflowRunner {
     private WorkflowInstance newWorkflowInstance() {
         WorkflowInstance instance = new WorkflowInstance();
         workflowInstance.insert(instance);
-        // create a new directory for the workflow instance
+        // Create a new directory for the workflow instance.
         instance.createStorageLocation(this.workflowDirectory.getPath());
         workflowInstance.update(instance,"id");
         return instance;
@@ -463,7 +464,7 @@ public class WorkflowRunner {
      */
     public static List<Integer> getInstanceIds(String workflowDirectory) {
         List<Integer> instanceIds = new ArrayList<Integer>();
-        Connection workflowDb = Connection.get(new File(workflowDirectory, "workflow.db").getPath());
+        Connection workflowDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath());
         if (workflowDb != null) {
             Dao<WorkflowInstance> workflowInstance = workflowDb.table(WorkflowInstance.class);
             for (WorkflowInstance instance : workflowInstance.select()) {

@@ -20,13 +20,13 @@ public class WorkflowInstance {
     
     public int getId() { return id; }
     public String getStorageLocation() { return this.storageLocation; }
-    public String createStorageLocation(String parent) {
+    public String createStorageLocation(String toplevel) {
         // create a new directory for the task instance
-        File dir = new File(parent, this.getName());
-        if (!dir.exists() && !dir.mkdirs()) {
-            throw new RuntimeException("Could not create directory "+dir.toString());
+        File path = new File(toplevel, this.getName());
+        if (!path.exists() && !path.mkdirs()) {
+            throw new RuntimeException("Could not create directory "+path.toString());
         }
-        this.storageLocation = dir.toString();
+        this.storageLocation = this.getName();
         return this.storageLocation;
     }
     public String getName() { return String.format("WF%05d",this.id); }

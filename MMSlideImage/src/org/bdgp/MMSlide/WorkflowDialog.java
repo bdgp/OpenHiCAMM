@@ -9,7 +9,6 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 
 import org.bdgp.MMSlide.DB.ModuleConfig;
-import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.WorkflowInstance;
 import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
@@ -190,52 +189,51 @@ public class WorkflowDialog extends JFrame {
         
         openWorkflowButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                if (directoryChooser.showDialog(thisDialog,"Choose Workflow Directory") == JFileChooser.APPROVE_OPTION 
-                		&& directoryChooser.getSelectedFile().exists()
-                		&& directoryChooser.getSelectedFile().isDirectory()) 
-                {
+                if (directoryChooser.showDialog(thisDialog,"Choose Workflow Directory") == JFileChooser.APPROVE_OPTION) {
                     workflowDir.setText(directoryChooser.getSelectedFile().getPath());
                 }
-                if (new File(workflowDir.getText()).exists()) {
+                if (workflowDir.getText().length() > 0) {
                     editWorkflowButton.setEnabled(true);
+                    refresh();
                 }
                 else {
                     editWorkflowButton.setVisible(false);
                 }
-                refresh();
             }
         });
     }
     public void refresh() {
-        Connection workflowDb = Connection.get(
-                new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
-        // get list of starting modules
         List<String> startModules = new ArrayList<String>();
-        Dao<WorkflowModule> modules = workflowDb.table(WorkflowModule.class);
-        for (WorkflowModule module : modules.select()) {
-            if (module.getParentId() == null) {
-                startModules.add(module.getId());
+    	if (workflowDir.getText().length() > 0) {
+            Connection workflowDb = Connection.get(
+                    new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
+            // get list of starting modules
+            Dao<WorkflowModule> modules = workflowDb.table(WorkflowModule.class);
+            for (WorkflowModule module : modules.select()) {
+                if (module.getParentId() == null) {
+                    startModules.add(module.getId());
+                }
             }
-        }
-        if (startModules.size() > 0) {
-            Collections.sort(startModules);
-            startModule.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
-            startModule.setEnabled(true);
-            
-            // get the list of workflow instances
-            List<String> workflowInstances = new ArrayList<String>();
-            workflowInstances.add("-Create new Instance-");
-            Dao<WorkflowInstance> wfi = workflowDb.table(WorkflowInstance.class);
-            for (WorkflowInstance instance : wfi.select()) {
-                workflowInstances.add(Integer.toString(instance.getId()));
+            if (startModules.size() > 0) {
+                Collections.sort(startModules);
+                startModule.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
+                startModule.setEnabled(true);
+                
+                // get the list of workflow instances
+                List<String> workflowInstances = new ArrayList<String>();
+                workflowInstances.add("-Create new Instance-");
+                Dao<WorkflowInstance> wfi = workflowDb.table(WorkflowInstance.class);
+                for (WorkflowInstance instance : wfi.select()) {
+                    workflowInstances.add(Integer.toString(instance.getId()));
+                }
+                Collections.sort(workflowInstances);
+                workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
+                workflowInstance.setEnabled(true);
+                
+                btnConfigure.setEnabled(true);
+                startButton.setEnabled(true);
             }
-            Collections.sort(workflowInstances);
-            workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
-            workflowInstance.setEnabled(true);
-            
-            btnConfigure.setEnabled(true);
-            startButton.setEnabled(true);
-        }
+    	}
     }
 
     public void initWorkflowRunner() {
