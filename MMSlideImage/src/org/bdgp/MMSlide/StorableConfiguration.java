@@ -52,7 +52,7 @@ public class StorableConfiguration implements Configuration {
      */
     @SuppressWarnings("rawtypes")
     @Override
-    public List<Config> retrieve() {
+    public Config[] retrieve() {
         List<Config> configs = new ArrayList<Config>();
         Field[] fields = this.panel.getClass().getDeclaredFields();
         try {
@@ -128,12 +128,12 @@ public class StorableConfiguration implements Configuration {
         }
         catch (IllegalArgumentException e) {throw new RuntimeException(e);} 
         catch (IllegalAccessException e) {throw new RuntimeException(e);}
-        return configs;
+        return configs.toArray(new Config[0]);
     }
     
     @SuppressWarnings("rawtypes")
     @Override
-    public JPanel display(List<Config> configs) {
+    public JPanel display(Config[] configs) {
         Map<String,Config> conf = new HashMap<String,Config>();
         for (Config config : configs) {
             conf.put(config.getKey(), config);

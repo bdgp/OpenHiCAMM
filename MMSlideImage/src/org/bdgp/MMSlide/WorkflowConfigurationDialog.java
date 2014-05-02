@@ -18,6 +18,7 @@ import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
 import org.bdgp.MMSlide.DB.Config;
+import org.bdgp.MMSlide.DB.ModuleConfig;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 
 import java.awt.event.ActionListener;
@@ -33,18 +34,17 @@ public class WorkflowConfigurationDialog extends JDialog {
     public WorkflowConfigurationDialog(
             JFrame parentFrame, 
             final Map<String,Configuration> configurations, 
-            final Dao<Config> config)
+            final Dao<ModuleConfig> config)
     {
 	    super(parentFrame, "Module Configuration", Dialog.ModalityType.APPLICATION_MODAL);
-	    final WorkflowConfigurationDialog self = this;
 	    this.setPreferredSize(new Dimension(800,600));
 	    final WorkflowConfigurationDialog thisDialog = this;
         getContentPane().setLayout(new MigLayout("", "[grow][]", "[grow][]"));
         
         final JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
         for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
-            List<Config> configs = config.select(where("id",entry.getKey()));
-            JPanel panel = entry.getValue().display(configs);
+            List<ModuleConfig> configs = config.select(where("id",entry.getKey()));
+            JPanel panel = entry.getValue().display(configs.toArray(new Config[0]));
             if (panel != null) {
                 tabbedPane.add(entry.getKey(), panel);
             }
@@ -116,14 +116,14 @@ public class WorkflowConfigurationDialog extends JDialog {
                         errorMessage.append(error.getMessage());
                         errorMessage.append("\n\n");
                     }
-                    JOptionPane.showMessageDialog(self, errorMessage.toString(), "Configuration Errors", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(thisDialog, errorMessage.toString(), "Configuration Errors", JOptionPane.ERROR_MESSAGE);
                 }
                 else {
                     for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
-                        List<Config> configs = entry.getValue().retrieve();
+                        Config[] configs = entry.getValue().retrieve();
                         if (configs != null) {
                             for (Config c : configs) {
-                                Config setId = new Config(entry.getKey(), c.getKey(), c.getValue());
+                                ModuleConfig setId = new ModuleConfig(entry.getKey(), c.getKey(), c.getValue());
                                 config.insertOrUpdate(setId,"id","key");
                             }
                         }

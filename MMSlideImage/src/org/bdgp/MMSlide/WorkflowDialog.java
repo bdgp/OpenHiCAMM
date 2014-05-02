@@ -8,7 +8,7 @@ import javax.swing.JTextField;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 
-import org.bdgp.MMSlide.DB.Config;
+import org.bdgp.MMSlide.DB.ModuleConfig;
 import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
@@ -104,7 +104,7 @@ public class WorkflowDialog extends JFrame {
                 
                 // get list of JPanels and load them with the configuration interfaces
                 Map<String,Configuration> configurations = new LinkedHashMap<String,Configuration>();
-                Dao<WorkflowModule> modules = workflowRunner.getInstanceDb().table(WorkflowModule.class, WorkflowRunner.WORKFLOW);
+                Dao<WorkflowModule> modules = workflowRunner.getInstanceDb().table(WorkflowModule.class);
                 List<WorkflowModule> ms = modules.select(where("id",startModule.getItemAt(startModule.getSelectedIndex())));
                 
                 while (ms.size() > 0) {
@@ -123,26 +123,24 @@ public class WorkflowDialog extends JFrame {
                     ms = newms;
                 }
                 
-                if (configurations.size() > 0) {
-                    thisDialog.setVisible(false);
-                    WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
-                            thisDialog, configurations, workflowRunner.getInstanceDb().table(Config.class));
-                    config.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-                    config.pack();
-                    config.setVisible(true);
-                    config.addWindowListener(new WindowListener() {
-                        @Override public void windowOpened(WindowEvent e) { }
-                        @Override public void windowClosing(WindowEvent e) { }
-                        @Override public void windowClosed(WindowEvent e) { 
-                            thisDialog.setVisible(true);
-                        }
-                        @Override public void windowIconified(WindowEvent e) { }
-                        @Override public void windowDeiconified(WindowEvent e) { }
-                        @Override public void windowActivated(WindowEvent e) { }
-                        @Override
-                        public void windowDeactivated(WindowEvent e) { }
-                    });
-                }
+                thisDialog.setVisible(false);
+                WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
+                    thisDialog, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
+                config.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                config.pack();
+                config.setVisible(true);
+                config.addWindowListener(new WindowListener()     {
+                    @Override public void windowOpened(WindowEvent e) { }
+                    @Override public void windowClosing(WindowEvent e) { }
+                    @Override public void windowClosed(WindowEvent e) { 
+                        thisDialog.setVisible(true);
+                    }
+                    @Override public void windowIconified(WindowEvent e) { }
+                    @Override public void windowDeiconified(WindowEvent e) { }
+                    @Override public void windowActivated(WindowEvent e) { }
+                    @Override
+                    public void windowDeactivated(WindowEvent e) { }
+                });
             }
         });
         getContentPane().add(btnConfigure, "cell 1 3,alignx trailing");
@@ -207,7 +205,7 @@ public class WorkflowDialog extends JFrame {
                 new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
         // get list of starting modules
         List<String> startModules = new ArrayList<String>();
-        Dao<WorkflowModule> modules = connection.table(WorkflowModule.class, WorkflowRunner.WORKFLOW);
+        Dao<WorkflowModule> modules = connection.table(WorkflowModule.class);
         for (WorkflowModule module : modules.select()) {
             if (module.getParentId() == null) {
                 startModules.add(module.getId());
@@ -221,7 +219,7 @@ public class WorkflowDialog extends JFrame {
             // get the list of workflow instances
             List<String> workflowInstances = new ArrayList<String>();
             workflowInstances.add("-Create new Instance-");
-            Dao<Task> workflowStatus = connection.table(Task.class, WorkflowRunner.WORKFLOW_INSTANCE);
+            Dao<Task> workflowStatus = connection.table(Task.class);
             for (Task task : workflowStatus.select()) {
                 workflowInstances.add(Integer.toString(task.getId()));
             }
@@ -237,7 +235,8 @@ public class WorkflowDialog extends JFrame {
 
     public void initWorkflowRunner() {
         if (workflowRunner == null) {
-            Integer instanceId = Integer.parseInt(workflowInstance.getItemAt(workflowInstance.getSelectedIndex()));
+            Integer instanceId = workflowInstance.getSelectedIndex() == 0 ? null :
+                Integer.parseInt(workflowInstance.getItemAt(workflowInstance.getSelectedIndex()));
             Map<String,Integer> resources = new HashMap<String,Integer>();
             Level loglevel = Level.INFO;
             workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, resources, loglevel, mmslide);

@@ -18,7 +18,9 @@ import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 
 import org.bdgp.MMSlide.DB.Config;
+import org.bdgp.MMSlide.DB.ModuleConfig;
 import org.bdgp.MMSlide.DB.Task;
+import org.bdgp.MMSlide.DB.TaskConfig;
 import org.bdgp.MMSlide.DB.TaskDispatch;
 import org.bdgp.MMSlide.DB.WorkflowInstance;
 import org.bdgp.MMSlide.DB.WorkflowModule;
@@ -36,14 +38,7 @@ public class WorkflowRunner {
      * Default file names for the metadata files.
      */
     public static final String WORKFLOW_DB = "workflow.db";
-    public static final String WORKFLOW = "workflow";
-    public static final String WORKFLOW_INSTANCE = "workflow_instance";
-    public static final String MODULE_CONFIG = "module_config";
-    public static final String TASK_CONFIG = "task_config";
-    public static final String TASK_DISPATCH = "task_dispatch";
-    public static final String TASK_STATUS = "tasks";
     public static final String LOG_FILE = "log.txt";
-    public static final String MODULE_LIST = "META-INF/modules.txt";
     
     private Connection workflowDb;
     private Connection instanceDb;
@@ -52,10 +47,10 @@ public class WorkflowRunner {
     private WorkflowInstance instance;
     
     private Dao<WorkflowModule> workflow;
-    private Dao<Config> moduleConfig;
+    private Dao<ModuleConfig> moduleConfig;
     private Dao<WorkflowInstance> workflowInstance;
     private Dao<TaskDispatch> taskDispatch;
-    private Dao<Config> taskConfig;
+    private Dao<TaskConfig> taskConfig;
     private Dao<Task> taskStatus;
     
     private Map<String,Module> moduleInstances;
@@ -113,10 +108,6 @@ public class WorkflowRunner {
             catch (InstantiationException e) {throw new RuntimeException(e);} 
             catch (IllegalAccessException e) {throw new RuntimeException(e);}
         }
-        // Find the first workflow modules
-        if (workflow.select(where("parent",null)).size() == 0) {
-            throw new RuntimeException("Workflow is an empty workflow.");
-        }
         
         int cores = Runtime.getRuntime().availableProcessors();
         this.pool = Executors.newFixedThreadPool(cores);
@@ -132,8 +123,8 @@ public class WorkflowRunner {
             this.resources.put("microscope",new Semaphore(1));
         }
         
-        this.moduleConfig = this.workflowDb.table(Config.class, MODULE_CONFIG);
-        this.workflowInstance = this.workflowDb.table(WorkflowInstance.class, WORKFLOW_INSTANCE);
+        this.moduleConfig = this.workflowDb.table(ModuleConfig.class);
+        this.workflowInstance = this.workflowDb.table(WorkflowInstance.class);
         this.workflowDirectory = workflowDirectory;
         this.workflow = workflow;
         this.logger = new Logger(new File(workflowDirectory, LOG_FILE).getPath(), 
@@ -145,9 +136,9 @@ public class WorkflowRunner {
                 this.workflowDirectory.getPath(),
                 new File(this.instance.getStorageLocation(), 
                     this.instance.getName()+".db").getPath());
-        this.taskConfig = this.instanceDb.table(Config.class, TASK_CONFIG);
-        this.taskStatus = this.instanceDb.table(Task.class, TASK_STATUS);
-        this.taskDispatch = this.instanceDb.table(TaskDispatch.class, TASK_DISPATCH);
+        this.taskConfig = this.instanceDb.table(TaskConfig.class);
+        this.taskStatus = this.instanceDb.table(Task.class);
+        this.taskDispatch = this.instanceDb.table(TaskDispatch.class);
         
         this.taskListeners = new ArrayList<TaskListener>();
         this.mmslide = mmslide;
@@ -160,9 +151,9 @@ public class WorkflowRunner {
     private WorkflowInstance newWorkflowInstance() {
         WorkflowInstance instance = new WorkflowInstance(this.workflowDirectory.getPath());
         workflowInstance.insert(instance);
-        instance.update(workflowInstance); // update storageLocation field
         // create a new directory for the workflow instance
-        if (!new File(instance.getStorageLocation()).mkdirs()) {
+        File dir = new File(instance.getStorageLocation());
+        if (!dir.exists() && !dir.mkdirs()) {
             throw new RuntimeException("Could not create directory "
                     +instance.getStorageLocation());
         }
@@ -475,7 +466,7 @@ public class WorkflowRunner {
         List<Integer> instanceIds = new ArrayList<Integer>();
         Connection workflowDb = Connection.get(new File(workflowDirectory, "workflow.db").getPath());
         if (workflowDb != null) {
-            Dao<WorkflowInstance> workflowInstance = workflowDb.table(WorkflowInstance.class, WORKFLOW_INSTANCE);
+            Dao<WorkflowInstance> workflowInstance = workflowDb.table(WorkflowInstance.class);
             for (WorkflowInstance instance : workflowInstance.select()) {
                 instanceIds.add(instance.getId());
             }
@@ -487,7 +478,7 @@ public class WorkflowRunner {
     // Various getters/setters
     public File getWorkflowDirectory() { return workflowDirectory; }
     public Dao<WorkflowModule> getWorkflow() { return workflow; }
-    public Dao<Config> getModuleConfig() { return moduleConfig; }
+    public Dao<ModuleConfig> getModuleConfig() { return moduleConfig; }
     public Dao<WorkflowInstance> getWorkflowInstance() { return workflowInstance; }
     public Logger getLogger() { return logger; }
     public Level getLogLevel() { return logLevel; }
@@ -496,7 +487,7 @@ public class WorkflowRunner {
     public WorkflowInstance getInstance() { return instance; }
     public Dao<Task> getTaskStatus() { return taskStatus; }
     public Dao<TaskDispatch> getTaskDispatch() { return taskDispatch; }
-    public Dao<Config> getTaskConfig() { return taskConfig; }
+    public Dao<TaskConfig> getTaskConfig() { return taskConfig; }
     public Connection getWorkflowDb() { return workflowDb; }
     public Connection getInstanceDb() { return instanceDb; }
     public MMSlide getMMSlide() { return mmslide; }

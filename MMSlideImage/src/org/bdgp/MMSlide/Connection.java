@@ -162,9 +162,6 @@ public class Connection extends JdbcPooledConnectionSource {
         catch (AclFormatException e) {throw new RuntimeException(e);}
     }
     
-    public <T> Dao<T> table(Class<T> class_, String tablename) {
-        return Dao.getTable(class_, this, tablename);
-    }
     public <T> Dao<T> table(Class<T> class_) {
         try {
     		DatabaseTableConfig<T> tableConfig = DatabaseTableConfig.fromClass(this, class_);

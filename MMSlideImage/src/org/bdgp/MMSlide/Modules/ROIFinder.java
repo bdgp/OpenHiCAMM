@@ -1,6 +1,5 @@
 package org.bdgp.MMSlide.Modules;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -54,11 +53,11 @@ public class ROIFinder implements Module {
     public Configuration configure() {
         return new Configuration() {
             @Override
-            public List<Config> retrieve() {
-                return new ArrayList<Config>();
+            public Config[] retrieve() {
+                return new Config[0];
             }
             @Override
-            public JPanel display(List<Config> configs) {
+            public JPanel display(Config[] configs) {
                 return new JPanel();
             }
             @Override
