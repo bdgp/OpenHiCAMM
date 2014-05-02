@@ -69,16 +69,20 @@ public class TIGenerator implements Module {
         if (module.getParentId() != null) {
             List<Task> parentTasks = workflow.getTaskStatus().select(where("moduleId",module.getParentId()));
             for (Task parentTask : parentTasks) {
-                Task task = new Task(moduleId, parentTask.getStorageLocation(), Status.NEW);
+                Task task = new Task(moduleId, Status.NEW);
                 workflow.getTaskStatus().insert(task);
+                task.createStorageLocation(parentTask.getStorageLocation());
+                workflow.getTaskStatus().update(task,"id");
                 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
                 workflow.getTaskDispatch().insert(dispatch);
             }
         }
         else {
-            Task task = new Task(moduleId, workflow.getInstance().getStorageLocation(), Status.NEW);
+            Task task = new Task(moduleId, Status.NEW);
             workflow.getTaskStatus().insert(task);
+            task.createStorageLocation(workflow.getInstance().getStorageLocation());
+            workflow.getTaskStatus().update(task,"id");
         }
     }
 

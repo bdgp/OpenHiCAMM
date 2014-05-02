@@ -1,5 +1,7 @@
 package org.bdgp.MMSlide.DB;
 
+import java.io.File;
+
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
@@ -11,6 +13,10 @@ import com.j256.ormlite.table.DatabaseTable;
 @DatabaseTable
 public class Task {
     public Task() {}
+    public Task(String moduleId, Status status) {
+       this.moduleId = moduleId;
+       this.status = status;
+    }
     public Task(String moduleId, String storageLocation, Status status) {
        this.moduleId = moduleId;
        this.storageLocation = storageLocation;
@@ -23,7 +29,7 @@ public class Task {
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING)
     private String moduleId;
     
-    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING)
+    @DatabaseField(canBeNull=true,dataType=DataType.LONG_STRING)
     private String storageLocation;
     
     public static enum Status {ERROR, FAIL, SUCCESS, IN_PROGRESS, DEFER, NEW};
@@ -39,6 +45,15 @@ public class Task {
     }
     public String getStorageLocation() {
         return storageLocation;
+    }
+    public String createStorageLocation(String parent) {
+        // create a new directory for the task instance
+        File dir = new File(parent, this.getName());
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw new RuntimeException("Could not create directory "+dir.toString());
+        }
+        this.storageLocation = dir.toString();
+        return this.storageLocation;
     }
     public String getModuleId() {
         return moduleId;

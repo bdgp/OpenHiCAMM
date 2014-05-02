@@ -149,14 +149,11 @@ public class WorkflowRunner {
      * @return the assigned instance_id for the new workflow instance.
      */
     private WorkflowInstance newWorkflowInstance() {
-        WorkflowInstance instance = new WorkflowInstance(this.workflowDirectory.getPath());
+        WorkflowInstance instance = new WorkflowInstance();
         workflowInstance.insert(instance);
         // create a new directory for the workflow instance
-        File dir = new File(instance.getStorageLocation());
-        if (!dir.exists() && !dir.mkdirs()) {
-            throw new RuntimeException("Could not create directory "
-                    +instance.getStorageLocation());
-        }
+        instance.createStorageLocation(this.workflowDirectory.getPath());
+        workflowInstance.update(instance,"id");
         return instance;
     }
     

@@ -73,16 +73,20 @@ public class ROIFinder implements Module {
         if (module.getParentId() != null) {
             List<Task> parentTasks = workflowRunner.getTaskStatus().select(where("moduleId",module.getParentId()));
             for (Task parentTask : parentTasks) {
-                Task task = new Task(moduleId, parentTask.getStorageLocation(), Status.NEW);
+                Task task = new Task(moduleId, Status.NEW);
                 workflowRunner.getTaskStatus().insert(task);
+                task.createStorageLocation(parentTask.getStorageLocation());
+                workflowRunner.getTaskStatus().update(task,"id");
                 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
                 workflowRunner.getTaskDispatch().insert(dispatch);
             }
         }
         else {
-            Task task = new Task(moduleId, workflowRunner.getInstance().getStorageLocation(), Status.NEW);
+            Task task = new Task(moduleId, Status.NEW);
             workflowRunner.getTaskStatus().insert(task);
+            task.createStorageLocation(workflowRunner.getInstance().getStorageLocation());
+            workflowRunner.getTaskStatus().update(task,"id");
         }
     }
 
