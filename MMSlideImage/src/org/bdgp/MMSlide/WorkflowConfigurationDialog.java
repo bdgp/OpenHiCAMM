@@ -1,5 +1,6 @@
 package org.bdgp.MMSlide;
 
+import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.util.ArrayList;
@@ -14,7 +15,6 @@ import net.miginfocom.swing.MigLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
 import org.bdgp.MMSlide.DB.Config;
@@ -44,7 +44,7 @@ public class WorkflowConfigurationDialog extends JDialog {
         final JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
         for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
             List<ModuleConfig> configs = config.select(where("id",entry.getKey()));
-            JPanel panel = entry.getValue().display(configs.toArray(new Config[0]));
+            Component panel = entry.getValue().display(configs.toArray(new Config[0]));
             if (panel != null) {
                 tabbedPane.add(entry.getKey(), panel);
             }
@@ -59,42 +59,36 @@ public class WorkflowConfigurationDialog extends JDialog {
         });
         getContentPane().add(btnCancel, "cell 0 1");
         
-        final JButton button = new JButton("< Previous");
+        final JButton btnPrevious = new JButton("< Previous");
         final JButton btnNext = new JButton("Next >");
         
-        button.setEnabled(tabbedPane.getSelectedIndex() > 0);
+        btnPrevious.setEnabled(tabbedPane.getSelectedIndex() > 0);
         btnNext.setEnabled(tabbedPane.getSelectedIndex() < tabbedPane.getTabCount()-1);
         
         tabbedPane.addChangeListener(new ChangeListener() {
             public void stateChanged(ChangeEvent e) {
-                if (tabbedPane.getSelectedIndex() > 0) {
-                    tabbedPane.setSelectedIndex(tabbedPane.getSelectedIndex()-1);
-                }
-                if (tabbedPane.getSelectedIndex() < tabbedPane.getTabCount()-1) {
-                    tabbedPane.setSelectedIndex(tabbedPane.getSelectedIndex()+1);
-                }
-                button.setEnabled(tabbedPane.getSelectedIndex() > 0);
+                btnPrevious.setEnabled(tabbedPane.getSelectedIndex() > 0);
                 btnNext.setEnabled(tabbedPane.getSelectedIndex() < tabbedPane.getTabCount()-1);
             }
         });
         
-        button.addActionListener(new ActionListener() {
+        btnPrevious.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 if (tabbedPane.getSelectedIndex() > 0) {
                     tabbedPane.setSelectedIndex(tabbedPane.getSelectedIndex()-1);
                 }
-                button.setEnabled(tabbedPane.getSelectedIndex() > 0);
+                btnPrevious.setEnabled(tabbedPane.getSelectedIndex() > 0);
                 btnNext.setEnabled(tabbedPane.getSelectedIndex() < tabbedPane.getTabCount()-1);
             }
         });
-        getContentPane().add(button, "flowx,cell 1 1");
+        getContentPane().add(btnPrevious, "flowx,cell 1 1");
         
         btnNext.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 if (tabbedPane.getSelectedIndex() < tabbedPane.getTabCount()-1) {
                     tabbedPane.setSelectedIndex(tabbedPane.getSelectedIndex()+1);
                 }
-                button.setEnabled(tabbedPane.getSelectedIndex() > 0);
+                btnPrevious.setEnabled(tabbedPane.getSelectedIndex() > 0);
                 btnNext.setEnabled(tabbedPane.getSelectedIndex() < tabbedPane.getTabCount()-1);
             }
         });
@@ -103,36 +97,45 @@ public class WorkflowConfigurationDialog extends JDialog {
         JButton btnFinish = new JButton("Finish");
         btnFinish.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                List<ValidationError> errors = new ArrayList<ValidationError>();
-                for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
-                    ValidationError[] error = entry.getValue().validate();
-                    if (error != null) {
-                        errors.addAll(Arrays.asList(error));
-                    }
-                }
-                if (errors.size() > 0) {
-                    StringBuilder errorMessage = new StringBuilder("Please fix the following configuration errors:\n\n");
-                    for (ValidationError error : errors) {
-                        errorMessage.append(error.getMessage());
-                        errorMessage.append("\n\n");
-                    }
-                    JOptionPane.showMessageDialog(thisDialog, errorMessage.toString(), "Configuration Errors", JOptionPane.ERROR_MESSAGE);
-                }
-                else {
-                    for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
-                        Config[] configs = entry.getValue().retrieve();
-                        if (configs != null) {
-                            for (Config c : configs) {
-                                ModuleConfig setId = new ModuleConfig(entry.getKey(), c.getKey(), c.getValue());
-                                config.insertOrUpdate(setId,"id","key");
-                            }
-                        }
-                    }
-                    thisDialog.dispose();
-                }
+            	validateConfiguration(thisDialog, configurations, config);
+            	thisDialog.dispose();
             }
         });
         getContentPane().add(btnFinish, "cell 1 1");
     }
-
+    
+    public static boolean validateConfiguration(
+    		Component parent,
+            final Map<String,Configuration> configurations, 
+            final Dao<ModuleConfig> config) 
+    {
+    	List<ValidationError> errors = new ArrayList<ValidationError>();
+    	for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
+    		ValidationError[] error = entry.getValue().validate();
+    		if (error != null) {
+    			errors.addAll(Arrays.asList(error));
+    		}
+    	}
+    	if (errors.size() > 0) {
+    		StringBuilder errorMessage = new StringBuilder("Please fix the following configuration errors:\n\n");
+    		for (ValidationError error : errors) {
+    			errorMessage.append(error.getMessage());
+    			errorMessage.append("\n\n");
+    		}
+    		JOptionPane.showMessageDialog(parent, errorMessage.toString(), "Configuration Errors", JOptionPane.ERROR_MESSAGE);
+    		return false;
+    	}
+    	else {
+    		for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
+    			Config[] configs = entry.getValue().retrieve();
+    			if (configs != null) {
+    				for (Config c : configs) {
+    					ModuleConfig setId = new ModuleConfig(entry.getKey(), c.getKey(), c.getValue());
+    					config.insertOrUpdate(setId,"id","key");
+    				}
+    			}
+    		}
+    		return true;
+    	}
+    }
 }

@@ -102,30 +102,10 @@ public class WorkflowDialog extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 initWorkflowRunner();
                 
-                // get list of JPanels and load them with the configuration interfaces
-                Map<String,Configuration> configurations = new LinkedHashMap<String,Configuration>();
-                Dao<WorkflowModule> modules = workflowRunner.getInstanceDb().table(WorkflowModule.class);
-                List<WorkflowModule> ms = modules.select(where("id",startModule.getItemAt(startModule.getSelectedIndex())));
-                
-                while (ms.size() > 0) {
-                    List<WorkflowModule> newms = new ArrayList<WorkflowModule>();
-                    for (WorkflowModule m : ms) {
-                        try {
-                            Module module = m.getModule().newInstance();
-                            module.initialize(workflowRunner, m.getId());
-                            configurations.put(m.getId(), module.configure());
-                        }
-                        catch (InstantiationException e1) {throw new RuntimeException(e1);} 
-                        catch (IllegalAccessException e1) {throw new RuntimeException(e1);}
-                        
-                        newms.addAll(modules.select(where("parentId",m.getId())));
-                    }
-                    ms = newms;
-                }
-                
                 thisDialog.setVisible(false);
+                Map<String,Configuration> configurations = getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
-                    thisDialog, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
+                    thisDialog, configurations, workflowRunner.getWorkflowDb().table(ModuleConfig.class));
                 config.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 config.pack();
                 config.setVisible(true);
@@ -147,7 +127,12 @@ public class WorkflowDialog extends JFrame {
         startButton = new JButton("Start");
         startButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                start(false);
+                if (WorkflowConfigurationDialog.validateConfiguration(thisDialog, 
+                		getConfigurations(),
+                		workflowRunner.getWorkflowDb().table(ModuleConfig.class))) 
+                {
+                	start(false);
+                }
             }
         });
         startButton.setEnabled(false);
@@ -156,7 +141,12 @@ public class WorkflowDialog extends JFrame {
         resumeButton = new JButton("Resume");
         resumeButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                start(true);
+                if (WorkflowConfigurationDialog.validateConfiguration(thisDialog, 
+                		getConfigurations(),
+                		workflowRunner.getWorkflowDb().table(ModuleConfig.class))) 
+                {
+                	start(true);
+                }
             }
         });
         resumeButton.setEnabled(false);
@@ -221,12 +211,12 @@ public class WorkflowDialog extends JFrame {
                 
                 // get the list of workflow instances
                 List<String> workflowInstances = new ArrayList<String>();
-                workflowInstances.add("-Create new Instance-");
                 Dao<WorkflowInstance> wfi = workflowDb.table(WorkflowInstance.class);
                 for (WorkflowInstance instance : wfi.select()) {
-                    workflowInstances.add(Integer.toString(instance.getId()));
+                    workflowInstances.add(instance.getName());
                 }
-                Collections.sort(workflowInstances);
+                Collections.sort(workflowInstances, Collections.reverseOrder());
+                workflowInstances.add(0, "-Create new Instance-");
                 workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
                 workflowInstance.setEnabled(true);
                 
@@ -239,7 +229,7 @@ public class WorkflowDialog extends JFrame {
     public void initWorkflowRunner() {
         if (workflowRunner == null) {
             Integer instanceId = workflowInstance.getSelectedIndex() == 0 ? null :
-                Integer.parseInt(workflowInstance.getItemAt(workflowInstance.getSelectedIndex()));
+                Integer.parseInt(workflowInstance.getItemAt(workflowInstance.getSelectedIndex()).replaceAll("^WF",""));
             Map<String,Integer> resources = new HashMap<String,Integer>();
             Level loglevel = Level.INFO;
             workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, resources, loglevel, mmslide);
@@ -267,5 +257,29 @@ public class WorkflowDialog extends JFrame {
             @Override public void windowActivated(WindowEvent e) { }
             @Override public void windowDeactivated(WindowEvent e) { }
         });
+    }
+    public Map<String,Configuration> getConfigurations() {
+    	// get list of JPanels and load them with the configuration interfaces
+    	initWorkflowRunner();
+    	Map<String,Configuration> configurations = new LinkedHashMap<String,Configuration>();
+    	Dao<WorkflowModule> modules = workflowRunner.getWorkflowDb().table(WorkflowModule.class);
+    	List<WorkflowModule> ms = modules.select(where("id",startModule.getItemAt(startModule.getSelectedIndex())));
+
+    	while (ms.size() > 0) {
+    		List<WorkflowModule> newms = new ArrayList<WorkflowModule>();
+    		for (WorkflowModule m : ms) {
+    			try {
+    				Module module = m.getModule().newInstance();
+    				module.initialize(workflowRunner, m.getId());
+    				configurations.put(m.getId(), module.configure());
+    			}
+    			catch (InstantiationException e1) {throw new RuntimeException(e1);} 
+    			catch (IllegalAccessException e1) {throw new RuntimeException(e1);}
+
+    			newms.addAll(modules.select(where("parentId",m.getId())));
+    		}
+    		ms = newms;
+    	}
+    	return configurations;
     }
 }

@@ -35,6 +35,7 @@ import static org.bdgp.MMSlide.StorableConfiguration.Storable;
 
 import javax.swing.JTextPane;
 
+import java.awt.Dimension;
 import java.awt.Font;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -46,7 +47,7 @@ import javax.swing.JTextArea;
 import static org.bdgp.MMSlide.Util.where;
 
 @SuppressWarnings("serial")
-public class SlideLoaderDialog extends JPanel {
+public class SlideLoaderDialog extends JTabbedPane {
     final SlideLoaderDialog self = this;
 
 	@Storable JList<String> poolList;
@@ -54,20 +55,17 @@ public class SlideLoaderDialog extends JPanel {
 	@Storable JRadioButton radioButtonSlideManual;
 	
 	public SlideLoaderDialog(final Connection connection, final MMSlide mmslide) {
-		JTabbedPane tabbedPanel = new JTabbedPane();
-		getRootPane().add(tabbedPanel);
-		
         final Dao<Slide> slideDao = connection.table(Slide.class);
         final Dao<PoolSlide> poolSlideDao = connection.table(PoolSlide.class);
 
 		// Pool (define new pool or select previous one)
 		JPanel poolPanel = new JPanel();
-		tabbedPanel.addTab("Pool", null, poolPanel, null);
+		this.addTab("Pool", null, poolPanel, null);
 		poolPanel.setLayout(new MigLayout("", "[256px,grow][1px]", "[64px,center][][grow][]"));
 		
 		JPanel panelSelectPool = new JPanel();
 		poolPanel.add(panelSelectPool, "cell 0 0,alignx left,aligny top");
-		panelSelectPool.setLayout(new MigLayout("", "[77px][114px]", "[22px][]"));
+		panelSelectPool.setLayout(new MigLayout("", "[77px][114px,grow]", "[100px][100px:100px,grow]"));
 		
 		// Populate the previous pool list from the Pool table
 		Dao<Pool> poolDao = connection.table(Pool.class);
@@ -79,20 +77,18 @@ public class SlideLoaderDialog extends JPanel {
 		Collections.sort(pool_names);
 		
 		JLabel lblSelectPool = new JLabel("Select Pool:");
-		panelSelectPool.add(lblSelectPool, "cell 0 1");
-		
-		JScrollPane scrollPane_prevPool = new JScrollPane();
-		panelSelectPool.add(scrollPane_prevPool, "cell 1 1");
+		panelSelectPool.add(lblSelectPool, "cell 0 1,aligny top");
 		
 		poolList = new JList<String>();
+		poolList.setVisibleRowCount(-1);
 		poolList.setListData(pool_names.toArray(new String[0]));
 		poolList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		poolList.setLayoutOrientation(JList.VERTICAL);
-		poolList.setVisibleRowCount(-1);
-		
-		scrollPane_prevPool.setViewportView(poolList);
-		poolList.setEnabled(false);
-		
+		poolList.setEnabled(true);
+		JScrollPane poolListPane = new JScrollPane(poolList);
+		poolListPane.setPreferredSize(new Dimension(200, 200));
+		panelSelectPool.add(poolListPane, "cell 1 1,grow");
+
 		JScrollPane poolPane = new JScrollPane();
 		poolPanel.add(poolPane, "cell 0 2,grow");
 		
@@ -213,7 +209,7 @@ public class SlideLoaderDialog extends JPanel {
 		});
 
 		JPanel loaderPanel = new JPanel();
-		tabbedPanel.addTab("Loading", null, loaderPanel, null);
+		this.addTab("Loading", null, loaderPanel, null);
 		loaderPanel.setLayout(new MigLayout("", "[195px]", "[22px][22px]"));
 		
 		ButtonGroup slideLoaderGroup = new ButtonGroup();
@@ -228,15 +224,17 @@ public class SlideLoaderDialog extends JPanel {
 
 		// Positions (what to image: entire slide, previously defined positions)
 		JPanel posPanel = new JPanel();
-		tabbedPanel.addTab("Positions", posPanel);
+		this.addTab("Positions", posPanel);
 		posPanel.setLayout(new MigLayout("", "[595px]", "[347px]"));
 		
 		JButton btnDisplayXyPosition = new JButton("Display XY Position List Dialog");
 		btnDisplayXyPosition.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
         		ScriptInterface script = mmslide.getApp();
-        		PositionListDlg posList = script.getXYPosListDlg();
-        		posList.setVisible(true);
+        		if (script != null) {
+                    PositionListDlg posList = script.getXYPosListDlg();
+                    posList.setVisible(true);
+        		}
 		    }
 		});
 		posPanel.add(btnDisplayXyPosition, "cell 0 0,aligny top");

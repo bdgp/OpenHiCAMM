@@ -1,6 +1,6 @@
 package org.bdgp.MMSlide.Modules.Interfaces;
 
-import javax.swing.JPanel;
+import java.awt.Component;
 
 import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.DB.Config;
@@ -13,7 +13,7 @@ public interface Configuration {
     /**
      * Return a JPanel configuration UI with the given configurations set.
      */
-    public JPanel display(Config[] configs);
+    public Component display(Config[] configs);
     /**
      * Validate the configuration settings.
      * @return A list of validation errors, if any.

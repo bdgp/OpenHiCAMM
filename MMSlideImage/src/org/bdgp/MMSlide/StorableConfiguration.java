@@ -1,5 +1,6 @@
 package org.bdgp.MMSlide;
 
+import java.awt.Component;
 import java.io.StringReader;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -20,7 +21,6 @@ import javax.swing.JComboBox;
 import javax.swing.JEditorPane;
 import javax.swing.JFormattedTextField;
 import javax.swing.JList;
-import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JRadioButton;
 import javax.swing.JSlider;
@@ -37,13 +37,13 @@ import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 
 public class StorableConfiguration implements Configuration {
-    protected JPanel panel;
+    protected Component panel;
     
     @Target(ElementType.FIELD)
     @Retention(RetentionPolicy.RUNTIME)
     public static @interface Storable {};
 
-    public StorableConfiguration(JPanel panel) {
+    public StorableConfiguration(Component panel) {
         this.panel = panel;
     }
 
@@ -133,7 +133,7 @@ public class StorableConfiguration implements Configuration {
     
     @SuppressWarnings("rawtypes")
     @Override
-    public JPanel display(Config[] configs) {
+    public Component display(Config[] configs) {
         Map<String,Config> conf = new HashMap<String,Config>();
         for (Config config : configs) {
             conf.put(config.getKey(), config);
