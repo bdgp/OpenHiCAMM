@@ -50,9 +50,9 @@ import static org.bdgp.MMSlide.Util.where;
 public class SlideLoaderDialog extends JTabbedPane {
     final SlideLoaderDialog self = this;
 
-	@Storable JList<String> poolList;
-	@Storable JRadioButton radioButtonSlideLoader;
-	@Storable JRadioButton radioButtonSlideManual;
+	@Storable public JList<String> poolList;
+	@Storable public JRadioButton radioButtonSlideLoader;
+	@Storable public JRadioButton radioButtonSlideManual;
 	
 	public SlideLoaderDialog(final Connection connection, final MMSlide mmslide) {
         final Dao<Slide> slideDao = connection.table(Slide.class);
