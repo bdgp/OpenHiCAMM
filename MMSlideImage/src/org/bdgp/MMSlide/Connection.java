@@ -9,11 +9,14 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.sql.SQLTransientConnectionException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.security.SecureRandom;
 import java.math.BigInteger;
+
+import javax.swing.JOptionPane;
 
 import org.hsqldb.Server;
 import org.hsqldb.persist.HsqlProperties;
@@ -142,8 +145,22 @@ public class Connection extends JdbcPooledConnectionSource {
                     serverURIs.put(serverPath,new ServerURI(serverURI, username, password));
                     URI dbURI = new URI(serverURI.getScheme(), serverURI.getUserInfo(), serverURI.getHost(), serverURI.getPort(), 
                             new File("", new File(dbPath).getName().replaceFirst("\\.db$","")).getPath(), serverURI.getQuery(), serverURI.getFragment());
-                    return new Connection("jdbc:hsqldb:"+dbURI+";file:"+dbPath+";user="+username+";password="+password, 
-                            username, password);
+                    try {
+                        return new Connection("jdbc:hsqldb:"+dbURI+";file:"+dbPath+";user="+username+";password="+password, username, password);
+                    } catch (SQLTransientConnectionException e) {
+                    	if (JOptionPane.showConfirmDialog(null, 
+                    			"There is a database lock file, but I could not connect to the database. "+
+                    			"This could mean that the database is not running. "+
+                    			"Do you want me to delete the lock file and re-start the database?", 
+                    			"Database Connection Error", 
+                    			JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
+                    	{
+                    		serverURIs.remove(serverPath);
+                    		lockfile.delete();
+                            return new Connection("jdbc:hsqldb:"+dbURI+";file:"+dbPath+";user="+username+";password="+password, username, password);
+                    	}
+                        throw e;
+                    }
                 }
     	    }
     	    else {
