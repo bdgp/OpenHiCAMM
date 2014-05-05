@@ -68,8 +68,8 @@ public class SlideLoaderDialog extends JTabbedPane {
 		panelSelectPool.setLayout(new MigLayout("", "[77px][114px,grow]", "[100px][100px:100px,grow]"));
 		
 		// Populate the previous pool list from the Pool table
-		Dao<Pool> poolDao = connection.table(Pool.class);
-		final List<Pool> pools = poolDao.select();
+		final Dao<Pool> poolDao = connection.table(Pool.class);
+		List<Pool> pools = poolDao.select();
 		List<String> pool_names = new ArrayList<String>();
 		for (Pool p : pools) {
 		    pool_names.add(p.getName());
@@ -126,7 +126,7 @@ public class SlideLoaderDialog extends JTabbedPane {
                         // skip blank lines
                         if (line.matches("^\\s*$")) continue;
 
-                        String[] fields = line.split("\t");
+                        String[] fields = line.split("[\t ,]", 3);
                         if (fields.length < 3) {
                             JOptionPane.showMessageDialog(self, "Line "+linenum+": Only "+fields.length+" fields found (should be 3)", 
                                     "Pool Description Formatting Error", JOptionPane.ERROR_MESSAGE);
@@ -143,7 +143,6 @@ public class SlideLoaderDialog extends JTabbedPane {
                             return;
                         }
                         Slide slide = new Slide(fields[2]);
-                        slides.add(slide);
                         PoolSlide poolSlide = new PoolSlide( 0,
                                 new Integer(fields[0]).intValue(), 
                                 new Integer(fields[1]).intValue(), 
@@ -153,6 +152,8 @@ public class SlideLoaderDialog extends JTabbedPane {
                                     "Pool Description Formatting Error", JOptionPane.ERROR_MESSAGE);
                             return;                          
                         }
+                        slides.add(slide);
+                        poolSlides.add(poolSlide);
                         linenum++;
                     }
                 } 
@@ -166,7 +167,8 @@ public class SlideLoaderDialog extends JTabbedPane {
 	            // Create the poolslide and slide records
 		        for (PoolSlide poolSlide : poolSlides) {
 		            Slide slide = slides.get(poolSlide.getSlideId());
-		            slideDao.insert(slide);
+		            slideDao.insertOrUpdate(slide,"experimentId");
+		            slide = slideDao.selectOne(where("experimentId",slide.getExperimentId()));
 		            poolSlideDao.insert(new PoolSlide(pool.getId(), 
 		                    poolSlide.getCartridgePosition(), 
 		                    poolSlide.getSlidePosition(), 
@@ -174,7 +176,7 @@ public class SlideLoaderDialog extends JTabbedPane {
 		        }
 
     		    // Update the pool list and select the newly created pool
-        		final List<Pool> pools = poolDao.select();
+        		List<Pool> pools = poolDao.select();
         		List<String> pool_names = new ArrayList<String>();
         		for (Pool p : pools) {
         		    pool_names.add(p.getName());
@@ -189,10 +191,11 @@ public class SlideLoaderDialog extends JTabbedPane {
 		poolList.addListSelectionListener(new ListSelectionListener() {
 			public void valueChanged(ListSelectionEvent e) {
 			    String name = poolList.getSelectedValue();
+        		List<Pool> pools = poolDao.select();
 			    for (Pool p : pools) {
 			        if (p.getName().equals(name)) {
 			            StringBuilder sb = new StringBuilder();
-			            List<PoolSlide> poolSlides = poolSlideDao.select(where("id",p.getId()));
+			            List<PoolSlide> poolSlides = poolSlideDao.select(where("poolId",p.getId()));
 			            Collections.sort(poolSlides);
 			            for (PoolSlide poolSlide : poolSlides) {
 			                Slide slide = slideDao.selectOne(where("id",poolSlide.getSlideId()));
@@ -223,21 +226,14 @@ public class SlideLoaderDialog extends JTabbedPane {
 		slideLoaderGroup.add(radioButtonSlideManual);
 
 		// Positions (what to image: entire slide, previously defined positions)
-		JPanel posPanel = new JPanel();
-		this.addTab("Positions", posPanel);
-		posPanel.setLayout(new MigLayout("", "[595px]", "[347px]"));
-		
-		JButton btnDisplayXyPosition = new JButton("Display XY Position List Dialog");
-		btnDisplayXyPosition.addActionListener(new ActionListener() {
-		    public void actionPerformed(ActionEvent e) {
-        		ScriptInterface script = mmslide.getApp();
-        		if (script != null) {
-                    PositionListDlg posList = script.getXYPosListDlg();
-                    posList.setVisible(true);
-        		}
-		    }
-		});
-		posPanel.add(btnDisplayXyPosition, "cell 0 0,aligny top");
-		
+        ScriptInterface script = mmslide.getApp();
+        if (script != null) {
+            PositionListDlg posList = script.getXYPosListDlg();
+            this.addTab("Positions", posList);
+        }
+        else {
+            JPanel posPanel = new JPanel();
+            this.addTab("Positions", posPanel);
+        }
 	}
 }
