@@ -433,8 +433,9 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
             String noneErrorMessage, 
             String multipleErrorMessage) 
     {
-        if (list.size() == 0 && noneErrorMessage != null) {
-            throw new RuntimeException(noneErrorMessage);
+        if (list.size() == 0) {
+            throw new RuntimeException(noneErrorMessage == null? 
+            		"Query returned no rows!" : noneErrorMessage);
         }
         if (list.size() > 1 && multipleErrorMessage != null) {
             throw new RuntimeException(multipleErrorMessage);
@@ -445,7 +446,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
         return one(list, "Query returned no rows!", "Query returned multiple rows!");
     }
     public static <T> T one(List<T> list) {
-        return one(list, null, "Query returned multiple rows!");
+        return one(list, null, null);
     }
 }
 
