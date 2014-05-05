@@ -92,6 +92,7 @@
 									<include>net.sf.jopt-simple:jopt-simple</include>
 									<include>com.miglayout:miglayout</include>
 									<include>javax.json:javax.json-api</include>
+									<include>org.glassfish:javax.json</include>
 								</includes>
 							</artifactSet>
 						</configuration>
@@ -200,9 +201,9 @@
 			<version>3.7.4</version>
 		</dependency>
 		<dependency>
-			<groupId>javax.json</groupId>
-			<artifactId>javax.json-api</artifactId>
-			<version>1.0</version>
+			<groupId>org.glassfish</groupId>
+			<artifactId>javax.json</artifactId>
+			<version>1.0.4</version>
 		</dependency>
 	</dependencies>
 </project>
