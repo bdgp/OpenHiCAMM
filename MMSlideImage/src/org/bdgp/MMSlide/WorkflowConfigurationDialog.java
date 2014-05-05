@@ -37,7 +37,7 @@ public class WorkflowConfigurationDialog extends JDialog {
             final Dao<ModuleConfig> config)
     {
 	    super(parentFrame, "Module Configuration", Dialog.ModalityType.APPLICATION_MODAL);
-	    this.setPreferredSize(new Dimension(800,600));
+	    this.setPreferredSize(new Dimension(800,700));
 	    final WorkflowConfigurationDialog thisDialog = this;
         getContentPane().setLayout(new MigLayout("", "[grow][]", "[grow][]"));
         
