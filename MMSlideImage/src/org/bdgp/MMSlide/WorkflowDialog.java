@@ -227,9 +227,9 @@ public class WorkflowDialog extends JFrame {
     }
 
     public void initWorkflowRunner() {
-        if (workflowRunner == null) {
-            Integer instanceId = workflowInstance.getSelectedIndex() == 0 ? null :
-                Integer.parseInt(workflowInstance.getItemAt(workflowInstance.getSelectedIndex()).replaceAll("^WF",""));
+        Integer instanceId = workflowInstance.getSelectedIndex() == 0 ? null :
+            Integer.parseInt(workflowInstance.getItemAt(workflowInstance.getSelectedIndex()).replaceAll("^WF",""));
+        if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getInstance().getId())) {
             Map<String,Integer> resources = new HashMap<String,Integer>();
             Level loglevel = Level.INFO;
             workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, resources, loglevel, mmslide);
