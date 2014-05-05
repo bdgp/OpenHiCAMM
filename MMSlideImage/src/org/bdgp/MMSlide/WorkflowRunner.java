@@ -123,7 +123,6 @@ public class WorkflowRunner {
             this.resources.put("microscope",new Semaphore(1));
         }
         
-        this.moduleConfig = this.workflowDb.table(ModuleConfig.class);
         this.workflowInstance = this.workflowDb.table(WorkflowInstance.class);
         this.workflowDirectory = workflowDirectory;
         this.workflow = workflow;
@@ -137,6 +136,7 @@ public class WorkflowRunner {
                 new File(this.workflowDirectory, 
                 		new File(this.instance.getStorageLocation(), 
                 				this.instance.getName()+".db").getPath()).getPath());
+        this.moduleConfig = this.instanceDb.table(ModuleConfig.class);
         this.taskConfig = this.instanceDb.table(TaskConfig.class);
         this.taskStatus = this.instanceDb.table(Task.class);
         this.taskDispatch = this.instanceDb.table(TaskDispatch.class);

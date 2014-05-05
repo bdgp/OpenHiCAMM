@@ -105,7 +105,7 @@ public class WorkflowDialog extends JFrame {
                 thisDialog.setVisible(false);
                 Map<String,Configuration> configurations = getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
-                    thisDialog, configurations, workflowRunner.getWorkflowDb().table(ModuleConfig.class));
+                    thisDialog, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
                 config.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 config.pack();
                 config.setVisible(true);
@@ -129,7 +129,7 @@ public class WorkflowDialog extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 if (WorkflowConfigurationDialog.validateConfiguration(thisDialog, 
                 		getConfigurations(),
-                		workflowRunner.getWorkflowDb().table(ModuleConfig.class))) 
+                		workflowRunner.getInstanceDb().table(ModuleConfig.class))) 
                 {
                 	start(false);
                 }
@@ -143,7 +143,7 @@ public class WorkflowDialog extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 if (WorkflowConfigurationDialog.validateConfiguration(thisDialog, 
                 		getConfigurations(),
-                		workflowRunner.getWorkflowDb().table(ModuleConfig.class))) 
+                		workflowRunner.getInstanceDb().table(ModuleConfig.class))) 
                 {
                 	start(true);
                 }
