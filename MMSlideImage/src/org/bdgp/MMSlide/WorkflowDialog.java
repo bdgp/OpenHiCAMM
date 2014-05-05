@@ -127,10 +127,10 @@ public class WorkflowDialog extends JFrame {
         startButton = new JButton("Start");
         startButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                if (WorkflowConfigurationDialog.validateConfiguration(thisDialog, 
-                		getConfigurations(),
-                		workflowRunner.getInstanceDb().table(ModuleConfig.class))) 
-                {
+                Map<String,Configuration> configurations = getConfigurations();
+                WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
+                    thisDialog, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
+                if (config.validateConfiguration()) {
                 	start(false);
                 }
             }
@@ -141,10 +141,10 @@ public class WorkflowDialog extends JFrame {
         resumeButton = new JButton("Resume");
         resumeButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                if (WorkflowConfigurationDialog.validateConfiguration(thisDialog, 
-                		getConfigurations(),
-                		workflowRunner.getInstanceDb().table(ModuleConfig.class))) 
-                {
+                Map<String,Configuration> configurations = getConfigurations();
+                WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
+                    thisDialog, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
+                if (config.validateConfiguration()) {
                 	start(true);
                 }
             }

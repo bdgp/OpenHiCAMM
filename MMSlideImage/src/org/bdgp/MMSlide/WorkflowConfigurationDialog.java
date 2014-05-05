@@ -31,12 +31,20 @@ import static org.bdgp.MMSlide.Util.where;
 
 @SuppressWarnings("serial")
 public class WorkflowConfigurationDialog extends JDialog {
+	JFrame parent;
+	Map<String,Configuration> configurations;
+	Dao<ModuleConfig> config;
+	
     public WorkflowConfigurationDialog(
-            JFrame parentFrame, 
+            JFrame parent, 
             final Map<String,Configuration> configurations, 
             final Dao<ModuleConfig> config)
     {
-	    super(parentFrame, "Module Configuration", Dialog.ModalityType.APPLICATION_MODAL);
+	    super(parent, "Module Configuration", Dialog.ModalityType.APPLICATION_MODAL);
+	    this.parent = parent;
+	    this.configurations = configurations;
+	    this.config = config;
+
 	    this.setPreferredSize(new Dimension(800,700));
 	    final WorkflowConfigurationDialog thisDialog = this;
         getContentPane().setLayout(new MigLayout("", "[grow][]", "[grow][]"));
@@ -97,18 +105,16 @@ public class WorkflowConfigurationDialog extends JDialog {
         JButton btnFinish = new JButton("Finish");
         btnFinish.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-            	validateConfiguration(thisDialog, configurations, config);
-            	thisDialog.dispose();
+            	if (validateConfiguration()) {
+            		storeConfiguration();
+                    thisDialog.dispose();
+            	}
             }
         });
         getContentPane().add(btnFinish, "cell 1 1");
     }
     
-    public static boolean validateConfiguration(
-    		Component parent,
-            final Map<String,Configuration> configurations, 
-            final Dao<ModuleConfig> config) 
-    {
+    public boolean validateConfiguration() {
     	List<ValidationError> errors = new ArrayList<ValidationError>();
     	for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
     		ValidationError[] error = entry.getValue().validate();
@@ -125,17 +131,18 @@ public class WorkflowConfigurationDialog extends JDialog {
     		JOptionPane.showMessageDialog(parent, errorMessage.toString(), "Configuration Errors", JOptionPane.ERROR_MESSAGE);
     		return false;
     	}
-    	else {
-    		for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
-    			Config[] configs = entry.getValue().retrieve();
-    			if (configs != null) {
-    				for (Config c : configs) {
-    					ModuleConfig setId = new ModuleConfig(entry.getKey(), c.getKey(), c.getValue());
-    					config.insertOrUpdate(setId,"id","key");
-    				}
-    			}
-    		}
-    		return true;
-    	}
+        return true;
+    }
+    
+    public void storeConfiguration() {
+        for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
+            Config[] configs = entry.getValue().retrieve();
+            if (configs != null) {
+                for (Config c : configs) {
+                    ModuleConfig setId = new ModuleConfig(entry.getKey(), c.getKey(), c.getValue());
+                    config.insertOrUpdate(setId,"id","key");
+                }
+            }
+        }
     }
 }
