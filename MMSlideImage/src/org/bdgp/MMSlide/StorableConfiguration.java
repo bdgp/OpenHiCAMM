@@ -59,56 +59,56 @@ public class StorableConfiguration implements Configuration {
             for (Field field : fields) {
                 if (!field.isAnnotationPresent(Storable.class)) continue;
                 String value = null;
-                if (JTextField.class.isAssignableFrom(field.getClass())) {
+                if (JTextField.class.isAssignableFrom(field.getType())) {
                     value = ((JTextField)(field.get(this.panel))).getText();
                 }
-                else if (JTextArea.class.isAssignableFrom(field.getClass())) {
+                else if (JTextArea.class.isAssignableFrom(field.getType())) {
                     value = ((JTextArea)(field.get(this.panel))).getText();
                 }
-                else if (JFormattedTextField.class.isAssignableFrom(field.getClass())) {
+                else if (JFormattedTextField.class.isAssignableFrom(field.getType())) {
                     value = ((JFormattedTextField)(field.get(this.panel))).getText();
                 }
-                else if (JEditorPane.class.isAssignableFrom(field.getClass())) {
+                else if (JEditorPane.class.isAssignableFrom(field.getType())) {
                     value = ((JEditorPane)(field.get(this.panel))).getText();
                 }
-                else if (JTextPane.class.isAssignableFrom(field.getClass())) {
+                else if (JTextPane.class.isAssignableFrom(field.getType())) {
                     value = ((JTextPane)(field.get(this.panel))).getText();
                 }
-                else if (JPasswordField.class.isAssignableFrom(field.getClass())) {
+                else if (JPasswordField.class.isAssignableFrom(field.getType())) {
                     value = new String(((JPasswordField)(field.get(this.panel))).getPassword());
                 }
-                else if (JComboBox.class.isAssignableFrom(field.getClass())) {
+                else if (JComboBox.class.isAssignableFrom(field.getType())) {
                     Object item = ((JComboBox)(field.get(this.panel))).getSelectedItem();
                     if (item != null) value = item.toString();
                 }
-                else if (JCheckBox.class.isAssignableFrom(field.getClass())) {
+                else if (JCheckBox.class.isAssignableFrom(field.getType())) {
                     value = ((JCheckBox)(field.get(this.panel))).isSelected()? "true" : "false";
                 }
-                else if (JRadioButton.class.isAssignableFrom(field.getClass())) {
+                else if (JRadioButton.class.isAssignableFrom(field.getType())) {
                     value = ((JRadioButton)(field.get(this.panel))).isSelected()? "true" : "false";
                 }
-                else if (JToggleButton.class.isAssignableFrom(field.getClass())) {
+                else if (JToggleButton.class.isAssignableFrom(field.getType())) {
                     value = ((JToggleButton)(field.get(this.panel))).isSelected()? "true" : "false";
                 }
-                else if (JSpinner.class.isAssignableFrom(field.getClass())) {
+                else if (JSpinner.class.isAssignableFrom(field.getType())) {
                     Object val = ((JSpinner)(field.get(this.panel))).getModel().getValue();
                     if (val != null) value = val.toString();
                 }
-                else if (JSlider.class.isAssignableFrom(field.getClass())) {
+                else if (JSlider.class.isAssignableFrom(field.getType())) {
                     value = new Integer(((JSlider)(field.get(this.panel))).getValue()).toString();
                 }
-                else if (JList.class.isAssignableFrom(field.getClass())) {
+                else if (JList.class.isAssignableFrom(field.getType())) {
                     // TODO: Handle non-string models
                     int[] indices = ((JList)(field.get(this.panel))).getSelectedIndices();
                     ListModel model = ((JList)(field.get(this.panel))).getModel();
                     JsonArrayBuilder j = Json.createArrayBuilder();
-                    for (int i=1; i < indices.length; ++i) {
+                    for (int i : indices) {
                         Object o = model.getElementAt(i);
                         j.add(o.toString());
                     }
                     value = j.build().toString();
                 }
-                else if (JTable.class.isAssignableFrom(field.getClass())) { 
+                else if (JTable.class.isAssignableFrom(field.getType())) { 
                     TableModel model = ((JTable)(field.get(this.panel))).getModel();
                     JsonArrayBuilder rows = Json.createArrayBuilder();
                     for (int i=0; i < model.getRowCount(); ++i) {
@@ -122,7 +122,7 @@ public class StorableConfiguration implements Configuration {
                     value = rows.toString();
                 }
                 // TODO: handle tree models
-                // else if (JTree.class.isAssignableFrom(field.getClass())) { }
+                // else if (JTree.class.isAssignableFrom(field.getType())) { }
                 if (value != null) configs.add(new Config(null, field.getName(), value));
             }
         }
@@ -147,45 +147,45 @@ public class StorableConfiguration implements Configuration {
                 if (config == null || config.getValue() == null) continue;
                 String value = config.getValue();
     
-                if (JTextField.class.isAssignableFrom(field.getClass())) {
+                if (JTextField.class.isAssignableFrom(field.getType())) {
                     ((JTextField)(field.get(this.panel))).setText(value);
                 }
-                else if (JTextArea.class.isAssignableFrom(field.getClass())) {
+                else if (JTextArea.class.isAssignableFrom(field.getType())) {
                     ((JTextArea)(field.get(this.panel))).setText(value);
                 }
-                else if (JFormattedTextField.class.isAssignableFrom(field.getClass())) {
+                else if (JFormattedTextField.class.isAssignableFrom(field.getType())) {
                     ((JFormattedTextField)(field.get(this.panel))).setText(value);
                 }
-                else if (JEditorPane.class.isAssignableFrom(field.getClass())) {
+                else if (JEditorPane.class.isAssignableFrom(field.getType())) {
                     ((JEditorPane)(field.get(this.panel))).setText(value);
                 }
-                else if (JTextPane.class.isAssignableFrom(field.getClass())) {
+                else if (JTextPane.class.isAssignableFrom(field.getType())) {
                     ((JTextPane)(field.get(this.panel))).setText(value);
                 }
-                else if (JPasswordField.class.isAssignableFrom(field.getClass())) {
+                else if (JPasswordField.class.isAssignableFrom(field.getType())) {
                     ((JPasswordField)(field.get(this.panel))).setText(value);
                 }
-                else if (JComboBox.class.isAssignableFrom(field.getClass())) {
+                else if (JComboBox.class.isAssignableFrom(field.getType())) {
                     // TODO: handle non-string Models
                     ((JComboBox)(field.get(this.panel))).setSelectedItem(value);
                 }
-                else if (JCheckBox.class.isAssignableFrom(field.getClass())) {
+                else if (JCheckBox.class.isAssignableFrom(field.getType())) {
                     ((JCheckBox)(field.get(this.panel))).setSelected(value.equals("true")? true : false);
                 }
-                else if (JRadioButton.class.isAssignableFrom(field.getClass())) {
+                else if (JRadioButton.class.isAssignableFrom(field.getType())) {
                     ((JRadioButton)(field.get(this.panel))).setSelected(value.equals("true")? true : false);
                 }
-                else if (JToggleButton.class.isAssignableFrom(field.getClass())) {
+                else if (JToggleButton.class.isAssignableFrom(field.getType())) {
                     ((JToggleButton)(field.get(this.panel))).setSelected(value.equals("true")? true : false);
                 }
-                else if (JSpinner.class.isAssignableFrom(field.getClass())) {
+                else if (JSpinner.class.isAssignableFrom(field.getType())) {
                     // TODO: handle non-string Models
                     ((JSpinner)(field.get(this.panel))).getModel().setValue(value);
                 }
-                else if (JSlider.class.isAssignableFrom(field.getClass())) {
+                else if (JSlider.class.isAssignableFrom(field.getType())) {
                     ((JSlider)(field.get(this.panel))).setValue(new Integer(value));
                 }
-                else if (JList.class.isAssignableFrom(field.getClass())) {
+                else if (JList.class.isAssignableFrom(field.getType())) {
                     // TODO: handle non-string Models
                     JsonReader reader = Json.createReader(new StringReader(value));
                     JsonArray array = reader.readArray();
@@ -195,7 +195,7 @@ public class StorableConfiguration implements Configuration {
                     }
                     reader.close();
                 }
-                else if (JTable.class.isAssignableFrom(field.getClass())) { 
+                else if (JTable.class.isAssignableFrom(field.getType())) { 
                     // TODO: handle non-string Models
                     TableModel model = ((JTable)(field.get(this.panel))).getModel();
                     JsonReader reader = Json.createReader(new StringReader(value));
@@ -210,7 +210,7 @@ public class StorableConfiguration implements Configuration {
                     reader.close();
                 }
                 // TODO: handle Tree models
-                // else if (JTree.class.isAssignableFrom(field.getClass())) { }
+                // else if (JTree.class.isAssignableFrom(field.getType())) { }
             }
         }
         catch (IllegalArgumentException e) {throw new RuntimeException(e);} 
