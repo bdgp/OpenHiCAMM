@@ -25,12 +25,7 @@ public class Logger extends java.util.logging.Logger {
     public Logger(String logfile, String source, Level loglevel) {
         super(source, null);
         try { 
-            FileHandler fh = new FileHandler(logfile, 10000000, 10, true);
-            fh.setFormatter(new SimpleFormatter() {
-                	public String format(LogRecord record) {
-                	    return String.format("%s %s %s%n", new Date(record.getMillis()), record.getLevel(), record.getMessage());
-                	}
-            });
+            FileHandler fh = new LogFileHandler(logfile);
             this.addHandler(fh); 
         }
         catch (IOException e) {throw new RuntimeException(e);}
@@ -52,6 +47,32 @@ public class Logger extends java.util.logging.Logger {
     }
     public LoggerOutputStream getOutputStream(Level level) {
         return new LoggerOutputStream(this, level);
+    }
+    
+    public static class LogFileHandler extends FileHandler {
+    	public LogFileHandler(String pattern) 
+            throws IOException, SecurityException 
+        {
+    		super(pattern, 10000000, 10, true);
+    		setFormatter();
+    	}
+		public LogFileHandler(String pattern, int limit, int count, boolean append) 
+            throws IOException, SecurityException 
+        {
+			super(pattern, limit, count, append);
+    		setFormatter();
+		}
+		public void setFormatter() {
+			setFormatter(new SimpleFormatter() {
+				public String format(LogRecord record) {
+					return String.format("[%s:%s:%s] %s%n", 
+							record.getLoggerName(),
+							new Date(record.getMillis()), 
+							record.getLevel(), 
+							record.getMessage());
+				}
+			});
+		}
     }
     
     public class LoggerOutputStream extends OutputStream {

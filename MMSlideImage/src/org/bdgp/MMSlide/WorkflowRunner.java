@@ -1,6 +1,7 @@
 package org.bdgp.MMSlide;
 
 import java.io.File;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.Semaphore;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 
 import org.bdgp.MMSlide.DB.Config;
@@ -55,7 +57,7 @@ public class WorkflowRunner {
     
     private Map<String,Module> moduleInstances;
     
-    private Logger logger;
+    private List<Handler> logHandlers;
     private Level logLevel;
     
     private ExecutorService pool;
@@ -116,8 +118,8 @@ public class WorkflowRunner {
         for (Map.Entry<String,Integer> entry : resources.entrySet()) {
             this.resources.put(entry.getKey(), new Semaphore(entry.getValue()));
         }
-        if (!this.resources.containsKey("CPU")) {
-            this.resources.put("CPU",new Semaphore(Runtime.getRuntime().availableProcessors()));
+        if (!this.resources.containsKey("cpu")) {
+            this.resources.put("cpu",new Semaphore(Runtime.getRuntime().availableProcessors()));
         }
         if (!this.resources.containsKey("microscope")) {
             this.resources.put("microscope",new Semaphore(1));
@@ -126,9 +128,7 @@ public class WorkflowRunner {
         this.workflowInstance = this.workflowDb.table(WorkflowInstance.class);
         this.workflowDirectory = workflowDirectory;
         this.workflow = workflow;
-        this.logger = new Logger(new File(workflowDirectory, LOG_FILE).getPath(), 
-                "workflow", loglevel);
-        
+
         this.instance = instanceId == null? newWorkflowInstance() :
                         workflowInstance.selectOneOrDie(where("id",instanceId));
         this.instanceDb = Connection.get(
@@ -141,6 +141,15 @@ public class WorkflowRunner {
         this.taskStatus = this.instanceDb.table(Task.class);
         this.taskDispatch = this.instanceDb.table(TaskDispatch.class);
         
+        this.logHandlers = new ArrayList<Handler>();
+		try {
+            logHandlers.add(new Logger.LogFileHandler(
+            		new File(workflowDirectory,
+            				new File(instance.getStorageLocation(), LOG_FILE).getPath()).getPath()));
+		} 
+		catch (SecurityException e) {throw new RuntimeException(e);} 
+		catch (IOException e) {throw new RuntimeException(e);}
+
         this.taskListeners = new ArrayList<TaskListener>();
         this.mmslide = mmslide;
     }
@@ -200,7 +209,7 @@ public class WorkflowRunner {
             @Override
             public Status call() {
                 Task start = taskStatus.selectOneOrDie(where("moduleId",startModuleId));
-                Future<Status> future = run(start, new File(instance.getStorageLocation()), null);
+                Future<Status> future = run(start, null);
                 try { return future.get(); }
                 catch (InterruptedException e) {throw new RuntimeException(e);} 
                 catch (ExecutionException e) {throw new RuntimeException(e);} 
@@ -216,21 +225,11 @@ public class WorkflowRunner {
      */
     private Future<Status> run(
             final Task task, 
-            final File taskDir,
             final Map<String,Integer> inheritedResources) 
     {
         final WorkflowModule module = this.workflow.selectOneOrDie(
                 where("id",task.getModuleId()));
         
-        // create the task storage location
-        if (!taskDir.exists()) {
-            taskDir.mkdirs();
-            if (!taskDir.exists()) {
-                throw new RuntimeException(
-                        "Could not create directory "+taskDir.getPath());
-            }
-        }
-            
         // merge the task and module configuration
         List<Config> configs = new ArrayList<Config>();
         configs.addAll(taskConfig.select(where("id",task.getId())));
@@ -267,15 +266,19 @@ public class WorkflowRunner {
                         
                         // instantiate a logger for the task
                         Logger taskLogger = Logger.create(
-                                new File(instance.getStorageLocation(), LOG_FILE).getPath(),
+                        		new File(workflowDirectory,
+                                    new File(task.getStorageLocation(), LOG_FILE).getPath()).getPath(),
                                 task.getModuleId(),
                                 logLevel);
+                        for (Handler handler : logHandlers) {
+                        	taskLogger.addHandler(handler);
+                        }
                         
                         // figure out the required resources for this task
                         Map<String,Integer> requiredResources = new HashMap<String,Integer>();
                         requiredResources.putAll(taskModule.getResources());
-                        if (!requiredResources.containsKey("CPU")) {
-                            requiredResources.put("CPU", 1);
+                        if (!requiredResources.containsKey("cpu")) {
+                            requiredResources.put("cpu", 1);
                         }
                         // acquire the required resources for this task
                         for (Map.Entry<String,Integer> resource : requiredResources.entrySet()) {
@@ -348,10 +351,6 @@ public class WorkflowRunner {
                                         }
                                     }
                                     
-                                    WorkflowModule childModule = workflow.selectOneOrDie(
-                                            where("id",childTask.getModuleId()));
-                                    File childDir = new File(taskDir, childModule.getId());
-                                    
                                     if (module.getTaskType() == TaskType.SERIAL) {
                                         // combine any inherited and acquired resources and pass them to the child task.
                                         Map<String,Integer> childResources = new HashMap<String,Integer>();
@@ -363,10 +362,10 @@ public class WorkflowRunner {
                                             childResources.put(resource.getKey(), 
                                                     resource.getValue() + (childResource != null? childResource : 0));
                                         }
-                                        childFutures.add(run(childTask, childDir, childResources));
+                                        childFutures.add(run(childTask, childResources));
                                     }
                                     else if (module.getTaskType() == TaskType.PARALLEL) {
-                                        childFutures.add(run(childTask, childDir, null));
+                                        childFutures.add(run(childTask, null));
                                     }
                                     else {
                                         throw new RuntimeException("Unknown task type: "+module.getTaskType());
@@ -480,7 +479,6 @@ public class WorkflowRunner {
     public Dao<WorkflowModule> getWorkflow() { return workflow; }
     public Dao<ModuleConfig> getModuleConfig() { return moduleConfig; }
     public Dao<WorkflowInstance> getWorkflowInstance() { return workflowInstance; }
-    public Logger getLogger() { return logger; }
     public Level getLogLevel() { return logLevel; }
     public void setLogLevel(Level logLevel) { this.logLevel = logLevel; }
     public int getMaxThreads() { return maxThreads; }
@@ -497,5 +495,11 @@ public class WorkflowRunner {
     }
     public void removeTaskListener(TaskListener listener) {
         taskListeners.remove(listener);
+    }
+    public void addLogHandler(Handler handler) {
+    	logHandlers.add(handler);
+    }
+    public boolean removeLogHandler(Handler handler) {
+    	return logHandlers.remove(handler);
     }
 }

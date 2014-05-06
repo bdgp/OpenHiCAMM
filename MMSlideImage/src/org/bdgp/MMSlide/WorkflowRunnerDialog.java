@@ -63,10 +63,14 @@ public class WorkflowRunnerDialog extends JDialog {
         getContentPane().add(btnKill, "cell 1 2");
         
         // logging output
-        workflowRunner.getLogger().addHandler(new Handler() {
+        workflowRunner.addLogHandler(new Handler() {
             @Override public void publish(LogRecord record) {
-        	    textPane.setText(String.format("%s%n%s %s %s%n", 
-        	            textPane.getText(), new Date(record.getMillis()), record.getLevel(), record.getMessage()));
+        	    textPane.setText(String.format("%s[%s:%s:%s] %s%n", 
+        	            textPane.getText(), 
+        	            record.getLoggerName(),
+        	            new Date(record.getMillis()), 
+        	            record.getLevel(), 
+        	            record.getMessage()));
             }
             @Override public void flush() {}
             @Override public void close() throws SecurityException { }});
