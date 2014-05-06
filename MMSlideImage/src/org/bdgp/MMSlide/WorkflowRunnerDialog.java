@@ -76,16 +76,14 @@ public class WorkflowRunnerDialog extends JDialog {
             @Override public void close() throws SecurityException { }});
         
         // progress bar
-        final Integer[] completedTasks = new Integer[1];
-        completedTasks[0] = new Integer(0);
         List<Task> tasks = workflowRunner.getTaskStatus().select();
         progressBar.setIndeterminate(false);
         progressBar.setMaximum(tasks.size());
         workflowRunner.addTaskListener(new TaskListener() {
-            @Override
-            public void notifyTask(Task task) {
-                completedTasks[0]++;
-                progressBar.setValue(completedTasks[0]);
+        	int completedTasks = 0;
+            @Override public void notifyTask(Task task) {
+                completedTasks++;
+                progressBar.setValue(completedTasks);
             }});
         
         if (!resume) {
