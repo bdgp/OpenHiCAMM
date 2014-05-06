@@ -322,7 +322,7 @@ public class WorkflowRunner {
                             savePoint = db.setSavePoint("task");
                             db.executeStatement("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE", 
                                     DatabaseConnection.DEFAULT_RESULT_FLAGS);
-                            db.executeStatement("LOCK TABLE task_status WRITE, task_dispatch WRITE", 
+                            db.executeStatement("LOCK TABLE TASK WRITE, TASKDISPATCH WRITE", 
                                     DatabaseConnection.DEFAULT_RESULT_FLAGS);
                             
                             // update the task status
@@ -345,7 +345,7 @@ public class WorkflowRunner {
                                             where("taskId",childTaskId.getTaskId()));
                                     for (TaskDispatch parentTaskId : parentTaskIds) {
                                         Task parentTask = taskStatus.selectOneOrDie(
-                                                where("id",parentTaskId.getTaskId()));
+                                                where("id",parentTaskId.getParentTaskId()));
                                         if (parentTask.getStatus() != Status.SUCCESS) {
                                             continue CHILD_TASK;
                                         }
