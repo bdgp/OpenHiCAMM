@@ -146,18 +146,22 @@ public class Connection extends JdbcPooledConnectionSource {
                     URI dbURI = new URI(serverURI.getScheme(), serverURI.getUserInfo(), serverURI.getHost(), serverURI.getPort(), 
                             new File("", new File(dbPath).getName().replaceFirst("\\.db$","")).getPath(), serverURI.getQuery(), serverURI.getFragment());
                     try {
-                        return new Connection("jdbc:hsqldb:"+dbURI+";file:"+dbPath+";user="+username+";password="+password, username, password);
-                    } catch (SQLTransientConnectionException e) {
+                        Connection con;
+                    	con = new Connection("jdbc:hsqldb:"+dbURI+";file:"+dbPath+";user="+username+";password="+password, username, password);
+                    	// test the connection
+                    	con.getReadWriteConnection();
+                    	return con;
+                    } catch (SQLException e) {
                     	if (JOptionPane.showConfirmDialog(null, 
-                    			"There is a database lock file, but I could not connect to the database. "+
-                    			"This could mean that the database is not running. "+
+                    			"There is a database lock file, but I could not connect to the database.\n"+
+                    			"This could mean that the database is not running.\n"+
                     			"Do you want me to delete the lock file and re-start the database?", 
                     			"Database Connection Error", 
                     			JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
                     	{
                     		serverURIs.remove(serverPath);
                     		lockfile.delete();
-                            return new Connection("jdbc:hsqldb:"+dbURI+";file:"+dbPath+";user="+username+";password="+password, username, password);
+                            return get(serverPath, dbPath);
                     	}
                         throw e;
                     }
