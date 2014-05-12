@@ -29,6 +29,7 @@ public class WorkflowRunnerDialog extends JDialog {
             boolean resume) 
     {
         super(workflowDialog, "Workflow Runner");
+    	final WorkflowRunnerDialog self = this;
         this.workflowRunner = runner;
         getContentPane().setLayout(new MigLayout("", "[][grow]", "[grow][][]"));
         setPreferredSize(new Dimension(800,600));
@@ -46,15 +47,15 @@ public class WorkflowRunnerDialog extends JDialog {
         final JProgressBar progressBar = new JProgressBar();
         getContentPane().add(progressBar, "cell 1 1,growx");
         
-        JButton btnNewButton = new JButton("Stop");
-        btnNewButton.addActionListener(new ActionListener() {
+        final JButton btnStop = new JButton("Stop");
+        btnStop.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 workflowRunner.stop();
             }
         });
-        getContentPane().add(btnNewButton, "flowx,cell 1 2,alignx trailing");
+        getContentPane().add(btnStop, "flowx,cell 1 2,alignx trailing");
         
-        JButton btnKill = new JButton("Kill");
+        final JButton btnKill = new JButton("Kill");
         btnKill.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 workflowRunner.kill();
@@ -76,14 +77,28 @@ public class WorkflowRunnerDialog extends JDialog {
             @Override public void close() throws SecurityException { }});
         
         // progress bar
-        List<Task> tasks = workflowRunner.getTaskStatus().select();
+        final List<Task> tasks = workflowRunner.getTaskStatus().select();
         progressBar.setIndeterminate(false);
         progressBar.setMaximum(tasks.size());
+        
+        final JButton btnClose = new JButton("Close");
+        btnClose.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        		self.dispose();
+        	}
+        });
+        btnClose.setEnabled(false);
+        getContentPane().add(btnClose, "cell 1 2");
         workflowRunner.addTaskListener(new TaskListener() {
         	int completedTasks = 0;
             @Override public void notifyTask(Task task) {
                 completedTasks++;
                 progressBar.setValue(completedTasks);
+                if (completedTasks == tasks.size()) {
+                	btnStop.setEnabled(false);
+                	btnKill.setEnabled(false);
+                	btnClose.setEnabled(true);
+                }
             }});
         
         if (!resume) {
