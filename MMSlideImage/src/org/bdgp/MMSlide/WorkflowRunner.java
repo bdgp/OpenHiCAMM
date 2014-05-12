@@ -236,14 +236,6 @@ public class WorkflowRunner {
         configs.addAll(moduleConfig.select(where("id",task.getModuleId())));
         final Map<String,Config> config = Config.merge(configs);
         
-        // make sure all required fields are filled in
-        for (Map.Entry<String,Config> c : config.entrySet()) {
-            if (c.getValue().isRequired() && c.getValue().getValue() == null) {
-                throw new RuntimeException("Required value "+
-                        c.getKey()+" missing for task "+task.getModuleId());
-            }
-        }
-            
         final WorkflowRunner workflowRunner = this;
                 
         Callable<Status> callable = new Callable<Status>() {
@@ -259,53 +251,52 @@ public class WorkflowRunner {
                 
                 Map<String,Integer> acquiredResources = new HashMap<String,Integer>();
                 try {
-                    if (status == Status.NEW || status == Status.DEFER) {
-                        // set the task status to IN_PROGRESS
-                        task.setStatus(Status.IN_PROGRESS);
-                        taskStatus.update(task, "id","moduleId");
-                        
-                        // instantiate a logger for the task
-                        Logger taskLogger = Logger.create(
-                        		new File(workflowDirectory,
-                                    new File(task.getStorageLocation(), LOG_FILE).getPath()).getPath(),
-                                task.getModuleId(),
-                                logLevel);
-                        for (Handler handler : logHandlers) {
-                        	taskLogger.addHandler(handler);
+                    // instantiate a logger for the task
+                    Logger taskLogger = Logger.create(
+                            new File(workflowDirectory,
+                                new File(task.getStorageLocation(), LOG_FILE).getPath()).getPath(),
+                            task.getModuleId(),
+                            logLevel);
+                    for (Handler handler : logHandlers) {
+                        taskLogger.addHandler(handler);
+                    }
+                    
+                    // figure out the required resources for this task
+                    Map<String,Integer> requiredResources = new HashMap<String,Integer>();
+                    requiredResources.putAll(taskModule.getResources());
+                    if (!requiredResources.containsKey("cpu")) {
+                        requiredResources.put("cpu", 1);
+                    }
+                    // acquire the required resources for this task
+                    for (Map.Entry<String,Integer> resource : requiredResources.entrySet()) {
+                        int requiredResource = resource.getValue();
+                        if (inheritedResources != null && inheritedResources.containsKey(resource.getKey())) {
+                            requiredResource -= Math.min(requiredResource, inheritedResources.get(resource.getKey()));
                         }
-                        
-                        // figure out the required resources for this task
-                        Map<String,Integer> requiredResources = new HashMap<String,Integer>();
-                        requiredResources.putAll(taskModule.getResources());
-                        if (!requiredResources.containsKey("cpu")) {
-                            requiredResources.put("cpu", 1);
+                        if (requiredResource > 0) {
+                            taskLogger.info("Acquiring resource "+resource.getKey()+" ("+resource.getValue()+")");
+                            resources.get(resource.getKey()).acquireUninterruptibly(requiredResource);
+                            acquiredResources.put(resource.getKey(), requiredResource);
+                            taskLogger.info("Acquired resource "+resource.getKey()+" ("+resource.getValue()+")");
                         }
-                        // acquire the required resources for this task
-                        for (Map.Entry<String,Integer> resource : requiredResources.entrySet()) {
-                            int requiredResource = resource.getValue();
-                            if (inheritedResources != null && inheritedResources.containsKey(resource.getKey())) {
-                                requiredResource -= Math.min(requiredResource, inheritedResources.get(resource.getKey()));
-                            }
-                            if (requiredResource > 0) {
-                                taskLogger.info("Acquiring resource "+resource.getKey()+" ("+resource.getValue()+")");
-                                resources.get(resource.getKey()).acquireUninterruptibly(requiredResource);
-                                acquiredResources.put(resource.getKey(), requiredResource);
-                                taskLogger.info("Acquired resource "+resource.getKey()+" ("+resource.getValue()+")");
-                            }
-                        }
-                        
-                        // run the task
-                        taskLogger.info("Running module "+module.getId()+", task ID "+task.getId());
-                        try {
-                            status = taskModule.run(task, config, taskLogger);
-                        } 
-                        // Uncaught exceptions set the status to ERROR
-                        catch (Exception e) {
-                            taskLogger.severe(String.format("Error reported during task %s:%n%s", 
-                                    task.toString(), e.toString()));
-                            status = Status.ERROR;
-                        }
-                        taskLogger.info("Finished module "+module.getId()+", task ID "+task.getId());
+                    }
+                    
+                    // run the task
+                    taskLogger.info("Running module "+module.getId()+", task ID "+task.getId());
+                    try {
+                        status = taskModule.run(task, config, taskLogger);
+                    } 
+                    // Uncaught exceptions set the status to ERROR
+                    catch (Exception e) {
+                        taskLogger.severe(String.format("Error reported during task %s:%n%s", 
+                                task.toString(), e.toString()));
+                        status = Status.ERROR;
+                    }
+                    taskLogger.info("Finished module "+module.getId()+", task ID "+task.getId());
+                    
+                    // notify any task listeners
+                    for (TaskListener listener : taskListeners) {
+                        listener.notifyTask(task);
                     }
                     
                     // This section must be synchronized both in java and in the backend database 
@@ -338,37 +329,47 @@ public class WorkflowRunner {
                                 for (TaskDispatch childTaskId : childTaskIds) {
                                     Task childTask = taskStatus.selectOneOrDie(
                                             where("id",childTaskId.getTaskId()));
-                                    
-                                    // do not run the child task unless all of its parent tasks 
-                                    // have been successfully completed
-                                    List<TaskDispatch> parentTaskIds = taskDispatch.select(
-                                            where("taskId",childTaskId.getTaskId()));
-                                    for (TaskDispatch parentTaskId : parentTaskIds) {
-                                        Task parentTask = taskStatus.selectOneOrDie(
-                                                where("id",parentTaskId.getParentTaskId()));
-                                        if (parentTask.getStatus() != Status.SUCCESS) {
-                                            continue CHILD_TASK;
+
+                                    if (childTask.getStatus() == Status.NEW || childTask.getStatus() == Status.DEFER) {
+                                        // do not run the child task unless all of its parent tasks 
+                                        // have been successfully completed
+                                        List<TaskDispatch> parentTaskIds = taskDispatch.select(
+                                                where("taskId",childTaskId.getTaskId()));
+                                        for (TaskDispatch parentTaskId : parentTaskIds) {
+                                            Task parentTask = taskStatus.selectOneOrDie(
+                                                    where("id",parentTaskId.getParentTaskId()));
+                                            if (parentTask.getStatus() != Status.SUCCESS) {
+                                                continue CHILD_TASK;
+                                            }
                                         }
-                                    }
-                                    
-                                    if (module.getTaskType() == TaskType.SERIAL) {
-                                        // combine any inherited and acquired resources and pass them to the child task.
-                                        Map<String,Integer> childResources = new HashMap<String,Integer>();
-                                        if (inheritedResources != null) {
-                                            childResources.putAll(inheritedResources);
+                                        
+                                        if (module.getTaskType() == TaskType.SERIAL) {
+                                            // combine any inherited and acquired resources and pass them to the child task.
+                                            Map<String,Integer> childResources = new HashMap<String,Integer>();
+                                            if (inheritedResources != null) {
+                                                childResources.putAll(inheritedResources);
+                                            }
+                                            for (Map.Entry<String,Integer> resource : acquiredResources.entrySet()) {
+                                                Integer childResource = childResources.get(resource.getKey());
+                                                childResources.put(resource.getKey(), 
+                                                        resource.getValue() + (childResource != null? childResource : 0));
+                                            }
+                                            // set the task status to IN_PROGRESS
+                                            task.setStatus(Status.IN_PROGRESS);
+                                            taskStatus.update(task, "id","moduleId");
+
+                                            childFutures.add(run(childTask, childResources));
                                         }
-                                        for (Map.Entry<String,Integer> resource : acquiredResources.entrySet()) {
-                                            Integer childResource = childResources.get(resource.getKey());
-                                            childResources.put(resource.getKey(), 
-                                                    resource.getValue() + (childResource != null? childResource : 0));
+                                        else if (module.getTaskType() == TaskType.PARALLEL) {
+                                            // set the task status to IN_PROGRESS
+                                            task.setStatus(Status.IN_PROGRESS);
+                                            taskStatus.update(task, "id","moduleId");
+
+                                            childFutures.add(run(childTask, null));
                                         }
-                                        childFutures.add(run(childTask, childResources));
-                                    }
-                                    else if (module.getTaskType() == TaskType.PARALLEL) {
-                                        childFutures.add(run(childTask, null));
-                                    }
-                                    else {
-                                        throw new RuntimeException("Unknown task type: "+module.getTaskType());
+                                        else {
+                                            throw new RuntimeException("Unknown task type: "+module.getTaskType());
+                                        }
                                     }
                                 }
                             }
@@ -383,11 +384,6 @@ public class WorkflowRunner {
                         }
                     }
 
-                    // notify any task listeners
-                    for (TaskListener listener : taskListeners) {
-                        listener.notifyTask(task);
-                    }
-                    
                     // resolve all the futures into statuses
                     List<Status> statuses = new ArrayList<Status>();
                     statuses.add(status);

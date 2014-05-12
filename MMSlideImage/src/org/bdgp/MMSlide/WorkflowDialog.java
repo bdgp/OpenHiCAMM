@@ -9,6 +9,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 
 import org.bdgp.MMSlide.DB.ModuleConfig;
+import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.WorkflowInstance;
 import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
@@ -77,6 +78,16 @@ public class WorkflowDialog extends JFrame {
             @Override
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
+                    initWorkflowRunner();
+
+                    // should the resume button be enabled?
+                    resumeButton.setEnabled(false);
+                    if (workflowRunner != null) {
+                        List<Task> tasks = workflowRunner.getTaskStatus().select();
+                        if (tasks.size() > 0) {
+                            resumeButton.setEnabled(true);
+                        }
+                    }
                 }
             }});
         getContentPane().add(workflowInstance, "cell 1 1,alignx right");
@@ -222,6 +233,15 @@ public class WorkflowDialog extends JFrame {
                 
                 btnConfigure.setEnabled(true);
                 startButton.setEnabled(true);
+
+                // should the resume button be enabled?
+                resumeButton.setEnabled(false);
+                if (workflowRunner != null) {
+                	List<Task> tasks = workflowRunner.getTaskStatus().select();
+                	if (tasks.size() > 0) {
+                		resumeButton.setEnabled(true);
+                	}
+                }
             }
     	}
     }
