@@ -30,9 +30,6 @@ public class Config {
     @DatabaseField(dataType=DataType.LONG_STRING)
     private String value;
     
-    @DatabaseField(canBeNull=false)
-    private boolean required;
-
     public String getId() {
         return id;
     }
@@ -41,9 +38,6 @@ public class Config {
     }
     public String getValue() {
         return value;
-    }
-    public boolean isRequired() {
-        return required;
     }
 
     /**
