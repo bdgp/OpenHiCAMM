@@ -25,8 +25,6 @@ import org.bdgp.MMSlide.MMSlide;
 import org.bdgp.MMSlide.DB.Pool;
 import org.bdgp.MMSlide.DB.PoolSlide;
 import org.bdgp.MMSlide.DB.Slide;
-import org.micromanager.PositionListDlg;
-import org.micromanager.api.ScriptInterface;
 
 import javax.swing.JList;
 
@@ -224,16 +222,5 @@ public class SlideLoaderDialog extends JTabbedPane {
 		radioButtonSlideManual.setSelected(true);
 		loaderPanel.add(radioButtonSlideManual, "cell 0 1,alignx left,aligny center");
 		slideLoaderGroup.add(radioButtonSlideManual);
-
-		// Positions (what to image: entire slide, previously defined positions)
-        ScriptInterface script = mmslide.getApp();
-        if (script != null) {
-            PositionListDlg posList = script.getXYPosListDlg();
-            this.addTab("Positions", posList);
-        }
-        else {
-            JPanel posPanel = new JPanel();
-            this.addTab("Positions", posPanel);
-        }
 	}
 }

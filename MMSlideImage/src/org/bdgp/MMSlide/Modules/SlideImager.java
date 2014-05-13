@@ -1,5 +1,8 @@
 package org.bdgp.MMSlide.Modules;
 
+import java.awt.Component;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +19,10 @@ import org.bdgp.MMSlide.DB.TaskDispatch;
 import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
+import org.micromanager.PositionListDlg;
+import org.micromanager.api.PositionList;
+import org.micromanager.api.ScriptInterface;
+import org.micromanager.utils.MMSerializationException;
 
 import static org.bdgp.MMSlide.Util.where;
 import static org.bdgp.MMSlide.Util.map;
@@ -49,12 +56,37 @@ public class SlideImager implements Module {
     @Override
     public Configuration configure() {
         return new Configuration() {
+            PositionListDlg posListDlg;
+            PositionList posList;
             @Override
             public Config[] retrieve() {
-                return new Config[0];
+            	List<Config> configs = new ArrayList<Config>();
+            	try {
+            		if (posList != null) {
+                        configs.add(new Config(moduleId, "positionList", posList.serialize()));
+            		}
+				} catch (MMSerializationException e) {throw new RuntimeException(e);}
+                return configs.toArray(new Config[0]);
             }
             @Override
-            public JPanel display(Config[] configs) {
+            public Component display(Config[] configs) {
+                Map<String,Config> conf = new HashMap<String,Config>();
+                for (Config config : configs) {
+                    conf.put(config.getKey(), config);
+                }
+                // Positions (what to image: entire slide, previously defined positions)
+                ScriptInterface script = workflowRunner.getMMSlide().getApp();
+                if (script != null) {
+                    posListDlg = script.getXYPosListDlg();
+                    posList = new PositionList();
+                    if (conf.containsKey("positionList")) {
+                    	try {
+							posList.restore(conf.get("positionList").getValue());
+						} catch (MMSerializationException e) {throw new RuntimeException(e);}
+                    }
+                    posListDlg.setPositionList(posList);
+                    return posListDlg;
+                }
                 return new JPanel();
             }
             @Override
