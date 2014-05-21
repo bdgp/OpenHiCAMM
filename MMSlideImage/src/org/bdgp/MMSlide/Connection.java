@@ -9,7 +9,6 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
-import java.sql.SQLTransientConnectionException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
