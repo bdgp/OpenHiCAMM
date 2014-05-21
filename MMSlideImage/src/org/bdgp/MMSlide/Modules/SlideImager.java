@@ -16,10 +16,12 @@ import java.util.prefs.Preferences;
 
 import javax.swing.JPanel;
 
+import org.bdgp.MMSlide.Dao;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
+import org.bdgp.MMSlide.DB.SlidePosList;
 import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.DB.TaskDispatch;
@@ -27,6 +29,7 @@ import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.micromanager.AcqControlDlg;
+import org.micromanager.api.PositionList;
 import org.micromanager.api.ScriptInterface;
 import org.micromanager.utils.MMScriptException;
 
@@ -123,13 +126,25 @@ public class SlideImager implements Module {
                     	// here to store the preferences, then load them, and 
                     	// delete the temp file. Still ugly, but not as ugly 
                     	// as grabbing a private field.
-                    	Config c = conf.get("acqDlgSettings");
-						File tempFile = File.createTempFile("mmslideimageprefs_",".prefs");
-						PrintWriter out = new PrintWriter(tempFile.getPath());
-						out.print(c.getValue());
-						out.close();
-						acqControlDlg.loadAcqSettingsFromFile(tempFile.getPath());
-						tempFile.delete();
+                    	if (conf.containsKey("acqDlgSettings")) {
+                            Config acqDlgSettings = conf.get("acqDlgSettings");
+                            File tempFile = File.createTempFile("mmslideimageprefs_",".prefs");
+                            PrintWriter out = new PrintWriter(tempFile.getPath());
+                            out.print(acqDlgSettings.getValue());
+                            out.close();
+                            acqControlDlg.loadAcqSettingsFromFile(tempFile.getPath());
+                            tempFile.delete();
+                    	}
+                    	// set the position list if there's a posListId 
+                    	// configuration value defined
+                    	if (conf.containsKey("posListId")) {
+                            Config posListId = conf.get("posListId");
+                            Dao<SlidePosList> posListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
+                            SlidePosList slidePosList = posListDao.selectOneOrDie(
+                            		where("id",Integer.parseInt(posListId.getValue())));
+                            PositionList posList = slidePosList.getPositionList();
+                            script.setPositionList(posList);
+                    	}
 					} 
                     catch (MMScriptException e) {throw new RuntimeException(e);}
 					catch (IOException e) {throw new RuntimeException(e);}
