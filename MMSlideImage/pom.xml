@@ -58,7 +58,7 @@
 				<version>2.3.1</version>
 				<configuration>
 					<forceCreation>true</forceCreation>
-					<outputDirectory>${fiji.dir}/mmplugins</outputDirectory>
+					<outputDirectory>${mmplugins.dir}</outputDirectory>
 					<archive>
 						<manifest>
 <!-- 							<addClasspath>true</addClasspath> -->
@@ -173,7 +173,7 @@
 		<dependency>
 			<groupId>MicroManager</groupId>
 			<artifactId>MMJ_</artifactId>
-			<version>1.4.16</version>
+			<version>1.4.17</version>
 		</dependency>
 		<dependency>
 			<groupId>org.hsqldb</groupId>
