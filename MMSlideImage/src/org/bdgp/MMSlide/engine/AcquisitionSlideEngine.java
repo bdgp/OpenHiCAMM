@@ -13,7 +13,6 @@ import org.json.JSONObject;
 
 import java.awt.Color;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.prefs.Preferences;
@@ -41,7 +40,6 @@ import org.micromanager.api.ScriptInterface;
 import org.micromanager.internalinterfaces.AcqSettingsListener;
 //import org.micromanager.metadata.MMAcqDataException;
 //import org.micromanager.metadata.WellAcquisitionData;
-import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
 import org.micromanager.utils.AutofocusManager;
 import org.micromanager.utils.ChannelSpec;
@@ -898,6 +896,18 @@ public class AcquisitionSlideEngine implements AcquisitionEngine {
 
 	@Override
 	public void setParentGUI(ScriptInterface arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public ArrayList<DataProcessor<TaggedImage>> getImageProcessorPipeline() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void setImageProcessorPipeline(List<DataProcessor<TaggedImage>> arg0) {
 		// TODO Auto-generated method stub
 		
 	}

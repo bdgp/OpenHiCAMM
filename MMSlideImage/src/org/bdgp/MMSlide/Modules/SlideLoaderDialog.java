@@ -48,7 +48,7 @@ import static org.bdgp.MMSlide.Util.where;
 public class SlideLoaderDialog extends JTabbedPane {
     final SlideLoaderDialog self = this;
 
-	@Storable public JList<String> poolList;
+	@Storable public JList poolList;
 	@Storable public JRadioButton radioButtonSlideLoader;
 	@Storable public JRadioButton radioButtonSlideManual;
 	
@@ -77,7 +77,7 @@ public class SlideLoaderDialog extends JTabbedPane {
 		JLabel lblSelectPool = new JLabel("Select Pool:");
 		panelSelectPool.add(lblSelectPool, "cell 0 1,aligny top");
 		
-		poolList = new JList<String>();
+		poolList = new JList();
 		poolList.setVisibleRowCount(-1);
 		poolList.setListData(pool_names.toArray(new String[0]));
 		poolList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -188,7 +188,7 @@ public class SlideLoaderDialog extends JTabbedPane {
 		// Populate the pool description if another pool ID was selected
 		poolList.addListSelectionListener(new ListSelectionListener() {
 			public void valueChanged(ListSelectionEvent e) {
-			    String name = poolList.getSelectedValue();
+			    String name = (String)poolList.getSelectedValue();
         		List<Pool> pools = poolDao.select();
 			    for (Pool p : pools) {
 			        if (p.getName().equals(name)) {

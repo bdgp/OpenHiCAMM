@@ -40,8 +40,8 @@ public class WorkflowDesignerDialog extends JDialog {
 	private JButton btnPlus;
 	private JButton btnMinus;
 	private JTextField moduleName;
-	private JComboBox<String> moduleList;
-    private JComboBox<String> taskType;
+	private JComboBox moduleList;
+    private JComboBox taskType;
     private Connection connection;
 	
 	public WorkflowDesignerDialog(JFrame parent, final File workflowDirectory) {
@@ -71,7 +71,7 @@ public class WorkflowDesignerDialog extends JDialog {
 		JLabel lblWorkflow = new JLabel("Module Type");
 		getContentPane().add(lblWorkflow, "flowx,cell 0 0,span 2");
 		
-		moduleList = new JComboBox<String>();
+		moduleList = new JComboBox();
 		getContentPane().add(moduleList, "cell 0 0");
 		moduleList.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
@@ -80,8 +80,8 @@ public class WorkflowDesignerDialog extends JDialog {
 		    }
 		});
 		moduleList.setToolTipText("select module");
-		moduleList.setModel(new DefaultComboBoxModel<String>(
-		        MMSlide.getModuleNames().toArray(new String[0])));
+//		moduleList.setModel(new DefaultComboBoxModel<String>(
+//		        MMSlide.getModuleNames().toArray(new String[0])));
 		
 		JLabel lblNewLabel = new JLabel("Module Name");
 		getContentPane().add(lblNewLabel, "cell 0 0,alignx left,growy");
@@ -98,9 +98,9 @@ public class WorkflowDesignerDialog extends JDialog {
 		JLabel lblTaskType = new JLabel("Task Type");
 		getContentPane().add(lblTaskType, "cell 0 0");
 		
-		taskType = new JComboBox<String>();
+		taskType = new JComboBox();
 		getContentPane().add(taskType, "cell 0 0");
-		taskType.setModel(new DefaultComboBoxModel<String>(taskTypeList.toArray(new String[0])));
+		taskType.setModel(new DefaultComboBoxModel(taskTypeList.toArray(new String[0])));
 		
 		btnPlus = new JButton("+");
 		getContentPane().add(btnPlus, "cell 0 0");

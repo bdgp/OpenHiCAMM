@@ -50,7 +50,6 @@ public class StorableConfiguration implements Configuration {
     /**
      * Use introspection to retrieve a list of configs for the panel.
      */
-    @SuppressWarnings("rawtypes")
     @Override
     public Config[] retrieve() {
         List<Config> configs = new ArrayList<Config>();
@@ -131,7 +130,6 @@ public class StorableConfiguration implements Configuration {
         return configs.toArray(new Config[0]);
     }
     
-    @SuppressWarnings("rawtypes")
     @Override
     public Component display(Config[] configs) {
         Map<String,Config> conf = new HashMap<String,Config>();

@@ -42,11 +42,12 @@ public class SlideImager implements Module {
     AcqControlDlg acqControlDlg;
     ScriptInterface script;
 
-    @Override
+    @SuppressWarnings("deprecation")
+	@Override
     public void initialize(WorkflowRunner workflowRunner, String moduleId) {
         this.workflowRunner = workflowRunner;
         this.moduleId = moduleId;
-        this.script = workflowRunner.getMMSlide().getApp();
+//        this.script = workflowRunner.getMMSlide().getApp();
         if (script != null) {
             this.acqControlDlg = script.getAcqDlg();
         }
