@@ -47,7 +47,7 @@ public class SlideImager implements Module {
     public void initialize(WorkflowRunner workflowRunner, String moduleId) {
         this.workflowRunner = workflowRunner;
         this.moduleId = moduleId;
-//        this.script = workflowRunner.getMMSlide().getApp();
+        this.script = workflowRunner.getMMSlide().getApp();
         if (script != null) {
             this.acqControlDlg = script.getAcqDlg();
         }
