@@ -80,8 +80,8 @@ public class WorkflowDesignerDialog extends JDialog {
 		    }
 		});
 		moduleList.setToolTipText("select module");
-//		moduleList.setModel(new DefaultComboBoxModel<String>(
-//		        MMSlide.getModuleNames().toArray(new String[0])));
+		moduleList.setModel(new DefaultComboBoxModel(
+		        MMSlide.getModuleNames().toArray(new String[0])));
 		
 		JLabel lblNewLabel = new JLabel("Module Name");
 		getContentPane().add(lblNewLabel, "cell 0 0,alignx left,growy");

@@ -1,9 +1,12 @@
 package org.bdgp.MMSlide;
 
+import java.awt.Dimension;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,6 +16,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
 
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.micromanager.api.MMPlugin;
@@ -57,11 +66,35 @@ public class MMSlide implements MMPlugin {
 	 * Open the module window
 	 */
 	public void show() {
-		if (dialog == null) {
-			dialog = new WorkflowDialog(this);
-			dialog.pack();
-		}
-		dialog.setVisible(true);
+        // open the slide workflow dialog
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+            	if (dialog == null) dialog = new WorkflowDialog(new MMSlide());
+                dialog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                dialog.pack();
+                dialog.setVisible(true);
+                
+                // Handle uncaught exceptions by print to stderr and displaying a GUI
+                // window with the stack trace.
+                Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+                    @Override
+                    public void uncaughtException(Thread t, Throwable e) {
+                        StringWriter sw = new StringWriter();
+                        PrintWriter pw = new PrintWriter(sw);
+                        e.printStackTrace(pw);
+                        System.err.println(sw.toString());
+                        
+                        JTextArea text = new JTextArea(sw.toString());
+                        text.setEditable(false);
+                        JScrollPane textScrollPane = new JScrollPane(text);
+                        textScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+                        textScrollPane.setPreferredSize(new Dimension(800, 600));
+                        JOptionPane.showMessageDialog(dialog, textScrollPane);
+                        dialog.dispose();
+                    }
+                });
+            }
+        });
 	}
 
 	/**

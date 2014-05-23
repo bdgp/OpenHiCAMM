@@ -87,30 +87,6 @@ public class WorkflowRunner {
         this.workflowDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath());
         Dao<WorkflowModule> workflow = this.workflowDb.table(WorkflowModule.class);
         
-        this.moduleInstances = new HashMap<String,Module>();
-        for (WorkflowModule w : workflow.select()) {
-            // Make sure parent IDs are defined
-            if (w.getParentId() != null) {
-                List<WorkflowModule> parent = workflow.select(where("id", w.getParentId()));
-                if (parent.size() == 0) {
-                    throw new RuntimeException("Workflow references unknown parent ID "+w.getParentId());
-                }
-            }
-            // Make sure all modules implement Module
-            if (!Module.class.isAssignableFrom(w.getModule())) {
-                throw new RuntimeException("First module "+w.getModuleName()
-                        +" in Workflow does not inherit the Module interface.");
-            }
-            // Instantiate the module instances and put them in a hash
-            try { 
-                Module m = w.getModule().newInstance();
-                m.initialize(this, w.getId());
-                moduleInstances.put(w.getId(), m); 
-            } 
-            catch (InstantiationException e) {throw new RuntimeException(e);} 
-            catch (IllegalAccessException e) {throw new RuntimeException(e);}
-        }
-        
         int cores = Runtime.getRuntime().availableProcessors();
         this.pool = Executors.newFixedThreadPool(cores);
         
@@ -152,6 +128,30 @@ public class WorkflowRunner {
 
         this.taskListeners = new ArrayList<TaskListener>();
         this.mmslide = mmslide;
+        this.moduleInstances = new HashMap<String,Module>();
+
+        for (WorkflowModule w : workflow.select()) {
+            // Make sure parent IDs are defined
+            if (w.getParentId() != null) {
+                List<WorkflowModule> parent = workflow.select(where("id", w.getParentId()));
+                if (parent.size() == 0) {
+                    throw new RuntimeException("Workflow references unknown parent ID "+w.getParentId());
+                }
+            }
+            // Make sure all modules implement Module
+            if (!Module.class.isAssignableFrom(w.getModule())) {
+                throw new RuntimeException("First module "+w.getModuleName()
+                        +" in Workflow does not inherit the Module interface.");
+            }
+            // Instantiate the module instances and put them in a hash
+            try { 
+                Module m = w.getModule().newInstance();
+                m.initialize(this, w.getId());
+                moduleInstances.put(w.getId(), m); 
+            } 
+            catch (InstantiationException e) {throw new RuntimeException(e);} 
+            catch (IllegalAccessException e) {throw new RuntimeException(e);}
+        }
     }
     
     /**
