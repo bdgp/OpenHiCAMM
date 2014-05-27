@@ -18,6 +18,7 @@ import javax.swing.JPanel;
 
 import org.bdgp.MMSlide.Dao;
 import org.bdgp.MMSlide.Logger;
+import org.bdgp.MMSlide.MMSlide;
 import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
@@ -47,7 +48,8 @@ public class SlideImager implements Module {
     public void initialize(WorkflowRunner workflowRunner, String moduleId) {
         this.workflowRunner = workflowRunner;
         this.moduleId = moduleId;
-        this.script = workflowRunner.getMMSlide().getApp();
+        MMSlide mmslide = workflowRunner.getMMSlide();
+        this.script = mmslide.getApp();
         if (script != null) {
             this.acqControlDlg = script.getAcqDlg();
         }

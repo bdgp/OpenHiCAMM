@@ -1,21 +1,11 @@
 package org.bdgp.MMSlide;
 
 import java.awt.Dimension;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -23,6 +13,11 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
+import org.bdgp.MMSlide.Modules.ImageStitcher;
+import org.bdgp.MMSlide.Modules.ROIFinder;
+import org.bdgp.MMSlide.Modules.SlideImager;
+import org.bdgp.MMSlide.Modules.SlideLoader;
+import org.bdgp.MMSlide.Modules.TIGenerator;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.micromanager.api.MMPlugin;
 import org.micromanager.api.ScriptInterface;
@@ -31,7 +26,7 @@ import org.micromanager.utils.JavaUtils;
 
 public class MMSlide implements MMPlugin {
 	public static final String MODULE_LIST = "META-INF/modules.txt";
-	public static String MODULE_DIR = "mmslidemodules";
+	public static String MMSLIDEPLUGINSDIR = "mmslidemodules";
 	private ScriptInterface app;
 	private WorkflowDialog dialog;
 
@@ -140,40 +135,27 @@ public class MMSlide implements MMPlugin {
 	 * @return The list of registered modules from the META-INF/modules.txt files.
 	 */
 	public static List<String> getModuleNames() {
+		// Add all the builtin modules to the modules list first
+		List<String> moduleNames = new ArrayList<String>();
+		moduleNames.add(SlideLoader.class.getName());
+		moduleNames.add(SlideImager.class.getName());
+		moduleNames.add(ROIFinder.class.getName());
+		moduleNames.add(TIGenerator.class.getName());
+		moduleNames.add(ImageStitcher.class.getName());
+
+		// Look in the mmslideplugins/ directory for any additional workflow modules.
 		try {
-			// Try to get the module names from resource files in the classpath
-			Enumeration<URL> configs = ClassLoader.getSystemResources(MODULE_LIST);
-			Set<String> modules = new HashSet<String>();
-			for (URL url : Collections.list(configs)) {
-				BufferedReader r = new BufferedReader(
-						new InputStreamReader(url.openStream(), "utf-8"));
-				String line;
-				while ((line = r.readLine()) != null) {
-					Matcher m = Pattern.compile("^\\s*([^#\\s]+)").matcher(line);
-					if (m.find() && m.groupCount() > 0) {
-						Class<?> c = Class.forName(m.group(1));
-						if (!Module.class.isAssignableFrom(c)) {
-							throw new RuntimeException(
-									"Class "+c.getName()+
-									" does not implement the Module interface");
-						}
-						modules.add(m.group(1));
-					}
-				}
-			}
-			// Now get module names from mmslidemodules folder in the current directory.
-			// We're using the micromanager routine JavaUtils.findClasses to do this.
-			List<Class<?>> classes = JavaUtils.findClasses(new File(MODULE_DIR), 2);
-			for (Class<?> class_ : classes) {
-				for (Class<?> iface : class_.getInterfaces()) {
-					if (iface == Module.class) {
-						modules.add(class_.getName());
-					}
-				}
-			}
-			return new ArrayList<String>(modules);
+            File pluginRootDir = new File(System.getProperty("org.bdgp.mmslide.plugin.path", MMSLIDEPLUGINSDIR));
+            List<Class<?>> classes = JavaUtils.findClasses(pluginRootDir, 0);
+            for (Class<?> clazz : classes) { for (Class<?> iface : clazz.getInterfaces()) {
+                    if (iface == Module.class) {
+                        moduleNames.add(clazz.getName());
+                        break;
+                    }
+                }
+            }
 		} 
-		catch (IOException e) {throw new RuntimeException(e);}
 		catch (ClassNotFoundException e) {throw new RuntimeException(e);}
-	}
+        return moduleNames;
+    }
 }
