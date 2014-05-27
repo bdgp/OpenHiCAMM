@@ -30,6 +30,8 @@ import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.micromanager.AcqControlDlg;
+import org.micromanager.MMOptions;
+import org.micromanager.MMStudioMainFrame;
 import org.micromanager.api.PositionList;
 import org.micromanager.api.ScriptInterface;
 import org.micromanager.utils.MMScriptException;
@@ -43,15 +45,22 @@ public class SlideImager implements Module {
     AcqControlDlg acqControlDlg;
     ScriptInterface script;
 
-    @SuppressWarnings("deprecation")
 	@Override
     public void initialize(WorkflowRunner workflowRunner, String moduleId) {
         this.workflowRunner = workflowRunner;
         this.moduleId = moduleId;
         MMSlide mmslide = workflowRunner.getMMSlide();
         this.script = mmslide.getApp();
-        if (script != null) {
-            this.acqControlDlg = script.getAcqDlg();
+
+        Preferences prefs = Preferences.userNodeForPackage(this.script.getClass());
+        MMOptions options = new MMOptions();
+        options.loadSettings();
+        if (this.script != null) {
+            this.acqControlDlg = new AcqControlDlg(
+            		((MMStudioMainFrame)this.script).getAcquisitionEngine(),
+            		prefs,
+            		this.script,
+            		options);
         }
     }
 
@@ -162,7 +171,7 @@ public class SlideImager implements Module {
             }
         };
     }
-
+    
     @Override
     public void createTaskRecords() {
         WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",moduleId));

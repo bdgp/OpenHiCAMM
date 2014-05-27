@@ -61,10 +61,11 @@ public class MMSlide implements MMPlugin {
 	 * Open the module window
 	 */
 	public void show() {
+		final MMSlide self = this;
         // open the slide workflow dialog
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-            	if (dialog == null) dialog = new WorkflowDialog(new MMSlide());
+            	if (dialog == null) dialog = new WorkflowDialog(self);
                 dialog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 dialog.pack();
                 dialog.setVisible(true);
