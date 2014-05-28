@@ -67,6 +67,9 @@ public class WorkflowRunner {
     private List<TaskListener> taskListeners;
     private MMSlide mmslide;
     
+    private boolean isStopped;
+    private Logger logger;
+    
     /**
      * Constructor for WorkflowRunner. This loads the workflow.txt file 
      * in the workflow directory and performs some consistency checks 
@@ -126,9 +129,15 @@ public class WorkflowRunner {
 		catch (SecurityException e) {throw new RuntimeException(e);} 
 		catch (IOException e) {throw new RuntimeException(e);}
 
+        this.logger = Logger.create(null, "WorkflowRunner", logLevel);
+        for (Handler handler : logHandlers) {
+            this.logger.addHandler(handler);
+        }
+
         this.taskListeners = new ArrayList<TaskListener>();
         this.mmslide = mmslide;
         this.moduleInstances = new HashMap<String,Module>();
+        this.isStopped = true;
 
         for (WorkflowModule w : workflow.select()) {
             // Make sure parent IDs are defined
@@ -205,9 +214,12 @@ public class WorkflowRunner {
     }
     
     public Future<Status> run(final String startModuleId) {
+        int cores = Runtime.getRuntime().availableProcessors();
+        this.pool = Executors.newFixedThreadPool(cores);
         Future<Status> future = pool.submit(new Callable<Status>() {
             @Override
             public Status call() {
+            	WorkflowRunner.this.isStopped = false;
                 Task start = taskStatus.selectOneOrDie(where("moduleId",startModuleId));
                 Future<Status> future = run(start, null);
                 try { return future.get(); }
@@ -242,6 +254,7 @@ public class WorkflowRunner {
             @Override
             public Status call() {
                 Status status = task.getStatus();
+            	if (workflowRunner.isStopped == true) return status;
                 
                 // get an instance of the module
                 Module taskModule = moduleInstances.get(module.getId());
@@ -441,14 +454,29 @@ public class WorkflowRunner {
      * Stop any new tasks from getting queued up.
      */
     public void stop() {
+    	logger.warning("Stopping all jobs");
+        isStopped = true;
         pool.shutdown();
+
+        // notify any task listeners
+        for (TaskListener listener : taskListeners) {
+            listener.stopped();
+        }
     }
 
     /** 
      * Stop all actively executing tasks and stop processing any waiting tasks.
      */
     public List<Runnable> kill() {
-        return pool.shutdownNow();
+    	logger.warning("Killing all jobs");
+    	isStopped = true;
+        List<Runnable> runnables = pool.shutdownNow();
+
+        // notify any task listeners
+        for (TaskListener listener : taskListeners) {
+            listener.killed();
+        }
+        return runnables;
     }
     
     /**
@@ -494,8 +522,10 @@ public class WorkflowRunner {
     }
     public void addLogHandler(Handler handler) {
     	logHandlers.add(handler);
+    	this.logger.addHandler(handler);
     }
     public boolean removeLogHandler(Handler handler) {
+    	this.logger.removeHandler(handler);
     	return logHandlers.remove(handler);
     }
 }

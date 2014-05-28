@@ -91,15 +91,32 @@ public class WorkflowRunnerDialog extends JDialog {
         getContentPane().add(btnClose, "cell 1 2");
         workflowRunner.addTaskListener(new TaskListener() {
         	int completedTasks = 0;
+        	boolean stopped = false;
             @Override public void notifyTask(Task task) {
-                completedTasks++;
-                progressBar.setValue(completedTasks);
-                if (completedTasks == tasks.size()) {
-                	btnStop.setEnabled(false);
-                	btnKill.setEnabled(false);
-                	btnClose.setEnabled(true);
-                }
-            }});
+            	if (stopped == false) {
+                    completedTasks++;
+                    progressBar.setValue(completedTasks);
+                    if (completedTasks == tasks.size()) {
+                        btnStop.setEnabled(false);
+                        btnKill.setEnabled(false);
+                        btnClose.setEnabled(true);
+                    }
+            	}
+            }
+			@Override public void stopped() {
+                progressBar.setValue(0);
+                stopped = true;
+                btnStop.setEnabled(false);
+                btnKill.setEnabled(false);
+                btnClose.setEnabled(true);
+			}
+			@Override public void killed() {
+                progressBar.setValue(0);
+                stopped = true;
+                btnStop.setEnabled(false);
+                btnKill.setEnabled(false);
+                btnClose.setEnabled(true);
+			}});
         
         if (!resume) {
             workflowRunner.deleteTaskRecords();
