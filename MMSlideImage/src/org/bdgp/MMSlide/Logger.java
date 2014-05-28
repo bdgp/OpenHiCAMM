@@ -24,11 +24,13 @@ public class Logger extends java.util.logging.Logger {
     }
     public Logger(String logfile, String source, Level loglevel) {
         super(source, null);
-        try { 
-            FileHandler fh = new LogFileHandler(logfile);
-            this.addHandler(fh); 
+        if (logfile != null) {
+            try { 
+                FileHandler fh = new LogFileHandler(logfile);
+                this.addHandler(fh); 
+            }
+            catch (IOException e) {throw new RuntimeException(e);}
         }
-        catch (IOException e) {throw new RuntimeException(e);}
         this.setLevel(loglevel);
         
         // close handlers on exit
