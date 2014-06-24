@@ -47,6 +47,7 @@ public class WorkflowDialog extends JFrame {
     JButton btnConfigure;
     MMSlide mmslide;
     WorkflowRunner workflowRunner;
+    private JButton btnCreateNewInstance;
 
     public WorkflowDialog(MMSlide mmslide) {
         super("MMSlide");
@@ -90,6 +91,13 @@ public class WorkflowDialog extends JFrame {
                     }
                 }
             }});
+        
+        btnCreateNewInstance = new JButton("Create New Instance");
+        btnCreateNewInstance.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent arg0) {
+        	}
+        });
+        getContentPane().add(btnCreateNewInstance, "flowx,cell 1 1,alignx right");
         getContentPane().add(workflowInstance, "cell 1 1,alignx right");
         
         JLabel lblChooseStartTask = new JLabel("Start Task");
@@ -227,7 +235,7 @@ public class WorkflowDialog extends JFrame {
                     workflowInstances.add(instance.getName());
                 }
                 Collections.sort(workflowInstances, Collections.reverseOrder());
-                workflowInstances.add(0, "-Create new Instance-");
+                workflowInstances.add(0, "-Select Instance-");
                 workflowInstance.setModel(new DefaultComboBoxModel(workflowInstances.toArray(new String[0])));
                 workflowInstance.setEnabled(true);
                 

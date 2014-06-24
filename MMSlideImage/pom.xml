@@ -173,7 +173,7 @@
 		<dependency>
 			<groupId>MicroManager</groupId>
 			<artifactId>MMJ_</artifactId>
-			<version>1.4.17</version>
+			<version>1.4.18</version>
 		</dependency>
 		<dependency>
 			<groupId>org.hsqldb</groupId>

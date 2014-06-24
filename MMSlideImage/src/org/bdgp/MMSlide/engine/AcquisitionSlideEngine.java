@@ -11,6 +11,7 @@ import org.json.JSONObject;
 
 
 
+
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
@@ -908,6 +909,45 @@ public class AcquisitionSlideEngine implements AcquisitionEngine {
 
 	@Override
 	public void setImageProcessorPipeline(List<DataProcessor<TaggedImage>> arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void disposeProcessors() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public String getNameForProcessorClass(
+			Class<? extends DataProcessor<TaggedImage>> arg0) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public DataProcessor<TaggedImage> getProcessorRegisteredAs(String arg0) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<String> getSortedDataProcessorNames() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public DataProcessor<TaggedImage> makeProcessor(String arg0,
+			ScriptInterface arg1) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void registerProcessorClass(
+			Class<? extends DataProcessor<TaggedImage>> arg0, String arg1) {
 		// TODO Auto-generated method stub
 		
 	}
