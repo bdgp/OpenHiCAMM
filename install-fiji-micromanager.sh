@@ -31,20 +31,20 @@ export JAVA_HOME="$(/usr/libexec/java_home -v 1.6.0_65-b14-462)"
 
 #install micro-manager from source
 
-cd -
-mkdir micromanager
-cd micromanager
-svn --username guest --password guest checkout https://valelab.ucsf.edu/svn/micromanager2/trunk micromanager
-mkdir 3rdpartypublic
-svn --username guest --password guest checkout https://valelab.ucsf.edu/svn/3rdpartypublic/classext 3rdpartypublic/classext
+( mkdir micromanager
+  cd micromanager
+  svn --username guest --password guest checkout https://valelab.ucsf.edu/svn/micromanager2/trunk micromanager
+  mkdir 3rdpartypublic
+  svn --username guest --password guest checkout https://valelab.ucsf.edu/svn/3rdpartypublic/classext 3rdpartypublic/classext
 
-cd micromanager
+  cd micromanager
 
-# Configure, build, and install
-./autogen.sh
-./configure --enable-imagej-plugin=/Applications/Fiji.app --with-ij-jar=/Applications/Fiji.app/jars/ij-*.jar
-make -j
-make install
+  # Configure, build, and install
+  ./autogen.sh
+  ./configure --enable-imagej-plugin=/Applications/Fiji.app --with-ij-jar=/Applications/Fiji.app/jars/ij-*.jar
+  make -j
+  make install
+)
 
 # NOTE: ImageJ launcher will fail if your PATH contains any null elements, # e.g. ::
 # so, make sure your PATH is properly formatted
