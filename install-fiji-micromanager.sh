@@ -17,9 +17,15 @@ pip install numpy
   # build & install deps
   ./Build.sh
   # add the following to fiji/Contents/Info.plist:
-  defaults write "$PWD"/Contents/Info fiji -dict-add JVMOptions "-Dorg.micromanager.plugin.path=$PWD/mmplugins -Dorg.micromanager.autofocus.path=$PWD/mmautofocus"
+  defaults write "$PWD"/Contents/Info fiji -dict-add JVMOptions "-Dorg.micromanager.plugin.path=$PWD/mmplugins -Dorg.micromanager.autofocus.path=$PWD/mmautofocus -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=4000"
   defaults write "$PWD"/Contents/Info CFBundleExecutable -string ImageJ-macosx
   plutil -convert xml1 Contents/Info.plist
+)
+
+# install latest imagej-ui-swing
+( git clone https://github.com/imagej/imagej-ui-swing
+  cd imagej-ui-swing
+  mvn -Dimagej.app.directory=/Applications/Fiji.app -Ddelete.other.versions=true
 )
 
 # install Java 1.6 JDK manually
