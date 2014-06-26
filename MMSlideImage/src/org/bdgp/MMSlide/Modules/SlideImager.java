@@ -1,28 +1,18 @@
 package org.bdgp.MMSlide.Modules;
 
 import java.awt.Component;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
-import javax.swing.JPanel;
-
-import org.bdgp.MMSlide.Dao;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.MMSlide;
 import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
-import org.bdgp.MMSlide.DB.SlidePosList;
 import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.DB.TaskDispatch;
@@ -34,6 +24,7 @@ import org.micromanager.MMOptions;
 import org.micromanager.MMStudioMainFrame;
 import org.micromanager.api.PositionList;
 import org.micromanager.api.ScriptInterface;
+import org.micromanager.utils.MMException;
 import org.micromanager.utils.MMScriptException;
 
 import static org.bdgp.MMSlide.Util.where;
@@ -65,8 +56,33 @@ public class SlideImager implements Module {
     }
 
     @Override
-    public Status run(Task task, Map<String,Config> config, Logger logger) {
+    public Status run(Task task, Map<String,Config> conf, Logger logger) {
         if (acqControlDlg != null) {
+            // Load the settings and position list from the settings files
+            if (conf.containsKey("acqSettingsFile")) {
+                Config acqSettings = conf.get("acqSettingsFile");
+                File acqSettingsFile = new File(acqSettings.getValue());
+                if (!acqSettingsFile.exists()) {
+                	throw new RuntimeException("Cannot find acquisition settings file "+acqSettingsFile.getPath());
+                }
+                try { acqControlDlg.loadAcqSettingsFromFile(acqSettingsFile.getPath()); } 
+                catch (MMScriptException e) {throw new RuntimeException(e);}
+            }
+            if (conf.containsKey("posListFile")) {
+                Config posList = conf.get("posListFile");
+                File posListFile = new File(posList.getValue());
+                if (!posListFile.exists()) {
+                	throw new RuntimeException("Cannot find position list file "+posListFile.getPath());
+                }
+                try {
+                    PositionList positionList = new PositionList();
+					positionList.load(posListFile.getPath());
+					script.setPositionList(positionList);
+				} 
+                catch (MMException e) {throw new RuntimeException(e);}
+				catch (MMScriptException e) {throw new RuntimeException(e);}
+            }
+            // Run the Acquisition Engine
             String rootDir = new File(workflowRunner.getWorkflowDirectory(),
             		task.getStorageLocation()).getParent();
             String acqName = new File(workflowRunner.getWorkflowDirectory(),
@@ -101,28 +117,21 @@ public class SlideImager implements Module {
     @Override
     public Configuration configure() {
         return new Configuration() {
+        	SlideImagerDialog slideImagerDialog = new SlideImagerDialog(acqControlDlg);
+
             @Override
             public Config[] retrieve() {
             	List<Config> configs = new ArrayList<Config>();
-                if (acqControlDlg != null) {
-                    try {
-                    	// Use reflection to get at the acqPrefs_ private member.
-                    	// Ugly, but it's the only way I could figure out to save
-                    	// the prefs without popping up a Save As dialog.
-                        Field f = acqControlDlg.getClass().getDeclaredField("acqPrefs_");
-                        f.setAccessible(true);
-                        Preferences acqPrefs = (Preferences) f.get(acqControlDlg);
-                        OutputStream prefs = new ByteArrayOutputStream();
-                        acqPrefs.exportNode(prefs);
-                        configs.add(new Config(moduleId, "acqDlgSettings", prefs.toString()));
-                    } 
-                    catch (NoSuchFieldException e) {throw new RuntimeException(e);} 
-                    catch (SecurityException e) {throw new RuntimeException(e);} 
-                    catch (IllegalArgumentException e) {throw new RuntimeException(e);} 
-                    catch (IllegalAccessException e) {throw new RuntimeException(e);} 
-                    catch (IOException e) {throw new RuntimeException(e);} 
-                    catch (BackingStoreException e) {throw new RuntimeException(e);}
-                }
+            	if (slideImagerDialog.acqSettingsText.getText().length()>0) {
+            		configs.add(new Config(moduleId, 
+            				"acqSettingsFile", 
+            				slideImagerDialog.acqSettingsText.getText()));
+            	}
+            	if (slideImagerDialog.posListText.getText().length()>0) {
+            		configs.add(new Config(moduleId, 
+            				"posListFile", 
+            				slideImagerDialog.posListText.getText()));
+            	}
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -131,43 +140,28 @@ public class SlideImager implements Module {
                 for (Config config : configs) {
                     conf.put(config.getKey(), config);
                 }
-                if (acqControlDlg != null) {
-                    try {
-                    	// AcqControlDlg has a public method for loading 
-                    	// preferences from a file, so we can use a temp file 
-                    	// here to store the preferences, then load them, and 
-                    	// delete the temp file. Still ugly, but not as ugly 
-                    	// as grabbing a private field.
-                    	if (conf.containsKey("acqDlgSettings")) {
-                            Config acqDlgSettings = conf.get("acqDlgSettings");
-                            File tempFile = File.createTempFile("mmslideimageprefs_",".prefs");
-                            PrintWriter out = new PrintWriter(tempFile.getPath());
-                            out.print(acqDlgSettings.getValue());
-                            out.close();
-                            acqControlDlg.loadAcqSettingsFromFile(tempFile.getPath());
-                            tempFile.delete();
-                    	}
-                    	// set the position list if there's a posListId 
-                    	// configuration value defined
-                    	if (conf.containsKey("posListId")) {
-                            Config posListId = conf.get("posListId");
-                            Dao<SlidePosList> posListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
-                            SlidePosList slidePosList = posListDao.selectOneOrDie(
-                            		where("id",Integer.parseInt(posListId.getValue())));
-                            PositionList posList = slidePosList.getPositionList();
-                            script.setPositionList(posList);
-                    	}
-					} 
-                    catch (MMScriptException e) {throw new RuntimeException(e);}
-					catch (IOException e) {throw new RuntimeException(e);}
-
-                    return acqControlDlg;
+                if (conf.containsKey("acqSettingsFile")) {
+                    Config acqDlgSettings = conf.get("acqSettingsFile");
+                	slideImagerDialog.acqSettingsText.setText(acqDlgSettings.getValue());
                 }
-                return new JPanel();
+                if (conf.containsKey("posListFile")) {
+                    Config posList = conf.get("posListFile");
+                	slideImagerDialog.posListText.setText(posList.getValue());
+                }
+                return slideImagerDialog;
             }
             @Override
             public ValidationError[] validate() {
-                return null;
+            	List<ValidationError> errors = new ArrayList<ValidationError>();
+            	File acqSettingsFile = new File(slideImagerDialog.acqSettingsText.getText());
+            	if (!acqSettingsFile.exists()) {
+            		errors.add(new ValidationError(moduleId, "Acquisition settings file "+acqSettingsFile.toString()+" not found."));
+            	}
+            	File posListFile = new File(slideImagerDialog.posListText.getText());
+            	if (!posListFile.exists()) {
+            		errors.add(new ValidationError(moduleId, "Position list file "+posListFile.toString()+" not found."));
+            	}
+                return errors.toArray(new ValidationError[0]);
             }
         };
     }
