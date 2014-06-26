@@ -8,11 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.prefs.Preferences;
 
+import org.bdgp.MMSlide.Dao;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.MMSlide;
 import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
+import org.bdgp.MMSlide.DB.SlidePosList;
 import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.DB.TaskDispatch;
@@ -68,7 +70,19 @@ public class SlideImager implements Module {
                 try { acqControlDlg.loadAcqSettingsFromFile(acqSettingsFile.getPath()); } 
                 catch (MMScriptException e) {throw new RuntimeException(e);}
             }
-            if (conf.containsKey("posListFile")) {
+
+            // first try to load a position list from the DB
+            if (conf.containsKey("posListId")) {
+                Config posListId = conf.get("posListId");
+                Dao<SlidePosList> posListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
+                SlidePosList slidePosList = posListDao.selectOneOrDie(
+                        where("id",Integer.parseInt(posListId.getValue())));
+                PositionList posList = slidePosList.getPositionList();
+                try { script.setPositionList(posList); } 
+                catch (MMScriptException e) {throw new RuntimeException(e);}
+            }
+            // otherwise, load a position list from a file
+            else if (conf.containsKey("posListFile")) {
                 Config posList = conf.get("posListFile");
                 File posListFile = new File(posList.getValue());
                 if (!posListFile.exists()) {
