@@ -41,7 +41,7 @@ export JAVA_HOME="$(/usr/libexec/java_home -v 1.6.0_65-b14-462)"
 
   # Configure, build, and install
   ./autogen.sh
-  ./configure --enable-imagej-plugin=/Applications/Fiji.app --with-ij-jar=/Applications/Fiji.app/jars/ij-*.jar
+  ./configure --enable-imagej-plugin=/Applications/Fiji.app --with-ij-jar=/Applications/Fiji.app/jars/ij-1.49b.jar
   make -j
   make install
 )
@@ -72,4 +72,5 @@ export JAVA_HOME="$(/usr/libexec/java_home -v 1.6.0_65-b14-462)"
 # Of all of the shared jars, only rsyntaxtextarea is confirmed to conflict, so
 # hide the Fiji version and symlink the MM version in its place.
 # You have to use the exact jar names for the replacements.
-ln -sfv /Applications/Fiji.app/plugins/Micro-Manager/rsyntaxtextarea.jar /Applications/Fiji.app/jars/rsyntaxtextarea-2.0.4.1.jar
+mv -v /Applications/Fiji.app/jars/rsyntaxtextarea-2.0.4.1.jar /Applications/Fiji.app/jars/rsyntaxtextarea-2.0.4.1.jar.bak
+ln -sv /Applications/Fiji.app/plugins/Micro-Manager/rsyntaxtextarea.jar /Applications/Fiji.app/jars/rsyntaxtextarea-2.0.4.1.jar
