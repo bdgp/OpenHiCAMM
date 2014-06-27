@@ -5,13 +5,19 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.swing.*;
-
 import java.awt.Dialog;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.JTree;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
@@ -24,12 +30,11 @@ import javax.swing.event.DocumentListener;
 
 import org.bdgp.MMSlide.Dao;
 import org.bdgp.MMSlide.DB.WorkflowModule;
-import org.bdgp.MMSlide.DB.WorkflowModule.TaskType;
 
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.event.TreeSelectionEvent;
-import net.miginfocom.swing.MigLayout;
 
+import net.miginfocom.swing.MigLayout;
 import static org.bdgp.MMSlide.Util.where;
 
 @SuppressWarnings("serial")
@@ -41,7 +46,6 @@ public class WorkflowDesignerDialog extends JDialog {
 	private JButton btnMinus;
 	private JTextField moduleName;
 	private JComboBox moduleList;
-    private JComboBox taskType;
     private Connection connection;
 	
 	public WorkflowDesignerDialog(JFrame parent, final File workflowDirectory) {
@@ -62,11 +66,6 @@ public class WorkflowDesignerDialog extends JDialog {
         setSize(800,600);
         setLocationRelativeTo(null);
 		getContentPane().setLayout(new MigLayout("", "[765.00][]", "[63px][586px][29px]"));
-		
-		List<String> taskTypeList = new ArrayList<String>();
-		for (WorkflowModule.TaskType type : WorkflowModule.TaskType.values()) {
-		    taskTypeList.add(type.name());
-		}
 		
 		JLabel lblWorkflow = new JLabel("Module Type");
 		getContentPane().add(lblWorkflow, "flowx,cell 0 0,span 2");
@@ -98,10 +97,6 @@ public class WorkflowDesignerDialog extends JDialog {
 		JLabel lblTaskType = new JLabel("Task Type");
 		getContentPane().add(lblTaskType, "cell 0 0");
 		
-		taskType = new JComboBox();
-		getContentPane().add(taskType, "cell 0 0");
-		taskType.setModel(new DefaultComboBoxModel(taskTypeList.toArray(new String[0])));
-		
 		btnPlus = new JButton("+");
 		getContentPane().add(btnPlus, "cell 0 0");
 		btnPlus.setToolTipText("add a module to the workflow");
@@ -115,8 +110,7 @@ public class WorkflowDesignerDialog extends JDialog {
 		        WorkflowModule module = new WorkflowModule(
 		                (String)moduleName.getText(), 
 		                (String)moduleList.getSelectedItem(),
-		                parent.getId(),
-		                TaskType.valueOf((String)taskType.getSelectedItem()));
+		                parent.getId());
 		        
 		        DefaultTreeModel model = (DefaultTreeModel) treeForModules.getModel();
 		        model.insertNodeInto(module, parent, parent.getChildCount());
@@ -188,7 +182,7 @@ public class WorkflowDesignerDialog extends JDialog {
 	            {
 	                WorkflowModule node = enum_.nextElement();
 	                if (node != treeRoot) {
-		                wf.insert(node);
+                        wf.insert(node);
 	                }
 	            }
 	            dialog.dispose();

@@ -27,7 +27,6 @@ import org.bdgp.MMSlide.DB.TaskDispatch;
 import org.bdgp.MMSlide.DB.WorkflowInstance;
 import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.DB.Task.Status;
-import org.bdgp.MMSlide.DB.WorkflowModule.TaskType;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.bdgp.MMSlide.Modules.Interfaces.TaskListener;
 
@@ -235,13 +234,19 @@ public class WorkflowRunner {
      * @param task
      * @param resume
      */
-    private Future<Status> run(
+    public Future<Status> run(
             final Task task, 
             final Map<String,Integer> inheritedResources) 
     {
         final WorkflowModule module = this.workflow.selectOneOrDie(
                 where("id",task.getModuleId()));
         
+        // get an instance of the module
+        final Module taskModule = moduleInstances.get(module.getId());
+        if (taskModule == null) {
+            throw new RuntimeException("No instantiated module found with ID: "+module.getId());
+        }
+                
         // merge the task and module configuration
         List<Config> configs = new ArrayList<Config>();
         configs.addAll(taskConfig.select(where("id",task.getId())));
@@ -255,12 +260,6 @@ public class WorkflowRunner {
             public Status call() {
                 Status status = task.getStatus();
             	if (workflowRunner.isStopped == true) return status;
-                
-                // get an instance of the module
-                Module taskModule = moduleInstances.get(module.getId());
-                if (taskModule == null) {
-                    throw new RuntimeException("No instantiated module found with ID: "+module.getId());
-                }
                 
                 Map<String,Integer> acquiredResources = new HashMap<String,Integer>();
                 try {
@@ -356,7 +355,7 @@ public class WorkflowRunner {
                                             }
                                         }
                                         
-                                        if (module.getTaskType() == TaskType.SERIAL) {
+                                        if (taskModule.getTaskType() == Module.TaskType.SERIAL) {
                                             // combine any inherited and acquired resources and pass them to the child task.
                                             Map<String,Integer> childResources = new HashMap<String,Integer>();
                                             if (inheritedResources != null) {
@@ -373,7 +372,7 @@ public class WorkflowRunner {
 
                                             childFutures.add(run(childTask, childResources));
                                         }
-                                        else if (module.getTaskType() == TaskType.PARALLEL) {
+                                        else if (taskModule.getTaskType() == Module.TaskType.PARALLEL) {
                                             // set the task status to IN_PROGRESS
                                             task.setStatus(Status.IN_PROGRESS);
                                             taskStatus.update(task, "id","moduleId");
@@ -381,7 +380,7 @@ public class WorkflowRunner {
                                             childFutures.add(run(childTask, null));
                                         }
                                         else {
-                                            throw new RuntimeException("Unknown task type: "+module.getTaskType());
+                                            throw new RuntimeException("Unknown task type: "+taskModule.getTaskType());
                                         }
                                     }
                                 }
@@ -423,17 +422,17 @@ public class WorkflowRunner {
                 
         Future<Status> future;
         // Serial tasks get run immediately
-        if (module.getTaskType() == TaskType.SERIAL) {
+        if (taskModule.getTaskType() == Module.TaskType.SERIAL) {
             FutureTask<Status> futureTask = new FutureTask<Status>(callable);
             futureTask.run();
             future = futureTask;
         }
         // Parallel tasks get put in the task pool
-        else if (module.getTaskType() == TaskType.PARALLEL) {
+        else if (taskModule.getTaskType() == Module.TaskType.PARALLEL) {
             future = pool.submit(callable);
         }
         else {
-            throw new RuntimeException("Unknown task type: "+module.getTaskType());
+            throw new RuntimeException("Unknown task type: "+taskModule.getTaskType());
         }
         return future;
     }

@@ -12,6 +12,8 @@ import org.bdgp.MMSlide.DB.Task.Status;
  * Interface for workflow modules.
  */
 public interface Module {
+    public static enum TaskType {SERIAL, PARALLEL};
+    
     /**
      * Initialize this module instance.
      */
@@ -48,4 +50,9 @@ public interface Module {
      * Return a map of the resources this module requires.
      */
     public Map<String,Integer> getResources();
+    
+    /**
+     *  Return the module's task type (Serial or Parallel).
+     */
+    public TaskType getTaskType();
 }

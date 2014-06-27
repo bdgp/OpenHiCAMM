@@ -92,4 +92,9 @@ public class ImageStitcher implements Module {
     public Map<String, Integer> getResources() {
         return map("cpu",1);
     }
+
+	@Override
+	public TaskType getTaskType() {
+		return Module.TaskType.PARALLEL;
+	}
 }

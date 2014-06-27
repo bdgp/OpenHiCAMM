@@ -22,22 +22,17 @@ public class WorkflowModule extends DefaultMutableTreeNode {
     private String moduleName;
     @DatabaseField(dataType=DataType.LONG_STRING)
     private String parentId;
-    @DatabaseField(canBeNull=false)
-    private TaskType taskType;
-    
-    public static enum TaskType {SERIAL, PARALLEL};
     
     private Class<Module> module;
     
     public WorkflowModule() {
         super();
     }
-    public WorkflowModule(String id, String moduleName, String parentId, TaskType taskType) {
+    public WorkflowModule(String id, String moduleName, String parentId) {
         super(id);
         this.id = id;
         setModuleName(moduleName);
         this.parentId = parentId;
-        this.taskType = taskType;
     }
     
     public String getId() {
@@ -74,8 +69,5 @@ public class WorkflowModule extends DefaultMutableTreeNode {
     }
     public String getParentId() {
         return parentId;
-    }
-    public TaskType getTaskType() {
-        return taskType;
     }
 }
