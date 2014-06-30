@@ -15,7 +15,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
-import java.util.concurrent.Semaphore;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 
@@ -61,7 +60,6 @@ public class WorkflowRunner {
     
     private ExecutorService pool;
     private int maxThreads;
-    private Map<String,Semaphore> resources;
     
     private List<TaskListener> taskListeners;
     private MMSlide mmslide;
@@ -78,7 +76,6 @@ public class WorkflowRunner {
     public WorkflowRunner(
             File workflowDirectory, 
             Integer instanceId, 
-            Map<String,Integer> resources,
             Level loglevel,
             MMSlide mmslide) 
     {
@@ -91,17 +88,6 @@ public class WorkflowRunner {
         
         int cores = Runtime.getRuntime().availableProcessors();
         this.pool = Executors.newFixedThreadPool(cores);
-        
-        this.resources = new HashMap<String,Semaphore>();
-        for (Map.Entry<String,Integer> entry : resources.entrySet()) {
-            this.resources.put(entry.getKey(), new Semaphore(entry.getValue()));
-        }
-        if (!this.resources.containsKey("cpu")) {
-            this.resources.put("cpu",new Semaphore(Runtime.getRuntime().availableProcessors()));
-        }
-        if (!this.resources.containsKey("microscope")) {
-            this.resources.put("microscope",new Semaphore(1));
-        }
         
         this.workflowInstance = this.workflowDb.table(WorkflowInstance.class);
         this.workflowDirectory = workflowDirectory;
@@ -236,7 +222,7 @@ public class WorkflowRunner {
      */
     public Future<Status> run(
             final Task task, 
-            final Map<String,Integer> inheritedResources) 
+            final Map<String,Config> inheritedTaskConfig) 
     {
         final WorkflowModule module = this.workflow.selectOneOrDie(
                 where("id",task.getModuleId()));
@@ -249,19 +235,21 @@ public class WorkflowRunner {
                 
         // merge the task and module configuration
         List<Config> configs = new ArrayList<Config>();
-        configs.addAll(taskConfig.select(where("id",task.getId())));
         configs.addAll(moduleConfig.select(where("id",task.getModuleId())));
+        if (inheritedTaskConfig != null) {
+            for (Map.Entry<String,Config> entry : inheritedTaskConfig.entrySet()) {
+                configs.add(entry.getValue());
+            }
+        }
+        configs.addAll(taskConfig.select(where("id",task.getId())));
         final Map<String,Config> config = Config.merge(configs);
         
-        final WorkflowRunner workflowRunner = this;
-                
         Callable<Status> callable = new Callable<Status>() {
             @Override
             public Status call() {
                 Status status = task.getStatus();
-            	if (workflowRunner.isStopped == true) return status;
+            	if (WorkflowRunner.this.isStopped == true) return status;
                 
-                Map<String,Integer> acquiredResources = new HashMap<String,Integer>();
                 try {
                     // instantiate a logger for the task
                     Logger taskLogger = Logger.create(
@@ -271,26 +259,6 @@ public class WorkflowRunner {
                             logLevel);
                     for (Handler handler : logHandlers) {
                         taskLogger.addHandler(handler);
-                    }
-                    
-                    // figure out the required resources for this task
-                    Map<String,Integer> requiredResources = new HashMap<String,Integer>();
-                    requiredResources.putAll(taskModule.getResources());
-                    if (!requiredResources.containsKey("cpu")) {
-                        requiredResources.put("cpu", 1);
-                    }
-                    // acquire the required resources for this task
-                    for (Map.Entry<String,Integer> resource : requiredResources.entrySet()) {
-                        int requiredResource = resource.getValue();
-                        if (inheritedResources != null && inheritedResources.containsKey(resource.getKey())) {
-                            requiredResource -= Math.min(requiredResource, inheritedResources.get(resource.getKey()));
-                        }
-                        if (requiredResource > 0) {
-                            taskLogger.info("Acquiring resource "+resource.getKey()+" ("+resource.getValue()+")");
-                            resources.get(resource.getKey()).acquireUninterruptibly(requiredResource);
-                            acquiredResources.put(resource.getKey(), requiredResource);
-                            taskLogger.info("Acquired resource "+resource.getKey()+" ("+resource.getValue()+")");
-                        }
                     }
                     
                     // run the task
@@ -314,7 +282,7 @@ public class WorkflowRunner {
                     // This section must be synchronized both in java and in the backend database 
                     // to avoid any race conditions.
                     List<Future<Status>> childFutures = new ArrayList<Future<Status>>();
-                    synchronized (workflowRunner) {
+                    synchronized (WorkflowRunner.this) {
                         DatabaseConnection db = instanceDb.getReadWriteConnection();
                         instanceDb.saveSpecialConnection(db);
                         Savepoint savePoint = null;
@@ -356,21 +324,11 @@ public class WorkflowRunner {
                                         }
                                         
                                         if (taskModule.getTaskType() == Module.TaskType.SERIAL) {
-                                            // combine any inherited and acquired resources and pass them to the child task.
-                                            Map<String,Integer> childResources = new HashMap<String,Integer>();
-                                            if (inheritedResources != null) {
-                                                childResources.putAll(inheritedResources);
-                                            }
-                                            for (Map.Entry<String,Integer> resource : acquiredResources.entrySet()) {
-                                                Integer childResource = childResources.get(resource.getKey());
-                                                childResources.put(resource.getKey(), 
-                                                        resource.getValue() + (childResource != null? childResource : 0));
-                                            }
                                             // set the task status to IN_PROGRESS
                                             task.setStatus(Status.IN_PROGRESS);
                                             taskStatus.update(task, "id","moduleId");
 
-                                            childFutures.add(run(childTask, childResources));
+                                            childFutures.add(run(childTask, config));
                                         }
                                         else if (taskModule.getTaskType() == Module.TaskType.PARALLEL) {
                                             // set the task status to IN_PROGRESS
@@ -411,12 +369,6 @@ public class WorkflowRunner {
                     return coalesceStatuses(statuses);
                 } 
                 catch (SQLException e) {throw new RuntimeException(e);}
-                finally {
-                    // relinquish any acquired resources
-                    for (Map.Entry<String,Integer> resource : acquiredResources.entrySet()) {
-                        resources.get(resource.getKey()).release(resource.getValue());
-                    }
-                }
             }
         };
                 
