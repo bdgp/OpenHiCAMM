@@ -26,7 +26,6 @@ import java.awt.event.WindowListener;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -258,9 +257,7 @@ public class WorkflowDialog extends JFrame {
         Integer instanceId = workflowInstance.getSelectedIndex() == 0 ? null :
             Integer.parseInt(((String)workflowInstance.getItemAt(workflowInstance.getSelectedIndex())).replaceAll("^WF",""));
         if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getInstance().getId())) {
-            Map<String,Integer> resources = new HashMap<String,Integer>();
-            Level loglevel = Level.INFO;
-            workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, resources, loglevel, mmslide);
+            workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, Level.INFO, mmslide);
         }
     }
 
