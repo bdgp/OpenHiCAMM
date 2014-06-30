@@ -19,10 +19,11 @@ import java.awt.event.ActionEvent;
 public class SlideImagerDialog extends JTabbedPane {
 	JTextField acqSettingsText;
 	JTextField posListText;
+	JTextField posListName;
 	public SlideImagerDialog(final AcqControlDlg acqControlDlg) {
 		JPanel panel = new JPanel();
 		addTab("New tab", null, panel, null);
-		panel.setLayout(new MigLayout("", "[grow]", "[][][][][]"));
+		panel.setLayout(new MigLayout("", "[grow]", "[][][][][][][]"));
 		
 		JButton btnShowAcquisitionDialog = new JButton("Show Acquisition Dialog");
 		if (acqControlDlg == null) {
@@ -47,7 +48,7 @@ public class SlideImagerDialog extends JTabbedPane {
 		panel.add(acqSettingsText, "flowx,cell 0 2,growx");
 		acqSettingsText.setColumns(10);
 		
-		JLabel lblLoad = new JLabel("Load Position List File");
+		JLabel lblLoad = new JLabel("Load Position List From File");
 		panel.add(lblLoad, "cell 0 3");
 		
         final JFileChooser acqSettingsChooser = new JFileChooser();
@@ -78,5 +79,12 @@ public class SlideImagerDialog extends JTabbedPane {
 			}
 		});
 		panel.add(btnLoadPosList, "cell 0 4");
+		
+		JLabel lblPositionListDb = new JLabel("Or Enter Position List DB Name");
+		panel.add(lblPositionListDb, "cell 0 5");
+		
+		posListName = new JTextField();
+		panel.add(posListName, "cell 0 6,growx");
+		posListName.setColumns(10);
 	}
 }

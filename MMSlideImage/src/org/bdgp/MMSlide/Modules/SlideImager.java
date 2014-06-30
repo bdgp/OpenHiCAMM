@@ -16,7 +16,10 @@ import org.bdgp.MMSlide.MMSlide;
 import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
+import org.bdgp.MMSlide.DB.Image;
 import org.bdgp.MMSlide.DB.ModuleConfig;
+import org.bdgp.MMSlide.DB.PoolSlide;
+import org.bdgp.MMSlide.DB.SlidePos;
 import org.bdgp.MMSlide.DB.SlidePosList;
 import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.Task.Status;
@@ -66,7 +69,7 @@ public class SlideImager implements Module {
     }
 
     @Override
-    public Status run(final Task task, Map<String,Config> conf, Logger logger) {
+    public Status run(final Task task, final Map<String,Config> conf, Logger logger) {
         if (acqControlDlg != null) {
             // first try to load a position list from the DB
             if (conf.containsKey("posListId")) {
@@ -137,13 +140,42 @@ public class SlideImager implements Module {
 								// out of the ImageCache.
                                 String imageLabel = MDUtils.getLabel(taggedImage.tags);
 								taskConfigDao.insert(new TaskConfig(new Integer(t.getId()).toString(),"imageLabel",imageLabel));
+								// Try to get the Slide ID
+								List<TaskDispatch> parentTaskDispatch = taskDispatchDao.select(where("id",task.getId()));
+								Integer slideId = new Integer(0);
+								if (parentTaskDispatch.size() == 1) {
+									TaskConfig poolSlideId = taskConfigDao.selectOne(
+											where("id",parentTaskDispatch.get(0).getParentTaskId()).
+											and("key","poolSlideId"));
+									if (poolSlideId != null) {
+										Dao<PoolSlide> poolSlideDao = workflowRunner.getInstanceDb().table(PoolSlide.class);
+										PoolSlide poolSlide = poolSlideDao.selectOneOrDie(where("id",new Integer(poolSlideId.getValue())));
+										slideId = poolSlide.getSlideId();
+									}
+                                }
+								// Try to get the SlidePos ID
+								TaskConfig slidePosIdConfig = taskConfigDao.selectOne(
+										where("id",new Integer(task.getId()).toString()).
+										and("key","slidePosId"));
+								Integer slidePosId = new Integer(slidePosIdConfig != null? new Integer(slidePosIdConfig.getValue()) : 0);
 
+								// Create image DB record
+								Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+								Image image = new Image(slideId, slidePosId, MDUtils.getFileName(taggedImage.tags), taggedImage.tags);
+								imageDao.insert(image);
+
+								// Store the Image ID as a Task Config variable
+								taskConfigDao.insert(new TaskConfig(
+										new Integer(t.getId()).toString(),
+										"imageId",
+										new Integer(image.getId()).toString()));
+								
 								// Run the downstream processing tasks for each image
 								List<TaskDispatch> childTaskIds = taskDispatchDao.select(where("parentId",t.getId()));
 								for (TaskDispatch childTaskId : childTaskIds) {
 									Task child = taskDao.selectOne(where("id",childTaskId.getTaskId()));
 									if (child != null) {
-                                        workflowRunner.run(child, new HashMap<String,Integer>());
+                                        workflowRunner.run(child, conf);
 									}
 								}
 							}
@@ -197,6 +229,11 @@ public class SlideImager implements Module {
             				"posListFile", 
             				slideImagerDialog.posListText.getText()));
             	}
+            	if (slideImagerDialog.posListName.getText().length()>0) {
+            		configs.add(new Config(moduleId, 
+            				"posListName", 
+            				slideImagerDialog.posListName.getText()));
+            	}
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -213,6 +250,10 @@ public class SlideImager implements Module {
                     Config posList = conf.get("posListFile");
                 	slideImagerDialog.posListText.setText(posList.getValue());
                 }
+                if (conf.containsKey("posListName")) {
+                    Config posListName = conf.get("posListName");
+                	slideImagerDialog.posListName.setText(posListName.getValue());
+                }
                 return slideImagerDialog;
             }
             @Override
@@ -222,9 +263,17 @@ public class SlideImager implements Module {
             	if (!acqSettingsFile.exists()) {
             		errors.add(new ValidationError(moduleId, "Acquisition settings file "+acqSettingsFile.toString()+" not found."));
             	}
-            	File posListFile = new File(slideImagerDialog.posListText.getText());
-            	if (!posListFile.exists()) {
-            		errors.add(new ValidationError(moduleId, "Position list file "+posListFile.toString()+" not found."));
+            	if (slideImagerDialog.posListText.getText().length()>0) {
+                    File posListFile = new File(slideImagerDialog.posListText.getText());
+                    if (!posListFile.exists()) {
+                        errors.add(new ValidationError(moduleId, "Position list file "+posListFile.toString()+" not found."));
+                    }
+            	}
+            	if (!((slideImagerDialog.posListText.getText().length()>0? 1: 0)
+            			+ (slideImagerDialog.posListName.getText().length()>0? 1: 0) == 1))
+            	{
+            		errors.add(new ValidationError(moduleId, 
+            				"You must enter one of either a position list file, or a position list name."));
             	}
                 return errors.toArray(new ValidationError[0]);
             }
@@ -240,14 +289,16 @@ public class SlideImager implements Module {
     		conf.put(c.getKey(), c);
     	}
 
-    	PositionList posList = new PositionList();
+    	SlidePosList posList = null;
         // first try to load a position list from the DB
-        if (conf.containsKey("posListId")) {
-            Config posListId = conf.get("posListId");
-            Dao<SlidePosList> posListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
-            SlidePosList slidePosList = posListDao.selectOneOrDie(
-                    where("id",Integer.parseInt(posListId.getValue())));
-            posList = slidePosList.getPositionList();
+        Dao<SlidePosList> posListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
+        Dao<SlidePos> posDao = workflowRunner.getInstanceDb().table(SlidePos.class);
+        if (conf.containsKey("posListName")) {
+            Config posListName = conf.get("posListName");
+            posList = posListDao.selectOne(where("name",posListName.getValue()));
+            if (posList == null) {
+            	throw new RuntimeException("Position list with name \""+posListName.getValue()+"\" not found in database");
+            }
         }
         // otherwise, load a position list from a file
         else if (conf.containsKey("posListFile")) {
@@ -256,15 +307,26 @@ public class SlideImager implements Module {
             if (!posListFile.exists()) {
                 throw new RuntimeException("Cannot find position list file "+posListFile.getPath());
             }
-            try { posList.load(posListFile.getPath()); } 
+            try { 
+            	PositionList positionList = new PositionList();
+            	positionList.load(posListFile.getPath()); 
+            	posList = new SlidePosList(posListConf.getValue(), positionList);
+            } 
             catch (MMException e) {throw new RuntimeException(e);}
+            
+            // store the loaded position list in the DB
+            posListDao.insert(posList);
+            MultiStagePosition[] msps = posList.getPositionList().getPositions();
+            for (int i=0; i<msps.length; ++i) {
+            	posDao.insert(new SlidePos(posList.getId(), i));
+            }
         }
 
         // get any parent tasks
         WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",moduleId));
         Task parentTask = workflowRunner.getTaskStatus().selectOne(where("moduleId",module.getParentId()));
         // Create the task records
-        MultiStagePosition[] msps = posList.getPositions();
+        MultiStagePosition[] msps = posList.getPositionList().getPositions();
         for (int i=0; i<msps.length; ++i) {
         	// Create task record
             Task task = new Task(moduleId, Status.NEW);
@@ -275,13 +337,23 @@ public class SlideImager implements Module {
             workflowRunner.getTaskStatus().update(task,"id");
             
             // Create taskConfig record to link task to position index in Position List
-            TaskConfig taskConfig = new TaskConfig(
+            Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
+            taskConfigDao.insert(new TaskConfig(
             		new Integer(task.getId()).toString(), 
             		"positionIndex", 
-            		new Integer(i).toString());
-            Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
-            taskConfigDao.insert(taskConfig);
-                
+            		new Integer(i).toString()));
+            
+            // Insert the slidePosId as a task config
+            SlidePos slidePos = posDao.selectOne(
+            		where("slidePosListId",posList.getId()).
+            		and("slidePosListIndex",i));
+            if (slidePos != null) {
+                taskConfigDao.insert(new TaskConfig(
+                        new Integer(task.getId()).toString(), 
+                        "slidePosId", 
+                        new Integer(slidePos.getId()).toString()));
+            }
+
             // Create task dispatch record
             if (parentTask != null) {
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
