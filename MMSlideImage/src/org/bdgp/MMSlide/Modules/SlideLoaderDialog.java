@@ -29,7 +29,6 @@ import org.bdgp.MMSlide.DB.Slide;
 import javax.swing.JList;
 
 import net.miginfocom.swing.MigLayout;
-import static org.bdgp.MMSlide.StorableConfiguration.Storable;
 
 import javax.swing.JTextPane;
 
@@ -48,9 +47,9 @@ import static org.bdgp.MMSlide.Util.where;
 public class SlideLoaderDialog extends JTabbedPane {
     final SlideLoaderDialog self = this;
 
-	@Storable public JList poolList;
-	@Storable public JRadioButton radioButtonSlideLoader;
-	@Storable public JRadioButton radioButtonSlideManual;
+	public JList poolList;
+	public JRadioButton radioButtonSlideLoader;
+	public JRadioButton radioButtonSlideManual;
 	
 	public SlideLoaderDialog(final Connection connection, final MMSlide mmslide) {
         final Dao<Slide> slideDao = connection.table(Slide.class);
