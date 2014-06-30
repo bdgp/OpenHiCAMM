@@ -61,13 +61,8 @@
 					<outputDirectory>${mmplugins.dir}</outputDirectory>
 					<archive>
 						<manifest>
-<!-- 							<addClasspath>true</addClasspath> -->
 							<mainClass>org.bdgp.MMSlide.Main</mainClass>
 						</manifest>
-						<!-- <manifestEntries> -->
-						<!-- <Class-Path>../jars/commons-math.jar ../jars/ij.jar ../jars/swing-layout-1.0.4.jar 
-							../jars/swingx-0.9.5.jar ./MMJ_.jar</Class-Path> -->
-						<!-- </manifestEntries> -->
 					</archive>
 				</configuration>
 			</plugin>
@@ -89,10 +84,7 @@
 									<include>org.hsqldb:hsqldb</include>
 									<include>com.j256.ormlite:ormlite-core</include>
 									<include>com.j256.ormlite:ormlite-jdbc</include>
-									<include>net.sf.jopt-simple:jopt-simple</include>
 									<include>com.miglayout:miglayout</include>
-									<include>javax.json:javax.json-api</include>
-									<include>org.glassfish:javax.json</include>
 								</includes>
 							</artifactSet>
 						</configuration>
