@@ -37,8 +37,8 @@ import static org.bdgp.MMSlide.Util.where;
 public class WorkflowDialog extends JFrame {
     JTextField workflowDir;
     JFileChooser directoryChooser;
-    JComboBox workflowInstance;
-    JComboBox startModule;
+    JComboBox<String> workflowInstance;
+    JComboBox<String> startModule;
     JButton editWorkflowButton;
     JButton startButton;
     JButton resumeButton;
@@ -72,7 +72,7 @@ public class WorkflowDialog extends JFrame {
         
         JLabel lblChooseWorkflowInstance = new JLabel("Workflow Instance");
         getContentPane().add(lblChooseWorkflowInstance, "cell 0 1,alignx trailing");
-        workflowInstance = new JComboBox();
+        workflowInstance = new JComboBox<String>();
         workflowInstance.setEnabled(false);
         workflowInstance.addItemListener(new ItemListener() {
             @Override
@@ -101,7 +101,7 @@ public class WorkflowDialog extends JFrame {
         
         JLabel lblChooseStartTask = new JLabel("Start Task");
         getContentPane().add(lblChooseStartTask, "cell 0 2,alignx trailing");
-        startModule = new JComboBox();
+        startModule = new JComboBox<String>();
         startModule.setEnabled(false);
         startModule.addItemListener(new ItemListener() {
             @Override
@@ -224,7 +224,7 @@ public class WorkflowDialog extends JFrame {
             }
             if (startModules.size() > 0) {
                 Collections.sort(startModules);
-                startModule.setModel(new DefaultComboBoxModel(startModules.toArray(new String[0])));
+                startModule.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
                 startModule.setEnabled(true);
                 
                 // get the list of workflow instances
@@ -235,7 +235,7 @@ public class WorkflowDialog extends JFrame {
                 }
                 Collections.sort(workflowInstances, Collections.reverseOrder());
                 workflowInstances.add(0, "-Select Instance-");
-                workflowInstance.setModel(new DefaultComboBoxModel(workflowInstances.toArray(new String[0])));
+                workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
                 workflowInstance.setEnabled(true);
                 
                 btnConfigure.setEnabled(true);

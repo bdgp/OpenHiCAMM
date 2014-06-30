@@ -47,7 +47,7 @@ import static org.bdgp.MMSlide.Util.where;
 public class SlideLoaderDialog extends JTabbedPane {
     final SlideLoaderDialog self = this;
 
-	public JList poolList;
+	public JList<String> poolList;
 	public JRadioButton radioButtonSlideLoader;
 	public JRadioButton radioButtonSlideManual;
 	
@@ -76,7 +76,7 @@ public class SlideLoaderDialog extends JTabbedPane {
 		JLabel lblSelectPool = new JLabel("Select Pool:");
 		panelSelectPool.add(lblSelectPool, "cell 0 1,aligny top");
 		
-		poolList = new JList();
+		poolList = new JList<String>();
 		poolList.setVisibleRowCount(-1);
 		poolList.setListData(pool_names.toArray(new String[0]));
 		poolList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
