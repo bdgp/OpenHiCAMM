@@ -7,6 +7,11 @@ set -o errexit
 #ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
 brew install autoconf automake libtool pkg-config swig subversion boost libusb-compat hidapi libdc1394 libgphoto2 freeimage opencv python git
 
+# install latest Java from Oracle
+#brew tap caskroom/cask
+#brew install brew-cask
+brew cask install java
+
 pip install numpy
 
 # install fiji from source
@@ -28,12 +33,11 @@ pip install numpy
   mvn -Dimagej.app.directory=/Applications/Fiji.app -Ddelete.other.versions=true
 )
 
-# install Java 1.6 JDK manually
-# Make sure your JAVA_HOME points to a java with the jni.h header. Apple's JRE
-# doesn't have it, you have to install the JDK.
-# URL: https://developer.apple.com/downloads
-# Download and install "Java for OS X 2013-005 Developer Package" (java_for_os_x_2013005_dp__11m4609.dmg).
-export JAVA_HOME="$(/usr/libexec/java_home -v 1.6.0_65-b14-462)"
+# set JAVA_HOME
+export JAVA_HOME="$(/usr/libexec/java_home)"
+# set Java source and compile targets to version 1.6 for compatibility with
+# Micro-Manager and Fiji
+export JAVACFLAGS='-source 1.6 -target 1.6'
 
 #install micro-manager from source
 
