@@ -11,7 +11,7 @@ import com.j256.ormlite.table.DatabaseTable;
 public class SlidePosList {
     @DatabaseField(generatedId=true) 
     private int id;
-    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) 
+    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,unique=true) 
     private String name;
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,useGetSet=true) 
     private String posList;
@@ -34,6 +34,7 @@ public class SlidePosList {
         catch (MMSerializationException e) { throw new RuntimeException(e); }
         this.posList = posList;
     }
+    public int getId() { return id; }
     public String getName() { return name; }
     public String getPosList() { return posList; }
     public PositionList getPositionList() { return positionList; }
