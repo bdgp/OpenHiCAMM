@@ -2,6 +2,8 @@ package org.bdgp.MMSlide;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.util.ArrayList;
@@ -268,8 +270,11 @@ public class WorkflowRunner {
                     } 
                     // Uncaught exceptions set the status to ERROR
                     catch (Exception e) {
+                        StringWriter sw = new StringWriter();
+                        PrintWriter pw = new PrintWriter(sw);
+                        e.printStackTrace(pw);
                         taskLogger.severe(String.format("Error reported during task %s:%n%s", 
-                                task.toString(), e.toString()));
+                                task.toString(), sw.toString()));
                         status = Status.ERROR;
                     }
                     taskLogger.info("Finished module "+module.getId()+", task ID "+task.getId());
