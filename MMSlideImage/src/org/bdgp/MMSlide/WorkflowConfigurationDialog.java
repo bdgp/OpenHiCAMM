@@ -47,7 +47,7 @@ public class WorkflowConfigurationDialog extends JDialog {
             final Map<String,Configuration> configurations, 
             final Dao<ModuleConfig> config)
     {
-	    super(parent, "Module Configuration", Dialog.ModalityType.MODELESS);
+	    super(parent, "Module Configuration", Dialog.ModalityType.DOCUMENT_MODAL);
 	    this.parent = parent;
 	    this.configurations = configurations;
 	    this.config = config;

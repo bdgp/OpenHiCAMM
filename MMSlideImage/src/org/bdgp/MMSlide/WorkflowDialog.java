@@ -51,7 +51,6 @@ public class WorkflowDialog extends JFrame {
     public WorkflowDialog(MMSlide mmslide) {
         super("MMSlide");
         this.mmslide = mmslide;
-        final WorkflowDialog thisDialog = this;
         
         directoryChooser = new JFileChooser();
         directoryChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -94,10 +93,25 @@ public class WorkflowDialog extends JFrame {
         btnCreateNewInstance = new JButton("Create New Instance");
         btnCreateNewInstance.addActionListener(new ActionListener() {
         	public void actionPerformed(ActionEvent arg0) {
+                Connection workflowDb = Connection.get(
+                    new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
+                Dao<WorkflowInstance> wfi = workflowDb.table(WorkflowInstance.class);
+                WorkflowInstance wf = new WorkflowInstance();
+                wfi.insert(wf);
+
+                List<String> workflowInstances = new ArrayList<String>();
+                for (WorkflowInstance instance : wfi.select()) {
+                    workflowInstances.add(instance.getName());
+                }
+                Collections.sort(workflowInstances, Collections.reverseOrder());
+                workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
+                workflowInstance.setEnabled(true);
+                workflowInstance.getModel().setSelectedItem(wf.getName());
         	}
         });
         getContentPane().add(btnCreateNewInstance, "flowx,cell 1 1,alignx right");
         getContentPane().add(workflowInstance, "cell 1 1,alignx right");
+        btnCreateNewInstance.setEnabled(false);
         
         JLabel lblChooseStartTask = new JLabel("Start Task");
         getContentPane().add(lblChooseStartTask, "cell 0 2,alignx trailing");
@@ -106,8 +120,7 @@ public class WorkflowDialog extends JFrame {
         startModule.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange() == ItemEvent.SELECTED) {
-                }
+                if (e.getStateChange() == ItemEvent.SELECTED) { }
             }});
         getContentPane().add(startModule, "cell 1 2,alignx trailing");
         
@@ -120,25 +133,12 @@ public class WorkflowDialog extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 initWorkflowRunner();
                 
-                thisDialog.setVisible(false);
                 Map<String,Configuration> configurations = getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
-                    thisDialog, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
+                    WorkflowDialog.this, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
                 config.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 config.pack();
                 config.setVisible(true);
-                config.addWindowListener(new WindowListener()     {
-                    @Override public void windowOpened(WindowEvent e) { }
-                    @Override public void windowClosing(WindowEvent e) { }
-                    @Override public void windowClosed(WindowEvent e) { 
-                        thisDialog.setVisible(true);
-                    }
-                    @Override public void windowIconified(WindowEvent e) { }
-                    @Override public void windowDeiconified(WindowEvent e) { }
-                    @Override public void windowActivated(WindowEvent e) { }
-                    @Override
-                    public void windowDeactivated(WindowEvent e) { }
-                });
             }
         });
         getContentPane().add(btnConfigure, "cell 1 3,alignx trailing");
@@ -147,7 +147,7 @@ public class WorkflowDialog extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 Map<String,Configuration> configurations = getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
-                    thisDialog, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
+                    WorkflowDialog.this, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
                 if (config.validateConfiguration()) {
                 	start(false);
                 }
@@ -161,7 +161,7 @@ public class WorkflowDialog extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 Map<String,Configuration> configurations = getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
-                    thisDialog, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
+                    WorkflowDialog.this, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
                 if (config.validateConfiguration()) {
                 	start(true);
                 }
@@ -176,8 +176,7 @@ public class WorkflowDialog extends JFrame {
         editWorkflowButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                thisDialog.setVisible(false);
-                WorkflowDesignerDialog designer = new WorkflowDesignerDialog(thisDialog, new File(workflowDir.getText()));
+                WorkflowDesignerDialog designer = new WorkflowDesignerDialog(WorkflowDialog.this, new File(workflowDir.getText()));
                 designer.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 designer.pack();
                 designer.setVisible(true);
@@ -185,7 +184,6 @@ public class WorkflowDialog extends JFrame {
                     @Override public void windowOpened(WindowEvent e) { }
                     @Override public void windowClosing(WindowEvent e) { }
                     @Override public void windowClosed(WindowEvent e) { 
-                        thisDialog.setVisible(true);
                         refresh();
                     }
                     @Override public void windowIconified(WindowEvent e) { }
@@ -197,7 +195,7 @@ public class WorkflowDialog extends JFrame {
         
         openWorkflowButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                if (directoryChooser.showDialog(thisDialog,"Choose Workflow Directory") == JFileChooser.APPROVE_OPTION) {
+                if (directoryChooser.showDialog(WorkflowDialog.this,"Choose Workflow Directory") == JFileChooser.APPROVE_OPTION) {
                     workflowDir.setText(directoryChooser.getSelectedFile().getPath());
                 }
                 if (workflowDir.getText().length() > 0) {
@@ -205,7 +203,7 @@ public class WorkflowDialog extends JFrame {
                     refresh();
                 }
                 else {
-                    editWorkflowButton.setVisible(false);
+                    editWorkflowButton.setEnabled(false);
                 }
             }
         });
@@ -234,12 +232,12 @@ public class WorkflowDialog extends JFrame {
                     workflowInstances.add(instance.getName());
                 }
                 Collections.sort(workflowInstances, Collections.reverseOrder());
-                workflowInstances.add(0, "-Select Instance-");
                 workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
                 workflowInstance.setEnabled(true);
                 
                 btnConfigure.setEnabled(true);
                 startButton.setEnabled(true);
+                btnCreateNewInstance.setEnabled(true);
 
                 // should the resume button be enabled?
                 resumeButton.setEnabled(false);
@@ -254,7 +252,7 @@ public class WorkflowDialog extends JFrame {
     }
 
     public void initWorkflowRunner() {
-        Integer instanceId = workflowInstance.getSelectedIndex() == 0 ? null :
+        Integer instanceId = workflowInstance.getSelectedIndex() < 0 ? null :
             Integer.parseInt(((String)workflowInstance.getItemAt(workflowInstance.getSelectedIndex())).replaceAll("^WF",""));
         if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getInstance().getId())) {
             workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, Level.INFO, mmslide);
@@ -262,8 +260,7 @@ public class WorkflowDialog extends JFrame {
     }
 
     public void start(boolean resume) {
-        final WorkflowDialog thisDialog = this;
-        thisDialog.setVisible(false);
+        WorkflowDialog.this.setVisible(false);
         
         initWorkflowRunner();
         String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
@@ -271,17 +268,6 @@ public class WorkflowDialog extends JFrame {
         wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         wrd.pack();
         wrd.setVisible(true);
-        wrd.addWindowListener(new WindowListener() {
-            @Override public void windowOpened(WindowEvent e) { }
-            @Override public void windowClosing(WindowEvent e) { }
-            @Override public void windowClosed(WindowEvent e) { 
-                thisDialog.setVisible(true);
-            }
-            @Override public void windowIconified(WindowEvent e) { }
-            @Override public void windowDeiconified(WindowEvent e) { }
-            @Override public void windowActivated(WindowEvent e) { }
-            @Override public void windowDeactivated(WindowEvent e) { }
-        });
     }
     public Map<String,Configuration> getConfigurations() {
     	// get list of JPanels and load them with the configuration interfaces

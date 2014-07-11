@@ -1,5 +1,6 @@
 package org.bdgp.MMSlide;
 
+import java.awt.Dialog;
 import java.awt.Dimension;
 import java.util.Date;
 import java.util.List;
@@ -7,7 +8,9 @@ import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 
 import javax.swing.JDialog;
+
 import net.miginfocom.swing.MigLayout;
+
 import javax.swing.JTextPane;
 import javax.swing.JButton;
 import javax.swing.JProgressBar;
@@ -28,7 +31,7 @@ public class WorkflowRunnerDialog extends JDialog {
             String startModuleId,
             boolean resume) 
     {
-        super(workflowDialog, "Workflow Runner");
+        super(workflowDialog, "Workflow Runner", Dialog.ModalityType.APPLICATION_MODAL);
     	final WorkflowRunnerDialog self = this;
         this.workflowRunner = runner;
         getContentPane().setLayout(new MigLayout("", "[][grow]", "[grow][][]"));

@@ -39,7 +39,6 @@ import static org.bdgp.MMSlide.Util.where;
 
 @SuppressWarnings("serial")
 public class WorkflowDesignerDialog extends JDialog {
-    private WorkflowDesignerDialog dialog;
 	private JTree treeForModules;
 	private WorkflowModule treeRoot;
 	private JButton btnPlus;
@@ -50,7 +49,6 @@ public class WorkflowDesignerDialog extends JDialog {
 	
 	public WorkflowDesignerDialog(JFrame parent, final File workflowDirectory) {
 	    super(parent, "Workflow Designer", Dialog.ModalityType.APPLICATION_MODAL);
-	    dialog = this;
 	    
 	    this.connection = Connection.get(
 	            new File(workflowDirectory, WorkflowRunner.WORKFLOW_DB).getPath());
@@ -74,7 +72,7 @@ public class WorkflowDesignerDialog extends JDialog {
 		getContentPane().add(moduleList, "cell 0 0");
 		moduleList.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
-		        dialog.setEnabledControls();
+		        WorkflowDesignerDialog.this.setEnabledControls();
 		        moduleName.setText(chooseModuleName((String)moduleList.getSelectedItem()));
 		    }
 		});
@@ -88,9 +86,9 @@ public class WorkflowDesignerDialog extends JDialog {
 		moduleName = new JTextField();
 		getContentPane().add(moduleName, "cell 0 0 2 1,growx");
 		moduleName.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { dialog.setEnabledControls(); }
-            @Override public void removeUpdate(DocumentEvent e) { dialog.setEnabledControls(); }
-            @Override public void changedUpdate(DocumentEvent e) { dialog.setEnabledControls(); }
+            @Override public void insertUpdate(DocumentEvent e) { WorkflowDesignerDialog.this.setEnabledControls(); }
+            @Override public void removeUpdate(DocumentEvent e) { WorkflowDesignerDialog.this.setEnabledControls(); }
+            @Override public void changedUpdate(DocumentEvent e) { WorkflowDesignerDialog.this.setEnabledControls(); }
         });
 		moduleName.setToolTipText("module name");
 		moduleName.setColumns(26);
@@ -144,7 +142,7 @@ public class WorkflowDesignerDialog extends JDialog {
 		getContentPane().add(btnCancel, "flowx,cell 0 2,alignx left");
 		btnCancel.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
-		        dialog.dispose();
+		        WorkflowDesignerDialog.this.dispose();
 		    }
 		});
 		btnMinus.addActionListener(new ActionListener() {
@@ -185,7 +183,7 @@ public class WorkflowDesignerDialog extends JDialog {
                         wf.insert(node);
 	                }
 	            }
-	            dialog.dispose();
+	            WorkflowDesignerDialog.this.dispose();
             }
 	    });
 		
