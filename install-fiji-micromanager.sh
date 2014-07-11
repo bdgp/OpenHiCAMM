@@ -53,5 +53,5 @@ make install
 popd
 
 # Temporary fix for different versions of rsyntaxtextarea
-mv -v "$FIJI"/jars/rsyntaxtextarea-2.5.0.jar "$FIJI"/jars/rsyntaxtextarea-2.5.0.jar.bak
-ln -svf "$FIJI"/plugins/Micro-Manager/rsyntaxtextarea.jar "$FIJI"/jars/rsyntaxtextarea-2.5.0.jar
+mv -v "$FIJIDIR"/jars/rsyntaxtextarea-2.5.0.jar "$FIJIDIR"/jars/rsyntaxtextarea-2.5.0.jar.bak
+ln -svf "$FIJIDIR"/plugins/Micro-Manager/rsyntaxtextarea.jar "$FIJIDIR"/jars/rsyntaxtextarea-2.5.0.jar
