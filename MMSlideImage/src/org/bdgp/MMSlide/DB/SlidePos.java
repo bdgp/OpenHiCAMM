@@ -14,6 +14,7 @@ public class SlidePos {
     @DatabaseField
     private int roiId;
 
+    public SlidePos() { }
     public SlidePos(int slidePosListId, int slidePosListIndex) {
         this.slidePosListId = slidePosListId;
         this.slidePosListIndex = slidePosListIndex;
