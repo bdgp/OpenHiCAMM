@@ -11,7 +11,8 @@ import javax.swing.JDialog;
 
 import net.miginfocom.swing.MigLayout;
 
-import javax.swing.JTextPane;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JButton;
 import javax.swing.JProgressBar;
 import javax.swing.JLabel;
@@ -40,9 +41,13 @@ public class WorkflowRunnerDialog extends JDialog {
         JLabel lblLogOutput = new JLabel("Log Output");
         getContentPane().add(lblLogOutput, "cell 0 0");
         
-        final JTextPane textPane = new JTextPane();
-        textPane.setEditable(false);
-        getContentPane().add(textPane, "cell 1 0,grow");
+        final JTextArea text = new JTextArea();
+        text.setEditable(false);
+        JScrollPane textScrollPane = new JScrollPane(text);
+        textScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        textScrollPane.setPreferredSize(new Dimension(800, 600));
+
+        getContentPane().add(textScrollPane, "cell 1 0,grow");
         
         JLabel lblProgress = new JLabel("Progress");
         getContentPane().add(lblProgress, "cell 0 1");
@@ -69,8 +74,8 @@ public class WorkflowRunnerDialog extends JDialog {
         // logging output
         workflowRunner.addLogHandler(new Handler() {
             @Override public void publish(LogRecord record) {
-        	    textPane.setText(String.format("%s[%s:%s:%s] %s%n", 
-        	            textPane.getText(), 
+        	    text.setText(String.format("%s[%s:%s:%s] %s%n", 
+        	            text.getText(), 
         	            record.getLoggerName(),
         	            new Date(record.getMillis()), 
         	            record.getLevel(), 
