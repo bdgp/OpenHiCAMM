@@ -19,7 +19,6 @@ import org.bdgp.MMSlide.DB.SlidePos;
 import org.bdgp.MMSlide.DB.SlidePosList;
 import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.Task.Status;
-import org.bdgp.MMSlide.DB.TaskConfig;
 import org.bdgp.MMSlide.DB.TaskDispatch;
 import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
@@ -49,44 +48,20 @@ public class ROIFinder implements Module {
         this.script = mmslide.getApp();
     }
 
+    // TOOD: Fill in image processing code here.
     @Override
     public Status run(Task task, Map<String,Config> config, Logger logger) {
-    	Dao<TaskDispatch> taskDispatchDao = this.workflowRunner.getInstanceDb().table(TaskDispatch.class);
-    	Dao<Task> taskDao = this.workflowRunner.getInstanceDb().table(Task.class);
-    	Dao<TaskConfig> taskConfigDao = this.workflowRunner.getInstanceDb().table(TaskConfig.class);
-    	List<TaskDispatch> parentTasks = taskDispatchDao.select(where("taskId",task.getId()));
-    	for (TaskDispatch parent : parentTasks) {
-    		Task parentTask = taskDao.selectOneOrDie(where("id",parent.getParentTaskId()));
-    		// get a map of the parent's task configuration
-    		Map<String,Config> configs = new HashMap<String,Config>();
-    		for (TaskConfig c : taskConfigDao.select(where("id",parentTask.getId()))) {
-    			configs.put(c.getKey(), c);
-    		}
-    		// Get the imageLabel from the Task Configuration, then convert it into the channel, slice,
-    		// frame, and position indices. These indices are used to get the TaggedImage out of the
-    		// ImageCache.
-            //ImageCache imageCache = ((MMStudioMainFrame)this.script).getAcquisitionEngine().getImageCache();
-    		//String imageLabel = configs.get("imageLabel").getValue();
-    		//int[] indices = MDUtils.getIndices(imageLabel);
-            //TaggedImage taggedImage = imageCache.getImage(indices[0], indices[1], indices[2], indices[3]);
-            
-    		// Get the Image record
-            Integer imageId = new Integer(configs.get("imageId").getValue());
-            Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-            Image image = imageDao.selectOneOrDie(where("id",imageId));
+        // Get the Image record
+    	Config imageIdConf = config.get("imageId");
+    	if (imageIdConf == null) throw new RuntimeException("No imageId task configuration was set by the slide imager!");
+        Integer imageId = new Integer(imageIdConf.getValue());
+        Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+        Image image = imageDao.selectOneOrDie(where("id",imageId));
 
-            Status status = process(task, config, logger, image);
-            if (status != Status.SUCCESS) return status;
-    	}
-        return Status.SUCCESS;
-    }
-    
-    // TOOD: Fill in image processing code here.
-    public Status process(Task task, Map<String,Config> config, Logger logger, Image image) {
     	try {
 			int positionIndex = MDUtils.getPositionIndex(image.getTags());
 			double pixelSizeUm = MDUtils.getPixelSizeUm(image.getTags());
-			String fileName = MDUtils.getFileName(image.getTags());
+			String fileName = image.getPath();
 			logger.info(String.format("Processed image at position %d, filename %s",positionIndex,fileName));
 
 			// get the name of the SlidePosList we're writing to
@@ -123,7 +98,7 @@ public class ROIFinder implements Module {
 		} 
     	catch (JSONException e) { throw new RuntimeException(e); }
     }
-
+    
     @Override
     public String getTitle() {
         return this.getClass().getName();
