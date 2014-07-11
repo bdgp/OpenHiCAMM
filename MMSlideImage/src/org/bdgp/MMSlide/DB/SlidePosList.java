@@ -17,10 +17,13 @@ public class SlidePosList {
     private String posList;
     private PositionList positionList;
 
+    public SlidePosList() {}
     public SlidePosList(String name, PositionList positionList) {
+    	this.name = name;
         setPositionList(positionList);
     }
     public SlidePosList(String name, String posList) {
+    	this.name = name;
         setPosList(posList);
     }
     public void setPositionList(PositionList positionList) {
