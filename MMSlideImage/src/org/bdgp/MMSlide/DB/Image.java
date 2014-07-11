@@ -13,7 +13,7 @@ public class Image {
     @DatabaseField(canBeNull=false) private int slideId;
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) private String path;
     @DatabaseField(canBeNull=false) private int slidePosId;
-    @DatabaseField() private String tags;
+    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) private String tags;
     
     public Image() {}
     public Image (int slideId, int slidePosId, String path) {
