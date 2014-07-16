@@ -130,7 +130,7 @@ public class WorkflowRunnerDialog extends JDialog {
             workflowRunner.deleteTaskRecords();
             workflowRunner.createTaskRecords();
         }
-        workflowRunner.run(startModuleId);
+        workflowRunner.run(startModuleId, null);
     }
 
 }
