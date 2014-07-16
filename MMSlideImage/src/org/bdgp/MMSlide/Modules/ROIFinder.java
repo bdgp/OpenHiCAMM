@@ -48,7 +48,6 @@ public class ROIFinder implements Module {
         this.script = mmslide.getApp();
     }
 
-    // TOOD: Fill in image processing code here.
     @Override
     public Status run(Task task, Map<String,Config> config, Logger logger) {
         // Get the Image record
@@ -69,11 +68,10 @@ public class ROIFinder implements Module {
 					where("id",this.moduleId).and("key","slidePosListName"));
 			String slidePosListName = slidePosListNameConf != null? slidePosListNameConf.getValue() : "default";
 			
-			// TODO: Fill in list of ROIs
-			List<ROI> rois = new ArrayList<ROI>();
-            rois.add(new ROI(image.getId(), 0, 0, 0, 0));
+			// Fill in list of ROIs
+			List<ROI> rois = process(image);
 
-            // TODO: Convert the ROIs into a PositionList
+            // Convert the ROIs into a PositionList
 			PositionList posList = new PositionList();
 			for (ROI roi : rois) {
 				posList.addPosition(new MultiStagePosition(
@@ -97,6 +95,13 @@ public class ROIFinder implements Module {
 			return Status.SUCCESS;
 		} 
     	catch (JSONException e) { throw new RuntimeException(e); }
+    }
+    
+    public List<ROI> process(Image image) {
+    	List<ROI> rois = new ArrayList<ROI>();
+    	String imagePath = image.getPath();
+    	// TODO: fill in ROI list here
+    	return rois;
     }
     
     @Override
