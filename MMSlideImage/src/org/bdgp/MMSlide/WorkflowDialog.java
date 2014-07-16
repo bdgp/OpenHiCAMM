@@ -260,8 +260,6 @@ public class WorkflowDialog extends JFrame {
     }
 
     public void start(boolean resume) {
-        WorkflowDialog.this.setVisible(false);
-        
         initWorkflowRunner();
         String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
         WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(this, workflowRunner, startModuleId, resume);
