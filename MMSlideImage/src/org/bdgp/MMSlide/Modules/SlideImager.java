@@ -145,7 +145,7 @@ public class SlideImager implements Module {
 								// out of the ImageCache.
                                 String imageLabel = MDUtils.getLabel(taggedImage.tags);
                                 TaskConfig imageLabelConf = new TaskConfig(new Integer(t.getId()).toString(),"imageLabel",imageLabel);
-								taskConfigDao.insert(imageLabelConf);
+								taskConfigDao.insertOrUpdate(imageLabelConf,"id","key");
 								config.put("imageLabel", imageLabelConf);
 
 								Integer slideId = new Integer(0);
@@ -162,14 +162,14 @@ public class SlideImager implements Module {
 								// Create image DB record
 								Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
 								Image image = new Image(slideId, slidePosId, MDUtils.getFileName(taggedImage.tags), taggedImage.tags);
-								imageDao.insert(image);
+								imageDao.insertOrUpdate(image,"slideId","slidePosId");
 
 								// Store the Image ID as a Task Config variable
 								TaskConfig imageId = new TaskConfig(
 										new Integer(t.getId()).toString(),
 										"imageId",
 										new Integer(image.getId()).toString());
-								taskConfigDao.insert(imageId);
+								taskConfigDao.insertOrUpdate(imageId,"id","key");
 								config.put("imageId", imageId);
 								
 								// Run the downstream processing tasks for each image
