@@ -200,18 +200,22 @@ public class WorkflowRunner {
         }
     }
     
-    public Future<Status> run(final String startModuleId) {
+    public Future<Status> run(final String startModuleId, final Map<String,Config> inheritedTaskConfig) {
         int cores = Runtime.getRuntime().availableProcessors();
         this.pool = Executors.newFixedThreadPool(cores);
         Future<Status> future = pool.submit(new Callable<Status>() {
             @Override
             public Status call() {
             	WorkflowRunner.this.isStopped = false;
-                Task start = taskStatus.selectOneOrDie(where("moduleId",startModuleId));
-                Future<Status> future = run(start, null);
-                try { return future.get(); }
-                catch (InterruptedException e) {throw new RuntimeException(e);} 
-                catch (ExecutionException e) {throw new RuntimeException(e);} 
+                List<Task> start = taskStatus.select(where("moduleId",startModuleId));
+                List<Task.Status> statuses = new ArrayList<Task.Status>();
+                for (Task t : start) {
+                    Future<Status> future = run(t, inheritedTaskConfig);
+                    try { statuses.add(future.get()); }
+                    catch (InterruptedException e) {throw new RuntimeException(e);} 
+                    catch (ExecutionException e) {throw new RuntimeException(e);} 
+                }
+                return coalesceStatuses(statuses);
             }
         });
         return future;
@@ -328,23 +332,10 @@ public class WorkflowRunner {
                                             }
                                         }
                                         
-                                        if (taskModule.getTaskType() == Module.TaskType.SERIAL) {
-                                            // set the task status to IN_PROGRESS
-                                            task.setStatus(Status.IN_PROGRESS);
-                                            taskStatus.update(task, "id","moduleId");
-
-                                            childFutures.add(run(childTask, config));
-                                        }
-                                        else if (taskModule.getTaskType() == Module.TaskType.PARALLEL) {
-                                            // set the task status to IN_PROGRESS
-                                            task.setStatus(Status.IN_PROGRESS);
-                                            taskStatus.update(task, "id","moduleId");
-
-                                            childFutures.add(run(childTask, null));
-                                        }
-                                        else {
-                                            throw new RuntimeException("Unknown task type: "+taskModule.getTaskType());
-                                        }
+                                        // set the task status to IN_PROGRESS
+                                        task.setStatus(Status.IN_PROGRESS);
+                                        taskStatus.update(task, "id","moduleId");
+                                        childFutures.add(run(childTask, config));
                                     }
                                 }
                             }
