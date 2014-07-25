@@ -51,7 +51,3 @@ cd micromanager
 make -j
 make install
 popd
-
-# Temporary fix for different versions of rsyntaxtextarea
-mv -v "$FIJIDIR"/jars/rsyntaxtextarea-2.5.0.jar "$FIJIDIR"/jars/rsyntaxtextarea-2.5.0.jar.bak
-ln -svf "$FIJIDIR"/plugins/Micro-Manager/rsyntaxtextarea.jar "$FIJIDIR"/jars/rsyntaxtextarea-2.5.0.jar
