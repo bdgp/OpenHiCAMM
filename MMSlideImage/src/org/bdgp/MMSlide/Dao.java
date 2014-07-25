@@ -347,6 +347,33 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	}
 	
 	/**
+	 * Given an object and an optional list of keys, returns an updated
+	 * copy of the object from the database.
+	 * @param value The object to refresh
+	 * @param where Optional list of keys to use when refreshing
+	 * @return A refreshed copy of the object
+	 */
+	public T reload(T value, String ... where) {
+		Class<T> class_ = this.getDataClass();
+		Map<String,Object> values = new HashMap<String,Object>();
+		for (String w : where) {
+			try {
+				Field f = class_.getField(w);
+				f.setAccessible(true);
+				values.put(w, f.get(value));
+			} 
+			catch (IllegalArgumentException e) {throw new RuntimeException(e);} 
+			catch (IllegalAccessException e) {throw new RuntimeException(e);} 
+			catch (NoSuchFieldException e) {throw new RuntimeException(e);} 
+			catch (SecurityException e) {throw new RuntimeException(e);}
+		}
+		T updated = where.length == 0?
+				this.selectOneOrDie(value) :
+				this.selectOneOrDie(values);
+		return updated;
+	}
+	
+	/**
 	 * Delete a value from the database table.
 	 * @return The number of records deleted
 	 */

@@ -163,6 +163,7 @@ public class SlideImager implements Module {
 								Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
 								Image image = new Image(slideId, slidePosId, MDUtils.getFileName(taggedImage.tags), taggedImage.tags);
 								imageDao.insertOrUpdate(image,"slideId","slidePosId");
+								image = imageDao.reload(image);
 
 								// Store the Image ID as a Task Config variable
 								TaskConfig imageId = new TaskConfig(
@@ -324,6 +325,7 @@ public class SlideImager implements Module {
             
             // store the loaded position list in the DB
             posListDao.insertOrUpdate(posList,"name");
+            posList = posListDao.reload(posList);
             MultiStagePosition[] msps = posList.getPositionList().getPositions();
             for (int i=0; i<msps.length; ++i) {
             	posDao.insert(new SlidePos(posList.getId(), i));

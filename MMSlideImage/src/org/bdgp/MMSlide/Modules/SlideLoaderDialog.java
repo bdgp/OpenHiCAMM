@@ -165,7 +165,7 @@ public class SlideLoaderDialog extends JTabbedPane {
 		        for (PoolSlide poolSlide : poolSlides) {
 		            Slide slide = slides.get(poolSlide.getSlideId());
 		            slideDao.insertOrUpdate(slide,"experimentId");
-		            slide = slideDao.selectOne(where("experimentId",slide.getExperimentId()));
+		            slide = slideDao.reload(slide);
 		            poolSlideDao.insert(new PoolSlide(pool.getId(), 
 		                    poolSlide.getCartridgePosition(), 
 		                    poolSlide.getSlidePosition(), 
