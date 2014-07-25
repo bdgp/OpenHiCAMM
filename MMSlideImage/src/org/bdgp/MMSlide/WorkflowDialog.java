@@ -98,6 +98,8 @@ public class WorkflowDialog extends JFrame {
                 Dao<WorkflowInstance> wfi = workflowDb.table(WorkflowInstance.class);
                 WorkflowInstance wf = new WorkflowInstance();
                 wfi.insert(wf);
+                wf.createStorageLocation(workflowDir.getText());
+                wfi.update(wf,"id");
 
                 List<String> workflowInstances = new ArrayList<String>();
                 for (WorkflowInstance instance : wfi.select()) {
