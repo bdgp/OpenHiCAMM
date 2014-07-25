@@ -446,7 +446,6 @@ public class WorkflowRunner {
     }
     
     // Various getters/setters
-    public File getWorkflowDirectory() { return workflowDirectory; }
     public Dao<WorkflowModule> getWorkflow() { return workflow; }
     public Dao<ModuleConfig> getModuleConfig() { return moduleConfig; }
     public Dao<WorkflowInstance> getWorkflowInstance() { return workflowInstance; }

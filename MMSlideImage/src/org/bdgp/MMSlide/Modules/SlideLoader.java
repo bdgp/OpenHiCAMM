@@ -126,7 +126,7 @@ public class SlideLoader implements Module {
                 taskDao.insert(task);
                 task.createStorageLocation(
                         workflowRunner.getInstance().getStorageLocation(), 
-                        workflowRunner.getWorkflowDirectory().getPath());
+                        task.getStorageLocation());
                 taskDao.update(task,"id");
 
                 if (parentTask != null) {

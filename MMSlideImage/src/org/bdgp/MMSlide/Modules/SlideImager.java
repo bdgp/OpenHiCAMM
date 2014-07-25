@@ -110,9 +110,9 @@ public class SlideImager implements Module {
             }
             if (!((MMStudioMainFrame)this.script).getAcquisitionEngine().isAcquisitionRunning()) {
             	// Set rootDir and acqName
-                String rootDir = new File(workflowRunner.getWorkflowDirectory(),
+                String rootDir = new File(workflowRunner.getInstance().getStorageLocation(),
                         task.getStorageLocation()).getParent();
-                String acqName = new File(workflowRunner.getWorkflowDirectory(),
+                String acqName = new File(workflowRunner.getInstance().getStorageLocation(),
                         task.getStorageLocation()).getName();
                 // make a map of position list index -> Task
                 final Dao<Task> taskDao = workflowRunner.getInstanceDb().table(Task.class);
@@ -343,7 +343,7 @@ public class SlideImager implements Module {
             workflowRunner.getTaskStatus().insert(task);
             task.createStorageLocation(
             		parentTask != null? parentTask.getStorageLocation() : null, 
-            		workflowRunner.getWorkflowDirectory().getPath());
+            		workflowRunner.getInstance().getStorageLocation());
             workflowRunner.getTaskStatus().update(task,"id");
             
             // Create taskConfig record to link task to position index in Position List

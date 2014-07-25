@@ -73,7 +73,7 @@ public class ImageStitcher implements Module {
             for (Task parentTask : parentTasks) {
                 Task task = new Task(moduleId, Status.NEW);
                 workflowRunner.getTaskStatus().insert(task);
-                task.createStorageLocation(parentTask.getStorageLocation(), workflowRunner.getWorkflowDirectory().getPath());
+                task.createStorageLocation(parentTask.getStorageLocation(), workflowRunner.getInstance().getStorageLocation());
                 workflowRunner.getTaskStatus().update(task,"id");
                 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
@@ -83,7 +83,7 @@ public class ImageStitcher implements Module {
         else {
             Task task = new Task(moduleId, Status.NEW);
             workflowRunner.getTaskStatus().insert(task);
-            task.createStorageLocation(workflowRunner.getInstance().getStorageLocation(), workflowRunner.getWorkflowDirectory().getPath());
+            task.createStorageLocation(workflowRunner.getInstance().getStorageLocation(), workflowRunner.getInstance().getStorageLocation());
             workflowRunner.getTaskStatus().update(task,"id");
         }
     }
