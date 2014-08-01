@@ -108,26 +108,36 @@ public class SlideImager implements Module {
                 try { acqControlDlg.loadAcqSettingsFromFile(acqSettingsFile.getPath()); } 
                 catch (MMScriptException e) {throw new RuntimeException(e);}
             }
-            if (!((MMStudioMainFrame)this.script).getAcquisitionEngine().isAcquisitionRunning()) {
+
+            // Get Dao objects ready for use
+            final Dao<Task> taskDao = workflowRunner.getInstanceDb().table(Task.class);
+            final Dao<TaskDispatch> taskDispatchDao = workflowRunner.getInstanceDb().table(TaskDispatch.class);
+            final Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
+
+            // get the position index of this task
+            TaskConfig positionIndex = taskConfigDao.selectOne(
+                    where("id",new Integer(task.getId()).toString()).and("key","positionIndex"));
+            if (positionIndex == null) {
+            	throw new RuntimeException("positionIndex config not found for task ID "+task.getId());
+            }
+
+            // If this is the first position, start the acquisition engine
+            if (new Integer(positionIndex.getValue()) == 0) {
             	// Set rootDir and acqName
-                final String rootDir = new File(
-                		workflowRunner.getWorkflowDir(), 
-                		new File(workflowRunner.getInstance().getStorageLocation(),
-                				task.getStorageLocation()).getPath()).getParent();
-                String acqName = new File(
-                		workflowRunner.getWorkflowDir(),
-                		new File(workflowRunner.getInstance().getStorageLocation(),
-                				task.getStorageLocation()).getPath()).getName();
+            	final String rootDir = new File(
+            			workflowRunner.getWorkflowDir(), 
+            			new File(workflowRunner.getInstance().getStorageLocation(),
+            					task.getStorageLocation()).getPath()).getPath();
+                final String acqName = "images";
+
                 // make a map of position list index -> Task
-                final Dao<Task> taskDao = workflowRunner.getInstanceDb().table(Task.class);
-                final Dao<TaskDispatch> taskDispatchDao = workflowRunner.getInstanceDb().table(TaskDispatch.class);
-                final Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
                 final List<Task> tasks = taskDao.select(where("moduleId",task.getModuleId()));
                 final Map<Integer,Task> posList2Task = new HashMap<Integer,Task>();
                 for (Task t : tasks) {
-                	TaskConfig positionIndex = taskConfigDao.selectOne(where("id",new Integer(t.getId()).toString()));
-                	if (positionIndex != null) {
-                		posList2Task.put(new Integer(positionIndex.getValue()),t);
+                	TaskConfig posIndex = taskConfigDao.selectOne(
+                			where("id",new Integer(t.getId()).toString()).and("key","positionIndex"));
+                	if (posIndex != null) {
+                		posList2Task.put(new Integer(posIndex.getValue()),t);
                 	}
                 }
 
@@ -165,7 +175,13 @@ public class SlideImager implements Module {
 
 								// Create image DB record
 								Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-								String imagePath = new File(new File(rootDir), MDUtils.getFileName(taggedImage.tags)).getPath();
+								if (!MDUtils.getSummary(taggedImage.tags).has("Prefix") || MDUtils.getFileName(taggedImage.tags) == null) {
+									throw new RuntimeException("Could not get file name and path information from image at index "+positionIndex);
+								}
+								String imagePath = new File(rootDir, 
+										new File(MDUtils.getSummary(taggedImage.tags).getString("Prefix"),
+												new File("Pos"+positionIndex, 
+														MDUtils.getFileName(taggedImage.tags)).getPath()).getPath()).getPath();
 								Image image = new Image(slideId, slidePosId, imagePath, taggedImage.tags);
 								imageDao.insertOrUpdate(image,"slideId","slidePosId");
 								image = imageDao.reload(image);
