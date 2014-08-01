@@ -4,22 +4,30 @@ import javax.swing.JPanel;
 
 import net.miginfocom.swing.MigLayout;
 
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.JButton;
 
+import org.bdgp.MMSlide.Dao;
+import org.bdgp.MMSlide.WorkflowRunner;
+import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.micromanager.AcqControlDlg;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @SuppressWarnings("serial")
 public class SlideImagerDialog extends JPanel {
 	JTextField acqSettingsText;
 	JTextField posListText;
-	JTextField posListName;
-	public SlideImagerDialog(final AcqControlDlg acqControlDlg) {
+	JComboBox<String> moduleId;
+	public SlideImagerDialog(final AcqControlDlg acqControlDlg, WorkflowRunner workflowRunner) {
 		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][]"));
 		
 		JButton btnShowAcquisitionDialog = new JButton("Show Acquisition Dialog");
@@ -77,11 +85,20 @@ public class SlideImagerDialog extends JPanel {
 		});
 		this.add(btnLoadPosList, "cell 0 4");
 		
-		JLabel lblPositionListDb = new JLabel("Or Enter Position List DB Name");
+		JLabel lblPositionListDb = new JLabel("Or choose the module that will generate the position list:");
 		this.add(lblPositionListDb, "cell 0 5");
 		
-		posListName = new JTextField();
-		this.add(posListName, "cell 0 6,growx");
-		posListName.setColumns(10);
+        // Populate the module ID drop-down list        
+        moduleId = new JComboBox<String>();
+        List<String> moduleIds = new ArrayList<String>();
+        moduleIds.add("- Select -");
+        Dao<WorkflowModule> modules = workflowRunner.getWorkflowDb().table(WorkflowModule.class);
+        for (WorkflowModule module : modules.select()) {
+            moduleIds.add(module.getId());
+        }
+        Collections.sort(moduleIds);
+        moduleId.setModel(new DefaultComboBoxModel<String>(moduleIds.toArray(new String[0])));
+        moduleId.setEnabled(true);
+        this.add(moduleId, "cell 0 6,growx");
 	}
 }

@@ -223,7 +223,7 @@ public class SlideImager implements Module {
     @Override
     public Configuration configure() {
         return new Configuration() {
-        	SlideImagerDialog slideImagerDialog = new SlideImagerDialog(acqControlDlg);
+        	SlideImagerDialog slideImagerDialog = new SlideImagerDialog(acqControlDlg, SlideImager.this.workflowRunner);
 
             @Override
             public Config[] retrieve() {
@@ -238,10 +238,10 @@ public class SlideImager implements Module {
             				"posListFile", 
             				slideImagerDialog.posListText.getText()));
             	}
-            	if (slideImagerDialog.posListName.getText().length()>0) {
+            	if (slideImagerDialog.moduleId.getSelectedIndex()>0) {
             		configs.add(new Config(moduleId, 
-            				"posListName", 
-            				slideImagerDialog.posListName.getText()));
+            				"posListModuleId", 
+            				slideImagerDialog.moduleId.getSelectedItem().toString()));
             	}
                 return configs.toArray(new Config[0]);
             }
@@ -259,9 +259,9 @@ public class SlideImager implements Module {
                     Config posList = conf.get("posListFile");
                 	slideImagerDialog.posListText.setText(posList.getValue());
                 }
-                if (conf.containsKey("posListName")) {
-                    Config posListName = conf.get("posListName");
-                	slideImagerDialog.posListName.setText(posListName.getValue());
+                if (conf.containsKey("posListModuleId")) {
+                    Config posListModuleId = conf.get("posListModuleId");
+                	slideImagerDialog.moduleId.setSelectedItem(posListModuleId.getValue());
                 }
                 return slideImagerDialog;
             }
@@ -279,7 +279,7 @@ public class SlideImager implements Module {
                     }
             	}
             	if (!((slideImagerDialog.posListText.getText().length()>0? 1: 0)
-            			+ (slideImagerDialog.posListName.getText().length()>0? 1: 0) == 1))
+            			+ (slideImagerDialog.moduleId.getSelectedIndex()>0? 1: 0) == 1))
             	{
             		errors.add(new ValidationError(moduleId, 
             				"You must enter one of either a position list file, or a position list name."));
@@ -289,7 +289,7 @@ public class SlideImager implements Module {
         };
     }
     
-    @Override
+    
     public void createTaskRecords() {
     	// Load all the module configuration into a HashMap
     	Dao<ModuleConfig> config = workflowRunner.getInstanceDb().table(ModuleConfig.class);
@@ -302,11 +302,11 @@ public class SlideImager implements Module {
         // first try to load a position list from the DB
         Dao<SlidePosList> posListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
         Dao<SlidePos> posDao = workflowRunner.getInstanceDb().table(SlidePos.class);
-        if (conf.containsKey("posListName")) {
-            Config posListName = conf.get("posListName");
-            posList = posListDao.selectOne(where("name",posListName.getValue()));
+        if (conf.containsKey("posListModuleId")) {
+            Config posListModuleId = conf.get("posListModuleId");
+            posList = posListDao.selectOne(where("name","posList").and("moduleId",posListModuleId.getValue()));
             if (posList == null) {
-            	throw new RuntimeException("Position list with name \""+posListName.getValue()+"\" not found in database");
+            	throw new RuntimeException("Position list from module \""+posListModuleId.getValue()+"\" not found in database");
             }
         }
         // otherwise, load a position list from a file
@@ -319,7 +319,7 @@ public class SlideImager implements Module {
             try { 
             	PositionList positionList = new PositionList();
             	positionList.load(posListFile.getPath()); 
-            	posList = new SlidePosList(posListConf.getValue(), positionList);
+            	posList = new SlidePosList(this.moduleId, posListConf.getValue(), positionList);
             } 
             catch (MMException e) {throw new RuntimeException(e);}
             

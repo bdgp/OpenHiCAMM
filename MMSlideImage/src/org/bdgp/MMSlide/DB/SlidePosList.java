@@ -11,18 +11,22 @@ import com.j256.ormlite.table.DatabaseTable;
 public class SlidePosList {
     @DatabaseField(generatedId=true) 
     private int id;
-    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,unique=true) 
+    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,uniqueCombo=true) 
+    private String moduleId;
+    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,uniqueCombo=true) 
     private String name;
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,useGetSet=true) 
     private String posList;
     private PositionList positionList;
 
     public SlidePosList() {}
-    public SlidePosList(String name, PositionList positionList) {
+    public SlidePosList(String moduleId, String name, PositionList positionList) {
+    	this.moduleId = moduleId;
     	this.name = name;
         setPositionList(positionList);
     }
-    public SlidePosList(String name, String posList) {
+    public SlidePosList(String moduleId, String name, String posList) {
+    	this.moduleId = moduleId;
     	this.name = name;
         setPosList(posList);
     }
@@ -38,6 +42,7 @@ public class SlidePosList {
         this.posList = posList;
     }
     public int getId() { return id; }
+    public String getModuleId() { return moduleId; }
     public String getName() { return name; }
     public String getPosList() { return posList; }
     public PositionList getPositionList() { return positionList; }

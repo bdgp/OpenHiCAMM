@@ -63,11 +63,6 @@ public class ROIFinder implements Module {
 			String fileName = image.getPath();
 			logger.info(String.format("Processed image at position %d, filename %s",positionIndex,fileName));
 
-			// get the name of the SlidePosList we're writing to
-			ModuleConfig slidePosListNameConf = workflowRunner.getModuleConfig().selectOne(
-					where("id",this.moduleId).and("key","slidePosListName"));
-			String slidePosListName = slidePosListNameConf != null? slidePosListNameConf.getValue() : "default";
-			
 			// Fill in list of ROIs
 			List<ROI> rois = process(image);
 
@@ -83,8 +78,8 @@ public class ROIFinder implements Module {
 
 			// Create SlidePosList and SlidePos DB records
 			Dao<SlidePosList> slidePosListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
-			slidePosListDao.delete(where("name",slidePosListName));
-			SlidePosList slidePosList = new SlidePosList(slidePosListName, posList);
+			slidePosListDao.delete(where("name","posList").and("moduleId",this.moduleId));
+			SlidePosList slidePosList = new SlidePosList(this.moduleId, "posList", posList);
 			slidePosListDao.insert(slidePosList);
 
 			MultiStagePosition[] msps = posList.getPositions();
@@ -121,9 +116,6 @@ public class ROIFinder implements Module {
             @Override
             public Config[] retrieve() {
             	List<Config> configs = new ArrayList<Config>();
-            	if (dialog.posListName.getText().length()>0) {
-            		configs.add(new Config(ROIFinder.this.moduleId, "posListName",dialog.posListName.getText()));
-            	}
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -132,19 +124,11 @@ public class ROIFinder implements Module {
             	for (Config c : configs) {
             		confs.put(c.getKey(), c);
             	}
-            	if (confs.containsKey("posListName")) {
-            		String posListName = confs.get("posListName").getValue();
-                    dialog.posListName.setText(posListName);
-            	}
                 return dialog;
             }
             @Override
             public ValidationError[] validate() {
             	List<ValidationError> errors = new ArrayList<ValidationError>();
-            	if (dialog.posListName.getText().length() == 0) {
-            		errors.add(new ValidationError(ROIFinder.this.moduleId, 
-            				"A position list name must be entered."));
-            	}
                 return errors.toArray(new ValidationError[0]);
             }
         };
