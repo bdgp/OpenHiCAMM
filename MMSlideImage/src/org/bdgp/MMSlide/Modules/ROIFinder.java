@@ -1,6 +1,7 @@
 package org.bdgp.MMSlide.Modules;
 
 import java.awt.Component;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -142,7 +143,10 @@ public class ROIFinder implements Module {
             for (Task parentTask : parentTasks) {
                 Task task = new Task(moduleId, Status.NEW);
                 workflowRunner.getTaskStatus().insert(task);
-                task.createStorageLocation(parentTask.getStorageLocation(), workflowRunner.getInstance().getStorageLocation());
+                task.createStorageLocation(
+                		parentTask.getStorageLocation(), 
+                		new File(workflowRunner.getWorkflowDir(),
+                				workflowRunner.getInstance().getStorageLocation()).getPath());
                 workflowRunner.getTaskStatus().update(task,"id");
                 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());

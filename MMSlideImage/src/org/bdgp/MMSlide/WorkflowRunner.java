@@ -259,10 +259,11 @@ public class WorkflowRunner {
                 try {
                     // instantiate a logger for the task
                     Logger taskLogger = Logger.create(
-                            new File(WorkflowRunner.this.getInstance().getStorageLocation(),
-                                new File(task.getStorageLocation(), LOG_FILE).getPath()).getPath(),
-                            task.getModuleId(),
-                            logLevel);
+                    		new File(WorkflowRunner.this.getWorkflowDir(),
+                    				new File(WorkflowRunner.this.getInstance().getStorageLocation(),
+                    						new File(task.getStorageLocation(), LOG_FILE).getPath()).getPath()).getPath(),
+                    						task.getModuleId(),
+                    						logLevel);
                     for (Handler handler : logHandlers) {
                         taskLogger.addHandler(handler);
                     }
@@ -457,6 +458,7 @@ public class WorkflowRunner {
     public Dao<TaskDispatch> getTaskDispatch() { return taskDispatch; }
     public Dao<TaskConfig> getTaskConfig() { return taskConfig; }
     public Connection getWorkflowDb() { return workflowDb; }
+    public File getWorkflowDir() { return workflowDirectory; }
     public Connection getInstanceDb() { return instanceDb; }
     public MMSlide getMMSlide() { return mmslide; }
     

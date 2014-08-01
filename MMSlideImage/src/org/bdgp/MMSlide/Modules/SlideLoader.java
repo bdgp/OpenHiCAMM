@@ -1,6 +1,7 @@
 package org.bdgp.MMSlide.Modules;
 
 import java.awt.Component;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -125,8 +126,9 @@ public class SlideLoader implements Module {
                 Task task = new Task(moduleId, Status.NEW);
                 taskDao.insert(task);
                 task.createStorageLocation(
-                        workflowRunner.getInstance().getStorageLocation(), 
-                        task.getStorageLocation());
+                		parentTask != null? parentTask.getStorageLocation() : null,
+                        new File(workflowRunner.getWorkflowDir(), 
+                        		workflowRunner.getInstance().getStorageLocation()).getPath());
                 taskDao.update(task,"id");
 
                 if (parentTask != null) {

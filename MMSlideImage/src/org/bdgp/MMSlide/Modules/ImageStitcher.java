@@ -1,6 +1,7 @@
 package org.bdgp.MMSlide.Modules;
 
 import java.awt.Component;
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 
@@ -68,23 +69,21 @@ public class ImageStitcher implements Module {
     @Override
     public void createTaskRecords() {
         WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",moduleId));
-        if (module.getParentId() != null) {
-            List<Task> parentTasks = workflowRunner.getTaskStatus().select(where("moduleId",module.getParentId()));
-            for (Task parentTask : parentTasks) {
-                Task task = new Task(moduleId, Status.NEW);
-                workflowRunner.getTaskStatus().insert(task);
-                task.createStorageLocation(parentTask.getStorageLocation(), workflowRunner.getInstance().getStorageLocation());
-                workflowRunner.getTaskStatus().update(task,"id");
-                
+        List<Task> parentTasks = workflowRunner.getTaskStatus().select(where("moduleId",module.getParentId()));
+        for (Task parentTask : parentTasks.size()>0? parentTasks.toArray(new Task[0]) : new Task[]{null}) 
+        {
+            Task task = new Task(moduleId, Status.NEW);
+            workflowRunner.getTaskStatus().insert(task);
+            task.createStorageLocation(
+                    parentTask != null? parentTask.getStorageLocation(): null, 
+                    new File(workflowRunner.getWorkflowDir(),
+                            workflowRunner.getInstance().getStorageLocation()).getPath());
+            workflowRunner.getTaskStatus().update(task,"id");
+            
+            if (parentTask != null) {
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
                 workflowRunner.getTaskDispatch().insert(dispatch);
             }
-        }
-        else {
-            Task task = new Task(moduleId, Status.NEW);
-            workflowRunner.getTaskStatus().insert(task);
-            task.createStorageLocation(workflowRunner.getInstance().getStorageLocation(), workflowRunner.getInstance().getStorageLocation());
-            workflowRunner.getTaskStatus().update(task,"id");
         }
     }
 

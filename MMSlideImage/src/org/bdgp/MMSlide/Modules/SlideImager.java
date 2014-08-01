@@ -110,10 +110,14 @@ public class SlideImager implements Module {
             }
             if (!((MMStudioMainFrame)this.script).getAcquisitionEngine().isAcquisitionRunning()) {
             	// Set rootDir and acqName
-                String rootDir = new File(workflowRunner.getInstance().getStorageLocation(),
-                        task.getStorageLocation()).getParent();
-                String acqName = new File(workflowRunner.getInstance().getStorageLocation(),
-                        task.getStorageLocation()).getName();
+                final String rootDir = new File(
+                		workflowRunner.getWorkflowDir(), 
+                		new File(workflowRunner.getInstance().getStorageLocation(),
+                				task.getStorageLocation()).getPath()).getParent();
+                String acqName = new File(
+                		workflowRunner.getWorkflowDir(),
+                		new File(workflowRunner.getInstance().getStorageLocation(),
+                				task.getStorageLocation()).getPath()).getName();
                 // make a map of position list index -> Task
                 final Dao<Task> taskDao = workflowRunner.getInstanceDb().table(Task.class);
                 final Dao<TaskDispatch> taskDispatchDao = workflowRunner.getInstanceDb().table(TaskDispatch.class);
@@ -161,7 +165,8 @@ public class SlideImager implements Module {
 
 								// Create image DB record
 								Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-								Image image = new Image(slideId, slidePosId, MDUtils.getFileName(taggedImage.tags), taggedImage.tags);
+								String imagePath = new File(new File(rootDir), MDUtils.getFileName(taggedImage.tags)).getPath();
+								Image image = new Image(slideId, slidePosId, imagePath, taggedImage.tags);
 								imageDao.insertOrUpdate(image,"slideId","slidePosId");
 								image = imageDao.reload(image);
 
@@ -181,6 +186,9 @@ public class SlideImager implements Module {
                                         workflowRunner.run(child, config);
 									}
 								}
+							}
+							else {
+								logger.warning("Unexpected position index "+positionIndex);
 							}
 						} 
                     	catch (Exception e) {
@@ -343,7 +351,8 @@ public class SlideImager implements Module {
             workflowRunner.getTaskStatus().insert(task);
             task.createStorageLocation(
             		parentTask != null? parentTask.getStorageLocation() : null, 
-            		workflowRunner.getInstance().getStorageLocation());
+            		new File(workflowRunner.getWorkflowDir(), 
+            				workflowRunner.getInstance().getStorageLocation()).getPath());
             workflowRunner.getTaskStatus().update(task,"id");
             
             // Create taskConfig record to link task to position index in Position List
