@@ -7,7 +7,6 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -61,12 +60,12 @@ public class MMSlide implements MMPlugin {
 	 * Open the module window
 	 */
 	public void show() {
-		final MMSlide self = this;
         // open the slide workflow dialog
         SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-            	if (dialog == null) dialog = new WorkflowDialog(self);
-                dialog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            @SuppressWarnings("deprecation")
+			public void run() {
+            	if (dialog == null) dialog = new WorkflowDialog(MMSlide.this.app.getAcqDlg(), MMSlide.this);
+                //dialog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 dialog.pack();
                 dialog.setVisible(true);
                 

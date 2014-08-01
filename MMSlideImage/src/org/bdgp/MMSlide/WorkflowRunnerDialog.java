@@ -28,11 +28,9 @@ public class WorkflowRunnerDialog extends JDialog {
     private WorkflowRunner workflowRunner;
     
     public WorkflowRunnerDialog(WorkflowDialog workflowDialog, 
-            WorkflowRunner runner,
-            String startModuleId,
-            boolean resume) 
+            WorkflowRunner runner) 
     {
-        super(workflowDialog, "Workflow Runner", Dialog.ModalityType.APPLICATION_MODAL);
+        super(workflowDialog, "Workflow Runner", Dialog.ModalityType.DOCUMENT_MODAL);
     	final WorkflowRunnerDialog self = this;
         this.workflowRunner = runner;
         getContentPane().setLayout(new MigLayout("", "[][grow]", "[grow][][]"));
@@ -126,11 +124,6 @@ public class WorkflowRunnerDialog extends JDialog {
                 btnClose.setEnabled(true);
 			}});
         
-        if (!resume) {
-            workflowRunner.deleteTaskRecords();
-            workflowRunner.createTaskRecords();
-        }
-        workflowRunner.run(startModuleId, null);
     }
 
 }

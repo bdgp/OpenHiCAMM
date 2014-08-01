@@ -59,11 +59,6 @@
 				<configuration>
 					<forceCreation>true</forceCreation>
 					<outputDirectory>${mmplugins.dir}</outputDirectory>
-					<archive>
-						<manifest>
-							<mainClass>org.bdgp.MMSlide.Main</mainClass>
-						</manifest>
-					</archive>
 				</configuration>
 			</plugin>
 			<plugin>

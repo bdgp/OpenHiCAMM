@@ -259,7 +259,7 @@ public class WorkflowRunner {
                 try {
                     // instantiate a logger for the task
                     Logger taskLogger = Logger.create(
-                            new File(workflowDirectory,
+                            new File(WorkflowRunner.this.getInstance().getStorageLocation(),
                                 new File(task.getStorageLocation(), LOG_FILE).getPath()).getPath(),
                             task.getModuleId(),
                             logLevel);

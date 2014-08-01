@@ -14,7 +14,6 @@ import javax.swing.JDialog;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JButton;
-import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
@@ -38,12 +37,12 @@ import static org.bdgp.MMSlide.Util.where;
 
 @SuppressWarnings("serial")
 public class WorkflowConfigurationDialog extends JDialog {
-	JFrame parent;
+	JDialog parent;
 	Map<String,Configuration> configurations;
 	Dao<ModuleConfig> config;
 	
     public WorkflowConfigurationDialog(
-            JFrame parent, 
+            JDialog parent, 
             final Map<String,Configuration> configurations, 
             final Dao<ModuleConfig> config)
     {

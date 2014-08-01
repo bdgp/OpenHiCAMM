@@ -13,7 +13,6 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -47,8 +46,8 @@ public class WorkflowDesignerDialog extends JDialog {
 	private JComboBox<String> moduleList;
     private Connection connection;
 	
-	public WorkflowDesignerDialog(JFrame parent, final File workflowDirectory) {
-	    super(parent, "Workflow Designer", Dialog.ModalityType.APPLICATION_MODAL);
+	public WorkflowDesignerDialog(JDialog parent, final File workflowDirectory) {
+	    super(parent, "Workflow Designer", Dialog.ModalityType.DOCUMENT_MODAL);
 	    
 	    this.connection = Connection.get(
 	            new File(workflowDirectory, WorkflowRunner.WORKFLOW_DB).getPath());

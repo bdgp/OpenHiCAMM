@@ -1,12 +1,14 @@
 package org.bdgp.MMSlide;
 
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.SwingUtilities;
 
 import org.bdgp.MMSlide.DB.ModuleConfig;
 import org.bdgp.MMSlide.DB.Task;
@@ -17,6 +19,7 @@ import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
 import net.miginfocom.swing.MigLayout;
 
+import java.awt.Frame;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
@@ -34,7 +37,7 @@ import java.util.logging.Level;
 import static org.bdgp.MMSlide.Util.where;
 
 @SuppressWarnings("serial")
-public class WorkflowDialog extends JFrame {
+public class WorkflowDialog extends JDialog {
     JTextField workflowDir;
     JFileChooser directoryChooser;
     JComboBox<String> workflowInstance;
@@ -48,8 +51,8 @@ public class WorkflowDialog extends JFrame {
     WorkflowRunner workflowRunner;
     private JButton btnCreateNewInstance;
 
-    public WorkflowDialog(MMSlide mmslide) {
-        super("MMSlide");
+    public WorkflowDialog(Frame parentFrame, MMSlide mmslide) {
+        super(parentFrame, "MMSlide");
         this.mmslide = mmslide;
         
         directoryChooser = new JFileChooser();
@@ -264,10 +267,21 @@ public class WorkflowDialog extends JFrame {
     public void start(boolean resume) {
         initWorkflowRunner();
         String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
-        WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(this, workflowRunner, startModuleId, resume);
+        final WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(this, workflowRunner);
         wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         wrd.pack();
-        wrd.setVisible(true);
+
+        if (!resume) {
+            workflowRunner.deleteTaskRecords();
+            workflowRunner.createTaskRecords();
+        }
+        workflowRunner.run(startModuleId, null);
+
+        SwingUtilities.invokeLater(new Runnable() {
+           @Override public void run() {
+                wrd.setVisible(true);
+            }
+        });
     }
     public Map<String,Configuration> getConfigurations() {
     	// get list of JPanels and load them with the configuration interfaces

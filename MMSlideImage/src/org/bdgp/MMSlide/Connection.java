@@ -82,7 +82,7 @@ public class Connection extends JdbcPooledConnectionSource {
                     HsqlProperties p = new HsqlProperties();
                     p.setProperty("server.remote_open","true");
                     p.setProperty("server.address", InetAddress.getLocalHost().getHostAddress());
-                    p.setProperty("server.port", map(serverDefaults).merge(Main.getConfig()).get("server.port"));
+                    p.setProperty("server.port", map(serverDefaults).get("server.port"));
                     p.setProperty("server.no_system_exit","true");
                     p.setProperty("hsqldb.default_table_type","cached");
                     p.setProperty("hsqldb.applog","1");
