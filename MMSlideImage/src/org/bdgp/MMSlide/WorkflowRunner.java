@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -314,6 +315,11 @@ public class WorkflowRunner {
                             if (status == Status.SUCCESS) {
                                 List<TaskDispatch> childTaskIds = taskDispatch.select(
                                         where("parentTaskId",task.getId()));
+                                // Sort task dispatches by task ID
+                                Collections.sort(childTaskIds, new Comparator<TaskDispatch>() {
+									@Override public int compare(TaskDispatch a, TaskDispatch b) {
+										return a.getTaskId()-b.getTaskId();
+									}});
                                             
                                 CHILD_TASK:
                                 for (TaskDispatch childTaskId : childTaskIds) {
