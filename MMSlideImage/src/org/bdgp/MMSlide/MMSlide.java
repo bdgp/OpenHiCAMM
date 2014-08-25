@@ -24,14 +24,13 @@ import org.micromanager.utils.JavaUtils;
 
 
 public class MMSlide implements MMPlugin {
-	public static final String MODULE_LIST = "META-INF/modules.txt";
-	public static String MMSLIDEPLUGINSDIR = "mmslidemodules";
+	public static final String MMSLIDEMODULESDIR = "mmslidemodules";
 	private ScriptInterface app;
 	private WorkflowDialog dialog;
 
 	/**
 	 *  The menu name is stored in a static string, so Micro-Manager
-	 *  can obtain it without instantiating the plugin
+	 *  can obtain it without instantiating the module
 	 */
 	public static String menuName = "MMSlideImage";	
 	public static String tooltipDescription = "Automated microscope imaging workflow tool";
@@ -143,9 +142,9 @@ public class MMSlide implements MMPlugin {
 		moduleNames.add(TIGenerator.class.getName());
 		moduleNames.add(ImageStitcher.class.getName());
 
-		// Look in the mmslideplugins/ directory for any additional workflow modules.
+		// Look in the mmslidemodules/ directory for any additional workflow modules.
 		try {
-            File pluginRootDir = new File(System.getProperty("org.bdgp.mmslide.plugin.path", MMSLIDEPLUGINSDIR));
+            File pluginRootDir = new File(System.getProperty("org.bdgp.mmslide.module.path", MMSLIDEMODULESDIR));
             List<Class<?>> classes = JavaUtils.findClasses(pluginRootDir, 0);
             for (Class<?> clazz : classes) { for (Class<?> iface : clazz.getInterfaces()) {
                     if (iface == Module.class) {
