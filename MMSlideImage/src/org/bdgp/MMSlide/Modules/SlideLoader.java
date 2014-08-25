@@ -9,7 +9,6 @@ import java.util.Map;
 
 import org.bdgp.MMSlide.Dao;
 import org.bdgp.MMSlide.Logger;
-import org.bdgp.MMSlide.Util;
 import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
@@ -22,7 +21,12 @@ import org.bdgp.MMSlide.DB.TaskConfig;
 import org.bdgp.MMSlide.DB.TaskDispatch;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
+import org.bdgp.slideloader.prior.SlideLoaderAPI;
+import org.bdgp.slideloader.prior.SequenceDoc;
 
+import static org.bdgp.slideloader.prior.PriorSlideLoader.getSTATE_STATEMASK;
+import static org.bdgp.slideloader.prior.PriorSlideLoader.getSTATE_IDLE;
+import static org.bdgp.slideloader.prior.PriorSlideLoader.getLOADER_ERROR;
 import static org.bdgp.MMSlide.Util.where;
 import static org.bdgp.MMSlide.Util.map;
 
@@ -36,12 +40,66 @@ public class SlideLoader implements Module {
         this.moduleId = moduleId;
     }
 
-
 	@Override
 	public Status run(Task task, Map<String, Config> config, Logger logger) {
-        Util.sleep();
+        int[] retVal = {0};
+        SlideLoaderAPI sl = new SlideLoaderAPI();
+        Config deviceConfig = config.getOrDefault("device", null);
+        String device = deviceConfig != null? deviceConfig.getValue() : "/dev/tty.usbserial-FTEKUITV";
+        sl.Connect(device, retVal);
+        sl.get_Status(retVal);
+        reportStatus(retVal[0], logger);
+        
+        // initialize Prior slide loader.....will take about 20 sec.
+        sl.Initialise(retVal);
+        do {
+            try { Thread.sleep(1000); } catch (InterruptedException e) { }
+            sl.get_Status(retVal);
+            //reportStatus(retVal[0], logger);
+        } while (((retVal[0] & getSTATE_STATEMASK()) != getSTATE_IDLE()) && !((retVal[0] & getLOADER_ERROR()) != 0));
+
+        sl.get_CassettesFitted(retVal);
+        sl.ScanCassette(1, retVal);
+        do {
+            sl.get_Status(retVal);
+            //reportStatus(retVal[0], logger);
+        } while (((retVal[0] & getSTATE_STATEMASK()) != getSTATE_IDLE()) && !((retVal[0] & getLOADER_ERROR()) != 0));
+
+        for(int slide = 1; slide < 32; ++slide) {
+            boolean[] slidePresent = {false};
+            sl.get_SlideFitted(1, slide, slidePresent);
+            if(slidePresent[0]) {
+                sl.MoveToStage(1, slide, retVal);
+                do {
+                    try { Thread.sleep(1000); } catch (InterruptedException e) { }
+                    sl.get_Status(retVal);
+                    //reportStatus(retVal[0], logger);
+                } while (((retVal[0] & getSTATE_STATEMASK()) != getSTATE_IDLE()) && !((retVal[0] & getLOADER_ERROR()) != 0));
+
+                sl.MoveFromStage(1, slide, retVal);
+                do {
+                    try { Thread.sleep(1000); } catch (InterruptedException e) { }
+                    sl.get_Status(retVal);
+                    //reportStatus(retVal[0], logger);
+                } while (((retVal[0] & getSTATE_STATEMASK()) != getSTATE_IDLE()) && !((retVal[0] & getLOADER_ERROR()) != 0));
+            }
+        }
+        sl.DisConnect(retVal);
         return Status.SUCCESS;
 	}
+
+    public void reportStatus(int status, Logger logger) {
+        String state = SequenceDoc.currentState(status);
+        String motion = SequenceDoc.parseMotion(status);
+        String errors = "no errors";
+        if (SequenceDoc.errorPresent(status)) {
+            errors = SequenceDoc.parseErrors(status);
+        }
+        logger.info("State: "+state);
+        logger.info("State: "+state);
+        logger.info("Motion: "+motion);
+        logger.info("Errors: "+errors);
+    }
 
     @Override
     public String getTitle() {
