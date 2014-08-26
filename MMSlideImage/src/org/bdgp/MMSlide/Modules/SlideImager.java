@@ -42,7 +42,6 @@ import org.micromanager.utils.MMScriptException;
 import org.micromanager.utils.MDUtils;
 
 import static org.bdgp.MMSlide.Util.where;
-import static org.bdgp.MMSlide.Util.map;
 
 public class SlideImager implements Module {
     WorkflowRunner workflowRunner;
@@ -395,11 +394,6 @@ public class SlideImager implements Module {
                 workflowRunner.getTaskDispatch().insert(dispatch);
             }
         }
-    }
-
-    @Override
-    public Map<String, Integer> getResources() {
-        return map("cpu",1);
     }
 
 	@Override

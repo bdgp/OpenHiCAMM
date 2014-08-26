@@ -47,11 +47,6 @@ public interface Module {
     public String getDescription();
     
     /**
-     * Return a map of the resources this module requires.
-     */
-    public Map<String,Integer> getResources();
-    
-    /**
      *  Return the module's task type (Serial or Parallel).
      */
     public TaskType getTaskType();

@@ -19,7 +19,6 @@ import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
-import static org.bdgp.MMSlide.Util.map;
 import static org.bdgp.MMSlide.Util.where;
 
 public class TIGenerator implements Module {
@@ -84,11 +83,6 @@ public class TIGenerator implements Module {
                 workflow.getTaskDispatch().insert(dispatch);
             }
         }
-    }
-
-    @Override
-    public Map<String, Integer> getResources() {
-        return map("cpu",1);
     }
 
 	@Override

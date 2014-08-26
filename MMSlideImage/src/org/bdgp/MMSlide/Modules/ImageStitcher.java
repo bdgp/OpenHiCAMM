@@ -20,7 +20,6 @@ import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
 import static org.bdgp.MMSlide.Util.where;
-import static org.bdgp.MMSlide.Util.map;
 
 public class ImageStitcher implements Module {
     WorkflowRunner workflowRunner;
@@ -85,11 +84,6 @@ public class ImageStitcher implements Module {
                 workflowRunner.getTaskDispatch().insert(dispatch);
             }
         }
-    }
-
-    @Override
-    public Map<String, Integer> getResources() {
-        return map("cpu",1);
     }
 
 	@Override
