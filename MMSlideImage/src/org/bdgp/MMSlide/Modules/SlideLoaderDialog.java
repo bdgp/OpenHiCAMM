@@ -42,14 +42,14 @@ import javax.swing.JLabel;
 import javax.swing.JTextArea;
 
 import static org.bdgp.MMSlide.Util.where;
+import javax.swing.JTextField;
 
 @SuppressWarnings("serial")
 public class SlideLoaderDialog extends JTabbedPane {
-    final SlideLoaderDialog self = this;
-
 	public JList<String> poolList;
 	public JRadioButton radioButtonSlideLoader;
 	public JRadioButton radioButtonSlideManual;
+	public JTextField device;
 	
 	public SlideLoaderDialog(final Connection connection, final MMSlide mmslide) {
         final Dao<Slide> slideDao = connection.table(Slide.class);
@@ -125,17 +125,17 @@ public class SlideLoaderDialog extends JTabbedPane {
 
                         String[] fields = line.split("[\t ,]", 3);
                         if (fields.length < 3) {
-                            JOptionPane.showMessageDialog(self, "Line "+linenum+": Only "+fields.length+" fields found (should be 3)", 
+                            JOptionPane.showMessageDialog(SlideLoaderDialog.this, "Line "+linenum+": Only "+fields.length+" fields found (should be 3)", 
                                     "Pool Description Formatting Error", JOptionPane.ERROR_MESSAGE);
                             return;
                         }
                         if (!fields[0].matches("^[0-9]$")) {
-                            JOptionPane.showMessageDialog(self, "Line "+linenum+": Cartridge Position \""+fields[0]+"\" is invalid",
+                            JOptionPane.showMessageDialog(SlideLoaderDialog.this, "Line "+linenum+": Cartridge Position \""+fields[0]+"\" is invalid",
                                     "Pool Description Formatting Error", JOptionPane.ERROR_MESSAGE);
                             return;
                         }
                         if (!fields[1].matches("^[0-9]$")) {
-                            JOptionPane.showMessageDialog(self, "Line "+linenum+": Slide Position \""+fields[1]+"\" is invalid",
+                            JOptionPane.showMessageDialog(SlideLoaderDialog.this, "Line "+linenum+": Slide Position \""+fields[1]+"\" is invalid",
                                     "Pool Description Formatting Error", JOptionPane.ERROR_MESSAGE);
                             return;
                         }
@@ -145,7 +145,7 @@ public class SlideLoaderDialog extends JTabbedPane {
                                 new Integer(fields[1]).intValue(), 
                                         slides.size());
                         if (poolSlides.contains(poolSlide)) {
-                            JOptionPane.showMessageDialog(self, "Line "+linenum+": Slide Position "+fields[0]+","+fields[1]+"\" was already entered",
+                            JOptionPane.showMessageDialog(SlideLoaderDialog.this, "Line "+linenum+": Slide Position "+fields[0]+","+fields[1]+"\" was already entered",
                                     "Pool Description Formatting Error", JOptionPane.ERROR_MESSAGE);
                             return;                          
                         }
@@ -210,7 +210,7 @@ public class SlideLoaderDialog extends JTabbedPane {
 
 		JPanel loaderPanel = new JPanel();
 		this.addTab("Loading", null, loaderPanel, null);
-		loaderPanel.setLayout(new MigLayout("", "[195px]", "[22px][22px]"));
+		loaderPanel.setLayout(new MigLayout("", "[195px,grow]", "[22px][22px][][][]"));
 		
 		ButtonGroup slideLoaderGroup = new ButtonGroup();
 		radioButtonSlideLoader = new JRadioButton("Slide loader");
@@ -221,5 +221,13 @@ public class SlideLoaderDialog extends JTabbedPane {
 		radioButtonSlideManual.setSelected(true);
 		loaderPanel.add(radioButtonSlideManual, "cell 0 1,alignx left,aligny center");
 		slideLoaderGroup.add(radioButtonSlideManual);
+		
+		JLabel lblEnterFullPath = new JLabel("Enter full path to Slide Loader Device:");
+		loaderPanel.add(lblEnterFullPath, "cell 0 3");
+		
+		device = new JTextField();
+		device.setText("/dev/tty.usbserial-FTEKUITV");
+		loaderPanel.add(device, "cell 0 4,growx");
+		device.setColumns(10);
 	}
 }

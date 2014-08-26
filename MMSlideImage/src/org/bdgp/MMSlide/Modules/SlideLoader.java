@@ -28,7 +28,6 @@ import static org.bdgp.slideloader.prior.PriorSlideLoader.getSTATE_STATEMASK;
 import static org.bdgp.slideloader.prior.PriorSlideLoader.getSTATE_IDLE;
 import static org.bdgp.slideloader.prior.PriorSlideLoader.getLOADER_ERROR;
 import static org.bdgp.MMSlide.Util.where;
-import static org.bdgp.MMSlide.Util.map;
 
 public class SlideLoader implements Module {
     WorkflowRunner workflowRunner;
@@ -45,7 +44,8 @@ public class SlideLoader implements Module {
         int[] retVal = {0};
         SlideLoaderAPI sl = new SlideLoaderAPI();
         Config deviceConfig = config.getOrDefault("device", null);
-        String device = deviceConfig != null? deviceConfig.getValue() : "/dev/tty.usbserial-FTEKUITV";
+        String device = deviceConfig != null && !deviceConfig.getValue().isEmpty()? 
+        		deviceConfig.getValue() : "/dev/tty.usbserial-FTEKUITV";
         sl.Connect(device, retVal);
         sl.get_Status(retVal);
         reportStatus(retVal[0], logger);
@@ -120,6 +120,13 @@ public class SlideLoader implements Module {
                 if (dialog.poolList.getSelectedValue() == null) {
                     errors.add(new ValidationError(null, "Please select a pool"));
                 }
+
+                if (dialog.device.getText().isEmpty()) {
+                    errors.add(new ValidationError(null, "Please enter a slide loader device path"));
+                }
+                else if (!new File(dialog.device.getText()).exists()) {
+                    errors.add(new ValidationError(null, "Could not find slide loader device file in path"));
+                }
                 return errors.toArray(new ValidationError[0]);
             }
 			@Override public Config[] retrieve() {
@@ -137,6 +144,8 @@ public class SlideLoader implements Module {
                 else if (dialog.radioButtonSlideManual.isSelected()) {
                 	configs.add(new Config(SlideLoader.this.moduleId, "slideLoaderMode","manual"));
                 }
+                
+                configs.add(new Config(SlideLoader.this.moduleId, "device", dialog.device.getText()));
 				return configs.toArray(new Config[0]);
 			}
 			@Override public Component display(Config[] configs) {
@@ -158,6 +167,9 @@ public class SlideLoader implements Module {
 						dialog.radioButtonSlideLoader.setSelected(false);
 						dialog.radioButtonSlideManual.setSelected(true);
 					}
+				}
+				if (conf.containsKey("device")) {
+					dialog.device.setText(conf.get("device").getValue());
 				}
 				return dialog;
 			}
@@ -201,11 +213,6 @@ public class SlideLoader implements Module {
                 }
     		}
     	}
-    }
-
-    @Override
-    public Map<String, Integer> getResources() {
-        return map("cpu",1);
     }
 
 	@Override

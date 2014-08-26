@@ -14,7 +14,6 @@ import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Image;
-import org.bdgp.MMSlide.DB.ModuleConfig;
 import org.bdgp.MMSlide.DB.ROI;
 import org.bdgp.MMSlide.DB.SlidePos;
 import org.bdgp.MMSlide.DB.SlidePosList;
@@ -31,7 +30,6 @@ import org.micromanager.api.ScriptInterface;
 import org.micromanager.utils.MDUtils;
 
 import static org.bdgp.MMSlide.Util.where;
-import static org.bdgp.MMSlide.Util.map;
 
 /**
  * Return x/y/len/width of bounding box surrounding the ROI
@@ -153,11 +151,6 @@ public class ROIFinder implements Module {
                 workflowRunner.getTaskDispatch().insert(dispatch);
             }
         }
-    }
-
-    @Override
-    public Map<String, Integer> getResources() {
-        return map("cpu",1);
     }
 
 	@Override
