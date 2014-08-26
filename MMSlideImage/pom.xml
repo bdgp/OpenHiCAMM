@@ -58,7 +58,6 @@
         <version>2.3.1</version>
         <configuration>
           <forceCreation>true</forceCreation>
-          <outputDirectory>${fiji.dir}/mmplugins</outputDirectory>
         </configuration>
       </plugin>
       <plugin>
@@ -83,6 +82,27 @@
                 </includes>
               </artifactSet>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.7</version>
+        <executions>
+          <execution>
+            <phase>install</phase>
+            <configuration>
+              <target>
+                <mkdir dir="${fiji.dir}/mmplugins"/>
+                <copy 
+                  file="${project.build.directory}/${project.build.finalName}.${project.packaging}" 
+                  todir="${fiji.dir}/mmplugins"
+                  overwrite="true" verbose="true"/>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
