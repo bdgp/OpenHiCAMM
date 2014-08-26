@@ -146,7 +146,8 @@ public class MMSlide implements MMPlugin {
 		try {
             File pluginRootDir = new File(System.getProperty("org.bdgp.mmslide.module.path", MMSLIDEMODULESDIR));
             List<Class<?>> classes = JavaUtils.findClasses(pluginRootDir, 0);
-            for (Class<?> clazz : classes) { for (Class<?> iface : clazz.getInterfaces()) {
+            for (Class<?> clazz : classes) { 
+            	for (Class<?> iface : clazz.getInterfaces()) {
                     if (iface == Module.class) {
                         moduleNames.add(clazz.getName());
                         break;

@@ -23,12 +23,12 @@ import org.bdgp.MMSlide.DB.TaskConfig;
 import org.bdgp.MMSlide.DB.TaskDispatch;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
-import org.bdgp.slideloader.prior.SlideLoaderAPI;
-import org.bdgp.slideloader.prior.SequenceDoc;
+import org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI;
+import org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc;
 
-import static org.bdgp.slideloader.prior.PriorSlideLoader.getSTATE_STATEMASK;
-import static org.bdgp.slideloader.prior.PriorSlideLoader.getSTATE_IDLE;
-import static org.bdgp.slideloader.prior.PriorSlideLoader.getLOADER_ERROR;
+import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK;
+import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE;
+import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR;
 import static org.bdgp.MMSlide.Util.where;
 
 public class SlideLoader implements Module {
@@ -36,7 +36,7 @@ public class SlideLoader implements Module {
     String moduleId;
     SlideLoaderAPI slideLoader;
     PoolSlide currentSlide;
-
+    
     @Override
     public void initialize(WorkflowRunner workflowRunner, String moduleId) {
         this.workflowRunner = workflowRunner;
