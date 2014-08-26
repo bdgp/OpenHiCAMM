@@ -129,12 +129,12 @@ public class SlideLoaderDialog extends JTabbedPane {
                                     "Pool Description Formatting Error", JOptionPane.ERROR_MESSAGE);
                             return;
                         }
-                        if (!fields[0].matches("^[0-9]$")) {
+                        if (!fields[0].matches("^[0-9]$") || new Integer(fields[0]).intValue() < 1) {
                             JOptionPane.showMessageDialog(SlideLoaderDialog.this, "Line "+linenum+": Cartridge Position \""+fields[0]+"\" is invalid",
                                     "Pool Description Formatting Error", JOptionPane.ERROR_MESSAGE);
                             return;
                         }
-                        if (!fields[1].matches("^[0-9]$")) {
+                        if (!fields[1].matches("^[0-9]$") || new Integer(fields[1]).intValue() < 1) {
                             JOptionPane.showMessageDialog(SlideLoaderDialog.this, "Line "+linenum+": Slide Position \""+fields[1]+"\" is invalid",
                                     "Pool Description Formatting Error", JOptionPane.ERROR_MESSAGE);
                             return;
