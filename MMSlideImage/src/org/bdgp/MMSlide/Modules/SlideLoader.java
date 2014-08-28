@@ -23,25 +23,25 @@ import org.bdgp.MMSlide.DB.TaskConfig;
 import org.bdgp.MMSlide.DB.TaskDispatch;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
-import org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI;
-import org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc;
+//import org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI;
+//import org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc;
 
-import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK;
-import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE;
-import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR;
+//import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK;
+//import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE;
+//import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR;
 import static org.bdgp.MMSlide.Util.where;
 
 public class SlideLoader implements Module {
     WorkflowRunner workflowRunner;
     String moduleId;
-    SlideLoaderAPI slideLoader;
+    org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI slideLoader;
     PoolSlide currentSlide;
     
     @Override
     public void initialize(WorkflowRunner workflowRunner, String moduleId) {
         this.workflowRunner = workflowRunner;
         this.moduleId = moduleId;
-        this.slideLoader = new SlideLoaderAPI();
+        this.slideLoader = new org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI();
     }
 
 	@Override
@@ -129,16 +129,18 @@ public class SlideLoader implements Module {
             try { Thread.sleep(1000); } catch (InterruptedException e) { }
             slideLoader.get_Status(retVal);
             //reportStatus(retVal[0], logger);
-        } while (((retVal[0] & getSTATE_STATEMASK()) != getSTATE_IDLE()) && !((retVal[0] & getLOADER_ERROR()) != 0));
+        } while (((retVal[0] & org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK()) 
+        		!= org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE()) && 
+        		!((retVal[0] & org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR()) != 0));
         return retVal[0];
 	}
 
     public void reportStatus(int status, Logger logger) {
-        String state = SequenceDoc.currentState(status);
-        String motion = SequenceDoc.parseMotion(status);
+        String state = org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc.currentState(status);
+        String motion = org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc.parseMotion(status);
         String errors = "no errors";
-        if (SequenceDoc.errorPresent(status)) {
-            errors = SequenceDoc.parseErrors(status);
+        if (org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc.errorPresent(status)) {
+            errors = org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc.parseErrors(status);
         }
         logger.info("State: "+state);
         logger.info("State: "+state);
@@ -224,7 +226,7 @@ public class SlideLoader implements Module {
     @Override
     public void createTaskRecords() {
     	Dao<ModuleConfig> moduleConfigDao = workflowRunner.getInstanceDb().table(ModuleConfig.class);
-    	ModuleConfig poolId = moduleConfigDao.selectOne(where("moduleId",this.moduleId).and("key","poolId"));
+    	ModuleConfig poolId = moduleConfigDao.selectOne(where("id",this.moduleId).and("key","poolId"));
     	List<PoolSlide> poolSlides = new ArrayList<PoolSlide>();
     	if (poolId != null) {
     		Dao<Pool> poolDao = workflowRunner.getInstanceDb().table(Pool.class);
