@@ -27,6 +27,7 @@ public class MMSlide implements MMPlugin {
 	public static final String MMSLIDEMODULESDIR = "mmslidemodules";
 	private ScriptInterface app;
 	private WorkflowDialog dialog;
+	private static List<String> moduleNames;
 
 	/**
 	 *  The menu name is stored in a static string, so Micro-Manager
@@ -59,6 +60,9 @@ public class MMSlide implements MMPlugin {
 	 * Open the module window
 	 */
 	public void show() {
+		// initialize the list of modules
+		getModuleNames();
+
         // open the slide workflow dialog
         SwingUtilities.invokeLater(new Runnable() {
             @SuppressWarnings("deprecation")
@@ -134,28 +138,30 @@ public class MMSlide implements MMPlugin {
 	 * @return The list of registered modules from the META-INF/modules.txt files.
 	 */
 	public static List<String> getModuleNames() {
-		// Add all the builtin modules to the modules list first
-		List<String> moduleNames = new ArrayList<String>();
-		moduleNames.add(SlideLoader.class.getName());
-		moduleNames.add(SlideImager.class.getName());
-		moduleNames.add(ROIFinder.class.getName());
-		moduleNames.add(TIGenerator.class.getName());
-		moduleNames.add(ImageStitcher.class.getName());
+		if (moduleNames == null) {
+            // Add all the builtin modules to the modules list first
+            moduleNames = new ArrayList<String>();
+            moduleNames.add(SlideLoader.class.getName());
+            moduleNames.add(SlideImager.class.getName());
+            moduleNames.add(ROIFinder.class.getName());
+            moduleNames.add(TIGenerator.class.getName());
+            moduleNames.add(ImageStitcher.class.getName());
 
-		// Look in the mmslidemodules/ directory for any additional workflow modules.
-		try {
-            File pluginRootDir = new File(System.getProperty("org.bdgp.mmslide.module.path", MMSLIDEMODULESDIR));
-            List<Class<?>> classes = JavaUtils.findClasses(pluginRootDir, 0);
-            for (Class<?> clazz : classes) { 
-            	for (Class<?> iface : clazz.getInterfaces()) {
-                    if (iface == Module.class) {
-                        moduleNames.add(clazz.getName());
-                        break;
+            // Look in the mmslidemodules/ directory for any additional workflow modules.
+            try {
+                File pluginRootDir = new File(System.getProperty("org.bdgp.mmslide.module.path", MMSLIDEMODULESDIR));
+                List<Class<?>> classes = JavaUtils.findClasses(pluginRootDir, 0);
+                for (Class<?> clazz : classes) { 
+                    for (Class<?> iface : clazz.getInterfaces()) {
+                        if (iface == Module.class) {
+                            moduleNames.add(clazz.getName());
+                            break;
+                        }
                     }
                 }
-            }
-		} 
-		catch (ClassNotFoundException e) {throw new RuntimeException(e);}
+            } 
+            catch (ClassNotFoundException e) {throw new RuntimeException(e);}
+		}
         return moduleNames;
     }
 }
