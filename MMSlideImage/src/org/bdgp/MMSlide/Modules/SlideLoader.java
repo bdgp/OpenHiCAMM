@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import mmcorej.CMMCore;
+
 import org.bdgp.MMSlide.Dao;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.ValidationError;
@@ -23,12 +25,14 @@ import org.bdgp.MMSlide.DB.TaskConfig;
 import org.bdgp.MMSlide.DB.TaskDispatch;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
+
+// TODO: Why does importing SWIG-generated modules not work?
 //import org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI;
 //import org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc;
-
 //import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK;
 //import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE;
 //import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR;
+
 import static org.bdgp.MMSlide.Util.where;
 
 public class SlideLoader implements Module {
@@ -50,6 +54,19 @@ public class SlideLoader implements Module {
         Config deviceConfig = config.get("device");
         String device = deviceConfig != null && !deviceConfig.getValue().isEmpty()? 
         		deviceConfig.getValue() : "/dev/tty.usbserial-FTEKUITV";
+        		
+        // Load the stage coordinates from the configuration
+        if (!config.containsKey("initXCoord") 
+        		|| !config.containsKey("initYCoord")
+        		|| !config.containsKey("loadXCoord")
+        		|| !config.containsKey("loadYCoord")) 
+        {
+        	throw new RuntimeException("Stage coordinates not configured!");
+        }
+        Double initXCoord = new Double(config.get("initXCoord").getValue());
+        Double initYCoord = new Double(config.get("initYCoord").getValue());
+        Double loadXCoord = new Double(config.get("loadXCoord").getValue());
+        Double loadYCoord = new Double(config.get("loadYCoord").getValue());
         		
         // get the PoolSlide ID for this Slide
         Config poolSlideIdConf = config.get("poolSlideId");
@@ -80,9 +97,19 @@ public class SlideLoader implements Module {
             slideLoader.get_Status(retVal);
             reportStatus(retVal[0], logger);
             
+            logger.info("Positioning stage toward initialization point.");
+            moveStage(initXCoord, initYCoord, logger);
+            logger.info("Positioned stage at initialization point.");
+            
             // initialize Prior slide loader.....will take about 20 sec.
             slideLoader.Initialise(retVal);
             waitForSlideLoader();
+
+            logger.info("** Initialize Complete **");
+            
+            logger.info("Positioning stage toward load point.");
+            moveStage(loadXCoord, loadYCoord, logger);
+            logger.info("Positioned stage at load point.");
 
             slideLoader.get_CassettesFitted(retVal);
             slideLoader.ScanCassette(1, retVal);
@@ -91,6 +118,10 @@ public class SlideLoader implements Module {
         
         // Put the previous slide back 
         if (this.currentSlide != null) {
+            logger.info("Positioning stage toward load point.");
+            moveStage(loadXCoord, loadYCoord, logger);
+            logger.info("Positioned stage at load point.");
+
             slideLoader.MoveFromStage(
             		this.currentSlide.getCartridgePosition(), 
             		this.currentSlide.getSlidePosition(), 
@@ -147,6 +178,21 @@ public class SlideLoader implements Module {
         logger.info("Motion: "+motion);
         logger.info("Errors: "+errors);
     }
+    
+    public void moveStage(double x, double y, Logger logger) {
+    	CMMCore core = workflowRunner.getMMSlide().getApp().getMMCore();
+    	core.setTimeoutMs(10000);
+        String xyStage = core.getXYStageDevice();
+        try {
+            core.setXYPosition(xyStage, x, y);
+            // wait for the stage to finish moving
+            while (core.deviceBusy(xyStage)) {}
+		} 
+        catch (Exception e) { 
+        	logger.severe("Failed to move stage to position "+x+","+y);
+        	throw new RuntimeException(e);
+        }
+    }
 
     @Override
     public String getTitle() {
@@ -174,6 +220,15 @@ public class SlideLoader implements Module {
                 else if (!new File(dialog.device.getText()).exists()) {
                     errors.add(new ValidationError(null, "Could not find slide loader device file in path"));
                 }
+
+                if (dialog.initXCoord.getDouble() == null || dialog.initYCoord.getDouble() == null) {
+                	errors.add(new ValidationError(null, "Invalid Init Stage Coordinates: "+
+                			dialog.initXCoord.getDouble()+","+dialog.initYCoord.getDouble()));
+                }
+                if (dialog.loadXCoord.getDouble() == null || dialog.loadYCoord.getDouble() == null) {
+                	errors.add(new ValidationError(null, "Invalid Loading Stage Coordinates: "+
+                			dialog.loadXCoord.getDouble()+","+dialog.loadYCoord.getDouble()));
+                }
                 return errors.toArray(new ValidationError[0]);
             }
 			@Override public Config[] retrieve() {
@@ -193,6 +248,12 @@ public class SlideLoader implements Module {
                 }
                 
                 configs.add(new Config(SlideLoader.this.moduleId, "device", dialog.device.getText()));
+
+                configs.add(new Config(SlideLoader.this.moduleId, "initXCoord", dialog.initXCoord.getDouble().toString()));
+                configs.add(new Config(SlideLoader.this.moduleId, "initYCoord", dialog.initYCoord.getDouble().toString()));
+                configs.add(new Config(SlideLoader.this.moduleId, "loadXCoord", dialog.loadXCoord.getDouble().toString()));
+                configs.add(new Config(SlideLoader.this.moduleId, "loadYCoord", dialog.loadYCoord.getDouble().toString()));
+
 				return configs.toArray(new Config[0]);
 			}
 			@Override public Component display(Config[] configs) {
@@ -217,6 +278,14 @@ public class SlideLoader implements Module {
 				}
 				if (conf.containsKey("device")) {
 					dialog.device.setText(conf.get("device").getValue());
+				}
+				if (conf.containsKey("initXCoord") && conf.containsKey("initYCoord")) {
+					dialog.initXCoord.setValue(new Double(conf.get("initXCoord").getValue()));
+					dialog.initYCoord.setValue(new Double(conf.get("initYCoord").getValue()));
+				}
+				if (conf.containsKey("loadXCoord") && conf.containsKey("loadYCoord")) {
+					dialog.loadXCoord.setValue(new Double(conf.get("loadXCoord").getValue()));
+					dialog.loadYCoord.setValue(new Double(conf.get("loadYCoord").getValue()));
 				}
 				return dialog;
 			}
