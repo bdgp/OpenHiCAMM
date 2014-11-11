@@ -14,7 +14,7 @@ import javax.swing.JButton;
 import org.bdgp.MMSlide.Dao;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.WorkflowModule;
-import org.micromanager.AcqControlDlg;
+import org.micromanager.dialogs.AcqControlDlg;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;

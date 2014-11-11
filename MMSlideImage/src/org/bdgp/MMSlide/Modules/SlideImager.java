@@ -30,9 +30,9 @@ import org.bdgp.MMSlide.DB.TaskDispatch;
 import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
-import org.micromanager.AcqControlDlg;
+import org.micromanager.dialogs.AcqControlDlg;
 import org.micromanager.MMOptions;
-import org.micromanager.MMStudioMainFrame;
+import org.micromanager.MMStudio;
 import org.micromanager.api.ImageCacheListener;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
@@ -61,7 +61,7 @@ public class SlideImager implements Module {
         options.loadSettings();
         if (this.script != null) {
             this.acqControlDlg = new AcqControlDlg(
-            		((MMStudioMainFrame)this.script).getAcquisitionEngine(),
+            		((MMStudio)this.script).getAcquisitionEngine(),
             		prefs,
             		this.script,
             		options);
@@ -142,7 +142,7 @@ public class SlideImager implements Module {
 
                 // As images are completed, kick off the individual task related to the image
                 String returnAcqName = acqControlDlg.runAcquisition(acqName, rootDir);
-                ((MMStudioMainFrame)this.script).getAcquisitionEngine().getImageCache().addImageCacheListener(new ImageCacheListener() {
+                ((MMStudio)this.script).getAcquisitionEngine().getImageCache().addImageCacheListener(new ImageCacheListener() {
                     @Override public void imageReceived(TaggedImage taggedImage) {
                     	try {
                     		// Make a copy of conf so that each child task can have its own configuration

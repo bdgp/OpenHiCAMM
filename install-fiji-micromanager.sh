@@ -9,7 +9,7 @@ PORT=4000
 
 # install homebrew and project dependencies
 #ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
-brew install autoconf automake libtool pkg-config swig subversion boost libusb-compat hidapi libdc1394 libgphoto2 freeimage opencv python git
+brew install autoconf automake libtool pkg-config swig subversion boost libusb-compat hidapi libdc1394 libgphoto2 freeimage opencv python git maven
 
 # install latest Java from Oracle
 #brew tap caskroom/cask
@@ -18,14 +18,10 @@ brew cask install java
 
 pip install numpy
 
-# install fiji from source
+# install fiji from homebrew cask
 pushd .
-git clone git://github.com/fiji/fiji "$FIJIDIR"
+HOMEBREW_CASK_OPTS="--appdir=/Applications" brew cask install fiji
 cd "$FIJIDIR"
-git config remote.origin.url git://fiji.sc/fiji.git
-git pull
-# build & install deps
-./Build.sh
 # add the following to fiji/Contents/Info.plist:
 defaults write "$PWD"/Contents/Info fiji -dict-add JVMOptions "-Dorg.micromanager.plugin.path=$PWD/mmplugins -Dorg.micromanager.autofocus.path=$PWD/mmautofocus -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$PORT"
 defaults write "$PWD"/Contents/Info CFBundleExecutable -string ImageJ-macosx
@@ -48,6 +44,14 @@ cd micromanager
 # Configure, build, and install
 ./autogen.sh
 ./configure --enable-imagej-plugin="$FIJIDIR" --with-ij-jar="$(echo "$FIJIDIR"/jars/ij-*.jar)"
+ant -f buildscripts/fetchdeps.xml
+
+# edit plugins/pluginpaths.xml, add the following line to the
+# project.classpath path;
+#   <path refid="project.linked.jars"/>
+# project.linked.jars path:
+#		<pathelement location="${mm.java.lib.jcommon}"/>
+
 make -j
 make install
 popd

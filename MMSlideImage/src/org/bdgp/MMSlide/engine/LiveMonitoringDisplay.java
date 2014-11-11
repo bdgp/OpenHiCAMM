@@ -18,7 +18,7 @@ import mmcorej.TaggedImage;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.micromanager.MMStudioMainFrame;
+import org.micromanager.MMStudio;
 import org.micromanager.acquisition.MMImageCache;
 // import org.micromanager.acquisition.engine.SequenceSettings;
 import org.micromanager.acquisition.AcquisitionEngine;
@@ -52,7 +52,7 @@ public class LiveMonitoringDisplay extends Thread {
            SequenceSettings acqSettings,
            ArrayList<ChannelSpec> channels,
            boolean diskCached,
-           MMStudioMainFrame gui, // inserted for MMWindow
+           MMStudio gui, // inserted for MMWindow
            AcquisitionEngine eng) {
       core_ = core;
       acqSettings_ = acqSettings;

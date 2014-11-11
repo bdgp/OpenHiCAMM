@@ -26,7 +26,7 @@ import mmcorej.PropertySetting;
 import mmcorej.StrVector;
 import mmcorej.TaggedImage;
 
-import org.micromanager.MMStudioMainFrame;
+import org.micromanager.MMStudio;
 //import org.micromanager.acquisition.engine.BurstMaker;
 //import org.micromanager.acquisition.engine.Engine;
 //import org.micromanager.acquisition.engine.ImageRequest;
@@ -57,7 +57,7 @@ import org.micromanager.utils.ReportingUtils;
  */
 public class AcquisitionSlideEngine implements AcquisitionEngine {
    private CMMCore core_;
-   private MMStudioMainFrame gui_;
+   private MMStudio gui_;
    private PositionList posList_ = new PositionList();
    private String zstage_;
    private double sliceZStepUm_;

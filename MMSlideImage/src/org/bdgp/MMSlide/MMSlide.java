@@ -148,19 +148,16 @@ public class MMSlide implements MMPlugin {
             moduleNames.add(ImageStitcher.class.getName());
 
             // Look in the mmslidemodules/ directory for any additional workflow modules.
-            try {
-                File pluginRootDir = new File(System.getProperty("org.bdgp.mmslide.module.path", MMSLIDEMODULESDIR));
-                List<Class<?>> classes = JavaUtils.findClasses(pluginRootDir, 0);
-                for (Class<?> clazz : classes) { 
-                    for (Class<?> iface : clazz.getInterfaces()) {
-                        if (iface == Module.class) {
-                            moduleNames.add(clazz.getName());
-                            break;
-                        }
+            File pluginRootDir = new File(System.getProperty("org.bdgp.mmslide.module.path", MMSLIDEMODULESDIR));
+            List<Class<?>> classes = JavaUtils.findAndLoadClasses(pluginRootDir, 0);
+            for (Class<?> clazz : classes) { 
+                for (Class<?> iface : clazz.getInterfaces()) {
+                    if (iface == Module.class) {
+                        moduleNames.add(clazz.getName());
+                        break;
                     }
                 }
-            } 
-            catch (ClassNotFoundException e) {throw new RuntimeException(e);}
+            }
 		}
         return moduleNames;
     }
