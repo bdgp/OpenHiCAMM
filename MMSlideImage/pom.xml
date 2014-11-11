@@ -60,27 +60,36 @@
           <forceCreation>true</forceCreation>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>1.7.1</version>
+     <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <phase>package</phase>
+            <phase>install</phase>
             <goals>
-              <goal>shade</goal>
+              <goal>copy</goal>
             </goals>
             <configuration>
-              <!-- <minimizeJar>true</minimizeJar> -->
-              <minimizeJar>false</minimizeJar>
-              <artifactSet>
-                <includes>
-                  <include>org.hsqldb:hsqldb</include>
-                  <include>com.j256.ormlite:ormlite-core</include>
-                  <include>com.j256.ormlite:ormlite-jdbc</include>
-                  <include>com.miglayout:miglayout</include>
-                </includes>
-              </artifactSet>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.hsqldb</groupId>
+                  <artifactId>hsqldb</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>com.j256.ormlite</groupId>
+                  <artifactId>ormlite-core</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>com.j256.ormlite</groupId>
+                  <artifactId>ormlite-jdbc</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>com.miglayout</groupId>
+                  <artifactId>miglayout</artifactId>
+                </artifactItem>
+              </artifactItems>
+              <outputDirectory>${fiji.dir}/jars</outputDirectory>
+              <overWriteReleases>true</overWriteReleases>
+              <overWriteSnapshots>true</overWriteSnapshots>
             </configuration>
           </execution>
         </executions>
@@ -107,43 +116,6 @@
         </executions>
       </plugin>
     </plugins>
-    <pluginManagement>
-      <plugins>
-        <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
-        <plugin>
-          <groupId>org.eclipse.m2e</groupId>
-          <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
-          <configuration>
-            <lifecycleMappingMetadata>
-              <pluginExecutions>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>
-                      org.codehaus.mojo
-                    </groupId>
-                    <artifactId>
-                      properties-maven-plugin
-                    </artifactId>
-                    <versionRange>
-                      [1.0-alpha-2,)
-                    </versionRange>
-                    <goals>
-                      <goal>
-                        read-project-properties
-                      </goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <execute/>
-                  </action>
-                </pluginExecution>
-              </pluginExecutions>
-            </lifecycleMappingMetadata>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
   </build>
   <repositories>
     <repository>
