@@ -1,5 +1,5 @@
 package org.bdgp.MMSlide;
-import mmcorej.CMMCore;
+//import mmcorej.CMMCore;
 
 // TODO: Why does importing SWIG-generated modules not work?
 //import org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI;
@@ -17,15 +17,15 @@ public class SlideLoaderDemo {
         String config = "stage_only.cfg";
         String device = "/dev/tty.usbserial-FTEKUITV";
 
-        CMMCore core = new CMMCore();
-        core.enableDebugLog(false);
-        core.enableStderrLog(false);
-        core.setTimeoutMs(10000);
-        try { core.loadSystemConfiguration(config); }
-        catch (Exception ex) {
-            System.out.println("Failed to load config file.");
-            System.exit(-1);
-        }        
+        //CMMCore core = new CMMCore();
+        //core.enableDebugLog(false);
+        //core.enableStderrLog(false);
+        //core.setTimeoutMs(10000);
+        //try { core.loadSystemConfiguration(config); }
+        //catch (Exception ex) {
+        //    System.out.println("Failed to load config file.");
+        //    System.exit(-1);
+        //}        
 
         org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI sl = 
         		new org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI();
@@ -36,9 +36,9 @@ public class SlideLoaderDemo {
         reportStatus(retVal[0]);
 
         // position stage to safe point
-        System.out.println("Positioning stage away from load point.");
-        moveStage(core, initCoords[0], initCoords[1]);
-        System.out.println("Positioned stage at initialization point");
+        //System.out.println("Positioning stage away from load point.");
+        //moveStage(core, initCoords[0], initCoords[1]);
+        //System.out.println("Positioned stage at initialization point");
 
         /* initialize Prior slide loader.....will take about 20 sec.*/
         sl.Initialise(retVal);
@@ -50,9 +50,9 @@ public class SlideLoaderDemo {
         System.out.println("    Initialize Complete");
         System.out.println("**************************************");
 
-        System.out.println("Positioning stage at load point.");
-        moveStage(core, loadCoords[0], loadCoords[1]);
-        System.out.println("Positioned stage at load point");
+        //System.out.println("Positioning stage at load point.");
+        //moveStage(core, loadCoords[0], loadCoords[1]);
+        //System.out.println("Positioned stage at load point");
 
         sl.get_CassettesFitted(retVal);
 
@@ -83,9 +83,9 @@ public class SlideLoaderDemo {
                 // This is where the slide surveyor code was
                 System.out.println("You could run a slide surveyor here!");
 
-                System.out.println("Positioning stage at load point.");
-                moveStage(core, loadCoords[0], loadCoords[1]);
-                System.out.println("Positioned stage at load point");
+                //System.out.println("Positioning stage at load point.");
+                //moveStage(core, loadCoords[0], loadCoords[1]);
+                //System.out.println("Positioned stage at load point");
 
                 sl.MoveFromStage(1, slide, retVal);
                 waitForSlideLoader(sl);
@@ -114,19 +114,19 @@ public class SlideLoaderDemo {
         System.out.println("Errors: "+errors);
     }
 
-    public static void moveStage(CMMCore core, double x, double y) {
-        core.setTimeoutMs(10000);
-        //String xyStage = core.getXYStageDevice();
-        try {
-              //core.setXYPosition(xyStage, x, y);
-              // wait for the stage to finish moving
-              //while (core.deviceBusy(xyStage)) {}
-        }
-        catch (Exception e) { 
-            System.err.println("Failed to move stage to position "+x+","+y);
-            throw new RuntimeException(e);
-        }
-    }
+    //public static void moveStage(CMMCore core, double x, double y) {
+    //    core.setTimeoutMs(10000);
+    //    //String xyStage = core.getXYStageDevice();
+    //    try {
+    //          //core.setXYPosition(xyStage, x, y);
+    //          // wait for the stage to finish moving
+    //          //while (core.deviceBusy(xyStage)) {}
+    //    }
+    //    catch (Exception e) { 
+    //        System.err.println("Failed to move stage to position "+x+","+y);
+    //        throw new RuntimeException(e);
+    //    }
+    //}
 
     public static int waitForSlideLoader(org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI slideLoader) 
     {
