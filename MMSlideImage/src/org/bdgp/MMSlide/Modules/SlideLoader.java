@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.JOptionPane;
+
 import mmcorej.CMMCore;
 
 import org.bdgp.MMSlide.Dao;
@@ -19,6 +21,7 @@ import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.ModuleConfig;
 import org.bdgp.MMSlide.DB.Pool;
 import org.bdgp.MMSlide.DB.PoolSlide;
+import org.bdgp.MMSlide.DB.Slide;
 import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.DB.TaskConfig;
@@ -32,6 +35,8 @@ import org.bdgp.MMSlide.Modules.Interfaces.Module;
 //import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK;
 //import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE;
 //import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR;
+
+
 
 import static org.bdgp.MMSlide.Util.where;
 
@@ -50,6 +55,30 @@ public class SlideLoader implements Module {
 
 	@Override
 	public synchronized Status run(Task task, Map<String, Config> config, Logger logger) {
+        // get the PoolSlide ID for this Slide
+        Config poolSlideIdConf = config.get("poolSlideId");
+        Integer poolSlideId = poolSlideIdConf != null? new Integer(poolSlideIdConf.getValue()) : null;
+        		
+        Dao<PoolSlide> poolSlideDao = workflowRunner.getInstanceDb().table(PoolSlide.class);
+        PoolSlide thisSlide = poolSlideId != null? poolSlideDao.selectOneOrDie(where("id",poolSlideId)) : null;
+        
+        Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
+        Slide slide = thisSlide != null? slideDao.selectOneOrDie(where("id",thisSlide.getSlideId())) : null;
+
+		Config mode = config.get("slideLoaderMode");
+		if (mode.getValue().equals("manual")) {
+            JOptionPane.showMessageDialog(this.workflowRunner.getMMSlide().getDialog(),
+                "Manual Slide Loading",
+                thisSlide != null? 
+                		"Please load slide number "+
+                            thisSlide.getSlidePosition()+" from cartridge "+
+                            thisSlide.getCartridgePosition()+
+                            (slide != null? ", experiment ID \""+slide.getExperimentId()+"\"":"")
+                	: "Please load the next slide",
+                JOptionPane.PLAIN_MESSAGE);
+            return Status.SUCCESS;
+		}
+
 		// get the device path
         Config deviceConfig = config.get("device");
         String device = deviceConfig != null && !deviceConfig.getValue().isEmpty()? 
@@ -68,13 +97,6 @@ public class SlideLoader implements Module {
         Double loadXCoord = new Double(config.get("loadXCoord").getValue());
         Double loadYCoord = new Double(config.get("loadYCoord").getValue());
         		
-        // get the PoolSlide ID for this Slide
-        Config poolSlideIdConf = config.get("poolSlideId");
-        Integer poolSlideId = poolSlideIdConf != null? new Integer(poolSlideIdConf.getValue()) : null;
-        		
-        Dao<PoolSlide> poolSlideDao = workflowRunner.getInstanceDb().table(PoolSlide.class);
-        PoolSlide thisSlide = poolSlideId != null? poolSlideDao.selectOneOrDie(where("id",poolSlideId)) : null;
-
         // get a sorted list of all the Task records for this module
         Dao<Task> taskDao = workflowRunner.getInstanceDb().table(Task.class);
         List<Task> tasks = taskDao.select(where("moduleId", this.moduleId));

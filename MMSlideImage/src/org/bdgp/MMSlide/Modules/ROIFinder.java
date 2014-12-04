@@ -94,7 +94,18 @@ public class ROIFinder implements Module {
     public List<ROI> process(Image image) {
     	List<ROI> rois = new ArrayList<ROI>();
     	String imagePath = image.getPath();
-    	// TODO: fill in ROI list here
+    	try {
+            int width = MDUtils.getWidth(image.getTags());
+            int height = MDUtils.getHeight(image.getTags());
+    		int roiCount = (int)(Math.random() * 10.0 + 10.0);
+    		for (int i=0; i<roiCount; ++i) {
+                int roiWidth = (int)(Math.random() * 100.0 + 150.0);
+                int roiHeight = (int)(Math.random() * 100.0 + 150.0);
+                int roiX = (int)(Math.random() * (width-roiWidth));
+                int roiY = (int)(Math.random() * (height-roiHeight));
+                rois.add(new ROI(image.getId(), roiX, roiY, roiX+roiWidth, roiY+roiHeight));
+    		}
+    	} catch (JSONException e) {throw new RuntimeException(e);}
     	return rois;
     }
     

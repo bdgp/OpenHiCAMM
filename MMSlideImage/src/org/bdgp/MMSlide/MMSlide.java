@@ -42,6 +42,10 @@ public class MMSlide implements MMPlugin {
 	public void dispose() {
 		if (dialog != null) dialog.dispose();
 	}
+	
+	public WorkflowDialog getDialog() {
+		return dialog;
+	}
 
 	/**
 	 * The main app passes its ScriptInterface to the module. This
