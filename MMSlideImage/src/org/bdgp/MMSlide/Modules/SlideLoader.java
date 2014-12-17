@@ -360,4 +360,6 @@ public class SlideLoader implements Module {
 	public TaskType getTaskType() {
 		return Module.TaskType.SERIAL;
 	}
+	
+    @Override public void cleanup(Task task) { }
 }
