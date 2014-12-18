@@ -284,7 +284,7 @@ public class WorkflowRunner {
                         status = Status.ERROR;
                     }
                     finally {
-                        taskModule.cleanup(); 
+                        taskModule.cleanup(task); 
                     }
                     taskLogger.info("Finished module "+module.getId()+", task ID "+task.getId());
                     

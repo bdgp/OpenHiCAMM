@@ -361,5 +361,5 @@ public class SlideLoader implements Module {
 		return Module.TaskType.SERIAL;
 	}
 	
-    @Override public void cleanup() { }
+    @Override public void cleanup(Task task) { }
 }

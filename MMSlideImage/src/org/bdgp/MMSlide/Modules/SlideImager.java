@@ -33,6 +33,7 @@ import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.micromanager.dialogs.AcqControlDlg;
 import org.micromanager.MMOptions;
 import org.micromanager.MMStudio;
+import org.micromanager.acquisition.AcquisitionEngine;
 import org.micromanager.api.ImageCacheListener;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
@@ -400,10 +401,10 @@ public class SlideImager implements Module {
         return Module.TaskType.SERIAL;
     }
 
-    @Override public void cleanup() { 
+    @Override public void cleanup(Task task) { 
         if (this.script != null) {
             AcquisitionEngine engine = ((MMStudio)this.script).getAcquisitionEngine();
-            if (engine && engine.isAcquisitionRunning()) {
+            if (engine != null && engine.isAcquisitionRunning()) {
                 engine.abortRequest();
             }
         }

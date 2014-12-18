@@ -91,5 +91,5 @@ public class ImageStitcher implements Module {
 		return Module.TaskType.PARALLEL;
 	}
 
-	@Override public void cleanup() { }
+	@Override public void cleanup(Task task) { }
 }
