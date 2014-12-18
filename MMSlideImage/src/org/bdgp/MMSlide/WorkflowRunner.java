@@ -283,6 +283,9 @@ public class WorkflowRunner {
                                 task.toString(), sw.toString()));
                         status = Status.ERROR;
                     }
+                    finally {
+                        taskModule.cleanup(); 
+                    }
                     taskLogger.info("Finished module "+module.getId()+", task ID "+task.getId());
                     
                     // notify any task listeners
@@ -410,12 +413,12 @@ public class WorkflowRunner {
     public void stop() {
     	logger.warning("Stopping all jobs");
         isStopped = true;
-        pool.shutdown();
 
         // notify any task listeners
         for (TaskListener listener : taskListeners) {
             listener.stopped();
         }
+        pool.shutdown();
     }
 
     /** 
@@ -424,12 +427,11 @@ public class WorkflowRunner {
     public List<Runnable> kill() {
     	logger.warning("Killing all jobs");
     	isStopped = true;
-        List<Runnable> runnables = pool.shutdownNow();
-
         // notify any task listeners
         for (TaskListener listener : taskListeners) {
             listener.killed();
         }
+        List<Runnable> runnables = pool.shutdownNow();
         return runnables;
     }
     

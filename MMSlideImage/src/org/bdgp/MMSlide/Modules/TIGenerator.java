@@ -89,4 +89,6 @@ public class TIGenerator implements Module {
 	public TaskType getTaskType() {
 		return Module.TaskType.PARALLEL;
 	}
+
+    @Override public void cleanup() { }
 }

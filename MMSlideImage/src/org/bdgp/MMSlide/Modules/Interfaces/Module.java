@@ -50,4 +50,9 @@ public interface Module {
      *  Return the module's task type (Serial or Parallel).
      */
     public TaskType getTaskType();
+
+    /**
+     * cleanup routine to be run after each task
+     */
+    public void cleanup(Task task);
 }

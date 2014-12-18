@@ -168,4 +168,6 @@ public class ROIFinder implements Module {
 	public TaskType getTaskType() {
 		return Module.TaskType.PARALLEL;
 	}
+
+	@Override public void cleanup() { }
 }
