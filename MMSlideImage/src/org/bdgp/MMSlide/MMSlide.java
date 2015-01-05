@@ -27,7 +27,7 @@ public class MMSlide implements MMPlugin {
 	public static final String MMSLIDEMODULESDIR = "mmslidemodules";
 	private ScriptInterface app;
 	private WorkflowDialog dialog;
-	private static List<String> moduleNames;
+	private static List<String> moduleNames = null;
 
 	/**
 	 *  The menu name is stored in a static string, so Micro-Manager

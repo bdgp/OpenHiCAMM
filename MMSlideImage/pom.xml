@@ -153,11 +153,15 @@
       <groupId>MicroManager</groupId>
       <artifactId>MMJ_</artifactId>
       <version>1.4.20</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/MMJ_.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>MicroManager</groupId>
       <artifactId>MMCoreJ</artifactId>
       <version>1.4.20</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/MMCoreJ.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>org.hsqldb</groupId>
@@ -183,6 +187,8 @@
       <groupId>org.bdgp.MMSlide.Modules.PriorSlideLoader</groupId>
       <artifactId>priorslideloader</artifactId>
       <version>1.0-SNAPSHOT</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/priorslideloader-1.0-SNAPSHOT.jar</systemPath>
     </dependency>
   </dependencies>
 </project>
