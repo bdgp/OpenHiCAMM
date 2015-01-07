@@ -25,6 +25,9 @@ public class Task {
     
     @DatabaseField(generatedId=true,canBeNull=false)
     private int id;
+
+    @DatabaseField(canBeNull=true)
+    private Integer parentTaskId;
     
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING)
     private String moduleId;
@@ -39,6 +42,9 @@ public class Task {
     
     public int getId() {
         return id;
+    }
+    public Integer getParentTaskId() { 
+    	return this.parentTaskId; 
     }
     public Status getStatus() {
         return status;

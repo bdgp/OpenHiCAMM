@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.sql.SQLException;
-import java.sql.Savepoint;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -32,7 +31,7 @@ import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.bdgp.MMSlide.Modules.Interfaces.TaskListener;
 
-import com.j256.ormlite.support.DatabaseConnection;
+import com.j256.ormlite.field.FieldType;
 
 import static org.bdgp.MMSlide.Util.where;
 
@@ -257,124 +256,125 @@ public class WorkflowRunner {
                 Status status = task.getStatus();
             	if (WorkflowRunner.this.isStopped == true) return status;
                 
+                // instantiate a logger for the task
+                Logger taskLogger = Logger.create(
+                        new File(WorkflowRunner.this.getWorkflowDir(),
+                                new File(WorkflowRunner.this.getInstance().getStorageLocation(),
+                                        new File(task.getStorageLocation(), LOG_FILE).getPath()).getPath()).getPath(),
+                                        task.getModuleId(),
+                                        logLevel);
+                for (Handler handler : logHandlers) {
+                    taskLogger.addHandler(handler);
+                }
+                
+                // run the task
+                taskLogger.info("Running module "+module.getId()+", task ID "+task.getId());
                 try {
-                    // instantiate a logger for the task
-                    Logger taskLogger = Logger.create(
-                    		new File(WorkflowRunner.this.getWorkflowDir(),
-                    				new File(WorkflowRunner.this.getInstance().getStorageLocation(),
-                    						new File(task.getStorageLocation(), LOG_FILE).getPath()).getPath()).getPath(),
-                    						task.getModuleId(),
-                    						logLevel);
-                    for (Handler handler : logHandlers) {
-                        taskLogger.addHandler(handler);
-                    }
-                    
-                    // run the task
-                    taskLogger.info("Running module "+module.getId()+", task ID "+task.getId());
-                    try {
-                        status = taskModule.run(task, config, taskLogger);
-                    } 
-                    // Uncaught exceptions set the status to ERROR
-                    catch (Exception e) {
-                        StringWriter sw = new StringWriter();
-                        PrintWriter pw = new PrintWriter(sw);
-                        e.printStackTrace(pw);
-                        taskLogger.severe(String.format("Error reported during task %s:%n%s", 
-                                task.toString(), sw.toString()));
-                        status = Status.ERROR;
-                    }
-                    finally {
-                        taskModule.cleanup(task); 
-                    }
-                    taskLogger.info("Finished module "+module.getId()+", task ID "+task.getId());
-                    
-                    // notify any task listeners
-                    for (TaskListener listener : taskListeners) {
-                        listener.notifyTask(task);
-                    }
-                    
-                    // This section must be synchronized both in java and in the backend database 
-                    // to avoid any race conditions.
-                    List<Future<Status>> childFutures = new ArrayList<Future<Status>>();
-                    synchronized (WorkflowRunner.this) {
-                        DatabaseConnection db = instanceDb.getReadWriteConnection();
-                        instanceDb.saveSpecialConnection(db);
-                        Savepoint savePoint = null;
-                        try {
-                            // explicitly lock the task status and dispatch tables to avoid deadlock exceptions
-                            // See: http://hsqldb.org/doc/guide/sessions-chapt.html
-                            db.setAutoCommit(false);
-                            savePoint = db.setSavePoint("task");
-                            db.executeStatement("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE", 
-                                    DatabaseConnection.DEFAULT_RESULT_FLAGS);
-                            db.executeStatement("LOCK TABLE TASK WRITE, TASKDISPATCH WRITE", 
-                                    DatabaseConnection.DEFAULT_RESULT_FLAGS);
-                            
-                            // update the task status
-                            task.setStatus(status);
-                            taskStatus.update(task, "id","moduleId");
-        
-                            // enqueue the child tasks
-                            if (status == Status.SUCCESS) {
-                                List<TaskDispatch> childTaskIds = taskDispatch.select(
-                                        where("parentTaskId",task.getId()));
-                                // Sort task dispatches by task ID
-                                Collections.sort(childTaskIds, new Comparator<TaskDispatch>() {
-									@Override public int compare(TaskDispatch a, TaskDispatch b) {
-										return a.getTaskId()-b.getTaskId();
-									}});
-                                            
-                                CHILD_TASK:
-                                for (TaskDispatch childTaskId : childTaskIds) {
-                                    Task childTask = taskStatus.selectOneOrDie(
-                                            where("id",childTaskId.getTaskId()));
-
-                                    if (childTask.getStatus() == Status.NEW || childTask.getStatus() == Status.DEFER) {
-                                        // do not run the child task unless all of its parent tasks 
-                                        // have been successfully completed
-                                        List<TaskDispatch> parentTaskIds = taskDispatch.select(
-                                                where("taskId",childTaskId.getTaskId()));
-                                        for (TaskDispatch parentTaskId : parentTaskIds) {
-                                            Task parentTask = taskStatus.selectOneOrDie(
-                                                    where("id",parentTaskId.getParentTaskId()));
-                                            if (parentTask.getStatus() != Status.SUCCESS) {
-                                                continue CHILD_TASK;
-                                            }
-                                        }
-                                        
-                                        // set the task status to IN_PROGRESS
-                                        task.setStatus(Status.IN_PROGRESS);
-                                        taskStatus.update(task, "id","moduleId");
-                                        childFutures.add(run(childTask, config));
-                                    }
-                                }
-                            }
-                            db.commit(savePoint);
-                        }
-                        catch (Exception e) {
-                            if (savePoint != null) db.rollback(savePoint);
-                            throw new RuntimeException(e);
-                        }
-                        finally {
-                           instanceDb.clearSpecialConnection(db);
-                        }
-                    }
-
-                    // resolve all the futures into statuses
-                    List<Status> statuses = new ArrayList<Status>();
-                    statuses.add(status);
-                    for (Future<Status> f : childFutures) {
-                        try {
-                            Status s = f.get();
-                            statuses.add(s);
-                        } 
-                        catch (ExecutionException e) {throw new RuntimeException(e);}
-                        catch (InterruptedException e) {throw new RuntimeException(e);}
-                    }
-                    // return the coalesced status
-                    return coalesceStatuses(statuses);
+                    status = taskModule.run(task, config, taskLogger);
                 } 
-                catch (SQLException e) {throw new RuntimeException(e);}
+                // Uncaught exceptions set the status to ERROR
+                catch (Exception e) {
+                    StringWriter sw = new StringWriter();
+                    PrintWriter pw = new PrintWriter(sw);
+                    e.printStackTrace(pw);
+                    taskLogger.severe(String.format("Error reported during task %s:%n%s", 
+                            task.toString(), sw.toString()));
+                    status = Status.ERROR;
+                }
+                finally {
+                    taskModule.cleanup(task); 
+                }
+                taskLogger.info("Finished module "+module.getId()+", task ID "+task.getId());
+                
+                // notify any task listeners
+                for (TaskListener listener : taskListeners) {
+                    listener.notifyTask(task);
+                }
+                
+                task.setStatus(status);
+                if (status == Status.SUCCESS) {
+                    try {
+                    	// We need to update the status of this task AND flag the unprocessed child tasks that 
+                    	// will be ready to run. Both of these actions must be done in a single atomic DB
+                    	// operation to avoid race conditions. As far as I can tell, the HSQLDB merge statement
+                    	// is atomic, so hopefully this works.
+                        taskStatus.getConnectionSource().getReadWriteConnection().update(
+                            "merge into TASK using (\n"+
+                            "  select c.id, p.id, 'IN_PROGRESS'\n"+
+                            "  from TASK p\n"+
+                            "  join TASKDISPATCH td\n"+
+                            "    on p.id=td.parentTaskId\n"+
+                            "  join TASK c\n"+
+                            "    on c.id=td.taskId\n"+
+                            "  left join (TASKDISPATCH td2\n"+
+                            "      join TASK p2\n"+
+                            "        on p2.id=td2.parentTaskId)\n"+
+                            "    on c.id=td2.taskId\n"+
+                            "    and p2.id<>?\n"+
+                            "    and p2.status<>'SUCCESS'\n"+
+                            "  where c.status in ('NEW','DEFER')\n"+
+                            "    and p2.id is null\n"+
+                            "    and p.id=?\n"+
+                            "  union all\n"+
+                            "  select p.id, p.parentTaskId, 'SUCCESS'\n"+
+                            "  from TASK p\n"+
+                            "  where p.id=?) \n"+
+                            "  as t(taskId, parentTaskId, status) on TASK.id=t.taskId\n"+
+                            "  when matched then update set TASK.parentTaskId=t.parentTaskId, TASK.status=t.status",
+                                new Object[] {
+                                    task.getId(),
+                                    task.getId(),
+                                    task.getId()},
+                                new FieldType[] {
+                                    FieldType.createFieldType(taskStatus.getConnectionSource(), "TASK", Task.class.getField("id"), Task.class),
+                                    FieldType.createFieldType(taskStatus.getConnectionSource(), "TASK", Task.class.getField("id"), Task.class),
+                                    FieldType.createFieldType(taskStatus.getConnectionSource(), "TASK", Task.class.getField("id"), Task.class)});
+                    }
+                    catch (NoSuchFieldException e) {throw new RuntimeException(e);} 
+                    catch (SecurityException e) {throw new RuntimeException(e);}
+                    catch (SQLException e) {throw new RuntimeException(e);}
+                }
+                else {
+                	taskStatus.update(task, "id","moduleId");
+                }
+
+                // enqueue the child tasks if all parent tasks completed successfully
+                List<TaskDispatch> childTaskIds = taskDispatch.select(
+                        where("parentTaskId",task.getId()));
+                List<Future<Status>> childFutures = new ArrayList<Future<Status>>();
+                if (status == Status.SUCCESS) {
+                    // Sort task dispatches by task ID
+                    Collections.sort(childTaskIds, new Comparator<TaskDispatch>() {
+                        @Override public int compare(TaskDispatch a, TaskDispatch b) {
+                            return a.getTaskId()-b.getTaskId();
+                        }});
+                                
+                    for (TaskDispatch childTaskId : childTaskIds) {
+                        Task childTask = taskStatus.selectOneOrDie(
+                                where("id",childTaskId.getTaskId()));
+
+                        if (childTask.getStatus() == Status.IN_PROGRESS && 
+                            childTask.getParentTaskId() != null && 
+                            childTask.getParentTaskId().equals(task.getId())) 
+                        {
+                            childFutures.add(run(childTask, config));
+                        }
+                    }
+                }
+
+                // resolve all the futures into statuses
+                List<Status> statuses = new ArrayList<Status>();
+                statuses.add(status);
+                for (Future<Status> f : childFutures) {
+                    try {
+                        Status s = f.get();
+                        statuses.add(s);
+                    } 
+                    catch (ExecutionException e) {throw new RuntimeException(e);}
+                    catch (InterruptedException e) {throw new RuntimeException(e);}
+                }
+                // return the coalesced status
+                return coalesceStatuses(statuses);
             }
         };
                 
