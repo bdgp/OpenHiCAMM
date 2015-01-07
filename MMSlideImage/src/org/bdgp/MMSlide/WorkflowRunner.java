@@ -32,6 +32,9 @@ import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.bdgp.MMSlide.Modules.Interfaces.TaskListener;
 
 import com.j256.ormlite.field.FieldType;
+import com.j256.ormlite.field.SqlType;
+import com.j256.ormlite.stmt.StatementBuilder.StatementType;
+import com.j256.ormlite.support.CompiledStatement;
 
 import static org.bdgp.MMSlide.Util.where;
 
@@ -298,7 +301,7 @@ public class WorkflowRunner {
                     	// will be ready to run. Both of these actions must be done in a single atomic DB
                     	// operation to avoid race conditions. As far as I can tell, the HSQLDB merge statement
                     	// is atomic, so hopefully this works.
-                        taskStatus.getConnectionSource().getReadWriteConnection().update(
+                    	CompiledStatement compiledStatement = taskStatus.getConnectionSource().getReadWriteConnection().compileStatement(
                             "merge into TASK using (\n"+
                             "  select c.id, p.id, 'IN_PROGRESS'\n"+
                             "  from TASK p\n"+
@@ -322,16 +325,12 @@ public class WorkflowRunner {
                             "  where p.id=?) \n"+
                             "  as t(taskId, parentTaskId, status) on TASK.id=t.taskId\n"+
                             "  when matched then update set TASK.parentTaskId=t.parentTaskId, TASK.status=t.status",
-                                new Object[] {
-                                    task.getId(),
-                                    task.getId(),
-                                    task.getId()},
-                                new FieldType[] {
-                                    FieldType.createFieldType(taskStatus.getConnectionSource(), "TASK", Task.class.getField("id"), Task.class),
-                                    FieldType.createFieldType(taskStatus.getConnectionSource(), "TASK", Task.class.getField("id"), Task.class),
-                                    FieldType.createFieldType(taskStatus.getConnectionSource(), "TASK", Task.class.getField("id"), Task.class)});
+                            StatementType.UPDATE, new FieldType[0]);
+                    	compiledStatement.setObject(0, task.getId(), SqlType.INTEGER);
+                    	compiledStatement.setObject(1, task.getId(), SqlType.INTEGER);
+                    	compiledStatement.setObject(2, task.getId(), SqlType.INTEGER);
+                    	compiledStatement.runUpdate();
                     }
-                    catch (NoSuchFieldException e) {throw new RuntimeException(e);} 
                     catch (SecurityException e) {throw new RuntimeException(e);}
                     catch (SQLException e) {throw new RuntimeException(e);}
                 }
