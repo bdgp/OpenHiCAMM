@@ -216,6 +216,10 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	    } catch (SQLException e) {throw new RuntimeException(e);}
 	}
     
+    public int update(Map<String,Object> set) {
+    	return update(set, new HashMap<String,Object>());
+    }
+    
     @Override
     public int update(T value) {
         try { return super.update(value); } 
