@@ -12,6 +12,7 @@ import javax.swing.SwingUtilities;
 
 import org.bdgp.MMSlide.DB.ModuleConfig;
 import org.bdgp.MMSlide.DB.Task;
+import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.DB.WorkflowInstance;
 import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
@@ -35,6 +36,7 @@ import java.util.Map;
 import java.util.logging.Level;
 
 import static org.bdgp.MMSlide.Util.where;
+import static org.bdgp.MMSlide.Util.set;
 
 @SuppressWarnings("serial")
 public class WorkflowDialog extends JDialog {
@@ -274,6 +276,13 @@ public class WorkflowDialog extends JDialog {
         if (!resume) {
             workflowRunner.deleteTaskRecords();
             workflowRunner.createTaskRecords();
+        }
+        else {
+        	// In resume mode, the task records aren't re-created. So we need to clear out 
+        	// invalid statuses and the parent Task ID flags.
+        	Dao<Task> taskStatus = workflowRunner.getTaskStatus();
+        	taskStatus.update(set("status", Status.NEW), where("status", Status.IN_PROGRESS));
+        	taskStatus.update(set("parentTaskId", null));
         }
         workflowRunner.run(startModuleId, null);
 

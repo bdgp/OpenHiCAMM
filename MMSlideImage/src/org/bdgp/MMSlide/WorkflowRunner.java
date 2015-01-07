@@ -313,6 +313,7 @@ public class WorkflowRunner {
                             "    and p2.id<>?\n"+
                             "    and p2.status<>'SUCCESS'\n"+
                             "  where c.status in ('NEW','DEFER')\n"+
+                            "    and c.parentTaskId is null"+
                             "    and p2.id is null\n"+
                             "    and p.id=?\n"+
                             "  union all\n"+
