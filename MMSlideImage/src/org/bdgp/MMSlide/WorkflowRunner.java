@@ -303,28 +303,28 @@ public class WorkflowRunner {
                     	// is atomic, so hopefully this works.
                     	CompiledStatement compiledStatement = taskStatus.getConnectionSource().getReadWriteConnection().compileStatement(
                             "merge into TASK using (\n"+
-                            "  select c.id, p.id, 'IN_PROGRESS'\n"+
+                            "  select c.\"id\", p.\"id\", 'IN_PROGRESS'\n"+
                             "  from TASK p\n"+
                             "  join TASKDISPATCH td\n"+
-                            "    on p.id=td.parentTaskId\n"+
+                            "    on p.\"id\"=td.\"parentTaskId\"\n"+
                             "  join TASK c\n"+
-                            "    on c.id=td.taskId\n"+
+                            "    on c.\"id\"=td.\"taskId\"\n"+
                             "  left join (TASKDISPATCH td2\n"+
                             "      join TASK p2\n"+
-                            "        on p2.id=td2.parentTaskId)\n"+
-                            "    on c.id=td2.taskId\n"+
-                            "    and p2.id<>?\n"+
-                            "    and p2.status<>'SUCCESS'\n"+
-                            "  where c.status in ('NEW','DEFER')\n"+
-                            "    and c.parentTaskId is null\n"+
-                            "    and p2.id is null\n"+
-                            "    and p.id=?\n"+
+                            "        on p2.\"id\"=td2.\"parentTaskId\")\n"+
+                            "    on c.\"id\"=td2.\"taskId\"\n"+
+                            "    and p2.\"id\"<>?\n"+
+                            "    and p2.\"status\"<>'SUCCESS'\n"+
+                            "  where c.\"status\" in ('NEW','DEFER')\n"+
+                            "    and c.\"parentTaskId\" is null\n"+
+                            "    and p2.\"id\" is null\n"+
+                            "    and p.\"id\"=?\n"+
                             "  union all\n"+
-                            "  select p.id, p.parentTaskId, 'SUCCESS'\n"+
+                            "  select p.\"id\", p.\"parentTaskId\", 'SUCCESS'\n"+
                             "  from TASK p\n"+
-                            "  where p.id=?) \n"+
-                            "  as t(taskId, parentTaskId, status) on TASK.id=t.taskId\n"+
-                            "  when matched then update set TASK.parentTaskId=t.parentTaskId, TASK.status=t.status",
+                            "  where p.\"id\"=?) \n"+
+                            "  as t(taskId, parentTaskId, status) on TASK.\"id\"=t.taskId\n"+
+                            "  when matched then update set TASK.\"parentTaskId\"=t.parentTaskId, TASK.\"status\"=t.status",
                             StatementType.UPDATE, new FieldType[0]);
                     	compiledStatement.setObject(0, task.getId(), SqlType.INTEGER);
                     	compiledStatement.setObject(1, task.getId(), SqlType.INTEGER);
