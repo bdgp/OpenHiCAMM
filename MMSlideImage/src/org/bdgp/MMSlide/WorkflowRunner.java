@@ -303,7 +303,7 @@ public class WorkflowRunner {
                     	// is atomic, so hopefully this works.
                     	CompiledStatement compiledStatement = taskStatus.getConnectionSource().getReadWriteConnection().compileStatement(
                             "merge into TASK using (\n"+
-                            "  select c.\"id\", p.\"id\", 'IN_PROGRESS'\n"+
+                            "  select c.\"id\", p.\"id\", cast('IN_PROGRESS' as longvarchar)\n"+
                             "  from TASK p\n"+
                             "  join TASKDISPATCH td\n"+
                             "    on p.\"id\"=td.\"parentTaskId\"\n"+
@@ -320,7 +320,7 @@ public class WorkflowRunner {
                             "    and p2.\"id\" is null\n"+
                             "    and p.\"id\"=?\n"+
                             "  union all\n"+
-                            "  select p.\"id\", p.\"parentTaskId\", 'SUCCESS'\n"+
+                            "  select p.\"id\", p.\"parentTaskId\", cast('SUCCESS' as longvarchar)\n"+
                             "  from TASK p\n"+
                             "  where p.\"id\"=?) \n"+
                             "  as t(taskId, parentTaskId, status) on TASK.\"id\"=t.taskId\n"+
