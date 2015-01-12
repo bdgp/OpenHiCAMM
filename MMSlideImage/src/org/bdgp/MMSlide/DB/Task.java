@@ -22,6 +22,10 @@ public class Task {
        this.storageLocation = storageLocation;
        this.status = status;
     }
+    public String toString() {
+    	return String.format("Task(id=%s, parentTaskId=%s, moduleId=%s, storageLocation=%s, status=%s)", 
+    			id, parentTaskId, moduleId, storageLocation, status);
+    }
     
     @DatabaseField(generatedId=true,canBeNull=false)
     private int id;
