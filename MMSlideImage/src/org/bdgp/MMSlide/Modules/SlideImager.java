@@ -17,6 +17,7 @@ import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.MMSlide;
 import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
+import org.bdgp.MMSlide.DB.Acquisition;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Image;
 import org.bdgp.MMSlide.DB.ModuleConfig;
@@ -142,6 +143,12 @@ public class SlideImager implements Module {
 
                 // As images are completed, kick off the individual task related to the image
                 String returnAcqName = acqControlDlg.runAcquisition(acqName, rootDir);
+                Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+                // create an acquisition record
+                final Acquisition acquisition = new Acquisition(acqName, rootDir);
+                acqDao.insert(acquisition);
+                acqDao.reload(acquisition, "name", "directory");
+
                 ((MMStudio)this.script).getAcquisitionEngine().getImageCache().addImageCacheListener(new ImageCacheListener() {
                     @Override public void imageReceived(TaggedImage taggedImage) {
                         try {
@@ -177,11 +184,11 @@ public class SlideImager implements Module {
                                 if (!MDUtils.getSummary(taggedImage.tags).has("Prefix") || MDUtils.getFileName(taggedImage.tags) == null) {
                                     throw new RuntimeException("Could not get file name and path information from image at index "+positionIndex);
                                 }
-                                String imagePath = new File(rootDir, 
-                                        new File(MDUtils.getSummary(taggedImage.tags).getString("Prefix"),
-                                                new File("Pos"+positionIndex, 
-                                                        MDUtils.getFileName(taggedImage.tags)).getPath()).getPath()).getPath();
-                                Image image = new Image(slideId, slidePosId, imagePath, taggedImage.tags);
+                                Image image = new Image(slideId, slidePosId, acquisition, 
+                                		MDUtils.getChannelIndex(taggedImage.tags),
+                                		MDUtils.getSliceIndex(taggedImage.tags),
+                                		MDUtils.getFrameIndex(taggedImage.tags),
+                                		MDUtils.getPositionIndex(taggedImage.tags));
                                 imageDao.insertOrUpdate(image,"slideId","slidePosId");
                                 image = imageDao.reload(image);
 

@@ -7,11 +7,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import mmcorej.TaggedImage;
+
 import org.bdgp.MMSlide.Dao;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.MMSlide;
 import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
+import org.bdgp.MMSlide.DB.Acquisition;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Image;
 import org.bdgp.MMSlide.DB.ROI;
@@ -24,6 +27,7 @@ import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.json.JSONException;
+import org.micromanager.acquisition.MMAcquisition;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
 import org.micromanager.api.ScriptInterface;
@@ -55,15 +59,19 @@ public class ROIFinder implements Module {
         Integer imageId = new Integer(imageIdConf.getValue());
         Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
         Image image = imageDao.selectOneOrDie(where("id",imageId));
+        
+        Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+        Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
+        MMAcquisition mmacquisition = acquisition.getAcquisition();
+        TaggedImage taggedImage = image.getImage(mmacquisition.getImageCache());
 
     	try {
-			int positionIndex = MDUtils.getPositionIndex(image.getTags());
-			double pixelSizeUm = MDUtils.getPixelSizeUm(image.getTags());
-			String fileName = image.getPath();
-			logger.info(String.format("Processed image at position %d, filename %s",positionIndex,fileName));
+			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
+			double pixelSizeUm = MDUtils.getPixelSizeUm(taggedImage.tags);
+			logger.info(String.format("Processed image at position %d", positionIndex));
 
 			// Fill in list of ROIs
-			List<ROI> rois = process(image);
+			List<ROI> rois = process(image, taggedImage);
 
             // Convert the ROIs into a PositionList
 			PositionList posList = new PositionList();
@@ -91,12 +99,11 @@ public class ROIFinder implements Module {
     	catch (JSONException e) { throw new RuntimeException(e); }
     }
     
-    public List<ROI> process(Image image) {
+    public List<ROI> process(Image image, TaggedImage taggedImage) {
     	List<ROI> rois = new ArrayList<ROI>();
-    	String imagePath = image.getPath();
     	try {
-            int width = MDUtils.getWidth(image.getTags());
-            int height = MDUtils.getHeight(image.getTags());
+            int width = MDUtils.getWidth(taggedImage.tags);
+            int height = MDUtils.getHeight(taggedImage.tags);
     		int roiCount = (int)(Math.random() * 10.0 + 10.0);
     		for (int i=0; i<roiCount; ++i) {
                 int roiWidth = (int)(Math.random() * 100.0 + 150.0);
