@@ -18,6 +18,7 @@ import org.bdgp.MMSlide.DB.Acquisition;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Image;
 import org.bdgp.MMSlide.DB.ROI;
+import org.bdgp.MMSlide.DB.Slide;
 import org.bdgp.MMSlide.DB.SlidePos;
 import org.bdgp.MMSlide.DB.SlidePosList;
 import org.bdgp.MMSlide.DB.Task;
@@ -60,6 +61,9 @@ public class ROIFinder implements Module {
         Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
         Image image = imageDao.selectOneOrDie(where("id",imageId));
         
+        Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
+        Slide slide = slideDao.selectOneOrDie(where("id",image.getSlideId()));
+        
         Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
         Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
         MMAcquisition mmacquisition = acquisition.getAcquisition();
@@ -86,7 +90,7 @@ public class ROIFinder implements Module {
 			// Create SlidePosList and SlidePos DB records
 			Dao<SlidePosList> slidePosListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
 			slidePosListDao.delete(where("name","posList").and("moduleId",this.moduleId));
-			SlidePosList slidePosList = new SlidePosList(this.moduleId, "posList", posList);
+			SlidePosList slidePosList = new SlidePosList(this.moduleId, slide, posList);
 			slidePosListDao.insert(slidePosList);
 
 			MultiStagePosition[] msps = posList.getPositions();

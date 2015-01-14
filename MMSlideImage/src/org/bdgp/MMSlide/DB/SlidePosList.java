@@ -13,21 +13,21 @@ public class SlidePosList {
     private int id;
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,uniqueCombo=true) 
     private String moduleId;
-    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,uniqueCombo=true) 
-    private String name;
+    @DatabaseField(canBeNull=false,uniqueCombo=true) 
+    private Integer slideId;
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,useGetSet=true) 
     private String posList;
     private PositionList positionList;
 
     public SlidePosList() {}
-    public SlidePosList(String moduleId, String name, PositionList positionList) {
+    public SlidePosList(String moduleId, Slide slide, PositionList positionList) {
     	this.moduleId = moduleId;
-    	this.name = name;
+    	this.slideId = slide.getId();
         setPositionList(positionList);
     }
-    public SlidePosList(String moduleId, String name, String posList) {
+    public SlidePosList(String moduleId, Slide slide, String posList) {
     	this.moduleId = moduleId;
-    	this.name = name;
+    	this.slideId = slide.getId();
         setPosList(posList);
     }
     public void setPositionList(PositionList positionList) {
@@ -41,9 +41,9 @@ public class SlidePosList {
         catch (MMSerializationException e) { throw new RuntimeException(e); }
         this.posList = posList;
     }
-    public int getId() { return id; }
-    public String getModuleId() { return moduleId; }
-    public String getName() { return name; }
-    public String getPosList() { return posList; }
-    public PositionList getPositionList() { return positionList; }
+    public int getId() { return this.id; }
+    public String getModuleId() { return this.moduleId; }
+    public String getPosList() { return this.posList; }
+    public PositionList getPositionList() { return this.positionList; }
+    public Integer getSlideId() { return this.slideId; }
 }

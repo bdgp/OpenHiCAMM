@@ -54,7 +54,8 @@ public class SlideLoader implements Module {
 	public synchronized Status run(Task task, Map<String, Config> config, Logger logger) {
         // get the PoolSlide ID for this Slide
         Config poolSlideIdConf = config.get("poolSlideId");
-        Integer poolSlideId = poolSlideIdConf != null? new Integer(poolSlideIdConf.getValue()) : null;
+        Integer poolSlideId = poolSlideIdConf != null && poolSlideIdConf.getValue() != null? 
+        		new Integer(poolSlideIdConf.getValue()) : null;
         		
         Dao<PoolSlide> poolSlideDao = workflowRunner.getInstanceDb().table(PoolSlide.class);
         PoolSlide thisSlide = poolSlideId != null? poolSlideDao.selectOneOrDie(where("id",poolSlideId)) : null;
@@ -179,8 +180,7 @@ public class SlideLoader implements Module {
             try { Thread.sleep(1000); } catch (InterruptedException e) { }
             slideLoader.get_Status(retVal);
             //reportStatus(retVal[0], logger);
-        } while (((retVal[0] & getSTATE_STATEMASK()) 
-        		!= getSTATE_IDLE()) && 
+        } while (((retVal[0] & getSTATE_STATEMASK()) != getSTATE_IDLE()) && 
         		!((retVal[0] & getLOADER_ERROR()) != 0));
         return retVal[0];
 	}
@@ -343,12 +343,10 @@ public class SlideLoader implements Module {
                     Dao<TaskDispatch> taskDispatchDao = workflowRunner.getInstanceDb().table(TaskDispatch.class);
                     taskDispatchDao.insert(new TaskDispatch(parentTask.getId(), task.getId()));
                 }
-                if (poolSlide != null) {
-                	Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
-                	taskConfigDao.insert(new TaskConfig(new Integer(task.getId()).toString(), 
-                			"poolSlideId", 
-                			new Integer(poolSlide.getId()).toString()));
-                }
+                Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
+                taskConfigDao.insert(new TaskConfig(new Integer(task.getId()).toString(), 
+                        "poolSlideId", 
+                        poolSlide != null? new Integer(poolSlide.getId()).toString() : null));
     		}
     	}
     }
