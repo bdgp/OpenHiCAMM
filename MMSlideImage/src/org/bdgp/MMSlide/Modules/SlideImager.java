@@ -386,7 +386,7 @@ public class SlideImager implements Module {
                 
                 // store the loaded position list in the DB
                 posListDao.insertOrUpdate(posList,"moduleId","slideId");
-                posList = posListDao.reload(posList);
+                posList = posListDao.reload(posList,"moduleId","slideId");
                 MultiStagePosition[] msps = posList.getPositionList().getPositions();
                 for (int i=0; i<msps.length; ++i) {
                     posDao.insert(new SlidePos(posList.getId(), i));

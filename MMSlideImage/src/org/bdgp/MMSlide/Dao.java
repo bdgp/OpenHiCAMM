@@ -362,7 +362,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 		Map<String,Object> values = new HashMap<String,Object>();
 		for (String w : where) {
 			try {
-				Field f = class_.getField(w);
+				Field f = class_.getDeclaredField(w);
 				f.setAccessible(true);
 				values.put(w, f.get(value));
 			} 
