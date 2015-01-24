@@ -8,7 +8,7 @@ import com.j256.ormlite.table.DatabaseTable;
 public class Slide {
     @DatabaseField(generatedId=true, canBeNull=false) 
     int id;
-    @DatabaseField(canBeNull=false, unique=true, dataType=DataType.LONG_STRING)
+    @DatabaseField(canBeNull=false, dataType=DataType.LONG_STRING)
     private String experimentId;
     
     public Slide() {}

@@ -113,7 +113,6 @@ public class SlideImager implements Module {
 
             // Get Dao objects ready for use
             final Dao<Task> taskDao = workflowRunner.getInstanceDb().table(Task.class);
-            final Dao<TaskDispatch> taskDispatchDao = workflowRunner.getInstanceDb().table(TaskDispatch.class);
             final Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
 
             // get the position index of this task
@@ -124,7 +123,7 @@ public class SlideImager implements Module {
             }
 
             // If this is the first position, start the acquisition engine
-            if (new Integer(positionIndex.getValue()) == 0) {
+            if (new Integer(positionIndex.getValue()) == 0 && !conf.containsKey("imageId")) {
                 // Set rootDir and acqName
                 final String rootDir = new File(
                         workflowRunner.getWorkflowDir(), 
@@ -147,8 +146,8 @@ public class SlideImager implements Module {
                 Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
                 // create an acquisition record
                 final Acquisition acquisition = new Acquisition(acqName, rootDir);
-                acqDao.insert(acquisition);
-                acqDao.reload(acquisition, "name", "directory");
+                acqDao.insertOrUpdate(acquisition, "name","directory");
+                acqDao.reload(acquisition, "name","directory");
 
                 ((MMStudio)this.script).getAcquisitionEngine().getImageCache().addImageCacheListener(new ImageCacheListener() {
                     @Override public void imageReceived(TaggedImage taggedImage) {
@@ -160,8 +159,6 @@ public class SlideImager implements Module {
                             Integer positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
                             if (posList2Task.containsKey(positionIndex)) {
                                 Task t = posList2Task.get(positionIndex);
-                                t.setStatus(Status.SUCCESS);
-                                taskDao.update(t);
                                 // Save the image label. This can be used by downstream processing scripts to get the TaggedImage
                                 // out of the ImageCache.
                                 String imageLabel = MDUtils.getLabel(taggedImage.tags);
@@ -190,8 +187,8 @@ public class SlideImager implements Module {
                                 		MDUtils.getSliceIndex(taggedImage.tags),
                                 		MDUtils.getFrameIndex(taggedImage.tags),
                                 		MDUtils.getPositionIndex(taggedImage.tags));
-                                imageDao.insertOrUpdate(image,"slideId","slidePosId");
-                                image = imageDao.reload(image);
+                                imageDao.insertOrUpdate(image,"slideId","slidePosId","acquisitionId");
+                                image = imageDao.reload(image,"slideId","slidePosId","acquisitionId");
 
                                 // Store the Image ID as a Task Config variable
                                 TaskConfig imageId = new TaskConfig(
@@ -202,13 +199,7 @@ public class SlideImager implements Module {
                                 config.put("imageId", imageId);
                                 
                                 // Run the downstream processing tasks for each image
-                                List<TaskDispatch> childTaskIds = taskDispatchDao.select(where("parentTaskId",t.getId()));
-                                for (TaskDispatch childTaskId : childTaskIds) {
-                                    Task child = taskDao.selectOne(where("id",childTaskId.getTaskId()));
-                                    if (child != null) {
-                                        workflowRunner.run(child, config);
-                                    }
-                                }
+                                workflowRunner.run(t, config);
                             }
                             else {
                                 logger.warning("Unexpected position index "+positionIndex);
@@ -354,8 +345,7 @@ public class SlideImager implements Module {
             // If no associated slide, create a slide to represent this task
             if (slide == null) {
             	slide = new Slide(moduleId);
-            	slideDao.insertOrUpdate(slide, "experimentId");
-            	slideDao.reload(slide);
+            	slideDao.insert(slide);
             }
 
             SlidePosList posList = null;
