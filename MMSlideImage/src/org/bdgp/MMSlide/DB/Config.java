@@ -21,14 +21,25 @@ public class Config {
         this.key = key;
         this.value = value;
     }
+    public Config(String id, String key, String value, Object object) {
+        this.id = id;
+        this.key = key;
+        this.value = value;
+        this.object = object;
+    }
     @DatabaseField(canBeNull=false,uniqueCombo=true,dataType=DataType.LONG_STRING)
     private String id;
     
     @DatabaseField(canBeNull=false,uniqueCombo=true,dataType=DataType.LONG_STRING)
     private String key;
     
-    @DatabaseField(dataType=DataType.LONG_STRING)
+    @DatabaseField(canBeNull=true,dataType=DataType.LONG_STRING)
     private String value;
+    
+    // The object field can store any object as part of the configuration, but 
+    // won't be serialized to the DB. This is useful for passing Java objects from
+    // parent tasks to child tasks.
+    private Object object;
     
     public String getId() {
         return id;
@@ -38,6 +49,9 @@ public class Config {
     }
     public String getValue() {
         return value;
+    }
+    public Object getObject() {
+    	return object;
     }
 
     /**
