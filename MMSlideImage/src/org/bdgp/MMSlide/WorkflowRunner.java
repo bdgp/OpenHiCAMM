@@ -178,9 +178,10 @@ public class WorkflowRunner {
         for (WorkflowModule child : childModules) {
             deleteTaskRecords(child);
         }
-        // Delete task dispatch records
+        // Delete task dispatch and config records
         List<Task> tasks = taskStatus.select(where("moduleId",module.getId()));
         for (Task task : tasks) {
+            taskConfig.delete(where("id",new Integer(task.getId()).toString()));
             taskDispatch.delete(where("taskId",task.getId()));
         }
         // Then delete task records
@@ -335,6 +336,7 @@ public class WorkflowRunner {
                     catch (SQLException e) {throw new RuntimeException(e);}
                 }
                 else {
+                	// update the task status in the DB
                 	taskStatus.update(task, "id","moduleId");
                 }
 
