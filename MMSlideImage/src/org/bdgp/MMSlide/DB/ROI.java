@@ -26,4 +26,8 @@ public class ROI {
     public int getY1() {return this.y1;}
     public int getX2() {return this.x2;}
     public int getY2() {return this.y2;}
+    
+    public String toString() {
+    	return String.format("ROI(imageId=%d, x1=%d, y1=%d, x2=%d, y2=%d)", imageId, x1, y1, x2, y2);
+    }
 }
