@@ -21,7 +21,6 @@ import org.bdgp.MMSlide.DB.Acquisition;
 import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Image;
 import org.bdgp.MMSlide.DB.ModuleConfig;
-import org.bdgp.MMSlide.DB.PoolSlide;
 import org.bdgp.MMSlide.DB.Slide;
 import org.bdgp.MMSlide.DB.SlidePos;
 import org.bdgp.MMSlide.DB.SlidePosList;
@@ -36,7 +35,8 @@ import org.micromanager.dialogs.AcqControlDlg;
 import org.micromanager.MMOptions;
 import org.micromanager.MMStudio;
 import org.micromanager.acquisition.AcquisitionEngine;
-import org.micromanager.api.ImageCacheListener;
+import org.micromanager.acquisition.TaggedImageQueue;
+import org.micromanager.api.DataProcessor;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
 import org.micromanager.api.ScriptInterface;
@@ -141,92 +141,106 @@ public class SlideImager implements Module {
                     }
                 }
 
+                // Create an acquisition record and get its ID. We won't know what acquisition name
+                // it gets until we run the acquisition, so set it to null for now. After runAcqusition 
+                // returns the real name, we'll update the acquisition DB record with the name.
+                final Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+
                 // As images are completed, kick off the individual task related to the image
+                this.script.addImageProcessor(new DataProcessor<TaggedImage>() {
+					@Override protected void process() {
+                        Acquisition acquisition = null;
+						TaggedImage taggedImage = null;
+						while ((taggedImage = this.poll()) != TaggedImageQueue.POISON) {
+                            try {
+                                // Make a copy of conf so that each child task can have its own configuration
+                                Map<String,Config> config = new HashMap<String,Config>();
+                                config.putAll(conf);
+
+                                Integer positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
+                                if (posList2Task.containsKey(positionIndex)) {
+                                    Task t = posList2Task.get(positionIndex);
+                                    // Save the image label. This can be used by downstream processing scripts to get the TaggedImage
+                                    // out of the ImageCache.
+                                    String imageLabel = MDUtils.getLabel(taggedImage.tags);
+                                    TaskConfig imageLabelConf = new TaskConfig(new Integer(t.getId()).toString(),"imageLabel",imageLabel);
+                                    taskConfigDao.insertOrUpdate(imageLabelConf,"id","key");
+                                    config.put("imageLabel", imageLabelConf);
+
+                                    // get the slide ID and slide Position ID from the config
+                                    if (!config.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
+                                    Integer slideId = new Integer(config.get("slideId").getValue());
+                                    if (!config.containsKey("slidePosId")) throw new RuntimeException("No slidePosId found for image!");
+                                    Integer slidePosId = new Integer(config.get("slidePosId").getValue());
+
+                                    // Make sure the acquisition name is set before running the child tasks.
+                                    // We have to do it here to avoid a race condition.
+                                    if (acquisition  == null) {
+                                        String prefix = MDUtils.getSummary(taggedImage.tags).getString("Prefix");
+                                        acquisition = new Acquisition(prefix, rootDir);
+                                        acqDao.insert(acquisition);
+                                    }
+                                    
+                                    // Create image DB record
+                                    Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+                                    Image image = new Image(slideId, slidePosId, acquisition, 
+                                            MDUtils.getChannelIndex(taggedImage.tags),
+                                            MDUtils.getSliceIndex(taggedImage.tags),
+                                            MDUtils.getFrameIndex(taggedImage.tags),
+                                            MDUtils.getPositionIndex(taggedImage.tags));
+                                    logger.info("Insert image: "+image.toString());
+                                    imageDao.insert(image);
+
+                                    // Store the Image ID as a Task Config variable
+                                    TaskConfig imageId = new TaskConfig(
+                                            new Integer(t.getId()).toString(),
+                                            "imageId",
+                                            new Integer(image.getId()).toString());
+                                    taskConfigDao.insertOrUpdate(imageId,"id","key");
+                                    config.put("imageId", imageId);
+                                    // Also store the taggedImage object as a config value. This
+                                    // is required when not running in offline mode, since the acquisition
+                                    // folder will not have been written yet.
+                                    config.put("taggedImage", new TaskConfig(
+                                    		new Integer(t.getId()).toString(),
+                                    		"taggedImage",
+                                    		null,
+                                    		taggedImage));
+                                    
+                                    // Run the downstream processing tasks for each image
+                                    workflowRunner.run(t, config);
+                                }
+                                else {
+                                    logger.warning("Unexpected position index "+positionIndex);
+                                }
+                                this.produce(taggedImage);
+                            } 
+                            catch (Exception e) {
+                                StringWriter sw = new StringWriter();
+                                PrintWriter pw = new PrintWriter(sw);
+                                e.printStackTrace(pw);
+                                logger.severe(String.format("Error reported during task %s:%n%s", 
+                                    task.toString(), sw.toString()));
+                                throw new RuntimeException(e);
+                            }
+						}
+					}});
                 String returnAcqName = acqControlDlg.runAcquisition(acqName, rootDir);
-                Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
-                // create an acquisition record
-                final Acquisition acquisition = new Acquisition(acqName, rootDir);
-                acqDao.insertOrUpdate(acquisition, "name","directory");
-                acqDao.reload(acquisition, "name","directory");
 
-                ((MMStudio)this.script).getAcquisitionEngine().getImageCache().addImageCacheListener(new ImageCacheListener() {
-                    @Override public void imageReceived(TaggedImage taggedImage) {
-                        try {
-                            // Make a copy of conf so that each child task can have its own configuration
-                            Map<String,Config> config = new HashMap<String,Config>();
-                            config.putAll(conf);
-
-                            Integer positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
-                            if (posList2Task.containsKey(positionIndex)) {
-                                Task t = posList2Task.get(positionIndex);
-                                // Save the image label. This can be used by downstream processing scripts to get the TaggedImage
-                                // out of the ImageCache.
-                                String imageLabel = MDUtils.getLabel(taggedImage.tags);
-                                TaskConfig imageLabelConf = new TaskConfig(new Integer(t.getId()).toString(),"imageLabel",imageLabel);
-                                taskConfigDao.insertOrUpdate(imageLabelConf,"id","key");
-                                config.put("imageLabel", imageLabelConf);
-
-                                Integer slideId = new Integer(0);
-                                if (config.containsKey("poolSlideId")) {
-                                    Config poolSlideId = config.get("poolSlideId");
-                                    Dao<PoolSlide> poolSlideDao = workflowRunner.getInstanceDb().table(PoolSlide.class);
-                                    PoolSlide poolSlide = poolSlideDao.selectOneOrDie(where("id",new Integer(poolSlideId.getValue())));
-                                    slideId = poolSlide.getSlideId();
-                                }
-                                // Try to get the SlidePos ID
-                                Config slidePosIdConfig = config.get("slidePosId");
-                                Integer slidePosId = new Integer(slidePosIdConfig != null? new Integer(slidePosIdConfig.getValue()) : 0);
-
-                                // Create image DB record
-                                Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-                                if (!MDUtils.getSummary(taggedImage.tags).has("Prefix") || MDUtils.getFileName(taggedImage.tags) == null) {
-                                    throw new RuntimeException("Could not get file name and path information from image at index "+positionIndex);
-                                }
-                                Image image = new Image(slideId, slidePosId, acquisition, 
-                                		MDUtils.getChannelIndex(taggedImage.tags),
-                                		MDUtils.getSliceIndex(taggedImage.tags),
-                                		MDUtils.getFrameIndex(taggedImage.tags),
-                                		MDUtils.getPositionIndex(taggedImage.tags));
-                                imageDao.insertOrUpdate(image,"slideId","slidePosId","acquisitionId");
-                                image = imageDao.reload(image,"slideId","slidePosId","acquisitionId");
-
-                                // Store the Image ID as a Task Config variable
-                                TaskConfig imageId = new TaskConfig(
-                                        new Integer(t.getId()).toString(),
-                                        "imageId",
-                                        new Integer(image.getId()).toString());
-                                taskConfigDao.insertOrUpdate(imageId,"id","key");
-                                config.put("imageId", imageId);
-                                
-                                // Run the downstream processing tasks for each image
-                                workflowRunner.run(t, config);
-                            }
-                            else {
-                                logger.warning("Unexpected position index "+positionIndex);
-                            }
-                        } 
-                        catch (Exception e) {
-                            StringWriter sw = new StringWriter();
-                            PrintWriter pw = new PrintWriter(sw);
-                            e.printStackTrace(pw);
-                            logger.severe(String.format("Error reported during task %s:%n%s", 
-                                task.toString(), sw.toString()));
-                            throw new RuntimeException(e);
-                        }
-                    }
-                    @Override public void imagingFinished(String path) { }
-                });
                 // wait for all the acquisitions to finish
                 if (returnAcqName == null) {
                     throw new RuntimeException("acqControlDlg.runAcquisition returned null acquisition name");
                 }
                 logger.info("Started acquisition to directory "+rootDir);
+
                 while (acqControlDlg.isAcquisitionRunning()) {
                      try { Thread.sleep(1); } 
                      catch (InterruptedException e) { logger.info("Thread was interrupted."); } 
                 }
                 logger.info("Acquisition "+acqName+" finished.");
-                return Status.SUCCESS;
+                // Set status to IN_PROGRESS, this task will be run again for the first image, which will set
+                // the final status for this task.
+                return Status.IN_PROGRESS;
             }
         }
         return Status.SUCCESS;
@@ -316,13 +330,13 @@ public class SlideImager implements Module {
         WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",moduleId));
         WorkflowModule parentModule = workflowRunner.getWorkflow().selectOne(where("id",module.getParentId()));
 
-        Dao<PoolSlide> poolSlideDao = workflowRunner.getInstanceDb().table(PoolSlide.class);
         Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
         Dao<SlidePosList> posListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
         Dao<SlidePos> posDao = workflowRunner.getInstanceDb().table(SlidePos.class);
+        Dao<ModuleConfig> config = workflowRunner.getInstanceDb().table(ModuleConfig.class);
+        Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
 
         // Load all the module configuration into a HashMap
-        Dao<ModuleConfig> config = workflowRunner.getInstanceDb().table(ModuleConfig.class);
         Map<String,Config> conf = new HashMap<String,Config>();
         for (ModuleConfig c : config.select(where("id",this.moduleId))) {
             conf.put(c.getKey(), c);
@@ -334,20 +348,25 @@ public class SlideImager implements Module {
         		workflowRunner.getTaskStatus().select(where("moduleId",parentModule.getId())).toArray(new Task[0]) : 
         		new Task[] {null}) 
         {
-        	// Get the Slide ID of the parent task if it exists
-        	TaskConfig poolSlideId = parentTask != null?
-        			workflowRunner.getTaskConfig().selectOne(
-        					where("id",parentTask.getId()).and("key","poolSlideId")) : null;
-            PoolSlide poolSlide = poolSlideId != null && poolSlideId.getValue() != null?
-            		poolSlideDao.selectOneOrDie(where("id",new Integer(poolSlideId.getValue()).intValue())) : null;
-            Slide slide = poolSlide != null?
-            		slideDao.selectOneOrDie(where("id",poolSlide.getSlideId())): null;
-            // If no associated slide, create a slide to represent this task
-            if (slide == null) {
-            	slide = new Slide(moduleId);
-            	slideDao.insert(slide);
+        	// get the parent task configuration
+        	Map<String,TaskConfig> parentTaskConf = new HashMap<String,TaskConfig>();
+        	if (parentTask != null) {
+                for (TaskConfig c : taskConfigDao.select(where("id",new Integer(parentTask.getId()).toString()))) {
+                    parentTaskConf.put(c.getKey(), c);
+                }
+        	}
+        	// Get the associated slide
+        	Slide slide;
+            if (parentTaskConf.containsKey("slideId")) {
+            	slide = slideDao.selectOneOrDie(where("id",new Integer(parentTaskConf.get("slideId").getValue())));
             }
-
+            // If no associated slide is registered, create a slide to represent this task
+            else {
+            	slide = new Slide(moduleId);
+            	slideDao.insertOrUpdate(slide,"experimentId");
+            	slide = slideDao.reload(slide, "experimentId");
+            }
+            // get the position list for the slide
             SlidePosList posList = null;
             // first try to load a position list from the DB
             if (conf.containsKey("posListModuleId")) {
@@ -377,6 +396,9 @@ public class SlideImager implements Module {
                 // store the loaded position list in the DB
                 posListDao.insertOrUpdate(posList,"moduleId","slideId");
                 posList = posListDao.reload(posList,"moduleId","slideId");
+                // delete any old record first
+                posDao.delete(where("slidePosListId", posList.getId()));
+                // then create new records
                 MultiStagePosition[] msps = posList.getPositionList().getPositions();
                 for (int i=0; i<msps.length; ++i) {
                     posDao.insert(new SlidePos(posList.getId(), i));
@@ -396,12 +418,17 @@ public class SlideImager implements Module {
                 workflowRunner.getTaskStatus().update(task,"id");
                 
                 // Create taskConfig record to link task to position index in Position List
-                Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
                 taskConfigDao.insert(new TaskConfig(
                         new Integer(task.getId()).toString(), 
                         "positionIndex", 
                         new Integer(i).toString()));
-                
+
+                // create taskConfig record for the slide ID
+                taskConfigDao.insert(new TaskConfig(
+                        new Integer(task.getId()).toString(), 
+                        "slideId", 
+                        new Integer(slide.getId()).toString()));
+
                 // Insert the slidePosId as a task config
                 SlidePos slidePos = posDao.selectOne(
                         where("slidePosListId",posList.getId()).
