@@ -47,7 +47,7 @@ cd micromanager
 ant -f buildscripts/fetchdeps.xml
 
 # edit plugins/pluginpaths.xml, add the following line to the
-# project.classpath path;
+# project.classpath path:
 #   <path refid="project.linked.jars"/>
 # project.linked.jars path:
 #		<pathelement location="${mm.java.lib.jcommon}"/>
