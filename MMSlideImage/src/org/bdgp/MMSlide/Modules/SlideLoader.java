@@ -347,6 +347,11 @@ public class SlideLoader implements Module {
                 taskConfigDao.insert(new TaskConfig(new Integer(task.getId()).toString(), 
                         "poolSlideId", 
                         poolSlide != null? new Integer(poolSlide.getId()).toString() : null));
+                if (poolSlide != null) {
+                    taskConfigDao.insert(new TaskConfig(new Integer(task.getId()).toString(), 
+                            "slideId", 
+                            new Integer(poolSlide.getSlideId()).toString()));
+                }
     		}
     	}
     }
