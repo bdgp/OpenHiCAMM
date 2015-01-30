@@ -29,10 +29,12 @@ import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.json.JSONException;
 import org.micromanager.acquisition.MMAcquisition;
+import org.micromanager.api.ImageCache;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
 import org.micromanager.api.ScriptInterface;
 import org.micromanager.utils.MDUtils;
+import org.micromanager.utils.MMScriptException;
 
 import static org.bdgp.MMSlide.Util.where;
 
@@ -62,12 +64,27 @@ public class ROIFinder implements Module {
         Image image = imageDao.selectOneOrDie(where("id",imageId));
         
         Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
+        logger.info(String.format("Getting slide ID for image: %s", image));
         Slide slide = slideDao.selectOneOrDie(where("id",image.getSlideId()));
         
-        Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
-        Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
-        MMAcquisition mmacquisition = acquisition.getAcquisition();
-        TaggedImage taggedImage = image.getImage(mmacquisition.getImageCache());
+        // Get the taggedImage object
+        TaggedImage taggedImage;
+        if (!config.containsKey("taggedImage")) {
+            // Initialize the acquisition
+            Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+            Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
+            MMAcquisition mmacquisition = acquisition.getAcquisition();
+            try { mmacquisition.initialize(); } 
+            catch (MMScriptException e) {throw new RuntimeException(e);}
+            // Get the image cache object
+            ImageCache imageCache = mmacquisition.getImageCache();
+            if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+            // Get the tagged image from the image cache
+            taggedImage = image.getImage(imageCache);
+        }
+        else {
+        	taggedImage = (TaggedImage)config.get("taggedImage").getObject();
+        }
 
     	try {
 			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
@@ -75,7 +92,7 @@ public class ROIFinder implements Module {
 			logger.info(String.format("Processed image at position %d", positionIndex));
 
 			// Fill in list of ROIs
-			List<ROI> rois = process(image, taggedImage);
+			List<ROI> rois = process(image, taggedImage, logger);
 
             // Convert the ROIs into a PositionList
 			PositionList posList = new PositionList();
@@ -87,14 +104,22 @@ public class ROIFinder implements Module {
 						"zStage", 0.0));
 			}
 
-			// Create SlidePosList and SlidePos DB records
 			Dao<SlidePosList> slidePosListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
-			slidePosListDao.delete(where("name","posList").and("moduleId",this.moduleId));
+            Dao<SlidePos> slidePosDao = workflowRunner.getInstanceDb().table(SlidePos.class);
+
+			// First, delete any old slidepos and slideposlist records
+			List<SlidePosList> oldSlidePosLists = slidePosListDao.select(
+					where("slideId",slide.getId()).and("moduleId",this.moduleId));
+			for (SlidePosList oldSlidePosList : oldSlidePosLists) {
+				slidePosDao.delete(where("slidePosListId",oldSlidePosList.getId()));
+			}
+			slidePosListDao.delete(where("slideId",slide.getId()).and("moduleId",this.moduleId));
+
+			// Create SlidePosList and SlidePos DB records
 			SlidePosList slidePosList = new SlidePosList(this.moduleId, slide, posList);
 			slidePosListDao.insert(slidePosList);
 
 			MultiStagePosition[] msps = posList.getPositions();
-            Dao<SlidePos> slidePosDao = workflowRunner.getInstanceDb().table(SlidePos.class);
 			for (int i=0; i<msps.length; ++i) {
 				slidePosDao.insert(new SlidePos(slidePosList.getId(), i, rois.get(i).getId()));
 			}
@@ -103,7 +128,7 @@ public class ROIFinder implements Module {
     	catch (JSONException e) { throw new RuntimeException(e); }
     }
     
-    public List<ROI> process(Image image, TaggedImage taggedImage) {
+    public List<ROI> process(Image image, TaggedImage taggedImage, Logger logger) {
     	List<ROI> rois = new ArrayList<ROI>();
     	try {
             int width = MDUtils.getWidth(taggedImage.tags);
@@ -114,7 +139,9 @@ public class ROIFinder implements Module {
                 int roiHeight = (int)(Math.random() * 100.0 + 150.0);
                 int roiX = (int)(Math.random() * (width-roiWidth));
                 int roiY = (int)(Math.random() * (height-roiHeight));
-                rois.add(new ROI(image.getId(), roiX, roiY, roiX+roiWidth, roiY+roiHeight));
+                ROI roi = new ROI(image.getId(), roiX, roiY, roiX+roiWidth, roiY+roiHeight);
+                logger.info(String.format("Created new ROI record: %s", roi));
+                rois.add(roi);
     		}
     	} catch (JSONException e) {throw new RuntimeException(e);}
     	return rois;
