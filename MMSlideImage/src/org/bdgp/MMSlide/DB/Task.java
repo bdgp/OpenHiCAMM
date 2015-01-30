@@ -30,6 +30,10 @@ public class Task {
     @DatabaseField(generatedId=true,canBeNull=false)
     private int id;
 
+    // This field is used by the workflow runner task dispatching logic to determine
+    // which parent task should dispatch a child task in cases where a child task 
+    // has multiple parent tasks. It is not the same as the TaskDispatch.parentTaskId, 
+    // which describes the task DAG.
     @DatabaseField(canBeNull=true)
     private Integer parentTaskId;
     
