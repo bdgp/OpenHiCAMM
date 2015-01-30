@@ -29,6 +29,15 @@ public class Image {
         if (acquisition == null) throw new RuntimeException("Acquisition is null");
         this.acquisitionId = acquisition.getId();
     }
+    public Image (int slideId, int slidePosId, int acquisitionId, int channel, int slice, int frame, int position) {
+        this.slideId = slideId;
+        this.slidePosId = slidePosId;
+        this.channel = channel;
+        this.slice = slice;
+        this.frame = frame;
+        this.position = position;
+        this.acquisitionId = acquisitionId;
+    }
     public int getId() {return this.id;}
     public String getName() {return String.format("I%05d", this.id);}
 
@@ -42,5 +51,17 @@ public class Image {
     
     public TaggedImage getImage(ImageCache imageCache) {
     	return imageCache.getImage(this.channel, this.slice, this.frame, this.position);
+    }
+    
+    public String toString() {
+    	return String.format(
+    			"Image(slideId=%d, slidePosId=%d, channel=%d, slice=%d, frame=%d, position=%d, acquisitionId=%d)",
+    			this.slideId,
+    			this.slidePosId,
+    			this.channel, 
+    			this.slice,
+    			this.frame,
+    			this.position,
+    			this.acquisitionId);
     }
 }
