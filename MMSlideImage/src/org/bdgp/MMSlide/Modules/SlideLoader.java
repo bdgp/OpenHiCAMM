@@ -2,6 +2,8 @@ package org.bdgp.MMSlide.Modules;
 
 import java.awt.Component;
 import java.io.File;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -15,6 +17,7 @@ import mmcorej.CMMCore;
 
 import org.bdgp.MMSlide.Dao;
 import org.bdgp.MMSlide.Logger;
+import org.bdgp.MMSlide.Util;
 import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Config;
@@ -28,13 +31,12 @@ import org.bdgp.MMSlide.DB.TaskConfig;
 import org.bdgp.MMSlide.DB.TaskDispatch;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
-
 import org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI;
 import org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc;
+
 import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK;
 import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE;
 import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR;
-
 import static org.bdgp.MMSlide.Util.where;
 
 public class SlideLoader implements Module {
@@ -52,19 +54,26 @@ public class SlideLoader implements Module {
 
 	@Override
 	public synchronized Status run(Task task, Map<String, Config> config, Logger logger) {
+		for (Config c : config.values()) {
+			logger.info(String.format("Using config: %s", c));
+		}
         // get the PoolSlide ID for this Slide
         Config poolSlideIdConf = config.get("poolSlideId");
         Integer poolSlideId = poolSlideIdConf != null && poolSlideIdConf.getValue() != null? 
         		new Integer(poolSlideIdConf.getValue()) : null;
+        logger.info(String.format("Using poolSlide ID: %s", Util.escape(poolSlideId)));
         		
         Dao<PoolSlide> poolSlideDao = workflowRunner.getInstanceDb().table(PoolSlide.class);
         PoolSlide thisSlide = poolSlideId != null? poolSlideDao.selectOneOrDie(where("id",poolSlideId)) : null;
+        logger.info(String.format("Using poolSlide: %s", Util.escape(thisSlide)));
         
         Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
         Slide slide = thisSlide != null? slideDao.selectOneOrDie(where("id",thisSlide.getSlideId())) : null;
+        logger.info(String.format("Using slide: %s", Util.escape(slide)));
 
 		Config mode = config.get("slideLoaderMode");
 		if (mode.getValue().equals("manual")) {
+            logger.info(String.format("Running in manual slide loading mode"));
             JOptionPane.showMessageDialog(this.workflowRunner.getMMSlide().getDialog(),
                 "Manual Slide Loading",
                 thisSlide != null? 
@@ -76,11 +85,15 @@ public class SlideLoader implements Module {
                 JOptionPane.PLAIN_MESSAGE);
             return Status.SUCCESS;
 		}
+		else {
+            logger.info(String.format("Running in automatic slide loading mode"));
+		}
 
 		// get the device path
         Config deviceConfig = config.get("device");
         String device = deviceConfig != null && !deviceConfig.getValue().isEmpty()? 
         		deviceConfig.getValue() : "/dev/tty.usbserial-FTEKUITV";
+        logger.info(String.format("Using device: %s", device));
         		
         // Load the stage coordinates from the configuration
         if (!config.containsKey("initXCoord") 
@@ -92,9 +105,12 @@ public class SlideLoader implements Module {
         }
         Double initXCoord = new Double(config.get("initXCoord").getValue());
         Double initYCoord = new Double(config.get("initYCoord").getValue());
+        logger.info(String.format("Using init coords: (%f,$f)", initXCoord, initYCoord));
+
         Double loadXCoord = new Double(config.get("loadXCoord").getValue());
         Double loadYCoord = new Double(config.get("loadYCoord").getValue());
-        		
+        logger.info(String.format("Using load coords: (%f,$f)", loadXCoord, loadYCoord));
+
         // get a sorted list of all the Task records for this module
         Dao<Task> taskDao = workflowRunner.getInstanceDb().table(Task.class);
         List<Task> tasks = taskDao.select(where("moduleId", this.moduleId));
@@ -142,6 +158,7 @@ public class SlideLoader implements Module {
             moveStage(loadXCoord, loadYCoord, logger);
             logger.info("Positioned stage at load point.");
 
+            logger.info("Moving slide ");
             slideLoader.MoveFromStage(
             		this.currentSlide.getCartridgePosition(), 
             		this.currentSlide.getSlidePosition(), 
@@ -169,6 +186,7 @@ public class SlideLoader implements Module {
 
         // Disconnect the slide loader if this is the last task
         if (task.getId() == lastTask.getId()) {
+        	logger.info("Disconnecting the slide loader");
             slideLoader.DisConnect(retVal);
         }
         return status;
@@ -207,8 +225,10 @@ public class SlideLoader implements Module {
             // wait for the stage to finish moving
             while (core.deviceBusy(xyStage)) {}
 		} 
-        catch (Exception e) { 
-        	logger.severe("Failed to move stage to position "+x+","+y);
+        catch (Throwable e) { 
+        	StringWriter sw = new StringWriter();
+        	e.printStackTrace(new PrintWriter(sw));
+        	logger.severe(String.format("Failed to move stage to position (%f,%f): %s", x,y, sw.toString()));
         	throw new RuntimeException(e);
         }
     }
@@ -315,10 +335,13 @@ public class SlideLoader implements Module {
     public void createTaskRecords() {
     	Dao<ModuleConfig> moduleConfigDao = workflowRunner.getInstanceDb().table(ModuleConfig.class);
     	ModuleConfig poolId = moduleConfigDao.selectOne(where("id",this.moduleId).and("key","poolId"));
+    	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Using pool config: %s", this.moduleId, poolId));
+
     	List<PoolSlide> poolSlides = new ArrayList<PoolSlide>();
     	if (poolId != null) {
     		Dao<Pool> poolDao = workflowRunner.getInstanceDb().table(Pool.class);
     		Pool pool = poolDao.selectOne(where("id",new Integer(poolId.getValue())));
+            workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Using pool: %s", this.moduleId, pool));
     		if (pool != null) {
                 Dao<PoolSlide> poolSlideDao = workflowRunner.getInstanceDb().table(PoolSlide.class);
                 poolSlides = poolSlideDao.select(where("poolId",new Integer(poolId.getValue())));
@@ -330,6 +353,8 @@ public class SlideLoader implements Module {
     	Dao<Task> taskDao = workflowRunner.getInstanceDb().table(Task.class);
     	List<Task> parentTasks = taskDao.select(where("moduleId",moduleId));
     	for (Task parentTask : parentTasks.size()>0? parentTasks.toArray(new Task[0]) : new Task[] {null}) {
+            workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Connecting parent task: %s", this.moduleId, 
+            		Util.escape(parentTask)));
     		for (PoolSlide poolSlide : poolSlides) {
                 Task task = new Task(moduleId, Status.NEW);
                 taskDao.insert(task);
@@ -338,19 +363,32 @@ public class SlideLoader implements Module {
                         new File(workflowRunner.getWorkflowDir(), 
                         		workflowRunner.getInstance().getStorageLocation()).getPath());
                 taskDao.update(task,"id");
+                workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Creating task %s for poolSlide %s", 
+                		this.moduleId, task, poolSlide));
 
                 if (parentTask != null) {
                     Dao<TaskDispatch> taskDispatchDao = workflowRunner.getInstanceDb().table(TaskDispatch.class);
-                    taskDispatchDao.insert(new TaskDispatch(parentTask.getId(), task.getId()));
+                    TaskDispatch taskDispatch = new TaskDispatch(parentTask.getId(), task.getId());
+                    taskDispatchDao.insert(taskDispatch);
+                    workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Creating taskDispatch: %s", 
+                            this.moduleId, taskDispatch));
                 }
                 Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
-                taskConfigDao.insert(new TaskConfig(new Integer(task.getId()).toString(), 
+
+                TaskConfig poolSlideId = new TaskConfig(new Integer(task.getId()).toString(), 
                         "poolSlideId", 
-                        poolSlide != null? new Integer(poolSlide.getId()).toString() : null));
+                        poolSlide != null? new Integer(poolSlide.getId()).toString() : null);
+                taskConfigDao.insert(poolSlideId);
+                workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Creating task config: %s", 
+                        this.moduleId, poolSlideId));
+
                 if (poolSlide != null) {
-                    taskConfigDao.insert(new TaskConfig(new Integer(task.getId()).toString(), 
+                	TaskConfig slideId = new TaskConfig(new Integer(task.getId()).toString(), 
                             "slideId", 
-                            new Integer(poolSlide.getSlideId()).toString()));
+                            new Integer(poolSlide.getSlideId()).toString());
+                    taskConfigDao.insert(slideId);
+                    workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Creating task config: %s", 
+                            this.moduleId, slideId));
                 }
     		}
     	}

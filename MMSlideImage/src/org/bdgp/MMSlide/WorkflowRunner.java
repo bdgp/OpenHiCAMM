@@ -31,6 +31,8 @@ import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.bdgp.MMSlide.Modules.Interfaces.TaskListener;
 
+import com.github.mdr.ascii.java.GraphBuilder;
+import com.github.mdr.ascii.java.GraphLayouter;
 import com.j256.ormlite.field.FieldType;
 import com.j256.ormlite.field.SqlType;
 import com.j256.ormlite.stmt.StatementBuilder.StatementType;
@@ -72,6 +74,9 @@ public class WorkflowRunner {
     private boolean isStopped;
     private Logger logger;
     
+    private String instancePath;
+    private String instanceDbName;
+    
     /**
      * Constructor for WorkflowRunner. This loads the workflow.txt file 
      * in the workflow directory and performs some consistency checks 
@@ -91,44 +96,51 @@ public class WorkflowRunner {
         this.workflowDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath());
         Dao<WorkflowModule> workflow = this.workflowDb.table(WorkflowModule.class);
         
-        int cores = Runtime.getRuntime().availableProcessors();
-        this.pool = Executors.newFixedThreadPool(cores);
-        
+        // set the workflow directory
         this.workflowInstance = this.workflowDb.table(WorkflowInstance.class);
         this.workflowDirectory = workflowDirectory;
         this.workflow = workflow;
 
+        // set the instance DB
         this.instance = instanceId == null? newWorkflowInstance() :
                         workflowInstance.selectOneOrDie(where("id",instanceId));
-        this.instanceDb = Connection.get(
-                new File(workflowDirectory, WORKFLOW_DB).getPath(),
-                new File(this.workflowDirectory, 
-                		new File(this.instance.getStorageLocation(), 
-                				this.instance.getName()+".db").getPath()).getPath());
-        this.moduleConfig = this.instanceDb.table(ModuleConfig.class);
-        this.taskConfig = this.instanceDb.table(TaskConfig.class);
-        this.taskStatus = this.instanceDb.table(Task.class);
-        this.taskDispatch = this.instanceDb.table(TaskDispatch.class);
-        
+        this.instancePath = new File(this.workflowDirectory, this.instance.getStorageLocation()).getPath();
+        this.instanceDbName = String.format("%s.db", this.instance.getName());
+        this.instanceDb = Connection.get(new File(instancePath, instanceDbName).getPath());
+
+    	// initialize the workflow logger
+        this.logger = Logger.create(null, "WorkflowRunner", logLevel);
+
+        // Write to a log file in the instance dir
         this.logHandlers = new ArrayList<Handler>();
 		try {
-            logHandlers.add(new Logger.LogFileHandler(
+            this.logHandlers.add(new Logger.LogFileHandler(
             		new File(workflowDirectory,
             				new File(instance.getStorageLocation(), LOG_FILE).getPath()).getPath()));
 		} 
 		catch (SecurityException e) {throw new RuntimeException(e);} 
 		catch (IOException e) {throw new RuntimeException(e);}
 
-        this.logger = Logger.create(null, "WorkflowRunner", logLevel);
-        for (Handler handler : logHandlers) {
+        for (Handler handler : this.logHandlers) {
             this.logger.addHandler(handler);
         }
 
+        // set the number of cores to use in the thread pool
+        this.maxThreads = Runtime.getRuntime().availableProcessors();
+        this.pool = Executors.newFixedThreadPool(this.maxThreads);
+
+		// initialize various Dao's for convenience
+        this.moduleConfig = this.instanceDb.table(ModuleConfig.class);
+        this.taskConfig = this.instanceDb.table(TaskConfig.class);
+        this.taskStatus = this.instanceDb.table(Task.class);
+        this.taskDispatch = this.instanceDb.table(TaskDispatch.class);
+        
         this.taskListeners = new ArrayList<TaskListener>();
         this.mmslide = mmslide;
         this.moduleInstances = new HashMap<String,Module>();
         this.isStopped = true;
 
+        // instantiate the workflow module object instances
         for (WorkflowModule w : workflow.select()) {
             // Make sure parent IDs are defined
             if (w.getParentId() != null) {
@@ -163,6 +175,7 @@ public class WorkflowRunner {
         // Create a new directory for the workflow instance.
         instance.createStorageLocation(this.workflowDirectory.getPath());
         workflowInstance.update(instance,"id");
+        this.logger.info(String.format("Created new workflow instance: %s", workflowInstance));
         return instance;
     }
     
@@ -171,6 +184,7 @@ public class WorkflowRunner {
         for (WorkflowModule module : modules) {
             deleteTaskRecords(module);
         }
+        this.logger.info(String.format("Removed old task, taskdispatch and taskconfig records"));
     }
     public void deleteTaskRecords(WorkflowModule module) {
         // Delete any child task/dispatch records
@@ -189,6 +203,7 @@ public class WorkflowRunner {
     }
     
     public void createTaskRecords() {
+    	this.logger.info("Creating new task records");
         List<WorkflowModule> modules = workflow.select(where("parentId",null));
         while (modules.size() > 0) {
             List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
@@ -204,22 +219,134 @@ public class WorkflowRunner {
         }
     }
     
+    public void logWorkflowInfo() {
+        // log some info on this workflow
+        this.logger.info(
+                String.format("Running workflow instance: %s",
+                WorkflowRunner.this.instance.getName()));
+
+        this.logger.info(String.format("Using workflow DB directory: %s", this.workflowDirectory));
+        this.logger.info(String.format("Using workflow DB: %s", WORKFLOW_DB));
+        this.logger.info(String.format("Using instance directory: %s", this.instancePath));
+        this.logger.info(String.format("Using instance DB: %s", this.instanceDbName));
+        this.logger.info(String.format("Using thread pool with %d max threads", this.maxThreads));
+        
+        // Log the workflow module info
+        this.logger.info("Workflow Modules:");
+        List<WorkflowModule> modules = this.workflow.select(where("parentId",null));
+        Collections.sort(modules, new Comparator<WorkflowModule>() {
+            @Override public int compare(WorkflowModule a, WorkflowModule b) {
+                return a.getModuleName().compareTo(b.getModuleName());
+            }});
+        GraphBuilder<String> graph = new GraphBuilder<String>();
+        Map<String,String> labels = new HashMap<String,String>();
+        while (modules.size() > 0) {
+            List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
+            for (WorkflowModule module : modules) {
+                Module m = moduleInstances.get(module.getId());
+                if (m == null) {
+                    throw new RuntimeException("No instantiated module found with ID: "+module.getId());
+                }
+                // print workflow module info
+                this.logger.info(String.format("    %s", module.toString(true)));
+                this.logger.info(String.format(
+                        "    %s(title=%s, description=%s, type=%s)", 
+                        m.getClass().getSimpleName(),
+                        Util.escape(m.getTitle()),
+                        Util.escape(m.getDescription()),
+                        m.getTaskType()));
+                // print workflow module config
+                List<ModuleConfig> configs = this.moduleConfig.select(where("id", module.getId()));
+                Collections.sort(configs, new Comparator<ModuleConfig>() {
+                    @Override public int compare(ModuleConfig a, ModuleConfig b) {
+                        return a.getId().compareTo(b.getId());
+                    }});
+                for (ModuleConfig config : configs) {
+                    this.logger.info(String.format("        %s", config));
+                }
+                // Print the tasks associated with this module
+                List<Task> tasks = this.taskStatus.select(where("moduleId",module.getId()));
+                Collections.sort(tasks, new Comparator<Task>() {
+                    @Override public int compare(Task a, Task b) {
+                        return a.getId()-b.getId();
+                    }});
+                for (Task task : tasks) {
+                    this.logger.info(String.format("    %s", task));
+                    // Print the task configs for the task
+                    List<TaskConfig> taskConfigs = this.taskConfig.select(where("id", new Integer(task.getId()).toString()));
+                    Collections.sort(taskConfigs, new Comparator<TaskConfig>() {
+                        @Override public int compare(TaskConfig a, TaskConfig b) {
+                            return new Integer(a.getId()).intValue()-new Integer(b.getId()).intValue();
+                        }});
+                    for (TaskConfig taskConfig : taskConfigs) {
+                        this.logger.info(String.format("        %s", taskConfig));
+                    }
+                }
+                // build a workflow graph
+                String label = String.format("%s:%s", module.getId(), m.getTaskType());
+                labels.put(module.getId(), label);
+                graph.addVertex(label);
+                if (module.getParentId() != null) {
+                    graph.addEdge(labels.get(module.getParentId()), label);
+                }
+                // now evaluate any child nodes
+                childModules.addAll(this.workflow.select(where("parentId",module.getId())));
+            }
+            modules = childModules;
+        }
+        // draw the workflow module graph
+        GraphLayouter<String> layout = new GraphLayouter<String>();
+        this.logger.info(String.format("Workflow Graph:%n%s", layout.layout(graph.build())));
+
+        // Draw the task dispatch graph
+        GraphBuilder<String> taskGraph = new GraphBuilder<String>();
+        Map<Integer,String> taskLabels = new HashMap<Integer,String>();
+        List<Task> tasks = this.taskStatus.select();
+        for (Task task : tasks) {
+            Module module = this.moduleInstances.get(task.getModuleId());
+            String label = String.format("%s:%s:%s", 
+                    task.getName(), task.getStatus(), module.getTaskType());
+            taskLabels.put(task.getId(), label);
+            taskGraph.addVertex(label);
+        }
+        List<TaskDispatch> dispatches = this.taskDispatch.select();
+        for (TaskDispatch dispatch : dispatches) {
+            String parent = taskLabels.get(dispatch.getParentTaskId());
+            String child = taskLabels.get(dispatch.getTaskId());
+            taskGraph.addEdge(parent, child);
+        }
+        GraphLayouter<String> taskLayout = new GraphLayouter<String>();
+        this.logger.info(String.format("Task Dispatch Graph:%n%s", taskLayout.layout(taskGraph.build())));
+    }
+    
     public Future<Status> run(final String startModuleId, final Map<String,Config> inheritedTaskConfig) {
         int cores = Runtime.getRuntime().availableProcessors();
         this.pool = Executors.newFixedThreadPool(cores);
         Future<Status> future = pool.submit(new Callable<Status>() {
             @Override
             public Status call() {
-            	WorkflowRunner.this.isStopped = false;
-                List<Task> start = taskStatus.select(where("moduleId",startModuleId));
-                List<Task.Status> statuses = new ArrayList<Task.Status>();
-                for (Task t : start) {
-                    Future<Status> future = run(t, inheritedTaskConfig);
-                    try { statuses.add(future.get()); }
-                    catch (InterruptedException e) {throw new RuntimeException(e);} 
-                    catch (ExecutionException e) {throw new RuntimeException(e);} 
-                }
-                return coalesceStatuses(statuses);
+            	try {
+                    WorkflowRunner.this.isStopped = false;
+                    // Log some information on this workflow
+                    WorkflowRunner.this.logWorkflowInfo();
+                    // start the first task(s)
+                    List<Task> start = taskStatus.select(where("moduleId",startModuleId));
+                    List<Task.Status> statuses = new ArrayList<Task.Status>();
+                    for (Task t : start) {
+                        Future<Status> future = run(t, inheritedTaskConfig);
+                        try { statuses.add(future.get()); }
+                        catch (InterruptedException e) {throw new RuntimeException(e);} 
+                        catch (ExecutionException e) {throw new RuntimeException(e);} 
+                    }
+                    return coalesceStatuses(statuses);
+            	}
+            	catch (Throwable e) {
+                    StringWriter sw = new StringWriter();
+                    e.printStackTrace(new PrintWriter(sw));
+            		WorkflowRunner.this.logger.severe(String.format("Caught exception while running workflow: %s", 
+            				sw.toString()));
+            		throw new RuntimeException(e);
+            	}
             }
         });
         return future;
@@ -234,6 +361,8 @@ public class WorkflowRunner {
             final Task task, 
             final Map<String,Config> inheritedTaskConfig) 
     {
+    	this.logger.info(String.format("%s: running task %s", task.getName(), task));
+
         final WorkflowModule module = this.workflow.selectOneOrDie(
                 where("id",task.getModuleId()));
         
@@ -245,19 +374,29 @@ public class WorkflowRunner {
                 
         // merge the task and module configuration
         List<Config> configs = new ArrayList<Config>();
-        configs.addAll(moduleConfig.select(where("id",task.getModuleId())));
+        List<ModuleConfig> moduleConfigs = moduleConfig.select(where("id",task.getModuleId()));
+        for (ModuleConfig moduleConfig : moduleConfigs) {
+            configs.add(moduleConfig);
+            this.logger.info(String.format("%s: using module config: %s", task.getName(), moduleConfig));
+        }
         if (inheritedTaskConfig != null) {
             for (Map.Entry<String,Config> entry : inheritedTaskConfig.entrySet()) {
                 configs.add(entry.getValue());
+                this.logger.info(String.format("%s: using inherited task config: %s", task.getName(), entry.getValue()));
             }
         }
-        configs.addAll(taskConfig.select(where("id",task.getId())));
+        List<TaskConfig> taskConfigs = taskConfig.select(where("id",task.getId()));
+        for (TaskConfig tc : taskConfigs) {
+        	configs.add(tc);
+            this.logger.info(String.format("%s: using task config: %s", task.getName(), tc));
+        }
         final Map<String,Config> config = Config.merge(configs);
         
         Callable<Status> callable = new Callable<Status>() {
             @Override
             public Status call() {
                 Status status = task.getStatus();
+                WorkflowRunner.this.logger.info(String.format("%s: Previous status was: %s", task.getName(), status));
             	if (WorkflowRunner.this.isStopped == true) return status;
                 
                 // instantiate a logger for the task
@@ -265,36 +404,37 @@ public class WorkflowRunner {
                         new File(WorkflowRunner.this.getWorkflowDir(),
                                 new File(WorkflowRunner.this.getInstance().getStorageLocation(),
                                         new File(task.getStorageLocation(), LOG_FILE).getPath()).getPath()).getPath(),
-                                        task.getModuleId(),
+                                        String.format("%s", task.getName()),
                                         logLevel);
-                for (Handler handler : logHandlers) {
+                for (Handler handler : WorkflowRunner.this.logHandlers) {
                     taskLogger.addHandler(handler);
                 }
                 
                 // run the task
-                taskLogger.info("Running module "+module.getId()+", task ID "+task.getId());
+                WorkflowRunner.this.logger.info(String.format("%s: Running task", task.getName()));
                 try {
                     status = taskModule.run(task, config, taskLogger);
                 } 
                 // Uncaught exceptions set the status to ERROR
-                catch (Exception e) {
+                catch (Throwable e) {
                     StringWriter sw = new StringWriter();
-                    PrintWriter pw = new PrintWriter(sw);
-                    e.printStackTrace(pw);
-                    taskLogger.severe(String.format("Error reported during task %s:%n%s", 
-                            task.toString(), sw.toString()));
+                    e.printStackTrace(new PrintWriter(sw));
+                    WorkflowRunner.this.logger.severe(String.format("%s: Error reported during task:%n%s", 
+                            task.getName(), sw.toString()));
                     status = Status.ERROR;
                 }
                 finally {
+                    WorkflowRunner.this.logger.info(String.format("%s: Calling cleanup", task.getName()));
                     taskModule.cleanup(task); 
                 }
-                taskLogger.info("Finished module "+module.getId()+", task ID "+task.getId());
+                WorkflowRunner.this.logger.info(String.format("%s: Finished running task", task.getName()));
                 
                 // notify any task listeners
                 for (TaskListener listener : taskListeners) {
                     listener.notifyTask(task);
                 }
                 
+                WorkflowRunner.this.logger.info(String.format("%s: Setting task status to %s", task.getName(), status));
                 task.setStatus(status);
                 if (status == Status.SUCCESS) {
                     try {
@@ -337,7 +477,7 @@ public class WorkflowRunner {
                 }
                 else {
                 	// update the task status in the DB
-                	taskStatus.update(task, "id","moduleId");
+                	taskStatus.update(task, "id");
                 }
 
                 // enqueue the child tasks if all parent tasks completed successfully
@@ -359,6 +499,7 @@ public class WorkflowRunner {
                             childTask.getParentTaskId() != null && 
                             childTask.getParentTaskId().equals(task.getId())) 
                         {
+                        	WorkflowRunner.this.logger.info(String.format("%s: Dispatching child task: %s", task.getName(), childTask));
                             childFutures.add(run(childTask, config));
                         }
                     }
@@ -376,7 +517,9 @@ public class WorkflowRunner {
                     catch (InterruptedException e) {throw new RuntimeException(e);}
                 }
                 // return the coalesced status
-                return coalesceStatuses(statuses);
+                Status returnStatus = coalesceStatuses(statuses);
+                WorkflowRunner.this.logger.info(String.format("%s: Returning coalesced status: %s", task.getName(), returnStatus));
+                return returnStatus;
             }
         };
                 
@@ -384,11 +527,13 @@ public class WorkflowRunner {
         // Serial tasks get run immediately
         if (taskModule.getTaskType() == Module.TaskType.SERIAL) {
             FutureTask<Status> futureTask = new FutureTask<Status>(callable);
+            this.logger.info(String.format("%s: Starting serial task", task.getName()));
             futureTask.run();
             future = futureTask;
         }
         // Parallel tasks get put in the task pool
         else if (taskModule.getTaskType() == Module.TaskType.PARALLEL) {
+            this.logger.info(String.format("%s: Submitting parallel task", task.getName()));
             future = pool.submit(callable);
         }
         else {
@@ -485,5 +630,8 @@ public class WorkflowRunner {
     public boolean removeLogHandler(Handler handler) {
     	this.logger.removeHandler(handler);
     	return logHandlers.remove(handler);
+    }
+    public Logger getLogger() {
+    	return this.logger;
     }
 }

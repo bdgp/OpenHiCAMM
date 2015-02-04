@@ -33,6 +33,8 @@ public class ImageStitcher implements Module {
 
     @Override
     public Status run(Task task, Map<String,Config> config, Logger logger) {
+    	logger.info(String.format("Running task %s: %s", task.getName(), task));
+    	logger.info(String.format("This is a *stub* module. Sleeping..."));
         Util.sleep();
         return Status.SUCCESS;
     }
@@ -78,10 +80,14 @@ public class ImageStitcher implements Module {
                     new File(workflowRunner.getWorkflowDir(),
                             workflowRunner.getInstance().getStorageLocation()).getPath());
             workflowRunner.getTaskStatus().update(task,"id");
+            workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created new task record: %s", 
+            		this.moduleId, task));
             
             if (parentTask != null) {
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
                 workflowRunner.getTaskDispatch().insert(dispatch);
+                workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created new task dispatch record: %s", 
+                		this.moduleId, dispatch));
             }
         }
     }

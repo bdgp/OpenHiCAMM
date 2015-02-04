@@ -56,26 +56,38 @@ public class ROIFinder implements Module {
 
     @Override
     public Status run(Task task, Map<String,Config> config, Logger logger) {
+    	logger.info(String.format("Running task: %s", task));
+    	for (Config c : config.values()) {
+            logger.info(String.format("Using config: %s", c));
+    	}
+
         // Get the Image record
     	Config imageIdConf = config.get("imageId");
     	if (imageIdConf == null) throw new RuntimeException("No imageId task configuration was set by the slide imager!");
         Integer imageId = new Integer(imageIdConf.getValue());
+        logger.info(String.format("Using image ID: %d", imageId));
+
         Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
         Image image = imageDao.selectOneOrDie(where("id",imageId));
+        logger.info(String.format("Using image: %s", image));
         
         Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
-        logger.info(String.format("Getting slide ID for image: %s", image));
         Slide slide = slideDao.selectOneOrDie(where("id",image.getSlideId()));
+        logger.info(String.format("Using slide: %s", slide));
         
         // Get the taggedImage object
         TaggedImage taggedImage;
         if (!config.containsKey("taggedImage")) {
+        	logger.info("Running in offline mode");
             // Initialize the acquisition
             Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
             Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
+        	logger.info(String.format("Using acquisition: %s", acquisition));
             MMAcquisition mmacquisition = acquisition.getAcquisition();
             try { mmacquisition.initialize(); } 
             catch (MMScriptException e) {throw new RuntimeException(e);}
+        	logger.info(String.format("Initialized acquisitio"));
+
             // Get the image cache object
             ImageCache imageCache = mmacquisition.getImageCache();
             if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
@@ -83,15 +95,20 @@ public class ROIFinder implements Module {
             taggedImage = image.getImage(imageCache);
         }
         else {
+        	logger.info("Running in online mode");
         	taggedImage = (TaggedImage)config.get("taggedImage").getObject();
         }
+        logger.info(String.format("Got taggedImage: %s", taggedImage));
 
     	try {
 			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
+			logger.info(String.format("Using positionIndex: %d", positionIndex));
+
 			double pixelSizeUm = MDUtils.getPixelSizeUm(taggedImage.tags);
-			logger.info(String.format("Processed image at position %d", positionIndex));
+			logger.info(String.format("Using pixedSizeUm: %f", pixelSizeUm));
 
 			// Fill in list of ROIs
+			logger.info(String.format("Running process() to get list of ROIs"));
 			List<ROI> rois = process(image, taggedImage, logger);
 
             // Convert the ROIs into a PositionList
@@ -108,6 +125,7 @@ public class ROIFinder implements Module {
             Dao<SlidePos> slidePosDao = workflowRunner.getInstanceDb().table(SlidePos.class);
 
 			// First, delete any old slidepos and slideposlist records
+			logger.info(String.format("Deleting old position lists"));
 			List<SlidePosList> oldSlidePosLists = slidePosListDao.select(
 					where("slideId",slide.getId()).and("moduleId",this.moduleId));
 			for (SlidePosList oldSlidePosList : oldSlidePosLists) {
@@ -118,10 +136,13 @@ public class ROIFinder implements Module {
 			// Create SlidePosList and SlidePos DB records
 			SlidePosList slidePosList = new SlidePosList(this.moduleId, slide, posList);
 			slidePosListDao.insert(slidePosList);
+			logger.info(String.format("Created new SlidePosList: %s", slidePosList));
 
 			MultiStagePosition[] msps = posList.getPositions();
 			for (int i=0; i<msps.length; ++i) {
-				slidePosDao.insert(new SlidePos(slidePosList.getId(), i, rois.get(i).getId()));
+				SlidePos slidePos = new SlidePos(slidePosList.getId(), i, rois.get(i).getId());
+				slidePosDao.insert(slidePos);
+                logger.info(String.format("Created new SlidePos record for position %d: %s", i, slidePos));
 			}
 			return Status.SUCCESS;
 		} 
@@ -133,6 +154,8 @@ public class ROIFinder implements Module {
     	try {
             int width = MDUtils.getWidth(taggedImage.tags);
             int height = MDUtils.getHeight(taggedImage.tags);
+            logger.info(String.format("Image dimensions: (%d,%d)", width, height));
+
     		int roiCount = (int)(Math.random() * 10.0 + 10.0);
     		for (int i=0; i<roiCount; ++i) {
                 int roiWidth = (int)(Math.random() * 100.0 + 150.0);
@@ -188,6 +211,8 @@ public class ROIFinder implements Module {
         if (module.getParentId() != null) {
             List<Task> parentTasks = workflowRunner.getTaskStatus().select(where("moduleId",module.getParentId()));
             for (Task parentTask : parentTasks) {
+            	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: attaching to parent Task: %s",
+            			this.moduleId, parentTask));
                 Task task = new Task(moduleId, Status.NEW);
                 workflowRunner.getTaskStatus().insert(task);
                 task.createStorageLocation(
@@ -195,9 +220,13 @@ public class ROIFinder implements Module {
                 		new File(workflowRunner.getWorkflowDir(),
                 				workflowRunner.getInstance().getStorageLocation()).getPath());
                 workflowRunner.getTaskStatus().update(task,"id");
+            	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created new task record: %s",
+            			this.moduleId, task));
                 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
                 workflowRunner.getTaskDispatch().insert(dispatch);
+            	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created new task dispatch record: %s",
+            			this.moduleId, dispatch));
             }
         }
     }
