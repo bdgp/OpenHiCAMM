@@ -331,6 +331,8 @@ public class SlideLoader implements Module {
         };
     }
 
+    // TODO: Automatically generate Pool/PoolSlide/Slide records by scanning all the cartridges
+    // if no Pool record was configured.
     @Override
     public void createTaskRecords() {
     	Dao<ModuleConfig> moduleConfigDao = workflowRunner.getInstanceDb().table(ModuleConfig.class);

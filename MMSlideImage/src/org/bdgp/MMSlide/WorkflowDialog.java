@@ -95,6 +95,7 @@ public class WorkflowDialog extends JDialog {
                 }
             }});
         
+        // TODO: Automatically create the first new instance for newly created workflows
         btnCreateNewInstance = new JButton("Create New Instance");
         btnCreateNewInstance.addActionListener(new ActionListener() {
         	public void actionPerformed(ActionEvent arg0) {

@@ -268,6 +268,7 @@ public class SlideImager implements Module {
                         }
                     }
                 }});
+            // TODO: Figure out what directory the acquisition is saving files to
             String returnAcqName = acqControlDlg.runAcquisition(acqName, rootDir);
             if (returnAcqName == null) {
                 throw new RuntimeException("acqControlDlg.runAcquisition returned null acquisition name");

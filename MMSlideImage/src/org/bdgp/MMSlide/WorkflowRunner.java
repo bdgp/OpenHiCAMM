@@ -499,6 +499,7 @@ public class WorkflowRunner {
                             childTask.getParentTaskId() != null && 
                             childTask.getParentTaskId().equals(task.getId())) 
                         {
+                        	// TODO: If a serial task fails, don't run the successive sibling tasks
                         	WorkflowRunner.this.logger.info(String.format("%s: Dispatching child task: %s", task.getName(), childTask));
                             childFutures.add(run(childTask, config));
                         }
