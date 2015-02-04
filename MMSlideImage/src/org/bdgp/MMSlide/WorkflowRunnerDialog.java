@@ -22,6 +22,7 @@ import org.bdgp.MMSlide.Modules.Interfaces.TaskListener;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.awt.Font;
 
 @SuppressWarnings("serial")
 public class WorkflowRunnerDialog extends JDialog {
@@ -34,16 +35,17 @@ public class WorkflowRunnerDialog extends JDialog {
     	final WorkflowRunnerDialog self = this;
         this.workflowRunner = runner;
         getContentPane().setLayout(new MigLayout("", "[][grow]", "[grow][][]"));
-        setPreferredSize(new Dimension(800,600));
+        setPreferredSize(new Dimension(1600,768));
         
         JLabel lblLogOutput = new JLabel("Log Output");
         getContentPane().add(lblLogOutput, "cell 0 0");
         
         final JTextArea text = new JTextArea();
+        text.setFont(new Font("Monospaced", Font.PLAIN, 12));
         text.setEditable(false);
         JScrollPane textScrollPane = new JScrollPane(text);
         textScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-        textScrollPane.setPreferredSize(new Dimension(800, 600));
+        textScrollPane.setPreferredSize(new Dimension(1600, 768));
 
         getContentPane().add(textScrollPane, "cell 1 0,grow");
         
