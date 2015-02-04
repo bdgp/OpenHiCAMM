@@ -65,6 +65,11 @@ public class PoolSlide implements Comparable<PoolSlide> {
     
     public String toString() {
     	return String.format("%s(id=%d, poolId=%d, cartridgePosition=%d, slidePosition=%d, slideId=%d)",
-    			this.getClass().getSimpleName(), this.poolId, this.cartridgePosition, this.slidePosition, this.slideId);
+    			this.getClass().getSimpleName(), 
+    			this.id,
+    			this.poolId, 
+    			this.cartridgePosition, 
+    			this.slidePosition, 
+    			this.slideId);
     }
 }
