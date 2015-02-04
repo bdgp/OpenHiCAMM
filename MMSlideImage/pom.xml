@@ -86,6 +86,14 @@
                   <groupId>com.miglayout</groupId>
                   <artifactId>miglayout</artifactId>
                 </artifactItem>
+                <artifactItem>
+                  <groupId>com.github.mdr</groupId>
+                  <artifactId>ascii-graphs_2.10</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.scala-lang</groupId>
+                  <artifactId>scala-library</artifactId>
+                </artifactItem>
               </artifactItems>
               <outputDirectory>${fiji.dir}/jars</outputDirectory>
               <overWriteReleases>true</overWriteReleases>
@@ -154,14 +162,14 @@
       <artifactId>MMJ_</artifactId>
       <version>1.4.20</version>
       <scope>system</scope>
-      <systemPath>${project.basedir}/lib/MMJ_.jar</systemPath>
+      <systemPath>/Applications/Fiji.app/plugins/Micro-Manager/MMJ_.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>MicroManager</groupId>
       <artifactId>MMCoreJ</artifactId>
       <version>1.4.20</version>
       <scope>system</scope>
-      <systemPath>${project.basedir}/lib/MMCoreJ.jar</systemPath>
+      <systemPath>/Applications/Fiji.app/plugins/Micro-Manager/MMCoreJ.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>org.hsqldb</groupId>
@@ -194,6 +202,16 @@
       <version>1.0-SNAPSHOT</version>
       <scope>system</scope>
       <systemPath>${project.basedir}/lib/priorslideloader-1.0-SNAPSHOT.jar</systemPath>
+    </dependency>
+    <dependency>
+      <groupId>com.github.mdr</groupId>
+      <artifactId>ascii-graphs_2.10</artifactId>
+      <version>0.0.6</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <version>2.10.1</version>
     </dependency>
   </dependencies>
 </project>
