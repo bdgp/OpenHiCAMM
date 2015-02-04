@@ -20,7 +20,7 @@ public class Logger extends java.util.logging.Logger {
     
     public static Logger create(String logfile, String source, Level loglevel) {
         try { return new Logger(logfile, source, loglevel); }
-        catch (Exception e) {throw new RuntimeException(e);}
+        catch (Throwable e) {throw new RuntimeException(e);}
     }
     public Logger(String logfile, String source, Level loglevel) {
         super(source, null);
