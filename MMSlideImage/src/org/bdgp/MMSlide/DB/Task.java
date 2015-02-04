@@ -2,6 +2,8 @@ package org.bdgp.MMSlide.DB;
 
 import java.io.File;
 
+import org.bdgp.MMSlide.Util;
+
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
@@ -23,8 +25,9 @@ public class Task {
        this.status = status;
     }
     public String toString() {
-    	return String.format("Task(id=%s, parentTaskId=%s, moduleId=%s, storageLocation=%s, status=%s)", 
-    			id, parentTaskId, moduleId, storageLocation, status);
+    	return String.format("%s(id=%d, parentTaskId=%d, moduleId=%s, storageLocation=%s, status=%s)", 
+    			this.getName(), 
+    			this.id, this.parentTaskId, Util.escape(moduleId), Util.escape(storageLocation), status);
     }
     
     @DatabaseField(generatedId=true,canBeNull=false)

@@ -26,4 +26,8 @@ public class Pool {
         }
 		return null;
 	}
+	
+	public String toString() {
+		return String.format("%s", this.getName());
+	}
 }

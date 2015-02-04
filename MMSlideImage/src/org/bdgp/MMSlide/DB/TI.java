@@ -1,5 +1,7 @@
 package org.bdgp.MMSlide.DB;
 
+import org.bdgp.MMSlide.Util;
+
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
@@ -19,4 +21,10 @@ public class TI {
     public int getImageId() {return this.imageId;}
     public String getPath() {return this.path;}
     public String getName() {return String.format("T%05d",this.id); }
+    
+    public String toString() {
+    	return String.format("%s(id=%d, imageId=%d, path=%s)",
+    			this.getClass().getSimpleName(),
+    			this.id, this.imageId, Util.escape(this.path));
+    }
 }

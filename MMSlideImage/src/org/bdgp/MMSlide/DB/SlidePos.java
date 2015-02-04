@@ -28,4 +28,10 @@ public class SlidePos {
     public int getSlidePosListId() { return this.slidePosListId; }
     public int getSlidePosListIndex() { return this.slidePosListIndex; }
     public int getRoiId() { return this.roiId; }
+    
+    public String toString() {
+    	return String.format("%s(id=%d, slidePosListId=%d, slidePosListIndex=%d, roiId=%d)",
+    			this.getClass().getSimpleName(),
+    			this.id, this.slidePosListId, this.slidePosListIndex, this.roiId);
+    }
 }

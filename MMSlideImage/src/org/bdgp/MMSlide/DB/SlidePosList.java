@@ -1,5 +1,6 @@
 package org.bdgp.MMSlide.DB;
 
+import org.bdgp.MMSlide.Util;
 import org.micromanager.api.PositionList;
 import org.micromanager.utils.MMSerializationException;
 
@@ -46,4 +47,10 @@ public class SlidePosList {
     public String getPosList() { return this.posList; }
     public PositionList getPositionList() { return this.positionList; }
     public Integer getSlideId() { return this.slideId; }
+    
+    public String toString() {
+    	return String.format("%s(id=%d, moduleId=%s, slideId=%d)", 
+    			this.getClass().getSimpleName(),
+    			this.id, Util.escape(this.moduleId), this.slideId);
+    }
 }

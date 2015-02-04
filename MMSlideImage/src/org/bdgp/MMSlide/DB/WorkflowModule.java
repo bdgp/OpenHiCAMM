@@ -2,6 +2,7 @@ package org.bdgp.MMSlide.DB;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 
+import org.bdgp.MMSlide.Util;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 
 import com.j256.ormlite.field.DataType;
@@ -69,5 +70,14 @@ public class WorkflowModule extends DefaultMutableTreeNode {
     }
     public String getParentId() {
         return parentId;
+    }
+    
+    public String toString(boolean all) {
+    	if (!all) return this.toString();
+    	return String.format("%s(id=%s, moduleName=%s, parentId=%s)",
+    			this.getClass().getSimpleName(),
+    			Util.escape(this.id), 
+    			Util.escape(this.moduleName), 
+    			Util.escape(this.parentId));
     }
 }

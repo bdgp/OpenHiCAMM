@@ -1,5 +1,7 @@
 package org.bdgp.MMSlide.DB;
 
+import org.bdgp.MMSlide.Util;
+
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
@@ -19,4 +21,9 @@ public class Slide {
     public int getId() { return id; }
     public String getExperimentId() { return experimentId; }
     public String getName() { return String.format("S%05d", this.id); }
+    
+    public String toString() {
+    	return String.format("%s(id=%d, experimentId=%s)",
+    			this.getClass().getSimpleName(), this.id, Util.escape(this.experimentId));
+    }
 }

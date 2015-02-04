@@ -1,5 +1,6 @@
 package org.bdgp.MMSlide.DB;
 
+import org.bdgp.MMSlide.Util;
 import org.micromanager.acquisition.MMAcquisition;
 import org.micromanager.utils.MMScriptException;
 
@@ -29,5 +30,10 @@ public class Acquisition {
     public MMAcquisition getAcquisition(boolean diskCached) {
     	try { return new MMAcquisition(name, directory, false, diskCached, true); } 
     	catch (MMScriptException e) {throw new RuntimeException(e);}
+    }
+    
+    public String toString() {
+    	return String.format("%s(id=%d, name=%s, directory=%s)",
+    			this.getClass().getSimpleName(), this.id, Util.escape(this.name), Util.escape(this.directory));
     }
 }

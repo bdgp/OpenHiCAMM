@@ -29,5 +29,10 @@ public class WorkflowInstance {
         this.storageLocation = this.getName();
         return this.storageLocation;
     }
-    public String getName() { return String.format("WF%05d",this.id); }
+    public String getName() { 
+    	return String.format("WF%05d",this.id); 
+    }
+    public String toString() {
+    	return this.getName();
+    }
 };
