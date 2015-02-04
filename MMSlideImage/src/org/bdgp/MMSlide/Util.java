@@ -104,4 +104,11 @@ public class Util {
     public static void sleep() {
         sleep(1000,3000);
     }
+    
+    public static String escape(Object in) {
+    	if (in == null) return "null";
+    	String str = in.toString();
+    	if (str.matches("^[0-9]+$")) return str;
+        return String.format("\"%s\"", str.replaceAll("(\b|\n|\t|\f|\r|\"|\\\\)", "\\\\$1"));
+    }
 }
