@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Handler;
+import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
 import javax.swing.JDialog;
@@ -74,12 +75,11 @@ public class WorkflowRunnerDialog extends JDialog {
         // logging output
         workflowRunner.addLogHandler(new Handler() {
             @Override public void publish(LogRecord record) {
-        	    text.setText(String.format("%s[%s:%s:%s] %s%n", 
-        	            text.getText(), 
-        	            record.getLoggerName(),
-        	            new Date(record.getMillis()), 
-        	            record.getLevel(), 
-        	            record.getMessage()));
+                text.append(String.format("[%s:%s:%s] %s%n", 
+                    record.getLoggerName(),
+                    new Date(record.getMillis()), 
+                    record.getLevel(), 
+                    record.getMessage()));
             }
             @Override public void flush() {}
             @Override public void close() throws SecurityException { }});
