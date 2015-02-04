@@ -162,14 +162,14 @@
       <artifactId>MMJ_</artifactId>
       <version>1.4.20</version>
       <scope>system</scope>
-      <systemPath>/Applications/Fiji.app/plugins/Micro-Manager/MMJ_.jar</systemPath>
+      <systemPath>${project.basedir}/lib/MMJ_.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>MicroManager</groupId>
       <artifactId>MMCoreJ</artifactId>
       <version>1.4.20</version>
       <scope>system</scope>
-      <systemPath>/Applications/Fiji.app/plugins/Micro-Manager/MMCoreJ.jar</systemPath>
+      <systemPath>${project.basedir}/lib/MMCoreJ.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>org.hsqldb</groupId>
