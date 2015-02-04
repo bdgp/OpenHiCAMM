@@ -270,6 +270,10 @@ public class WorkflowDialog extends JDialog {
         initWorkflowRunner();
         String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
 
+        final WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(this, workflowRunner);
+        wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        wrd.pack();
+
         if (!resume) {
             workflowRunner.deleteTaskRecords();
             workflowRunner.createTaskRecords();
@@ -281,10 +285,6 @@ public class WorkflowDialog extends JDialog {
         	taskStatus.update(set("status", Status.NEW), where("status", Status.IN_PROGRESS));
         	taskStatus.update(set("parentTaskId", null));
         }
-
-        final WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(this, workflowRunner);
-        wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        wrd.pack();
 
         workflowRunner.run(startModuleId, null);
 
