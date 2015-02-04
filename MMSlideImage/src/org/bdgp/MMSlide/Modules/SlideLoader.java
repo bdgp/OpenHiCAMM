@@ -37,6 +37,7 @@ import org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc;
 import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK;
 import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE;
 import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR;
+import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_NOTCONNECTED;
 import static org.bdgp.MMSlide.Util.where;
 
 public class SlideLoader implements Module {
@@ -105,11 +106,11 @@ public class SlideLoader implements Module {
         }
         Double initXCoord = new Double(config.get("initXCoord").getValue());
         Double initYCoord = new Double(config.get("initYCoord").getValue());
-        logger.info(String.format("Using init coords: (%f,$f)", initXCoord, initYCoord));
+        logger.info(String.format("Using init coords: (%.02f,%.02f)", initXCoord, initYCoord));
 
         Double loadXCoord = new Double(config.get("loadXCoord").getValue());
         Double loadYCoord = new Double(config.get("loadYCoord").getValue());
-        logger.info(String.format("Using load coords: (%f,$f)", loadXCoord, loadYCoord));
+        logger.info(String.format("Using load coords: (%.02f,%.02f)", loadXCoord, loadYCoord));
 
         // get a sorted list of all the Task records for this module
         Dao<Task> taskDao = workflowRunner.getInstanceDb().table(Task.class);
@@ -211,9 +212,12 @@ public class SlideLoader implements Module {
             errors = SequenceDoc.parseErrors(status);
         }
         logger.info("State: "+state);
-        logger.info("State: "+state);
         logger.info("Motion: "+motion);
         logger.info("Errors: "+errors);
+
+        if ((status & getLOADER_NOTCONNECTED()) != 0) {
+            throw new RuntimeException("Loader is not connected!");
+        }
     }
     
     public void moveStage(double x, double y, Logger logger) {
@@ -221,14 +225,30 @@ public class SlideLoader implements Module {
     	core.setTimeoutMs(10000);
         String xyStage = core.getXYStageDevice();
         try {
+            //double[] x_stage = new double[] {0.0};
+            //double[] y_stage = new double[] {0.0};
+            //core.getXYPosition(xyStage, x_stage, y_stage);
+
             core.setXYPosition(xyStage, x, y);
             // wait for the stage to finish moving
             while (core.deviceBusy(xyStage)) {}
+            
+            //double[] x_stage_new = new double[] {0.0};
+            //double[] y_stage_new = new double[] {0.0};
+            //core.getXYPosition(xyStage, x_stage_new, y_stage_new);
+            //double epsilon = 10;
+            //if (Math.abs(x_stage[0]-x_stage_new[0]) < epsilon && Math.abs(y_stage[0]-y_stage_new[0]) < epsilon) {
+            //	throw new RuntimeException("Stage did not move at all!");
+            //}
+            //if (Math.abs(x_stage_new[0]-x) < epsilon && Math.abs(y_stage_new[0]-y) < epsilon) {
+            //	throw new RuntimeException(String.format("Stage moved to wrong coordinates: (%.2f,%.2f)",
+            //			x_stage_new[0], y_stage_new[0]));
+            //}
 		} 
         catch (Throwable e) { 
         	StringWriter sw = new StringWriter();
         	e.printStackTrace(new PrintWriter(sw));
-        	logger.severe(String.format("Failed to move stage to position (%f,%f): %s", x,y, sw.toString()));
+        	logger.severe(String.format("Failed to move stage to position (%.2f,%.2f): %s", x,y, sw.toString()));
         	throw new RuntimeException(e);
         }
     }
