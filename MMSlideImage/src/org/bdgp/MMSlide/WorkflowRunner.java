@@ -506,9 +506,32 @@ public class WorkflowRunner {
                             childTask.getParentTaskId() != null && 
                             childTask.getParentTaskId().equals(task.getId())) 
                         {
-                        	// TODO: If a serial task fails, don't run the successive sibling tasks
                         	WorkflowRunner.this.logger.info(String.format("%s: Dispatching child task: %s", task.getName(), childTask));
-                            childFutures.add(run(childTask, config));
+                        	Future<Status> future = run(childTask, config);
+
+                        	// If a serial task fails, don't run the successive sibling tasks
+                        	Module.TaskType childTaskType = WorkflowRunner.this.moduleInstances.get(childTask.getModuleId()).getTaskType();
+                            if (childTaskType == Module.TaskType.SERIAL && future.isCancelled()) {
+                                WorkflowRunner.this.logger.severe(String.format(
+                                        "Child task %s was cancelled, not running successive sibling tasks",
+                                        childTask.getName()));
+                                break;
+                            }
+                            if (childTaskType == Module.TaskType.SERIAL && future.isDone()) {
+                            	Status s;
+                                try { s = future.get(); } 
+                                catch (InterruptedException e) {throw new RuntimeException(e);} 
+                                catch (ExecutionException e) {throw new RuntimeException(e);}
+                                if (s != Task.Status.SUCCESS) {
+                                	WorkflowRunner.this.logger.severe(String.format(
+                                			"Child task %s returned status %s, not running successive sibling tasks",
+                                			childTask.getName(), s));
+                                	break;
+                                }
+                            }
+
+                            // Otherwise, add the task to 
+                            childFutures.add(future);
                         }
                     }
                 }
