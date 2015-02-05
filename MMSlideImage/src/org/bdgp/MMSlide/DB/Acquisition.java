@@ -24,7 +24,7 @@ public class Acquisition {
     public String getDirectory() { return this.directory; }
 
     public MMAcquisition getAcquisition() {
-    	try { return new MMAcquisition(name, directory, false, false, true); } 
+    	try { return new MMAcquisition(name, directory, false, true, true); } 
     	catch (MMScriptException e) {throw new RuntimeException(e);}
     }
     public MMAcquisition getAcquisition(boolean diskCached) {
