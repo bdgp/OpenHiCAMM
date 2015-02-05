@@ -53,6 +53,11 @@ public class Logger extends java.util.logging.Logger {
     }
     
     public static class LogFileHandler extends FileHandler {
+    	public LogFileHandler(String pattern, boolean append) 
+    	throws IOException, SecurityException
+    	{
+    		super(pattern, 10000000, 10, append);
+    	}
     	public LogFileHandler(String pattern) 
             throws IOException, SecurityException 
         {
