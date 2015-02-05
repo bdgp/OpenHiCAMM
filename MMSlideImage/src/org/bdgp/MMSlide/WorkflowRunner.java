@@ -108,23 +108,6 @@ public class WorkflowRunner {
         this.instanceDbName = String.format("%s.db", this.instance.getName());
         this.instanceDb = Connection.get(new File(instancePath, instanceDbName).getPath());
 
-    	// initialize the workflow logger
-        this.logger = Logger.create(null, "WorkflowRunner", logLevel);
-
-        // Write to a log file in the instance dir
-        this.logHandlers = new ArrayList<Handler>();
-		try {
-            this.logHandlers.add(new Logger.LogFileHandler(
-            		new File(workflowDirectory,
-            				new File(instance.getStorageLocation(), LOG_FILE).getPath()).getPath()));
-		} 
-		catch (SecurityException e) {throw new RuntimeException(e);} 
-		catch (IOException e) {throw new RuntimeException(e);}
-
-        for (Handler handler : this.logHandlers) {
-            this.logger.addHandler(handler);
-        }
-
         // set the number of cores to use in the thread pool
         this.maxThreads = Runtime.getRuntime().availableProcessors();
         this.pool = Executors.newFixedThreadPool(this.maxThreads);
@@ -163,6 +146,9 @@ public class WorkflowRunner {
             catch (InstantiationException e) {throw new RuntimeException(e);} 
             catch (IllegalAccessException e) {throw new RuntimeException(e);}
         }
+        
+        // init the logger
+        this.initLogger();
     }
     
     /**
@@ -216,6 +202,25 @@ public class WorkflowRunner {
                 childModules.addAll(workflow.select(where("parentId",module.getId())));
             }
             modules = childModules;
+        }
+    }
+    
+    public void initLogger() {
+    	// initialize the workflow logger
+        this.logger = Logger.create(null, "WorkflowRunner", logLevel);
+
+        // Write to a log file in the instance dir
+        this.logHandlers = new ArrayList<Handler>();
+		try {
+            this.logHandlers.add(new Logger.LogFileHandler(
+            		new File(workflowDirectory,
+            				new File(instance.getStorageLocation(), LOG_FILE).getPath()).getPath()));
+		} 
+		catch (SecurityException e) {throw new RuntimeException(e);} 
+		catch (IOException e) {throw new RuntimeException(e);}
+
+        for (Handler handler : this.logHandlers) {
+            this.logger.addHandler(handler);
         }
     }
     
@@ -309,10 +314,7 @@ public class WorkflowRunner {
         for (int t=0; t<tasks.size(); ++t) {
         	Task task = tasks.get(t);
             Module module = this.moduleInstances.get(task.getModuleId());
-            // Mark the first and last tasks with special symbols
-            String mark = t == 0? "[S]" : t == tasks.size()-1? "[E]" : "";
-            String label = String.format("%s%s:%s:%s", 
-            		mark, task.getName(), task.getStatus(), module.getTaskType());
+            String label = String.format("%s:%s:%s", task.getName(), task.getStatus(), module.getTaskType());
             taskLabels.put(task.getId(), label);
             taskGraph.addVertex(label);
         }
@@ -338,9 +340,26 @@ public class WorkflowRunner {
                     WorkflowRunner.this.logWorkflowInfo();
                     // start the first task(s)
                     List<Task> start = taskStatus.select(where("moduleId",startModuleId));
-                    List<Task.Status> statuses = new ArrayList<Task.Status>();
+                    List<Future<Status>> futures = new ArrayList<Future<Status>>();
                     for (Task t : start) {
                         Future<Status> future = run(t, inheritedTaskConfig);
+                        futures.add(future);
+                        // If this is a serial task and it failed, don't run the successive sibling tasks
+                        if (WorkflowRunner.this.moduleInstances.get(t.getModuleId()).getTaskType() == Module.TaskType.SERIAL) {
+                        	Status status;
+                            try { status = future.get(); }
+                            catch (InterruptedException e) {throw new RuntimeException(e);} 
+                            catch (ExecutionException e) {throw new RuntimeException(e);} 
+                            if (status != Status.SUCCESS) {
+                                WorkflowRunner.this.logger.severe(String.format(
+                                        "Top-level task %s returned status %s, not running successive sibling tasks",
+                                        t.getName(), status));
+                                break;
+                            }
+                        }
+                    }
+                    List<Status> statuses = new ArrayList<Status>();
+                    for (Future<Status> future : futures) {
                         try { statuses.add(future.get()); }
                         catch (InterruptedException e) {throw new RuntimeException(e);} 
                         catch (ExecutionException e) {throw new RuntimeException(e);} 
