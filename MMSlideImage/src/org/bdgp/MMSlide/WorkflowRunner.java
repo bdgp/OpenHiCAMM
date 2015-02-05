@@ -190,18 +190,18 @@ public class WorkflowRunner {
     
     public void createTaskRecords() {
     	this.logger.info("Creating new task records");
-        List<WorkflowModule> modules = workflow.select(where("parentId",null));
-        while (modules.size() > 0) {
-            List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
-            for (WorkflowModule module : modules) {
-                Module m = moduleInstances.get(module.getId());
-                if (m == null) {
-                    throw new RuntimeException("No instantiated module found with ID: "+module.getId());
-                }
-                m.createTaskRecords();
-                childModules.addAll(workflow.select(where("parentId",module.getId())));
-            }
-            modules = childModules;
+    	this.createTaskRecords(null, null);
+    }
+    public void createTaskRecords(WorkflowModule module, List<Task> tasks) {
+    	List<Task> childTasks = new ArrayList<Task>();
+    	if (module != null) {
+            Module m = this.moduleInstances.get(module.getId());
+            childTasks = m.createTaskRecords(tasks != null? tasks : new ArrayList<Task>());
+    	}
+        List<WorkflowModule> modules = workflow.select(
+        		where("parentId",module != null? module.getId() : null));
+        for (WorkflowModule mod : modules) {
+        	this.createTaskRecords(mod, childTasks);
         }
     }
     

@@ -2,6 +2,7 @@ package org.bdgp.MMSlide.Modules;
 
 import java.awt.Component;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -15,11 +16,8 @@ import org.bdgp.MMSlide.DB.Config;
 import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.DB.TaskDispatch;
-import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
-
-import static org.bdgp.MMSlide.Util.where;
 
 public class ImageStitcher implements Module {
     WorkflowRunner workflowRunner;
@@ -68,9 +66,8 @@ public class ImageStitcher implements Module {
     }
 
     @Override
-    public void createTaskRecords() {
-        WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",moduleId));
-        List<Task> parentTasks = workflowRunner.getTaskStatus().select(where("moduleId",module.getParentId()));
+    public List<Task> createTaskRecords(List<Task> parentTasks) {
+        List<Task> tasks = new ArrayList<Task>();
         for (Task parentTask : parentTasks.size()>0? parentTasks.toArray(new Task[0]) : new Task[]{null}) 
         {
             Task task = new Task(moduleId, Status.NEW);
@@ -80,6 +77,7 @@ public class ImageStitcher implements Module {
                     new File(workflowRunner.getWorkflowDir(),
                             workflowRunner.getInstance().getStorageLocation()).getPath());
             workflowRunner.getTaskStatus().update(task,"id");
+            tasks.add(task);
             workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created new task record: %s", 
             		this.moduleId, task));
             
@@ -90,6 +88,7 @@ public class ImageStitcher implements Module {
                 		this.moduleId, dispatch));
             }
         }
+        return tasks;
     }
 
 	@Override

@@ -30,7 +30,6 @@ import org.bdgp.MMSlide.DB.Task;
 import org.bdgp.MMSlide.DB.Task.Status;
 import org.bdgp.MMSlide.DB.TaskConfig;
 import org.bdgp.MMSlide.DB.TaskDispatch;
-import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
 import org.json.JSONException;
@@ -44,7 +43,6 @@ import org.micromanager.api.DataProcessor;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
 import org.micromanager.api.ScriptInterface;
-import org.micromanager.api.SequenceSettings;
 import org.micromanager.utils.MMException;
 import org.micromanager.utils.MMScriptException;
 import org.micromanager.utils.MDUtils;
@@ -393,10 +391,8 @@ public class SlideImager implements Module {
     }
     
     
-    public void createTaskRecords() {
-        WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",moduleId));
-        WorkflowModule parentModule = workflowRunner.getWorkflow().selectOne(where("id",module.getParentId()));
-
+    @Override
+    public List<Task> createTaskRecords(List<Task> parentTasks) {
         Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
         Dao<SlidePosList> posListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
         Dao<SlidePos> posDao = workflowRunner.getInstanceDb().table(SlidePos.class);
@@ -413,9 +409,8 @@ public class SlideImager implements Module {
 
         // Create task records and connect to parent tasks
         // If no parent tasks were defined, then just create a single task instance.
-        for (Task parentTask : parentModule != null? 
-        		workflowRunner.getTaskStatus().select(where("moduleId",parentModule.getId())).toArray(new Task[0]) : 
-        		new Task[] {null}) 
+        List<Task> tasks = new ArrayList<Task>();
+        for (Task parentTask : parentTasks.size()>0? parentTasks.toArray(new Task[0]) : new Task[] {null}) 
         {
             workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Connecting parent task %s", 
             		this.moduleId, Util.escape(parentTask)));
@@ -512,6 +507,7 @@ public class SlideImager implements Module {
                         new File(workflowRunner.getWorkflowDir(), 
                                 workflowRunner.getInstance().getStorageLocation()).getPath());
                 workflowRunner.getTaskStatus().update(task,"id");
+                tasks.add(task);
                 workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created task record: %s", 
                         this.moduleId, task));
                 
@@ -556,6 +552,7 @@ public class SlideImager implements Module {
                 }
             }
         }
+        return tasks;
     }
 
     @Override

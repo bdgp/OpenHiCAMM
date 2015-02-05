@@ -355,7 +355,7 @@ public class SlideLoader implements Module {
     // TODO: Automatically generate Pool/PoolSlide/Slide records by scanning all the cartridges
     // if no Pool record was configured.
     @Override
-    public void createTaskRecords() {
+    public List<Task> createTaskRecords(List<Task> parentTasks) {
     	Dao<ModuleConfig> moduleConfigDao = workflowRunner.getInstanceDb().table(ModuleConfig.class);
     	ModuleConfig poolId = moduleConfigDao.selectOne(where("id",this.moduleId).and("key","poolId"));
     	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Using pool config: %s", this.moduleId, poolId));
@@ -374,7 +374,7 @@ public class SlideLoader implements Module {
         poolSlides.add(null);
 
     	Dao<Task> taskDao = workflowRunner.getInstanceDb().table(Task.class);
-    	List<Task> parentTasks = taskDao.select(where("moduleId",moduleId));
+    	List<Task> tasks = new ArrayList<Task>();
     	for (Task parentTask : parentTasks.size()>0? parentTasks.toArray(new Task[0]) : new Task[] {null}) {
             workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Connecting parent task: %s", this.moduleId, 
             		Util.escape(parentTask)));
@@ -386,6 +386,7 @@ public class SlideLoader implements Module {
                         new File(workflowRunner.getWorkflowDir(), 
                         		workflowRunner.getInstance().getStorageLocation()).getPath());
                 taskDao.update(task,"id");
+                if (poolSlide != null) tasks.add(task);
                 workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Creating task %s for poolSlide %s", 
                 		this.moduleId, task, poolSlide));
 
@@ -415,6 +416,7 @@ public class SlideLoader implements Module {
                 }
     		}
     	}
+    	return tasks;
     }
 
 	@Override

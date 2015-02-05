@@ -1,5 +1,6 @@
 package org.bdgp.MMSlide.Modules.Interfaces;
 
+import java.util.List;
 import java.util.Map;
 
 import org.bdgp.MMSlide.Logger;
@@ -26,8 +27,9 @@ public interface Module {
     
     /**
      * Create the task records before running the workflow.
+     * @return The list of created tasks
      */
-    public void createTaskRecords();
+    public List<Task> createTaskRecords(List<Task> parentTasks);
     
     /**
      * Run the task.

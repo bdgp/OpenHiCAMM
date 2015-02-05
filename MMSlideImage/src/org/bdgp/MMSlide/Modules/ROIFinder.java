@@ -206,10 +206,10 @@ public class ROIFinder implements Module {
     }
 
     @Override
-    public void createTaskRecords() {
+    public List<Task> createTaskRecords(List<Task> parentTasks) {
         WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",moduleId));
+        List<Task> tasks = new ArrayList<Task>();
         if (module.getParentId() != null) {
-            List<Task> parentTasks = workflowRunner.getTaskStatus().select(where("moduleId",module.getParentId()));
             for (Task parentTask : parentTasks) {
             	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: attaching to parent Task: %s",
             			this.moduleId, parentTask));
@@ -220,6 +220,7 @@ public class ROIFinder implements Module {
                 		new File(workflowRunner.getWorkflowDir(),
                 				workflowRunner.getInstance().getStorageLocation()).getPath());
                 workflowRunner.getTaskStatus().update(task,"id");
+                tasks.add(task);
             	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created new task record: %s",
             			this.moduleId, task));
                 
@@ -229,6 +230,7 @@ public class ROIFinder implements Module {
             			this.moduleId, dispatch));
             }
         }
+        return tasks;
     }
 
 	@Override
