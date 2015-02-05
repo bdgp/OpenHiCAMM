@@ -40,6 +40,7 @@ public class WorkflowRunnerDialog extends JDialog {
         JLabel lblLogOutput = new JLabel("Log Output");
         getContentPane().add(lblLogOutput, "cell 0 0");
         
+        // TODO: make the log window collapsible, show last important log message (sans timestamp) in the progress bar message
         final JTextArea text = new JTextArea();
         text.setFont(new Font("Monospaced", Font.PLAIN, 12));
         text.setEditable(false);
