@@ -2,6 +2,7 @@ package org.bdgp.MMSlide;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
@@ -55,7 +56,7 @@ public class Logger extends java.util.logging.Logger {
     	public LogFileHandler(String pattern) 
             throws IOException, SecurityException 
         {
-    		super(pattern, 10000000, 10, true);
+    		super(pattern, 10000000, 10, false);
     		setFormatter();
     	}
 		public LogFileHandler(String pattern, int limit, int count, boolean append) 
@@ -69,7 +70,7 @@ public class Logger extends java.util.logging.Logger {
 				public String format(LogRecord record) {
 					return String.format("[%s:%s:%s] %s%n", 
 							record.getLoggerName(),
-							new Date(record.getMillis()), 
+							new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S").format(new Date(record.getMillis())), 
 							record.getLevel(), 
 							record.getMessage());
 				}
