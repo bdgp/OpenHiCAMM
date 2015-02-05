@@ -270,6 +270,9 @@ public class WorkflowDialog extends JDialog {
     public void start(boolean resume) {
         initWorkflowRunner();
         String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
+        
+        // re-init the logger. This ensures each workflow run gets logged to a separate file.
+        workflowRunner.initLogger();
 
         final WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(this, workflowRunner);
         wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
