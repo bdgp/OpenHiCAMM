@@ -33,6 +33,7 @@ import org.bdgp.MMSlide.DB.TaskDispatch;
 import org.bdgp.MMSlide.DB.WorkflowModule;
 import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
 import org.bdgp.MMSlide.Modules.Interfaces.Module;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.micromanager.dialogs.AcqControlDlg;
 import org.micromanager.MMOptions;
@@ -43,6 +44,7 @@ import org.micromanager.api.DataProcessor;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
 import org.micromanager.api.ScriptInterface;
+import org.micromanager.api.SequenceSettings;
 import org.micromanager.utils.MMException;
 import org.micromanager.utils.MMScriptException;
 import org.micromanager.utils.MDUtils;
@@ -148,7 +150,7 @@ public class SlideImager implements Module {
                     workflowRunner.getInstance().getStorageLocation()).getPath();
             logger.info(String.format("Using rootDir: %s", rootDir)); 
             final String acqName = "images";
-            logger.info(String.format("Using acqName: %s", acqName)); 
+            logger.info(String.format("Requesting to use acqName: %s", acqName)); 
 
             // make a map of position list index -> Task
             final List<Task> tasks = taskDao.select(where("moduleId",task.getModuleId()));
@@ -205,13 +207,13 @@ public class SlideImager implements Module {
 
                                 // Make sure the acquisition name is set before running the child tasks.
                                 // We have to do it here to avoid a race condition.
-                                // TODO: Don't rely on Prefix metadata to get the acquisition name, since 
-                                // it's not always there in some acquisition modes.
                                 if (acquisition  == null) {
-                                	JSONObject summary = MDUtils.getSummary(taggedImage.tags);
-                                	if (summary == null) throw new RuntimeException("Summary metadata for image was null!");
-                                    String prefix = summary.getString("Prefix");
-                                	if (prefix == null) throw new RuntimeException("Summary Prefix for image was null!");
+                                	JSONObject summaryMetadata = MMStudio.getInstance().getAcquisitionEngine().getSummaryMetadata();
+                                	if (!summaryMetadata.has("Prefix")) {
+                                		throw new RuntimeException("Could not find Prefix key in summary metadata!");
+                                	}
+                                	String prefix = summaryMetadata.getString("Prefix");
+                                	if (prefix == null) throw new RuntimeException("Acquisition prefix for image was null!");
 
                                     acquisition = new Acquisition(prefix, rootDir);
                                     acqDao.insert(acquisition);
@@ -271,13 +273,22 @@ public class SlideImager implements Module {
                 }});
             this.script.setImageProcessorPipeline(pipeline);
 
-            // TODO: Figure out what directory the acquisition is saving files to
             String returnAcqName = acqControlDlg.runAcquisition(acqName, rootDir);
             if (returnAcqName == null) {
                 throw new RuntimeException("acqControlDlg.runAcquisition returned null acquisition name");
             }
-            logger.info(String.format("Started acquisition to root directory: %s", rootDir));
-
+            // get the prefix name and log it
+            JSONObject summaryMetadata = MMStudio.getInstance().getAcquisitionEngine().getSummaryMetadata();
+            if (!summaryMetadata.has("Prefix")) {
+                throw new RuntimeException("Could not find Prefix key in summary metadata!");
+            }
+            String prefix;
+            try { prefix = summaryMetadata.getString("Prefix"); } 
+			catch (JSONException e) { throw new RuntimeException(e); }
+            logger.info(String.format("Started acquisition to root directory %s, prefix %s", 
+            		Util.escape(rootDir), Util.escape(prefix)));
+            
+            // wait until the current acquisition finishes
             while (acqControlDlg.isAcquisitionRunning()) {
                  try { Thread.sleep(1); } 
                  catch (InterruptedException e) { logger.info("Thread was interrupted."); } 
@@ -420,7 +431,9 @@ public class SlideImager implements Module {
         	}
         	// Make sure this isn't a sentinel (dummy) task. The final slide loader task is only 
         	// used for putting the last slide back, and should have no child tasks.
-        	if (!parentTaskConf.containsKey("poolSlideId") || parentTaskConf.get("poolSlideId") == null) {
+        	if (parentTask != null && 
+                (!parentTaskConf.containsKey("poolSlideId") || parentTaskConf.get("poolSlideId") == null)) 
+        	{
                 workflowRunner.getLogger().info(String.format(
                 		"%s: createTaskRecords: Task %d is a sentinel, not attaching child tasks", 
                         this.moduleId, parentTask.getId()));
