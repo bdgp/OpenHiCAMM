@@ -5,7 +5,6 @@ import java.awt.Dimension;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Handler;
-import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
 import javax.swing.JDialog;
