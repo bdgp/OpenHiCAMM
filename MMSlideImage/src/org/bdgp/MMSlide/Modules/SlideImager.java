@@ -170,7 +170,8 @@ public class SlideImager implements Module {
             final Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
 
             // As images are completed, kick off the individual task related to the image
-            this.script.addImageProcessor(new DataProcessor<TaggedImage>() {
+            List<DataProcessor<TaggedImage>> pipeline = new ArrayList<DataProcessor<TaggedImage>>();
+            pipeline.add(new DataProcessor<TaggedImage>() {
                 @Override protected void process() {
                     Acquisition acquisition = null;
                     TaggedImage taggedImage = null;
@@ -268,6 +269,8 @@ public class SlideImager implements Module {
                         }
                     }
                 }});
+            this.script.setImageProcessorPipeline(pipeline);
+
             // TODO: Figure out what directory the acquisition is saving files to
             String returnAcqName = acqControlDlg.runAcquisition(acqName, rootDir);
             if (returnAcqName == null) {
@@ -414,6 +417,14 @@ public class SlideImager implements Module {
                     workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Using task config: %s", 
                             this.moduleId, c));
                 }
+        	}
+        	// Make sure this isn't a sentinel (dummy) task. The final slide loader task is only 
+        	// used for putting the last slide back, and should have no child tasks.
+        	if (!parentTaskConf.containsKey("poolSlideId") || parentTaskConf.get("poolSlideId") == null) {
+                workflowRunner.getLogger().info(String.format(
+                		"%s: createTaskRecords: Task %d is a sentinel, not attaching child tasks", 
+                        this.moduleId, parentTask.getId()));
+                continue;
         	}
         	// Get the associated slide
         	Slide slide;
