@@ -220,6 +220,7 @@ public class SlideLoader implements Module {
         }
     }
     
+    // TODO: Detect stage-moving failures
     public void moveStage(double x, double y, Logger logger) {
     	CMMCore core = workflowRunner.getMMSlide().getApp().getMMCore();
     	core.setTimeoutMs(10000);
