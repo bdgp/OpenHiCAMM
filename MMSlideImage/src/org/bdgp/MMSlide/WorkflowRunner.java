@@ -302,10 +302,17 @@ public class WorkflowRunner {
         GraphBuilder<String> taskGraph = new GraphBuilder<String>();
         Map<Integer,String> taskLabels = new HashMap<Integer,String>();
         List<Task> tasks = this.taskStatus.select();
-        for (Task task : tasks) {
+        Collections.sort(tasks, new Comparator<Task>() {
+            @Override public int compare(Task a, Task b) {
+                return a.getId()-b.getId();
+            }});
+        for (int t=0; t<tasks.size(); ++t) {
+        	Task task = tasks.get(t);
             Module module = this.moduleInstances.get(task.getModuleId());
-            String label = String.format("%s:%s:%s", 
-                    task.getName(), task.getStatus(), module.getTaskType());
+            // Mark the first and last tasks with special symbols
+            String mark = t == 0? "[S]" : t == tasks.size()-1? "[E]" : "";
+            String label = String.format("%s%s:%s:%s", 
+            		mark, task.getName(), task.getStatus(), module.getTaskType());
             taskLabels.put(task.getId(), label);
             taskGraph.addVertex(label);
         }
