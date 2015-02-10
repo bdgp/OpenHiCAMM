@@ -6,8 +6,10 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.prefs.Preferences;
 
@@ -128,6 +130,7 @@ public class SlideImager implements Module {
 
         // Get Dao objects ready for use
         final Dao<Task> taskDao = workflowRunner.getInstanceDb().table(Task.class);
+        final Dao<TaskDispatch> taskDispatchDao = workflowRunner.getInstanceDb().table(TaskDispatch.class);
         final Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
 
         // get the position index of this task
@@ -151,7 +154,15 @@ public class SlideImager implements Module {
             logger.info(String.format("Requesting to use acqName: %s", acqName)); 
 
             // make a map of position list index -> Task
-            final List<Task> tasks = taskDao.select(where("moduleId",task.getModuleId()));
+            List<TaskDispatch> taskDispatch = taskDispatchDao.select(where("taskId", task.getId()));
+            Set<TaskDispatch> taskDispatches = new HashSet<TaskDispatch>();
+            for (TaskDispatch td : taskDispatch) {
+            	taskDispatches.addAll(taskDispatchDao.select(where("parentTaskId", td.getParentTaskId())));
+            } 
+            Set<Task> tasks = new HashSet<Task>();
+            for (TaskDispatch td : taskDispatches) {
+            	tasks.addAll(taskDao.select(where("id", td.getTaskId())));
+            }
             final Map<Integer,Task> posList2Task = new TreeMap<Integer,Task>();
             for (Task t : tasks) {
                 TaskConfig posIndex = taskConfigDao.selectOne(
@@ -174,8 +185,35 @@ public class SlideImager implements Module {
             pipeline.add(new DataProcessor<TaggedImage>() {
                 @Override protected void process() {
                     Acquisition acquisition = null;
-                    TaggedImage taggedImage = null;
-                    while ((taggedImage = this.poll()) != TaggedImageQueue.POISON) {
+                    // add all the taggedImages to a list
+                    TaggedImage ti = null;
+                    List<TaggedImage> taggedImages = new ArrayList<TaggedImage>();
+                    while ((ti = this.poll()) != TaggedImageQueue.POISON) {
+                    	taggedImages.add(ti);
+                    }
+                    logger.info(String.format("Found %d taggedImages: %s", taggedImages.size(), taggedImages.toString()));
+                    
+                    // make sure we didn't get any unexpected taggedImages
+                    Map<Integer, TaggedImage> posList2Image = new HashMap<Integer, TaggedImage>();
+                    for (TaggedImage taggedImage : taggedImages) {
+                    	Integer positionIndex;
+                    	try { positionIndex = MDUtils.getPositionIndex(taggedImage.tags); } 
+                    	catch (JSONException e) { throw new RuntimeException(e); }
+                    	
+                    	if (!posList2Task.containsKey(positionIndex)) {
+                             throw new RuntimeException(String.format("Unexpected position index %d", positionIndex));
+                    	}
+                    	posList2Image.put(positionIndex, taggedImage);
+                    }
+                    // now make sure we're not missing any taggedImages
+                    for (Map.Entry<Integer,Task> p2t : posList2Task.entrySet()) {
+                    	if (!posList2Image.containsKey(p2t.getKey())) {
+                             throw new RuntimeException(String.format("No taggedImage was given for position index %d!", p2t.getKey()));
+                    	}
+                    }
+                    
+                    // If we have all the taggedImages for processing, then continue processing.
+                    for (TaggedImage taggedImage : taggedImages) {
                         try {
                         	logger.info(String.format("Analyzing taggedImage with tags:\n%s", taggedImage.tags.toString(2)));
 
@@ -256,7 +294,7 @@ public class SlideImager implements Module {
                                 workflowRunner.run(t, config);
                             }
                             else {
-                                logger.warning("Unexpected position index "+positionIndex);
+                                logger.warning(String.format("Unexpected position index %d", positionIndex));
                             }
                             this.produce(taggedImage);
                         } 
@@ -291,22 +329,9 @@ public class SlideImager implements Module {
                  try { Thread.sleep(1); } 
                  catch (InterruptedException e) { logger.info("Thread was interrupted."); } 
             }
-            
-            // Set status to IN_PROGRESS, this task will be run again for the first image, which will set
-            // the final status for this task.
-            Status status = Status.IN_PROGRESS;
-            // Now check that the acquisition succeeded in creating imageId config records 
-            // for each task in the module
-            for (Task t: tasks) {
-            	TaskConfig imageId = workflowRunner.getTaskConfig().selectOne(
-            			where("id", new Integer(t.getId()).toString()).and("key","imageId"));
-            	if (imageId == null) {
-            		logger.severe(String.format("Image ID was not created for task %s, acqusition failed!", t.getName()));
-            		status = Status.FAIL;
-            	}
-            }
-            logger.info(String.format("Acquisition "+acqName+" finished with status %s", status));
-            return status;
+            // Set status to IN_PROGRESS, and wait for the image tasks to complete.
+            logger.info(String.format("Acquisition "+acqName+" finished."));
+            return Status.IN_PROGRESS;
         }
         return Status.SUCCESS;
     }
