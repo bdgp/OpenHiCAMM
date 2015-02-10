@@ -82,4 +82,48 @@ public class Task {
     public String getName() { 
         return String.format("%s.T%05d",this.moduleId,this.id); 
     }
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + id;
+		result = prime * result
+				+ ((moduleId == null) ? 0 : moduleId.hashCode());
+		result = prime * result
+				+ ((parentTaskId == null) ? 0 : parentTaskId.hashCode());
+		result = prime * result + ((status == null) ? 0 : status.hashCode());
+		result = prime * result
+				+ ((storageLocation == null) ? 0 : storageLocation.hashCode());
+		return result;
+	}
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Task other = (Task) obj;
+		if (id != other.id)
+			return false;
+		if (moduleId == null) {
+			if (other.moduleId != null)
+				return false;
+		} else if (!moduleId.equals(other.moduleId))
+			return false;
+		if (parentTaskId == null) {
+			if (other.parentTaskId != null)
+				return false;
+		} else if (!parentTaskId.equals(other.parentTaskId))
+			return false;
+		if (status != other.status)
+			return false;
+		if (storageLocation == null) {
+			if (other.storageLocation != null)
+				return false;
+		} else if (!storageLocation.equals(other.storageLocation))
+			return false;
+		return true;
+	}
 };
