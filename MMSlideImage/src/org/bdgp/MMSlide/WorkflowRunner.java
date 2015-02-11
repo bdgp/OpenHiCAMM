@@ -238,6 +238,7 @@ public class WorkflowRunner {
         
         // Log the workflow module info
         this.logger.info("Workflow Modules:");
+        // TODO: Only include modules and tasks in current phase in the workflow/task graphs
         List<WorkflowModule> modules = this.workflow.select(where("parentId",null));
         Collections.sort(modules, new Comparator<WorkflowModule>() {
             @Override public int compare(WorkflowModule a, WorkflowModule b) {
