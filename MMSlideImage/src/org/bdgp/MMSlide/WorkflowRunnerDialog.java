@@ -53,6 +53,7 @@ public class WorkflowRunnerDialog extends JDialog {
         JLabel lblProgress = new JLabel("Progress");
         getContentPane().add(lblProgress, "cell 0 1");
         
+        // TODO: only count tasks in current phase in the progress bar
         final JProgressBar progressBar = new JProgressBar();
         getContentPane().add(progressBar, "cell 1 1,growx");
         
