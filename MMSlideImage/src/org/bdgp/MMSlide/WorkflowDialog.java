@@ -82,7 +82,7 @@ public class WorkflowDialog extends JDialog {
             @Override
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
-                    initWorkflowRunner();
+                    initWorkflowRunner(false);
 
                     // should the resume button be enabled?
                     resumeButton.setEnabled(false);
@@ -139,7 +139,7 @@ public class WorkflowDialog extends JDialog {
         btnConfigure.setEnabled(false);
         btnConfigure.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                initWorkflowRunner();
+                initWorkflowRunner(false);
                 
                 Map<String,Configuration> configurations = getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
@@ -192,6 +192,7 @@ public class WorkflowDialog extends JDialog {
                     @Override public void windowOpened(WindowEvent e) { }
                     @Override public void windowClosing(WindowEvent e) { }
                     @Override public void windowClosed(WindowEvent e) { 
+                    	initWorkflowRunner(true);
                         refresh();
                     }
                     @Override public void windowIconified(WindowEvent e) { }
@@ -259,16 +260,16 @@ public class WorkflowDialog extends JDialog {
     	}
     }
 
-    public void initWorkflowRunner() {
+    public void initWorkflowRunner(boolean force) {
         Integer instanceId = workflowInstance.getSelectedIndex() < 0 ? null :
             Integer.parseInt(((String)workflowInstance.getItemAt(workflowInstance.getSelectedIndex())).replaceAll("^WF",""));
-        if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getInstance().getId())) {
+        if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getInstance().getId()) || force) {
             workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, Level.INFO, mmslide);
         }
     }
 
     public void start(boolean resume) {
-        initWorkflowRunner();
+        initWorkflowRunner(false);
         String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
         
         // re-init the logger. This ensures each workflow run gets logged to a separate file.
@@ -300,10 +301,10 @@ public class WorkflowDialog extends JDialog {
     }
     public Map<String,Configuration> getConfigurations() {
     	// get list of JPanels and load them with the configuration interfaces
-    	initWorkflowRunner();
+    	initWorkflowRunner(false);
     	Map<String,Configuration> configurations = new LinkedHashMap<String,Configuration>();
     	Dao<WorkflowModule> modules = workflowRunner.getWorkflowDb().table(WorkflowModule.class);
-    	List<WorkflowModule> ms = modules.select(where("id",startModule.getItemAt(startModule.getSelectedIndex())));
+    	List<WorkflowModule> ms = modules.select(where("parentId", null));
 
     	while (ms.size() > 0) {
     		List<WorkflowModule> newms = new ArrayList<WorkflowModule>();
