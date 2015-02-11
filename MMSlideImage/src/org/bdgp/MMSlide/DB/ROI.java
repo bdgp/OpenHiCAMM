@@ -28,8 +28,8 @@ public class ROI {
     public int getY2() {return this.y2;}
     
     public String toString() {
-    	return String.format("%s(imageId=%d, x1=%d, y1=%d, x2=%d, y2=%d)", 
+    	return String.format("%s(id=%d, imageId=%d, x1=%d, y1=%d, x2=%d, y2=%d)", 
     			this.getClass().getSimpleName(),
-    			this.imageId, this.x1, this.y1, this.x2, this.y2);
+    			this.id, this.imageId, this.x1, this.y1, this.x2, this.y2);
     }
 }
