@@ -1,6 +1,6 @@
-package org.bdgp.MMSlide.Modules.Interfaces;
+package org.bdgp.OpenHiCAMM.Modules.Interfaces;
 
-import org.bdgp.MMSlide.DB.Task;
+import org.bdgp.OpenHiCAMM.DB.Task;
 
 public interface TaskListener {
     public void notifyTask(Task task);

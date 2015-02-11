@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide;
+package org.bdgp.OpenHiCAMM;
 
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -27,14 +27,14 @@ import java.io.File;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
-import org.bdgp.MMSlide.Dao;
-import org.bdgp.MMSlide.DB.WorkflowModule;
+import org.bdgp.OpenHiCAMM.Dao;
+import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.event.TreeSelectionEvent;
 
 import net.miginfocom.swing.MigLayout;
-import static org.bdgp.MMSlide.Util.where;
+import static org.bdgp.OpenHiCAMM.Util.where;
 
 @SuppressWarnings("serial")
 public class WorkflowDesignerDialog extends JDialog {
@@ -77,7 +77,7 @@ public class WorkflowDesignerDialog extends JDialog {
 		});
 		moduleList.setToolTipText("select module");
 		moduleList.setModel(new DefaultComboBoxModel<String>(
-		        MMSlide.getModuleNames().toArray(new String[0])));
+		        OpenHiCAMM.getModuleNames().toArray(new String[0])));
 		
 		JLabel lblNewLabel = new JLabel("Module Name");
 		getContentPane().add(lblNewLabel, "cell 0 0,alignx left,growy");

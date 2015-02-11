@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide.DB;
+package org.bdgp.OpenHiCAMM.DB;
 
 public class TaskConfig extends Config {
     public TaskConfig() {

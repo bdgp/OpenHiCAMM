@@ -1,8 +1,8 @@
-package org.bdgp.MMSlide.DB;
+package org.bdgp.OpenHiCAMM.DB;
 
 import java.io.File;
 
-import org.bdgp.MMSlide.Util;
+import org.bdgp.OpenHiCAMM.Util;
 
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;

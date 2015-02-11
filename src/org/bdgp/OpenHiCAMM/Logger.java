@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide;
+package org.bdgp.OpenHiCAMM;
 
 import java.io.IOException;
 import java.io.OutputStream;

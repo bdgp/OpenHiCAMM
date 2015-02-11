@@ -2,9 +2,9 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.bdgp</groupId>
-  <artifactId>MMSlideImage</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <name>MMSlideImage</name>
+  <artifactId>OpenHiCAMM</artifactId>
+  <version>1.0</version>
+  <name>OpenHiCAMM</name>
   <description></description>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -23,7 +23,7 @@
       </testResource>
     </testResources>
     <directory>target</directory>
-    <finalName>MMSlideImage</finalName>
+    <finalName>OpenHiCAMM</finalName>
     <plugins>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -197,7 +197,7 @@
       <version>3.7.4</version>
     </dependency>
     <dependency>
-      <groupId>org.bdgp.MMSlide.Modules.PriorSlideLoader</groupId>
+      <groupId>org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader</groupId>
       <artifactId>priorslideloader</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>system</scope>

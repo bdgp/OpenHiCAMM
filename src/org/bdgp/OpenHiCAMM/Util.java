@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide;
+package org.bdgp.OpenHiCAMM;
 
 import java.util.Arrays;
 import java.util.List;

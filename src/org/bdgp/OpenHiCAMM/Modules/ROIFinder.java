@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide.Modules;
+package org.bdgp.OpenHiCAMM.Modules;
 
 import java.awt.Component;
 import java.io.File;
@@ -10,25 +10,25 @@ import java.util.Map;
 import mmcorej.CMMCore;
 import mmcorej.TaggedImage;
 
-import org.bdgp.MMSlide.Dao;
-import org.bdgp.MMSlide.Logger;
-import org.bdgp.MMSlide.MMSlide;
-import org.bdgp.MMSlide.Util;
-import org.bdgp.MMSlide.ValidationError;
-import org.bdgp.MMSlide.WorkflowRunner;
-import org.bdgp.MMSlide.DB.Acquisition;
-import org.bdgp.MMSlide.DB.Config;
-import org.bdgp.MMSlide.DB.Image;
-import org.bdgp.MMSlide.DB.ROI;
-import org.bdgp.MMSlide.DB.Slide;
-import org.bdgp.MMSlide.DB.SlidePos;
-import org.bdgp.MMSlide.DB.SlidePosList;
-import org.bdgp.MMSlide.DB.Task;
-import org.bdgp.MMSlide.DB.Task.Status;
-import org.bdgp.MMSlide.DB.TaskDispatch;
-import org.bdgp.MMSlide.DB.WorkflowModule;
-import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
-import org.bdgp.MMSlide.Modules.Interfaces.Module;
+import org.bdgp.OpenHiCAMM.Dao;
+import org.bdgp.OpenHiCAMM.Logger;
+import org.bdgp.OpenHiCAMM.OpenHiCAMM;
+import org.bdgp.OpenHiCAMM.Util;
+import org.bdgp.OpenHiCAMM.ValidationError;
+import org.bdgp.OpenHiCAMM.WorkflowRunner;
+import org.bdgp.OpenHiCAMM.DB.Acquisition;
+import org.bdgp.OpenHiCAMM.DB.Config;
+import org.bdgp.OpenHiCAMM.DB.Image;
+import org.bdgp.OpenHiCAMM.DB.ROI;
+import org.bdgp.OpenHiCAMM.DB.Slide;
+import org.bdgp.OpenHiCAMM.DB.SlidePos;
+import org.bdgp.OpenHiCAMM.DB.SlidePosList;
+import org.bdgp.OpenHiCAMM.DB.Task;
+import org.bdgp.OpenHiCAMM.DB.Task.Status;
+import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
+import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.json.JSONException;
 import org.micromanager.acquisition.MMAcquisition;
 import org.micromanager.api.ImageCache;
@@ -40,7 +40,7 @@ import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMScriptException;
 import org.micromanager.utils.MMSerializationException;
 
-import static org.bdgp.MMSlide.Util.where;
+import static org.bdgp.OpenHiCAMM.Util.where;
 
 /**
  * Return x/y/len/width of bounding box surrounding the ROI
@@ -54,7 +54,7 @@ public class ROIFinder implements Module {
     public void initialize(WorkflowRunner workflowRunner, String moduleId) {
         this.workflowRunner = workflowRunner;
         this.moduleId = moduleId;
-        MMSlide mmslide = workflowRunner.getMMSlide();
+        OpenHiCAMM mmslide = workflowRunner.getOpenHiCAMM();
         this.script = mmslide.getApp();
     }
 
@@ -121,7 +121,7 @@ public class ROIFinder implements Module {
 			// get the current stage position
             double[] x_stage = new double[] {0.0};
             double[] y_stage = new double[] {0.0};
-            CMMCore core = workflowRunner.getMMSlide().getApp().getMMCore();
+            CMMCore core = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
             String xyStage = core.getXYStageDevice();
             try { core.getXYPosition(xyStage, x_stage, y_stage); } 
             catch (Exception e) { throw new RuntimeException(e); }

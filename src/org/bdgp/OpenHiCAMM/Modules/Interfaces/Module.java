@@ -1,13 +1,13 @@
-package org.bdgp.MMSlide.Modules.Interfaces;
+package org.bdgp.OpenHiCAMM.Modules.Interfaces;
 
 import java.util.List;
 import java.util.Map;
 
-import org.bdgp.MMSlide.Logger;
-import org.bdgp.MMSlide.WorkflowRunner;
-import org.bdgp.MMSlide.DB.Config;
-import org.bdgp.MMSlide.DB.Task;
-import org.bdgp.MMSlide.DB.Task.Status;
+import org.bdgp.OpenHiCAMM.Logger;
+import org.bdgp.OpenHiCAMM.WorkflowRunner;
+import org.bdgp.OpenHiCAMM.DB.Config;
+import org.bdgp.OpenHiCAMM.DB.Task;
+import org.bdgp.OpenHiCAMM.DB.Task.Status;
 
 /**
  * Interface for workflow modules.

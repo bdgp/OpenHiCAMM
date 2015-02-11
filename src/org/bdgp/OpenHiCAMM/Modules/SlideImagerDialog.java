@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide.Modules;
+package org.bdgp.OpenHiCAMM.Modules;
 
 import javax.swing.JPanel;
 
@@ -11,9 +11,9 @@ import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.JButton;
 
-import org.bdgp.MMSlide.Dao;
-import org.bdgp.MMSlide.WorkflowRunner;
-import org.bdgp.MMSlide.DB.WorkflowModule;
+import org.bdgp.OpenHiCAMM.Dao;
+import org.bdgp.OpenHiCAMM.WorkflowRunner;
+import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.micromanager.dialogs.AcqControlDlg;
 
 import java.awt.event.ActionListener;

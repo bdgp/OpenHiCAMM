@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide;
+package org.bdgp.OpenHiCAMM;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -24,7 +24,7 @@ import org.hsqldb.server.ServerAcl.AclFormatException;
 import com.j256.ormlite.jdbc.JdbcPooledConnectionSource;
 import com.j256.ormlite.table.DatabaseTableConfig;
 
-import static org.bdgp.MMSlide.Util.map;
+import static org.bdgp.OpenHiCAMM.Util.map;
 
 public class Connection extends JdbcPooledConnectionSource {
     private static Map<String,String> serverDefaults = map("server.port","9001");

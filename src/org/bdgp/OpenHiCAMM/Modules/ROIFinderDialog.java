@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide.Modules;
+package org.bdgp.OpenHiCAMM.Modules;
 
 import javax.swing.JPanel;
 import net.miginfocom.swing.MigLayout;

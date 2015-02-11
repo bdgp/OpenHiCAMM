@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide.Modules;
+package org.bdgp.OpenHiCAMM.Modules;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -22,12 +22,12 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
-import org.bdgp.MMSlide.Connection;
-import org.bdgp.MMSlide.Dao;
-import org.bdgp.MMSlide.MMSlide;
-import org.bdgp.MMSlide.DB.Pool;
-import org.bdgp.MMSlide.DB.PoolSlide;
-import org.bdgp.MMSlide.DB.Slide;
+import org.bdgp.OpenHiCAMM.Connection;
+import org.bdgp.OpenHiCAMM.Dao;
+import org.bdgp.OpenHiCAMM.OpenHiCAMM;
+import org.bdgp.OpenHiCAMM.DB.Pool;
+import org.bdgp.OpenHiCAMM.DB.PoolSlide;
+import org.bdgp.OpenHiCAMM.DB.Slide;
 
 import javax.swing.JList;
 
@@ -44,7 +44,7 @@ import java.io.StringReader;
 import javax.swing.JLabel;
 import javax.swing.JTextArea;
 
-import static org.bdgp.MMSlide.Util.where;
+import static org.bdgp.OpenHiCAMM.Util.where;
 
 import javax.swing.JTextField;
 import javax.swing.JSpinner;
@@ -61,7 +61,7 @@ public class SlideLoaderDialog extends JTabbedPane {
     public DoubleSpinner loadXCoord;
     public DoubleSpinner loadYCoord;
 	
-	public SlideLoaderDialog(final Connection connection, final MMSlide mmslide) {
+	public SlideLoaderDialog(final Connection connection, final OpenHiCAMM mmslide) {
         final Dao<Slide> slideDao = connection.table(Slide.class);
         final Dao<PoolSlide> poolSlideDao = connection.table(PoolSlide.class);
 

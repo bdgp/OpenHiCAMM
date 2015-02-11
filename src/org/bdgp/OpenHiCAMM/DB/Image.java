@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide.DB;
+package org.bdgp.OpenHiCAMM.DB;
 
 import org.micromanager.api.ImageCache;
 

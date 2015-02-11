@@ -1,9 +1,9 @@
-package org.bdgp.MMSlide.DB;
+package org.bdgp.OpenHiCAMM.DB;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 
-import org.bdgp.MMSlide.Util;
-import org.bdgp.MMSlide.Modules.Interfaces.Module;
+import org.bdgp.OpenHiCAMM.Util;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;

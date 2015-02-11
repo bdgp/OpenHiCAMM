@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide;
+package org.bdgp.OpenHiCAMM;
 
 import java.awt.Dialog;
 import java.awt.Dimension;
@@ -17,8 +17,8 @@ import javax.swing.JButton;
 import javax.swing.JProgressBar;
 import javax.swing.JLabel;
 
-import org.bdgp.MMSlide.DB.Task;
-import org.bdgp.MMSlide.Modules.Interfaces.TaskListener;
+import org.bdgp.OpenHiCAMM.DB.Task;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.TaskListener;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;

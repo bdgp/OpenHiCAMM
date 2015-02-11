@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide.Modules;
+package org.bdgp.OpenHiCAMM.Modules;
 
 import java.awt.Component;
 import java.io.File;
@@ -8,16 +8,16 @@ import java.util.Map;
 
 import javax.swing.JPanel;
 
-import org.bdgp.MMSlide.Logger;
-import org.bdgp.MMSlide.Util;
-import org.bdgp.MMSlide.ValidationError;
-import org.bdgp.MMSlide.WorkflowRunner;
-import org.bdgp.MMSlide.DB.Config;
-import org.bdgp.MMSlide.DB.Task;
-import org.bdgp.MMSlide.DB.Task.Status;
-import org.bdgp.MMSlide.DB.TaskDispatch;
-import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
-import org.bdgp.MMSlide.Modules.Interfaces.Module;
+import org.bdgp.OpenHiCAMM.Logger;
+import org.bdgp.OpenHiCAMM.Util;
+import org.bdgp.OpenHiCAMM.ValidationError;
+import org.bdgp.OpenHiCAMM.WorkflowRunner;
+import org.bdgp.OpenHiCAMM.DB.Config;
+import org.bdgp.OpenHiCAMM.DB.Task;
+import org.bdgp.OpenHiCAMM.DB.Task.Status;
+import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 
 public class TIGenerator implements Module {
     WorkflowRunner workflow;

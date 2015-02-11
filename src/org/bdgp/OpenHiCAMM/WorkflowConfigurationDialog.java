@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide;
+package org.bdgp.OpenHiCAMM;
 
 import java.awt.Component;
 import java.awt.Dialog;
@@ -18,9 +18,9 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
-import org.bdgp.MMSlide.DB.Config;
-import org.bdgp.MMSlide.DB.ModuleConfig;
-import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
+import org.bdgp.OpenHiCAMM.DB.Config;
+import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -33,7 +33,7 @@ import java.awt.event.WindowListener;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ChangeEvent;
 
-import static org.bdgp.MMSlide.Util.where;
+import static org.bdgp.OpenHiCAMM.Util.where;
 
 @SuppressWarnings("serial")
 public class WorkflowConfigurationDialog extends JDialog {

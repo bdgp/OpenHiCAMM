@@ -1,9 +1,9 @@
-package org.bdgp.MMSlide.Modules.Interfaces;
+package org.bdgp.OpenHiCAMM.Modules.Interfaces;
 
 import java.awt.Component;
 
-import org.bdgp.MMSlide.ValidationError;
-import org.bdgp.MMSlide.DB.Config;
+import org.bdgp.OpenHiCAMM.ValidationError;
+import org.bdgp.OpenHiCAMM.DB.Config;
 
 public interface Configuration {
     /**

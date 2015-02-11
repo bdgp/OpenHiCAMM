@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide;
+package org.bdgp.OpenHiCAMM;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,16 +20,16 @@ import java.util.concurrent.FutureTask;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 
-import org.bdgp.MMSlide.DB.Config;
-import org.bdgp.MMSlide.DB.ModuleConfig;
-import org.bdgp.MMSlide.DB.Task;
-import org.bdgp.MMSlide.DB.TaskConfig;
-import org.bdgp.MMSlide.DB.TaskDispatch;
-import org.bdgp.MMSlide.DB.WorkflowInstance;
-import org.bdgp.MMSlide.DB.WorkflowModule;
-import org.bdgp.MMSlide.DB.Task.Status;
-import org.bdgp.MMSlide.Modules.Interfaces.Module;
-import org.bdgp.MMSlide.Modules.Interfaces.TaskListener;
+import org.bdgp.OpenHiCAMM.DB.Config;
+import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
+import org.bdgp.OpenHiCAMM.DB.Task;
+import org.bdgp.OpenHiCAMM.DB.TaskConfig;
+import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
+import org.bdgp.OpenHiCAMM.DB.WorkflowInstance;
+import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
+import org.bdgp.OpenHiCAMM.DB.Task.Status;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.TaskListener;
 
 import com.github.mdr.ascii.java.GraphBuilder;
 import com.github.mdr.ascii.java.GraphLayouter;
@@ -38,7 +38,7 @@ import com.j256.ormlite.field.SqlType;
 import com.j256.ormlite.stmt.StatementBuilder.StatementType;
 import com.j256.ormlite.support.CompiledStatement;
 
-import static org.bdgp.MMSlide.Util.where;
+import static org.bdgp.OpenHiCAMM.Util.where;
 
 public class WorkflowRunner {
     /**
@@ -69,7 +69,7 @@ public class WorkflowRunner {
     private int maxThreads;
     
     private List<TaskListener> taskListeners;
-    private MMSlide mmslide;
+    private OpenHiCAMM mmslide;
     
     private boolean isStopped;
     private Logger logger;
@@ -87,7 +87,7 @@ public class WorkflowRunner {
             File workflowDirectory, 
             Integer instanceId, 
             Level loglevel,
-            MMSlide mmslide) 
+            OpenHiCAMM mmslide) 
     {
         // Load the workflow database and workflow table
         if (workflowDirectory == null || !workflowDirectory.exists() || !workflowDirectory.isDirectory()) {
@@ -666,7 +666,7 @@ public class WorkflowRunner {
     public Connection getWorkflowDb() { return workflowDb; }
     public File getWorkflowDir() { return workflowDirectory; }
     public Connection getInstanceDb() { return instanceDb; }
-    public MMSlide getMMSlide() { return mmslide; }
+    public OpenHiCAMM getOpenHiCAMM() { return mmslide; }
     
     public void addTaskListener(TaskListener listener) {
         taskListeners.add(listener);

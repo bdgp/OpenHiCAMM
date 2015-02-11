@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide.Modules;
+package org.bdgp.OpenHiCAMM.Modules;
 
 import java.awt.Component;
 import java.io.File;
@@ -15,30 +15,30 @@ import javax.swing.JOptionPane;
 
 import mmcorej.CMMCore;
 
-import org.bdgp.MMSlide.Dao;
-import org.bdgp.MMSlide.Logger;
-import org.bdgp.MMSlide.Util;
-import org.bdgp.MMSlide.ValidationError;
-import org.bdgp.MMSlide.WorkflowRunner;
-import org.bdgp.MMSlide.DB.Config;
-import org.bdgp.MMSlide.DB.ModuleConfig;
-import org.bdgp.MMSlide.DB.Pool;
-import org.bdgp.MMSlide.DB.PoolSlide;
-import org.bdgp.MMSlide.DB.Slide;
-import org.bdgp.MMSlide.DB.Task;
-import org.bdgp.MMSlide.DB.Task.Status;
-import org.bdgp.MMSlide.DB.TaskConfig;
-import org.bdgp.MMSlide.DB.TaskDispatch;
-import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
-import org.bdgp.MMSlide.Modules.Interfaces.Module;
-import org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI;
-import org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc;
+import org.bdgp.OpenHiCAMM.Dao;
+import org.bdgp.OpenHiCAMM.Logger;
+import org.bdgp.OpenHiCAMM.Util;
+import org.bdgp.OpenHiCAMM.ValidationError;
+import org.bdgp.OpenHiCAMM.WorkflowRunner;
+import org.bdgp.OpenHiCAMM.DB.Config;
+import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
+import org.bdgp.OpenHiCAMM.DB.Pool;
+import org.bdgp.OpenHiCAMM.DB.PoolSlide;
+import org.bdgp.OpenHiCAMM.DB.Slide;
+import org.bdgp.OpenHiCAMM.DB.Task;
+import org.bdgp.OpenHiCAMM.DB.Task.Status;
+import org.bdgp.OpenHiCAMM.DB.TaskConfig;
+import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
+import org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.SlideLoaderAPI;
+import org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.SequenceDoc;
 
-import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK;
-import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE;
-import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR;
-import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_NOTCONNECTED;
-import static org.bdgp.MMSlide.Util.where;
+import static org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK;
+import static org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE;
+import static org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR;
+import static org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_NOTCONNECTED;
+import static org.bdgp.OpenHiCAMM.Util.where;
 
 public class SlideLoader implements Module {
     WorkflowRunner workflowRunner;
@@ -75,7 +75,7 @@ public class SlideLoader implements Module {
 		Config mode = config.get("slideLoaderMode");
 		if (mode.getValue().equals("manual")) {
             logger.info(String.format("Running in manual slide loading mode"));
-            JOptionPane.showMessageDialog(this.workflowRunner.getMMSlide().getDialog(),
+            JOptionPane.showMessageDialog(this.workflowRunner.getOpenHiCAMM().getDialog(),
                 "Manual Slide Loading",
                 thisSlide != null? 
                 		"Please load slide number "+
@@ -222,7 +222,7 @@ public class SlideLoader implements Module {
     
     // TODO: Detect stage-moving failures
     public void moveStage(double x, double y, Logger logger) {
-    	CMMCore core = workflowRunner.getMMSlide().getApp().getMMCore();
+    	CMMCore core = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
     	core.setTimeoutMs(10000);
         String xyStage = core.getXYStageDevice();
         try {
@@ -266,7 +266,7 @@ public class SlideLoader implements Module {
 
     @Override
     public Configuration configure() {
-        final SlideLoaderDialog dialog = new SlideLoaderDialog(workflowRunner.getInstanceDb(), workflowRunner.getMMSlide());
+        final SlideLoaderDialog dialog = new SlideLoaderDialog(workflowRunner.getInstanceDb(), workflowRunner.getOpenHiCAMM());
         return new Configuration() {
             @Override public ValidationError[] validate() {
                 List<ValidationError> errors = new ArrayList<ValidationError>();

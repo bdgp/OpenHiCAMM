@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide;
+package org.bdgp.OpenHiCAMM;
 
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JDialog;
@@ -10,13 +10,13 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.SwingUtilities;
 
-import org.bdgp.MMSlide.DB.ModuleConfig;
-import org.bdgp.MMSlide.DB.Task;
-import org.bdgp.MMSlide.DB.Task.Status;
-import org.bdgp.MMSlide.DB.WorkflowInstance;
-import org.bdgp.MMSlide.DB.WorkflowModule;
-import org.bdgp.MMSlide.Modules.Interfaces.Configuration;
-import org.bdgp.MMSlide.Modules.Interfaces.Module;
+import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
+import org.bdgp.OpenHiCAMM.DB.Task;
+import org.bdgp.OpenHiCAMM.DB.Task.Status;
+import org.bdgp.OpenHiCAMM.DB.WorkflowInstance;
+import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -35,8 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
-import static org.bdgp.MMSlide.Util.where;
-import static org.bdgp.MMSlide.Util.set;
+import static org.bdgp.OpenHiCAMM.Util.where;
+import static org.bdgp.OpenHiCAMM.Util.set;
 
 @SuppressWarnings("serial")
 public class WorkflowDialog extends JDialog {
@@ -49,12 +49,12 @@ public class WorkflowDialog extends JDialog {
     JButton resumeButton;
     JLabel lblConfigure;
     JButton btnConfigure;
-    MMSlide mmslide;
+    OpenHiCAMM mmslide;
     WorkflowRunner workflowRunner;
     private JButton btnCreateNewInstance;
 
-    public WorkflowDialog(Frame parentFrame, MMSlide mmslide) {
-        super(parentFrame, "MMSlide");
+    public WorkflowDialog(Frame parentFrame, OpenHiCAMM mmslide) {
+        super(parentFrame, "OpenHiCAMM");
         this.mmslide = mmslide;
         
         directoryChooser = new JFileChooser();

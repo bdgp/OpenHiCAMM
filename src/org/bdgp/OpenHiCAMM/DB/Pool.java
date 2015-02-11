@@ -1,4 +1,4 @@
-package org.bdgp.MMSlide.DB;
+package org.bdgp.OpenHiCAMM.DB;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

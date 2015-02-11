@@ -1,12 +1,12 @@
-package org.bdgp.MMSlide;
+package org.bdgp.OpenHiCAMM;
 //import mmcorej.CMMCore;
 
 // TODO: Why does importing SWIG-generated modules not work?
-//import org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI;
-//import org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc;
-//import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK;
-//import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE;
-//import static org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR;
+//import org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.SlideLoaderAPI;
+//import org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.SequenceDoc;
+//import static org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK;
+//import static org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE;
+//import static org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR;
 
 public class SlideLoaderDemo {
 
@@ -27,8 +27,8 @@ public class SlideLoaderDemo {
         //    System.exit(-1);
         //}        
 
-        org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI sl = 
-        		new org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI();
+        org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.SlideLoaderAPI sl = 
+        		new org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.SlideLoaderAPI();
         sl.Connect(device, retVal);
         //sl.set_DataLoggingEnabled(true);
 
@@ -102,11 +102,11 @@ public class SlideLoaderDemo {
     }
 
     public static void reportStatus(int status) {
-        String state = org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc.currentState(status);
-        String motion = org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc.parseMotion(status);
+        String state = org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.SequenceDoc.currentState(status);
+        String motion = org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.SequenceDoc.parseMotion(status);
         String errors = "no errors";
-        if (org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc.errorPresent(status)) {
-            errors = org.bdgp.MMSlide.Modules.PriorSlideLoader.SequenceDoc.parseErrors(status);
+        if (org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.SequenceDoc.errorPresent(status)) {
+            errors = org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.SequenceDoc.parseErrors(status);
         }
         System.out.println("State: "+state);
         System.out.println("State: "+state);
@@ -128,16 +128,16 @@ public class SlideLoaderDemo {
     //    }
     //}
 
-    public static int waitForSlideLoader(org.bdgp.MMSlide.Modules.PriorSlideLoader.SlideLoaderAPI slideLoader) 
+    public static int waitForSlideLoader(org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.SlideLoaderAPI slideLoader) 
     {
         int[] retVal = {0};
         do {
             try { Thread.sleep(1000); } catch (InterruptedException e) { }
             slideLoader.get_Status(retVal);
             //reportStatus(retVal[0]);
-        } while (((retVal[0] & org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK()) 
-              != org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE()) && 
-              !((retVal[0] & org.bdgp.MMSlide.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR()) != 0));
+        } while (((retVal[0] & org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_STATEMASK()) 
+              != org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.PriorSlideLoader.getSTATE_IDLE()) && 
+              !((retVal[0] & org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader.PriorSlideLoader.getLOADER_ERROR()) != 0));
         return retVal[0];
     }
 }

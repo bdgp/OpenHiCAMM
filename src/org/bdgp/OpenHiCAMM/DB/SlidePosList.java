@@ -1,6 +1,6 @@
-package org.bdgp.MMSlide.DB;
+package org.bdgp.OpenHiCAMM.DB;
 
-import org.bdgp.MMSlide.Util;
+import org.bdgp.OpenHiCAMM.Util;
 import org.micromanager.api.PositionList;
 import org.micromanager.utils.MMSerializationException;
 
