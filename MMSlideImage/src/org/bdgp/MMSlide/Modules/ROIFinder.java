@@ -7,11 +7,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import mmcorej.CMMCore;
 import mmcorej.TaggedImage;
 
 import org.bdgp.MMSlide.Dao;
 import org.bdgp.MMSlide.Logger;
 import org.bdgp.MMSlide.MMSlide;
+import org.bdgp.MMSlide.Util;
 import org.bdgp.MMSlide.ValidationError;
 import org.bdgp.MMSlide.WorkflowRunner;
 import org.bdgp.MMSlide.DB.Acquisition;
@@ -33,8 +35,10 @@ import org.micromanager.api.ImageCache;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
 import org.micromanager.api.ScriptInterface;
+import org.micromanager.api.StagePosition;
 import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMScriptException;
+import org.micromanager.utils.MMSerializationException;
 
 import static org.bdgp.MMSlide.Util.where;
 
@@ -106,20 +110,40 @@ public class ROIFinder implements Module {
 
 			double pixelSizeUm = MDUtils.getPixelSizeUm(taggedImage.tags);
 			logger.info(String.format("Using pixedSizeUm: %f", pixelSizeUm));
+			
+			int imageWidth = MDUtils.getWidth(taggedImage.tags);
+			int imageHeight = MDUtils.getHeight(taggedImage.tags);
 
 			// Fill in list of ROIs
 			logger.info(String.format("Running process() to get list of ROIs"));
 			List<ROI> rois = process(image, taggedImage, logger);
+			
+			// get the current stage position
+            double[] x_stage = new double[] {0.0};
+            double[] y_stage = new double[] {0.0};
+            CMMCore core = workflowRunner.getMMSlide().getApp().getMMCore();
+            String xyStage = core.getXYStageDevice();
+            try { core.getXYPosition(xyStage, x_stage, y_stage); } 
+            catch (Exception e) { throw new RuntimeException(e); }
 
             // Convert the ROIs into a PositionList
 			PositionList posList = new PositionList();
 			for (ROI roi : rois) {
-				posList.addPosition(new MultiStagePosition(
-						"xyStage", 
-						((roi.getX1()+roi.getX2())/2.0)*pixelSizeUm, 
-						((roi.getY1()+roi.getY2())/2.0)*pixelSizeUm, 
-						"zStage", 0.0));
+				MultiStagePosition msp = new MultiStagePosition();
+				StagePosition sp = new StagePosition();
+				sp.numAxes = 2;
+				sp.stageName = "XYStage";
+				sp.x = x_stage[0]+(((((double)roi.getX1()+(double)roi.getX2())/2.0)-(double)imageWidth)*pixelSizeUm);
+				sp.y = y_stage[0]+(((((double)roi.getY1()+(double)roi.getY2())/2.0)-(double)imageHeight)*pixelSizeUm);
+				msp.setLabel(roi.toString());
+				msp.add(sp);
+				msp.setDefaultXYStage("XYStage");
+				posList.addPosition(msp);
+				logger.info(String.format("Storing StagePosition(numAxes: %d, stageName: %s, x=%.2f, y=%.2f)",
+						sp.numAxes, Util.escape(sp.stageName), sp.x, sp.y));
 			}
+			try { logger.info(String.format("Produced position list of ROIs:%n%s", posList.serialize())); } 
+			catch (MMSerializationException e) {throw new RuntimeException(e);}
 
 			Dao<SlidePosList> slidePosListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
             Dao<SlidePos> slidePosDao = workflowRunner.getInstanceDb().table(SlidePos.class);
