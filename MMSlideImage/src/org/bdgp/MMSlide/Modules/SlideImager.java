@@ -48,6 +48,7 @@ import org.micromanager.api.ScriptInterface;
 import org.micromanager.utils.MMException;
 import org.micromanager.utils.MMScriptException;
 import org.micromanager.utils.MDUtils;
+import org.micromanager.utils.MMSerializationException;
 
 import static org.bdgp.MMSlide.Util.where;
 
@@ -88,15 +89,28 @@ public class SlideImager implements Module {
         	return Status.SUCCESS;
     	}
 
-        // first try to load a position list from the DB
-        if (conf.containsKey("posListId")) {
-            Config posListId = conf.get("posListId");
+        // first try to load a position list from the posListId conf
+        // otherwise, try loading from the posListModuleId conf
+        if (conf.containsKey("posListModuleId")) {
+            Config posListModuleId = conf.get("posListModuleId");
             Dao<SlidePosList> posListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
-            SlidePosList slidePosList = posListDao.selectOneOrDie(
-                    where("id",Integer.parseInt(posListId.getValue())));
-            logger.info(String.format("Loading position list from DB: %s", slidePosList));
-            PositionList posList = slidePosList.getPositionList();
-            try { script.setPositionList(posList); } 
+            Integer slideId = new Integer(conf.get("slideId").getValue());
+            SlidePosList posList = posListDao.selectOne(
+                            where("slideId",slideId).
+                            and("moduleId",posListModuleId.getValue()));
+            if (posList == null) {
+                throw new RuntimeException("Position list from module \""+posListModuleId.getValue()+"\" not found in database");
+            }
+            // get the position list from the DB
+            PositionList positionList = posList.getPositionList();
+            // log the position list to the console
+            try {
+				logger.info(String.format("Read position list from module %s:%n%s", 
+						conf.get("posListModuleId"), positionList.serialize()));
+			} 
+            catch (MMSerializationException e) {throw new RuntimeException(e);}
+            // load the position list into the acquisition engine
+            try { script.setPositionList(positionList); } 
             catch (MMScriptException e) {throw new RuntimeException(e);}
         }
         // otherwise, load a position list from a file
@@ -114,6 +128,9 @@ public class SlideImager implements Module {
             } 
             catch (MMException e) {throw new RuntimeException(e);}
             catch (MMScriptException e) {throw new RuntimeException(e);}
+        }
+        else {
+        	throw new RuntimeException("No position list was given!");
         }
 
         // Load the settings and position list from the settings files
@@ -184,128 +201,127 @@ public class SlideImager implements Module {
             List<DataProcessor<TaggedImage>> pipeline = new ArrayList<DataProcessor<TaggedImage>>();
             pipeline.add(new DataProcessor<TaggedImage>() {
                 @Override protected void process() {
-                    Acquisition acquisition = null;
-                    // add all the taggedImages to a list
-                    TaggedImage ti = null;
-                    List<TaggedImage> taggedImages = new ArrayList<TaggedImage>();
-                    while ((ti = this.poll()) != TaggedImageQueue.POISON) {
-                    	taggedImages.add(ti);
-                    }
-                    logger.info(String.format("Found %d taggedImages: %s", taggedImages.size(), taggedImages.toString()));
-                    
-                    // make sure we didn't get any unexpected taggedImages
-                    Map<Integer, TaggedImage> posList2Image = new HashMap<Integer, TaggedImage>();
-                    for (TaggedImage taggedImage : taggedImages) {
-                    	Integer positionIndex;
-                    	try { positionIndex = MDUtils.getPositionIndex(taggedImage.tags); } 
-                    	catch (JSONException e) { throw new RuntimeException(e); }
-                    	
-                    	if (!posList2Task.containsKey(positionIndex)) {
-                             throw new RuntimeException(String.format("Unexpected position index %d", positionIndex));
-                    	}
-                    	posList2Image.put(positionIndex, taggedImage);
-                    }
-                    // now make sure we're not missing any taggedImages
-                    for (Map.Entry<Integer,Task> p2t : posList2Task.entrySet()) {
-                    	if (!posList2Image.containsKey(p2t.getKey())) {
-                             throw new RuntimeException(String.format("No taggedImage was given for position index %d!", p2t.getKey()));
-                    	}
-                    }
-                    
-                    // If we have all the taggedImages for processing, then continue processing.
-                    for (TaggedImage taggedImage : taggedImages) {
-                        try {
-                        	logger.info(String.format("Analyzing taggedImage with tags:\n%s", taggedImage.tags.toString(2)));
-
-                            // Make a copy of conf so that each child task can have its own configuration
-                            Map<String,Config> config = new HashMap<String,Config>();
-                            config.putAll(conf);
-
-                            Integer positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
-                            if (posList2Task.containsKey(positionIndex)) {
-                                Task t = posList2Task.get(positionIndex);
-                                // Save the image label. This can be used by downstream processing scripts to get the TaggedImage
-                                // out of the ImageCache.
-                                String imageLabel = MDUtils.getLabel(taggedImage.tags);
-                                TaskConfig imageLabelConf = new TaskConfig(new Integer(t.getId()).toString(),"imageLabel",imageLabel);
-                                taskConfigDao.insertOrUpdate(imageLabelConf,"id","key");
-                                config.put("imageLabel", imageLabelConf);
-                                logger.info(String.format("Created imageLabel task config: %s", imageLabelConf));
-
-                                // get the slide ID and slide Position ID from the config
-                                if (!config.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
-                                Integer slideId = new Integer(config.get("slideId").getValue());
-                                logger.info(String.format("Using slideId: %d", slideId));
-
-                                if (!config.containsKey("slidePosId")) throw new RuntimeException("No slidePosId found for image!");
-                                Integer slidePosId = new Integer(config.get("slidePosId").getValue());
-                                logger.info(String.format("Using slidePosId: %d", slidePosId));
-
-                                // Make sure the acquisition name is set before running the child tasks.
-                                // We have to do it here to avoid a race condition.
-                                if (acquisition  == null) {
-                                	JSONObject summaryMetadata = MMStudio.getInstance().getAcquisitionEngine().getSummaryMetadata();
-                                	if (!summaryMetadata.has("Prefix")) {
-                                		throw new RuntimeException("Could not find Prefix key in summary metadata!");
-                                	}
-                                	String prefix = summaryMetadata.getString("Prefix");
-                                	if (prefix == null) throw new RuntimeException("Acquisition prefix for image was null!");
-
-                                    acquisition = new Acquisition(prefix, rootDir);
-                                    acqDao.insert(acquisition);
-                                    logger.info(String.format("Created new acquisition record: %s", acquisition));
-                                }
-                                
-                                // Create image DB record
-                                Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-                                Image image = new Image(slideId, slidePosId, acquisition, 
-                                        MDUtils.getChannelIndex(taggedImage.tags),
-                                        MDUtils.getSliceIndex(taggedImage.tags),
-                                        MDUtils.getFrameIndex(taggedImage.tags),
-                                        MDUtils.getPositionIndex(taggedImage.tags));
-                                imageDao.insert(image);
-                                logger.info(String.format("Inserted image: %s", image));
-
-                                // Store the Image ID as a Task Config variable
-                                TaskConfig imageId = new TaskConfig(
-                                        new Integer(t.getId()).toString(),
-                                        "imageId",
-                                        new Integer(image.getId()).toString());
-                                taskConfigDao.insertOrUpdate(imageId,"id","key");
-                                config.put("imageId", imageId);
-                                logger.info(String.format("Inserted/Updated imageId config: %s", imageId));
-
-                                // Also store the taggedImage object as a config value. This
-                                // is required when not running in offline mode, since the acquisition
-                                // folder will not have been written yet.
-                                TaskConfig taggedImageConf = new TaskConfig(
-                                        new Integer(t.getId()).toString(),
-                                        "taggedImage",
-                                        null,
-                                        taggedImage);
-                                config.put(taggedImageConf.getKey(), taggedImageConf);
-                                logger.info(String.format("Added taggedImage conf: %s", taggedImageConf));
-                                
-                                // Run the downstream processing tasks for each image
-                                logger.info(String.format("Running task %s from SlideImager: %s", t.getName(), t));
-                                for (Config c : config.values()) {
-                                	logger.info(String.format("    Passing config to SlideImager task %s: %s", t.getName(), c));
-                                }
-                                workflowRunner.run(t, config);
-                            }
-                            else {
-                                logger.warning(String.format("Unexpected position index %d", positionIndex));
-                            }
-                            this.produce(taggedImage);
-                        } 
-                        catch (Throwable e) {
-                            StringWriter sw = new StringWriter();
-                            e.printStackTrace(new PrintWriter(sw));
-                            logger.severe(String.format("Error reported during task %s:%n%s", 
-                                task.getName(), sw.toString()));
-                            throw new RuntimeException(e);
+                	try {
+                        Acquisition acquisition = null;
+                        // add all the taggedImages to a list
+                        TaggedImage ti = null;
+                        List<TaggedImage> taggedImages = new ArrayList<TaggedImage>();
+                        while ((ti = this.poll()) != TaggedImageQueue.POISON) {
+                        	taggedImages.add(ti);
                         }
-                    }
+                        logger.info(String.format("Found %d taggedImages: %s", taggedImages.size(), taggedImages.toString()));
+                    
+                        // make sure we didn't get any unexpected taggedImages
+                        Map<Integer, TaggedImage> posList2Image = new HashMap<Integer, TaggedImage>();
+                        for (TaggedImage taggedImage : taggedImages) {
+                        	Integer positionIndex;
+                        	try { positionIndex = MDUtils.getPositionIndex(taggedImage.tags); } 
+                        	catch (JSONException e) { throw new RuntimeException(e); }
+                        	
+                        	if (!posList2Task.containsKey(positionIndex)) {
+                                 throw new RuntimeException(String.format("Unexpected position index %d", positionIndex));
+                        	}
+                        	posList2Image.put(positionIndex, taggedImage);
+                        }
+                        // now make sure we're not missing any taggedImages
+                        for (Map.Entry<Integer,Task> p2t : posList2Task.entrySet()) {
+                        	if (!posList2Image.containsKey(p2t.getKey())) {
+                                 throw new RuntimeException(String.format("No taggedImage was given for position index %d!", p2t.getKey()));
+                        	}
+                        }
+                    
+                        // If we have all the taggedImages for processing, then continue processing.
+                        for (TaggedImage taggedImage : taggedImages) {
+                            	logger.info(String.format("Analyzing taggedImage with tags:\n%s", taggedImage.tags.toString(2)));
+
+                                // Make a copy of conf so that each child task can have its own configuration
+                                Map<String,Config> config = new HashMap<String,Config>();
+                                config.putAll(conf);
+
+                                Integer positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
+                                if (posList2Task.containsKey(positionIndex)) {
+                                    Task t = posList2Task.get(positionIndex);
+                                    // Save the image label. This can be used by downstream processing scripts to get the TaggedImage
+                                    // out of the ImageCache.
+                                    String imageLabel = MDUtils.getLabel(taggedImage.tags);
+                                    TaskConfig imageLabelConf = new TaskConfig(new Integer(t.getId()).toString(),"imageLabel",imageLabel);
+                                    taskConfigDao.insertOrUpdate(imageLabelConf,"id","key");
+                                    config.put("imageLabel", imageLabelConf);
+                                    logger.info(String.format("Created imageLabel task config: %s", imageLabelConf));
+
+                                    // get the slide ID and slide Position ID from the config
+                                    if (!config.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
+                                    Integer slideId = new Integer(config.get("slideId").getValue());
+                                    logger.info(String.format("Using slideId: %d", slideId));
+
+                                    if (!config.containsKey("slidePosId")) throw new RuntimeException("No slidePosId found for image!");
+                                    Integer slidePosId = new Integer(config.get("slidePosId").getValue());
+                                    logger.info(String.format("Using slidePosId: %d", slidePosId));
+
+                                    // Make sure the acquisition name is set before running the child tasks.
+                                    // We have to do it here to avoid a race condition.
+                                    if (acquisition  == null) {
+                                    	JSONObject summaryMetadata = MMStudio.getInstance().getAcquisitionEngine().getSummaryMetadata();
+                                    	if (!summaryMetadata.has("Prefix")) {
+                                    		throw new RuntimeException("Could not find Prefix key in summary metadata!");
+                                    	}
+                                    	String prefix = summaryMetadata.getString("Prefix");
+                                    	if (prefix == null) throw new RuntimeException("Acquisition prefix for image was null!");
+
+                                        acquisition = new Acquisition(prefix, rootDir);
+                                        acqDao.insert(acquisition);
+                                        logger.info(String.format("Created new acquisition record: %s", acquisition));
+                                    }
+                                    
+                                    // Create image DB record
+                                    Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+                                    Image image = new Image(slideId, slidePosId, acquisition, 
+                                            MDUtils.getChannelIndex(taggedImage.tags),
+                                            MDUtils.getSliceIndex(taggedImage.tags),
+                                            MDUtils.getFrameIndex(taggedImage.tags),
+                                            MDUtils.getPositionIndex(taggedImage.tags));
+                                    imageDao.insert(image);
+                                    logger.info(String.format("Inserted image: %s", image));
+
+                                    // Store the Image ID as a Task Config variable
+                                    TaskConfig imageId = new TaskConfig(
+                                            new Integer(t.getId()).toString(),
+                                            "imageId",
+                                            new Integer(image.getId()).toString());
+                                    taskConfigDao.insertOrUpdate(imageId,"id","key");
+                                    config.put("imageId", imageId);
+                                    logger.info(String.format("Inserted/Updated imageId config: %s", imageId));
+
+                                    // Also store the taggedImage object as a config value. This
+                                    // is required when not running in offline mode, since the acquisition
+                                    // folder will not have been written yet.
+                                    TaskConfig taggedImageConf = new TaskConfig(
+                                            new Integer(t.getId()).toString(),
+                                            "taggedImage",
+                                            null,
+                                            taggedImage);
+                                    config.put(taggedImageConf.getKey(), taggedImageConf);
+                                    logger.info(String.format("Added taggedImage conf: %s", taggedImageConf));
+                                    
+                                    // Run the downstream processing tasks for each image
+                                    logger.info(String.format("Running task %s from SlideImager: %s", t.getName(), t));
+                                    for (Config c : config.values()) {
+                                    	logger.info(String.format("    Passing config to SlideImager task %s: %s", t.getName(), c));
+                                    }
+                                    workflowRunner.run(t, config);
+                                }
+                                else {
+                                    logger.warning(String.format("Unexpected position index %d", positionIndex));
+                                }
+                                this.produce(taggedImage);
+                        }
+                }
+                catch (Throwable e) {
+                    StringWriter sw = new StringWriter();
+                    e.printStackTrace(new PrintWriter(sw));
+                    logger.severe(String.format("Error reported during task %s:%n%s", 
+                        task.getName(), sw.toString()));
+                }
                 }});
             this.script.setImageProcessorPipeline(pipeline);
 
