@@ -130,16 +130,6 @@
       <id>ormlite</id>
       <url>http://ormlite.com/releases/</url>
     </repository>
-    <!--repository>
-      <id>bam.lbl.gov</id>
-      <name>bam.lbl.gov-releases</name>
-      <url>http://bam.lbl.gov:8081/artifactory/libs-release-local</url>
-    </repository-->
-    <repository>
-      <id>local-repository</id>
-      <name>Project-local repository</name>
-      <url>file://${project.basedir}/repository</url>
-    </repository>
   </repositories>
   <dependencies>
     <dependency>
@@ -161,15 +151,11 @@
       <groupId>MicroManager</groupId>
       <artifactId>MMJ_</artifactId>
       <version>1.4.20</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/lib/MMJ_.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>MicroManager</groupId>
       <artifactId>MMCoreJ</artifactId>
       <version>1.4.20</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/lib/MMCoreJ.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>org.hsqldb</groupId>
@@ -200,8 +186,6 @@
       <groupId>org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader</groupId>
       <artifactId>priorslideloader</artifactId>
       <version>1.0-SNAPSHOT</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/lib/priorslideloader-1.0-SNAPSHOT.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>com.github.mdr</groupId>

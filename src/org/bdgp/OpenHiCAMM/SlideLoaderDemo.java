@@ -12,9 +12,9 @@ public class SlideLoaderDemo {
 
     public static void main(String[] args) {
         int[] retVal = {0};
-        double[] loadCoords = {-115372.0, -77000.0};
-        double[] initCoords = {0.0, 0.0};
-        String config = "stage_only.cfg";
+        //double[] loadCoords = {-115372.0, -77000.0};
+        //double[] initCoords = {0.0, 0.0};
+        //String config = "stage_only.cfg";
         String device = "/dev/tty.usbserial-FTEKUITV";
 
         //CMMCore core = new CMMCore();
