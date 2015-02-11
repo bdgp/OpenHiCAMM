@@ -28,35 +28,3 @@ cd ../OpenHiCAMM
 
 # build and install OpenHiCAMM
 mvn install
-
-# if the build fails due to missing dependencies, you may need to update
-following sections in your pom.xml to use system scoped jar paths:
-
-    <dependency>
-      <groupId>MicroManager</groupId>
-      <artifactId>MMJ_</artifactId>
-      <version>1.4.20</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/repository/MicroManager/MMJ_/1.4.20/MMJ_-1.4.20.jar</systemPath>
-    </dependency>
-    <dependency>
-      <groupId>MicroManager</groupId>
-      <artifactId>MMCoreJ</artifactId>
-      <version>1.4.20</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/repository/MicroManager/MMCoreJ/1.4.20/MMCoreJ-1.4.20.jar</systemPath>
-    </dependency>
-    <dependency>
-      <groupId>org.bdgp.OpenHiCAMM.Modules.PriorSlideLoader</groupId>
-      <artifactId>priorslideloader</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/repository/org/bdgp/OpenHiCAMM/Modules/PriorSlideLoader/priorslideloader/1.0-SNAPSHOT/priorslideloader-1.0-SNAPSHOT.jar</systemPath>
-    </dependency>
-
-Basically, just find the sections for the following dependencies, and
-add <scope>system</scope> tags and set the systemPath tag to point to
-the absolute path of the jar file. For some reason, the local maven
-repository didn't work on the iMac machine. The above system scoped jar
-paths can be used as a workaround until the problem is fixed.
-
