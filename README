@@ -1,27 +1,14 @@
 OpenHiCAMM Installation Instructions
 ======================================
 
-git clone agarwalgrp@twist.lbl.gov:/srv/git/umanager.git
-cd umanager
-
 # build and install fiji and micromanager as outlined in the script file:
 ./install-fiji-micromanager.sh
 
 # set the fiji.dir variable (set to your Fiji installation folder)
-echo "fiji.dir=/Applications/Fiji.app" >OpenHiCAMM/build.properties
+echo "fiji.dir=/Applications/Fiji.app" >./build.properties
 
-# build the prior slide loader driver
-# the "make install" command will copy the created .jar file into
-# OpenHiCAMM/repository local maven repo.
-cd PriorSlideLoader
-./bootstrap
-./configure
-make -j
-make install
+# add the micromanager MMJ_.jar and MMCore.jar files to the user's local maven repo
 
-# add the micromanager MMJ_.jar and MMCore.jar files to the local maven
-# repo in OpenHiCAMM/repository
-cd ../OpenHiCAMM
 # change the following command to point to your micromanager source
 # directory that has already been built with make
 ./add-mmj-jar.sh ~/src/micromanager/micromanager
