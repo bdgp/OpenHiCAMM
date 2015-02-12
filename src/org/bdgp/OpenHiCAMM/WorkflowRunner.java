@@ -161,7 +161,6 @@ public class WorkflowRunner {
         // Create a new directory for the workflow instance.
         instance.createStorageLocation(this.workflowDirectory.getPath());
         workflowInstance.update(instance,"id");
-        this.logger.info(String.format("Created new workflow instance: %s", workflowInstance));
         return instance;
     }
     
