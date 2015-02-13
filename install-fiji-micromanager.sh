@@ -9,7 +9,8 @@ PORT=4000
 
 # install homebrew and project dependencies
 #ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
-brew install autoconf automake libtool pkg-config swig subversion boost libusb-compat hidapi libdc1394 libgphoto2 freeimage opencv python git maven
+brew tap homebrew/science
+brew install autoconf automake libtool pkg-config swig subversion boost libusb-compat hidapi libdc1394 libgphoto2 freeimage opencv python git maven ant
 
 # install latest Java from Oracle
 #brew tap caskroom/cask
