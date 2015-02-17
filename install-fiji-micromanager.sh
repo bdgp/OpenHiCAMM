@@ -46,11 +46,8 @@ cd micromanager
 ./configure --enable-imagej-plugin="$FIJIDIR" --with-ij-jar="$(echo "$FIJIDIR"/jars/ij-*.jar)"
 ant -f buildscripts/fetchdeps.xml
 
-# edit plugins/pluginpaths.xml, add the following line to the
-# project.classpath path:
-#   <path refid="project.linked.jars"/>
-# project.linked.jars path:
-#		<pathelement location="${mm.java.lib.jcommon}"/>
+# this patch is required for the build to work, TODO: file bug report with Micro-Manager
+patch -p0 -i "$(dirname "$0")"/mmfix.patch
 
 make -j
 make install
