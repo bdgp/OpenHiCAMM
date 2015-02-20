@@ -170,7 +170,7 @@ public class WorkflowDesignerDialog extends JDialog {
 		doneButton.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
 	            Dao<WorkflowModule> wf = connection.table(WorkflowModule.class);
-		        // clear the file of any existing records 
+		        // clear the workflow
 	            wf.delete();
 	            // create the WorkflowModule records
 	            for (@SuppressWarnings("unchecked")
