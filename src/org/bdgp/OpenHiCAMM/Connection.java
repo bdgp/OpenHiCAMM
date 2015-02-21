@@ -8,9 +8,11 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.logging.Level;
 import java.security.SecureRandom;
 import java.math.BigInteger;
@@ -28,21 +30,8 @@ import static org.bdgp.OpenHiCAMM.Util.map;
 
 public class Connection extends JdbcPooledConnectionSource {
     private static Map<String,String> serverDefaults = map("server.port","9001");
-    
-    public static class ServerURI {
-        public ServerURI(URI serverURI, String user, String password) {
-            this.serverURI = serverURI;
-            this.user = user;
-            this.password = password;
-        }
-        public URI serverURI;
-        public String user;
-        public String password;
-    }
-    private static Map<String,ServerURI> serverURIs = new HashMap<String,ServerURI>();
-    private static Map<String,Server> servers = new HashMap<String,Server>();
     private static SecureRandom random = new SecureRandom();
-
+    private static Server server;
     
     public Connection(String string) throws SQLException {
         super(string);
@@ -52,19 +41,8 @@ public class Connection extends JdbcPooledConnectionSource {
     }
     
     public static Connection get(String dbPath) {
-        return get(dbPath,dbPath);
-    }
-    
-    public static Connection get(String serverPath, String dbPath) {
         try {
-            // create the server and db directories if they do not exist
-    	    File serverDir = new File(new File(serverPath).getParent());
-    	    if (!(serverDir.exists() && serverDir.isDirectory())) {
-    	        serverDir.mkdirs();
-        		if (!(serverDir.exists() && serverDir.isDirectory())) {
-        		    throw new RuntimeException("Could not create directory "+serverDir.getPath());
-        		}
-    	    }
+        	// create the db dir if it does not exist
     	    File dbDir = new File(new File(dbPath).getParent());
     	    if (!(dbDir.exists() && dbDir.isDirectory())) {
     	        dbDir.mkdirs();
@@ -72,117 +50,126 @@ public class Connection extends JdbcPooledConnectionSource {
         		    throw new RuntimeException("Could not create directory "+dbDir.getPath());
         		}
     	    }
-    	    
-    	    // start a new HSQLDB server if one hasn't been started yet.
-    	    if (serverURIs.get(serverPath) == null) {
-        	    File lockfile = new File(serverDir, new File(dbPath).getName().replaceFirst("\\.db$","")+".lock");
-        	    File loginfile = new File(serverDir, new File(dbPath).getName().replaceFirst("\\.db$","")+".login");
-                if (lockfile.createNewFile()) {
-                    // set server properties
-                    HsqlProperties p = new HsqlProperties();
-                    p.setProperty("server.remote_open","true");
-                    p.setProperty("server.address", InetAddress.getLocalHost().getHostAddress());
-                    p.setProperty("server.port", map(serverDefaults).get("server.port"));
-                    p.setProperty("server.no_system_exit","true");
-                    p.setProperty("hsqldb.default_table_type","cached");
-                    p.setProperty("hsqldb.applog","1");
-                    p.setProperty("hsqldb.sqllog","3");
-                    // writer server output to a log file
-                    Logger logger = Logger.create(new File(serverDir, WorkflowRunner.LOG_FILE).getPath(), 
-                            "HSQLDB", Level.INFO);
-                    // instantiate a new database server
-                    Server server = new Server();
-                    server.setLogWriter(new PrintWriter(logger.getOutputStream(Level.INFO)));
-                    server.setErrWriter(new PrintWriter(logger.getOutputStream(Level.WARNING)));
-                    server.setProperties(p);
-                    server.start();
-                    servers.put(serverPath,server);
-                    // write the server connection URL to the lock file
-                    URI serverURI = new URI("hsql",null,server.getAddress(),server.getPort(),null,null,null);
-                    
-                    String user = "mmslide";
-                    String pw = new BigInteger(130, random).toString(32);
-                    if (loginfile.exists()) {
-                        // read the login information from the login file
-                        BufferedReader login = new BufferedReader(new FileReader(loginfile.getPath()));
-                        user = login.readLine();
-                        pw = login.readLine();
-                        login.close();
-                    }
-                    else {
-                        // write the login file
-                        PrintWriter login = new PrintWriter(loginfile);
-                        login.println(user);
-                        login.println(pw);
-                        login.close();
-                    }
-                    serverURIs.put(serverPath,new ServerURI(serverURI,user,pw));
-                    URI dbURI = new URI(serverURI.getScheme(), serverURI.getUserInfo(), serverURI.getHost(), serverURI.getPort(), 
-                            new File("", new File(dbPath).getName().replaceFirst("\\.db$","")).getPath(), serverURI.getQuery(), serverURI.getFragment());
-                    // write the lock file
-                    PrintWriter lock = new PrintWriter(lockfile);
-                    lock.println(serverURI);
-                    lock.close();
-                    lockfile.deleteOnExit();
-                    return new Connection("jdbc:hsqldb:"+dbURI+";file:"+dbPath+";user="+user+";password="+pw, user, pw);
-                }
-                else {
-                    // use the connection URL stored in the existing .lock file
-                    BufferedReader lock = new BufferedReader(new FileReader(lockfile.getPath()));
-                    String serverString = lock.readLine();
-                    lock.close();
+
+            File loginfile = new File(dbDir, new File(dbPath).getName().replaceFirst("\\.db$","")+".login");
+            File lockfile = new File(dbDir, new File(dbPath).getName().replaceFirst("\\.db$","")+".lock");
+
+            // try to create the db lockfile
+            if (lockfile.createNewFile()) {
+                lockfile.deleteOnExit();
+            	// make sure a server is started
+            	startServer(dbDir.getPath());
+
+            	// Choose a random string to be the DB alias
+            	String dbAlias = String.format("/DB_%s", new BigInteger(130, random).toString(32));
+                // write the server connection URL to the lock file
+                URI dbURI = new URI("hsql",null,server.getAddress(),server.getPort(), dbAlias, null,null);
+                // write the lock file
+                PrintWriter lock = new PrintWriter(lockfile);
+                lock.println(dbURI);
+                lock.close();
+                
+                // write the user/password to the login file
+                String user = "mmslide";
+                String pw = new BigInteger(130, random).toString(32);
+                if (loginfile.exists()) {
                     // read the login information from the login file
                     BufferedReader login = new BufferedReader(new FileReader(loginfile.getPath()));
-                    String username = login.readLine();
-                    String password = login.readLine();
+                    user = login.readLine();
+                    pw = login.readLine();
                     login.close();
-                    if (serverString == null || username == null || password == null) {
-                        throw new RuntimeException("Could not read server connection information from file "+lockfile.getPath());
-                    }
-                    URI serverURI = new URI(serverString);
-                    
-                    serverURIs.put(serverPath,new ServerURI(serverURI, username, password));
-                    URI dbURI = new URI(serverURI.getScheme(), serverURI.getUserInfo(), serverURI.getHost(), serverURI.getPort(), 
-                            new File("", new File(dbPath).getName().replaceFirst("\\.db$","")).getPath(), serverURI.getQuery(), serverURI.getFragment());
-                    try {
-                        Connection con;
-                    	con = new Connection("jdbc:hsqldb:"+dbURI+";file:"+dbPath+";user="+username+";password="+password, username, password);
-                    	// test the connection
-                    	con.getReadWriteConnection();
-                    	return con;
-                    } catch (SQLException e) {
-                    	if (JOptionPane.showConfirmDialog(null, 
-                    			"There is a database lock file, but I could not connect to the database.\n"+
-                    			"This could mean that the database is not running.\n"+
-                    			"Do you want me to delete the lock file and re-start the database?", 
-                    			"Database Connection Error", 
-                    			JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
-                    	{
-                    		serverURIs.remove(serverPath);
-                    		lockfile.delete();
-                            return get(serverPath, dbPath);
-                    	}
-                        throw e;
-                    }
                 }
-    	    }
-    	    else {
-    	        ServerURI serverURI = serverURIs.get(serverPath);
-                URI dbURI = new URI(serverURI.serverURI.getScheme(), serverURI.serverURI.getUserInfo(), 
-                        serverURI.serverURI.getHost(), serverURI.serverURI.getPort(), 
-                        new File("", new File(dbPath).getName().replaceFirst("\\.db$","")).getPath(), 
-                        serverURI.serverURI.getQuery(), serverURI.serverURI.getFragment());
-                return new Connection("jdbc:hsqldb:"+dbURI+";file:"+dbPath+";user="+serverURI.user+";password="+serverURI.password, 
-                        serverURI.user, serverURI.password);
-    	    }
+                else {
+                    // write the login file
+                    PrintWriter login = new PrintWriter(loginfile);
+                    login.println(user);
+                    login.println(pw);
+                    login.close();
+                }
+
+                return new Connection(
+                		String.format("jdbc:hsqldb:%s;file:%s;user=%s;password=%s",dbURI,dbPath,user,pw), 
+                		user, pw);
+            }
+            else {
+                // use the connection URL stored in the existing .lock file
+            	// There is a potential race condition here; if the one thread gets the lock file, it
+            	// doesn't write the server connection string right away, so just in case we need to loop
+            	// until the connection string is written to the file. To make sure the connection URL is fully
+            	// written, make sure it ends in a newline.
+            	String dbString = "";
+            	while (dbString.isEmpty()) {
+            		Scanner scanner = new Scanner(lockfile);
+            		scanner.useDelimiter("\\Z");
+            		dbString = scanner.next();
+            		scanner.close();
+                    if (!dbString.matches("\n$")) {
+						try { Thread.sleep(500); } 
+						catch (InterruptedException e) { }
+                    }
+            	}
+            	dbString = dbString.replaceFirst("\n$", "");
+
+                // read the login information from the login file
+                BufferedReader login = new BufferedReader(new FileReader(loginfile.getPath()));
+                String username = login.readLine();
+                String password = login.readLine();
+                login.close();
+                if (dbString == null || username == null || password == null) {
+                    throw new RuntimeException("Could not read server connection information from file "+lockfile.getPath());
+                }
+                URI dbURI = new URI(dbString);
+                try {
+                    Connection con = new Connection(
+                    		String.format("jdbc:hsqldb:%s;file:%s;user=%s;password=%s", dbURI,dbPath,username,password), 
+                    		username, password);
+                    // test the connection
+                    con.getReadWriteConnection();
+                    return con;
+                } catch (SQLException e) {
+                    if (JOptionPane.showConfirmDialog(null, 
+                            "There is a database lock file, but I could not connect to the database.\n"+
+                            "This could mean that the database is not running.\n"+
+                            "Do you want me to delete the lock file and re-start the database?", 
+                            "Database Connection Error", 
+                            JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
+                    {
+                        lockfile.delete();
+                        return get(dbPath);
+                    }
+                    throw e;
+                }
+            }
         }
         catch (SQLException e) {throw new RuntimeException(e);} 
         catch (URISyntaxException e) {throw new RuntimeException(e);}
 	    catch (IOException e) {throw new RuntimeException(e);}
-        catch (AclFormatException e) {throw new RuntimeException(e);}
     }
     
-    public <T> Dao<T> table(Class<T> class_) {
+    private static void startServer(String logDir) {
+        // set server properties
+        HsqlProperties p = new HsqlProperties();
+        p.setProperty("server.remote_open","true");
+        try { p.setProperty("server.address", InetAddress.getLocalHost().getHostAddress()); } 
+        catch (UnknownHostException e) {throw new RuntimeException(e);}
+        p.setProperty("server.port", map(serverDefaults).get("server.port"));
+        p.setProperty("server.no_system_exit","true");
+        p.setProperty("hsqldb.default_table_type","cached");
+        p.setProperty("hsqldb.applog","1");
+        p.setProperty("hsqldb.sqllog","3");
+        // writer server output to a log file
+        Logger logger = Logger.create(new File(logDir, WorkflowRunner.LOG_FILE).getPath(), 
+        "HSQLDB", Level.INFO);
+        // instantiate a new database server
+        server = new Server();
+        server.setLogWriter(new PrintWriter(logger.getOutputStream(Level.INFO)));
+        server.setErrWriter(new PrintWriter(logger.getOutputStream(Level.WARNING)));
+        try { server.setProperties(p); } 
+        catch (IOException e) {throw new RuntimeException(e);} 
+        catch (AclFormatException e) {throw new RuntimeException(e);}
+        server.start();
+	}
+	public <T> Dao<T> table(Class<T> class_) {
         try {
     		DatabaseTableConfig<T> tableConfig = DatabaseTableConfig.fromClass(this, class_);
     		if (tableConfig == null) {
