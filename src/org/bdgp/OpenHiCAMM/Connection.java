@@ -10,7 +10,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.sql.SQLException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.logging.Level;
@@ -146,29 +145,32 @@ public class Connection extends JdbcPooledConnectionSource {
 	    catch (IOException e) {throw new RuntimeException(e);}
     }
     
-    private static void startServer(String logDir) {
-        // set server properties
-        HsqlProperties p = new HsqlProperties();
-        p.setProperty("server.remote_open","true");
-        try { p.setProperty("server.address", InetAddress.getLocalHost().getHostAddress()); } 
-        catch (UnknownHostException e) {throw new RuntimeException(e);}
-        p.setProperty("server.port", map(serverDefaults).get("server.port"));
-        p.setProperty("server.no_system_exit","true");
-        p.setProperty("hsqldb.default_table_type","cached");
-        p.setProperty("hsqldb.applog","1");
-        p.setProperty("hsqldb.sqllog","3");
-        // writer server output to a log file
-        Logger logger = Logger.create(new File(logDir, WorkflowRunner.LOG_FILE).getPath(), 
-        "HSQLDB", Level.INFO);
-        // instantiate a new database server
-        server = new Server();
-        server.setLogWriter(new PrintWriter(logger.getOutputStream(Level.INFO)));
-        server.setErrWriter(new PrintWriter(logger.getOutputStream(Level.WARNING)));
-        try { server.setProperties(p); } 
-        catch (IOException e) {throw new RuntimeException(e);} 
-        catch (AclFormatException e) {throw new RuntimeException(e);}
-        server.start();
+    private static synchronized void startServer(String logDir) {
+    	if (server == null) {
+            // set server properties
+            HsqlProperties p = new HsqlProperties();
+            p.setProperty("server.remote_open","true");
+            try { p.setProperty("server.address", InetAddress.getLocalHost().getHostAddress()); } 
+            catch (UnknownHostException e) {throw new RuntimeException(e);}
+            p.setProperty("server.port", map(serverDefaults).get("server.port"));
+            p.setProperty("server.no_system_exit","true");
+            p.setProperty("hsqldb.default_table_type","cached");
+            p.setProperty("hsqldb.applog","1");
+            p.setProperty("hsqldb.sqllog","3");
+            // writer server output to a log file
+            Logger logger = Logger.create(new File(logDir, WorkflowRunner.LOG_FILE).getPath(), 
+            "HSQLDB", Level.INFO);
+            // instantiate a new database server
+            server = new Server();
+            server.setLogWriter(new PrintWriter(logger.getOutputStream(Level.INFO)));
+            server.setErrWriter(new PrintWriter(logger.getOutputStream(Level.WARNING)));
+            try { server.setProperties(p); } 
+            catch (IOException e) {throw new RuntimeException(e);} 
+            catch (AclFormatException e) {throw new RuntimeException(e);}
+            server.start();
+    	}
 	}
+
 	public <T> Dao<T> table(Class<T> class_) {
         try {
     		DatabaseTableConfig<T> tableConfig = DatabaseTableConfig.fromClass(this, class_);
