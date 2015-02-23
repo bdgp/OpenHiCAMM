@@ -292,6 +292,7 @@ public class WorkflowDialog extends JDialog {
         	taskStatus.update(set("parentTaskId", null));
         }
 
+        refresh();
         workflowRunner.run(startModuleId, null);
 
         SwingUtilities.invokeLater(new Runnable() {

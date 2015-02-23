@@ -202,16 +202,18 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
         	    update.updateColumnValue(entry.getKey(), entry.getValue());
     	    }
     	    // Add the where clause
-    	    Where<T,Object> whereClause = update.where();
-    	    for (Map.Entry<String,Object> entry : where.entrySet()) {
-    	        if (entry.getValue() == null) {
-    	            whereClause.isNull(entry.getKey());
-    	        }
-    	        else {
-        	        whereClause.eq(entry.getKey(), new SelectArg(entry.getValue()));
-    	        }
+    	    if (where.size()>0) {
+                Where<T,Object> whereClause = update.where();
+                for (Map.Entry<String,Object> entry : where.entrySet()) {
+                    if (entry.getValue() == null) {
+                        whereClause.isNull(entry.getKey());
+                    }
+                    else {
+                        whereClause.eq(entry.getKey(), new SelectArg(entry.getValue()));
+                    }
+                }
+                whereClause.and(where.size());
     	    }
-    	    whereClause.and(where.size());
     	    return update.update();
 	    } catch (SQLException e) {throw new RuntimeException(e);}
 	}
@@ -315,6 +317,9 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 		return queryForFieldValues(fieldValues, true);
 	}
 	private List<T> queryForFieldValues(Map<String, Object> fieldValues, boolean useArgs) throws SQLException {
+		if (fieldValues.size() == 0) {
+			return Collections.emptyList();
+		}
 		checkForInitialized();
 		QueryBuilder<T, Object> qb = queryBuilder();
 		Where<T, Object> where = qb.where();
@@ -330,12 +335,8 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     			where.eq(entry.getKey(), fieldValue);
 			}
 		}
-		if (fieldValues.size() == 0) {
-			return Collections.emptyList();
-		} else {
-			where.and(fieldValues.size());
-			return qb.query();
-		}
+        where.and(fieldValues.size());
+        return qb.query();
 	}
 	
 	/**
@@ -410,16 +411,18 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     	    DeleteBuilder<T,Object> delete = this.deleteBuilder();
     	    
     	    // Add the where clause
-    	    Where<T,Object> whereClause = delete.where();
-    	    for (Map.Entry<String,Object> entry : where.entrySet()) {
-    	        if (entry.getValue() == null) {
-    	            whereClause.isNull(entry.getKey());
-    	        }
-    	        else {
-        	        whereClause.eq(entry.getKey(), new SelectArg(entry.getValue()));
-    	        }
+    	    if (where.size()>0) {
+                Where<T,Object> whereClause = delete.where();
+                for (Map.Entry<String,Object> entry : where.entrySet()) {
+                    if (entry.getValue() == null) {
+                        whereClause.isNull(entry.getKey());
+                    }
+                    else {
+                        whereClause.eq(entry.getKey(), new SelectArg(entry.getValue()));
+                    }
+                }
+                whereClause.and(where.size());
     	    }
-    	    whereClause.and(where.size());
     	    return delete.delete();
 	    } catch (SQLException e) {throw new RuntimeException(e);}
 	}
