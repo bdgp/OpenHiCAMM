@@ -44,12 +44,9 @@ svn --username guest --password guest checkout https://valelab.ucsf.edu/svn/3rdp
 cd micromanager
 # Configure, build, and install
 ./autogen.sh
-./configure --enable-imagej-plugin="$FIJIDIR" --with-ij-jar="$(echo "$FIJIDIR"/jars/ij-*.jar)"
+./configure --enable-imagej-plugin="$FIJIDIR" --with-ij-jar="$(echo "$FIJIDIR"/jars/ij*.jar)"
 ant -f buildscripts/fetchdeps.xml
 
-# this patch is required for the build to work, TODO: file bug report with Micro-Manager
-patch -p0 -i "$(dirname "$0")"/mmfix.patch
-
-make -j
+make -j "$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
 make install
 popd
