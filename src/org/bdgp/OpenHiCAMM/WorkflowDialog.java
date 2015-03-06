@@ -38,8 +38,13 @@ import java.util.logging.Level;
 import static org.bdgp.OpenHiCAMM.Util.where;
 import static org.bdgp.OpenHiCAMM.Util.set;
 
+/**
+ * The main workflow dialog.
+ * @author insitu
+ */
 @SuppressWarnings("serial")
 public class WorkflowDialog extends JDialog {
+	// Swing widgets
     JTextField workflowDir;
     JFileChooser directoryChooser;
     JComboBox<String> workflowInstance;
@@ -49,9 +54,12 @@ public class WorkflowDialog extends JDialog {
     JButton resumeButton;
     JLabel lblConfigure;
     JButton btnConfigure;
+    JButton btnCreateNewInstance;
+
+    // The Micro-Manager plugin module
     OpenHiCAMM mmslide;
+    // The workflow runner module
     WorkflowRunner workflowRunner;
-    private JButton btnCreateNewInstance;
 
     public WorkflowDialog(Frame parentFrame, OpenHiCAMM mmslide) {
         super(parentFrame, "OpenHiCAMM");
@@ -95,7 +103,6 @@ public class WorkflowDialog extends JDialog {
                 }
             }});
         
-        // TODO: Automatically create the first new instance for newly created workflows
         btnCreateNewInstance = new JButton("Create New Instance");
         btnCreateNewInstance.addActionListener(new ActionListener() {
         	public void actionPerformed(ActionEvent arg0) {
@@ -205,9 +212,15 @@ public class WorkflowDialog extends JDialog {
         
         openWorkflowButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+            	String oldWorkflowDir = workflowDir.getText();
                 if (directoryChooser.showDialog(WorkflowDialog.this,"Choose Workflow Directory") == JFileChooser.APPROVE_OPTION) {
                     workflowDir.setText(directoryChooser.getSelectedFile().getPath());
                 }
+                // If the workflow selection changed, then load the new workflow runner
+                if (!oldWorkflowDir.isEmpty() && !workflowDir.getText().equals(oldWorkflowDir)) {
+                    WorkflowDialog.this.initWorkflowRunner(true);
+                }
+                // If a workflow directory was given, enable the edit button and refresh the UI control state
                 if (workflowDir.getText().length() > 0) {
                     editWorkflowButton.setEnabled(true);
                     refresh();
@@ -218,6 +231,11 @@ public class WorkflowDialog extends JDialog {
             }
         });
     }
+    
+    /**
+     * Catch-all function to refresh the UI controls given the state of the dialog. This should be run whenever
+     * a model state change is made that can change the UI state.
+     */
     public void refresh() {
         List<String> startModules = new ArrayList<String>();
     	if (workflowDir.getText().length() > 0) {
@@ -230,21 +248,22 @@ public class WorkflowDialog extends JDialog {
                     startModules.add(module.getId());
                 }
             }
+
+            Collections.sort(startModules);
+            startModule.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
+            startModule.setEnabled(true);
+            
+            // get the list of workflow instances
+            List<String> workflowInstances = new ArrayList<String>();
+            Dao<WorkflowInstance> wfi = workflowDb.table(WorkflowInstance.class);
+            for (WorkflowInstance instance : wfi.select()) {
+                workflowInstances.add(instance.getName());
+            }
+            Collections.sort(workflowInstances, Collections.reverseOrder());
+            workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
+            workflowInstance.setEnabled(true);
+                
             if (startModules.size() > 0) {
-                Collections.sort(startModules);
-                startModule.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
-                startModule.setEnabled(true);
-                
-                // get the list of workflow instances
-                List<String> workflowInstances = new ArrayList<String>();
-                Dao<WorkflowInstance> wfi = workflowDb.table(WorkflowInstance.class);
-                for (WorkflowInstance instance : wfi.select()) {
-                    workflowInstances.add(instance.getName());
-                }
-                Collections.sort(workflowInstances, Collections.reverseOrder());
-                workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
-                workflowInstance.setEnabled(true);
-                
                 btnConfigure.setEnabled(true);
                 startButton.setEnabled(true);
                 btnCreateNewInstance.setEnabled(true);
@@ -261,16 +280,28 @@ public class WorkflowDialog extends JDialog {
     	}
     }
 
+    /**
+     * Create a new workflowRunner instance.
+     * @param force
+     */
     public void initWorkflowRunner(boolean force) {
         Integer instanceId = workflowInstance.getSelectedIndex() < 0 ? null :
             Integer.parseInt(((String)workflowInstance.getItemAt(workflowInstance.getSelectedIndex())).replaceAll("^WF",""));
         if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getInstance().getId()) || force) {
             workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, Level.INFO, mmslide);
+
         }
     }
 
+    /**
+     * Start the workflow runner and open the Workflow Runner dialog.
+     * @param resume Are we running in "New" or "Resume" mode? 
+     * Resume mode does not delete and re-create the Task/TaskConfig records before starting.
+     */
     public void start(boolean resume) {
+        // Make sure the workflow runner is initialized
         initWorkflowRunner(false);
+        // Get the selected start module
         String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
         
         // re-init the logger. This ensures each workflow run gets logged to a separate file.
@@ -280,27 +311,36 @@ public class WorkflowDialog extends JDialog {
         wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         wrd.pack();
 
+        // If we're not resuming, delete and re-create the task records
         if (!resume) {
             workflowRunner.deleteTaskRecords();
             workflowRunner.createTaskRecords();
         }
+        // In resume mode, the task records aren't re-created. So we need to clear out 
+        // invalid statuses and the parent Task ID flags.
         else {
-        	// In resume mode, the task records aren't re-created. So we need to clear out 
-        	// invalid statuses and the parent Task ID flags.
         	Dao<Task> taskStatus = workflowRunner.getTaskStatus();
         	taskStatus.update(set("status", Status.NEW), where("status", Status.IN_PROGRESS));
         	taskStatus.update(set("parentTaskId", null));
         }
 
+        // Refresh the UI controls
         refresh();
+        // Start the workflow runner
         workflowRunner.run(startModuleId, null);
 
+        // Make the workflow runner dialog visible
         SwingUtilities.invokeLater(new Runnable() {
            @Override public void run() {
                 wrd.setVisible(true);
             }
         });
     }
+
+    /**
+     * Get the set of Configuration objects to pass to the Workflow Configuration Dialog.
+     * @return a map of the configuration name -> configuration
+     */
     public Map<String,Configuration> getConfigurations() {
     	// get list of JPanels and load them with the configuration interfaces
     	initWorkflowRunner(false);
