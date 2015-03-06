@@ -62,8 +62,8 @@ public class SlideImager implements Module {
     public void initialize(WorkflowRunner workflowRunner, String moduleId) {
         this.workflowRunner = workflowRunner;
         this.moduleId = moduleId;
-        OpenHiCAMM mmslide = workflowRunner.getOpenHiCAMM();
-        this.script = mmslide.getApp();
+        OpenHiCAMM openhicamm = workflowRunner.getOpenHiCAMM();
+        this.script = openhicamm.getApp();
 
         Preferences prefs = Preferences.userNodeForPackage(this.script.getClass());
         MMOptions options = new MMOptions();
@@ -84,7 +84,7 @@ public class SlideImager implements Module {
     	for (Config c : conf.values()) {
     		logger.info(String.format("Using configuration: %s", c));
     	}
-    	if (acqControlDlg == null) {
+    	if (this.acqControlDlg == null) {
         	logger.warning("acqControlDlg is not initialized!");
         	return Status.SUCCESS;
     	}
@@ -179,6 +179,9 @@ public class SlideImager implements Module {
             Set<Task> tasks = new HashSet<Task>();
             for (TaskDispatch td : taskDispatches) {
             	tasks.addAll(taskDao.select(where("id", td.getTaskId())));
+            }
+            if (tasks.isEmpty()) {
+                tasks.addAll(taskDao.select(where("moduleId", this.moduleId)));
             }
             final Map<Integer,Task> posList2Task = new TreeMap<Integer,Task>();
             for (Task t : tasks) {
