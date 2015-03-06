@@ -304,28 +304,35 @@ public class WorkflowRunner {
         this.logger.info(String.format("Workflow Graph:%n%s", layout.layout(graph.build())));
 
         // Draw the task dispatch graph
-        GraphBuilder<String> taskGraph = new GraphBuilder<String>();
-        Map<Integer,String> taskLabels = new HashMap<Integer,String>();
         List<Task> tasks = this.taskStatus.select();
-        Collections.sort(tasks, new Comparator<Task>() {
-            @Override public int compare(Task a, Task b) {
-                return a.getId()-b.getId();
-            }});
-        for (int t=0; t<tasks.size(); ++t) {
-        	Task task = tasks.get(t);
-            Module module = this.moduleInstances.get(task.getModuleId());
-            String label = String.format("%s:%s:%s", task.getName(), task.getStatus(), module.getTaskType());
-            taskLabels.put(task.getId(), label);
-            taskGraph.addVertex(label);
+        final int MAX_TASKS_IN_GRAPH = 50;
+        // If there are too many tasks, skip drawing the graph
+        if (tasks.size() < MAX_TASKS_IN_GRAPH) {
+            GraphBuilder<String> taskGraph = new GraphBuilder<String>();
+            Map<Integer,String> taskLabels = new HashMap<Integer,String>();
+            Collections.sort(tasks, new Comparator<Task>() {
+                @Override public int compare(Task a, Task b) {
+                    return a.getId()-b.getId();
+                }});
+            for (int t=0; t<tasks.size(); ++t) {
+                Task task = tasks.get(t);
+                Module module = this.moduleInstances.get(task.getModuleId());
+                String label = String.format("%s:%s:%s", task.getName(), task.getStatus(), module.getTaskType());
+                taskLabels.put(task.getId(), label);
+                taskGraph.addVertex(label);
+            }
+            List<TaskDispatch> dispatches = this.taskDispatch.select();
+            for (TaskDispatch dispatch : dispatches) {
+                String parent = taskLabels.get(dispatch.getParentTaskId());
+                String child = taskLabels.get(dispatch.getTaskId());
+                taskGraph.addEdge(parent, child);
+            }
+            GraphLayouter<String> taskLayout = new GraphLayouter<String>();
+            this.logger.info(String.format("Task Dispatch Graph:%n%s", taskLayout.layout(taskGraph.build())));
         }
-        List<TaskDispatch> dispatches = this.taskDispatch.select();
-        for (TaskDispatch dispatch : dispatches) {
-            String parent = taskLabels.get(dispatch.getParentTaskId());
-            String child = taskLabels.get(dispatch.getTaskId());
-            taskGraph.addEdge(parent, child);
+        else {
+            this.logger.info(String.format("Too many tasks (%d), not drawing the task graph", tasks.size()));
         }
-        GraphLayouter<String> taskLayout = new GraphLayouter<String>();
-        this.logger.info(String.format("Task Dispatch Graph:%n%s", taskLayout.layout(taskGraph.build())));
     }
     
     public Future<Status> run(final String startModuleId, final Map<String,Config> inheritedTaskConfig) {
