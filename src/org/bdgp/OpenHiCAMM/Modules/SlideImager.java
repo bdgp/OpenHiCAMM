@@ -101,6 +101,8 @@ public class SlideImager implements Module {
 			} 
             catch (MMSerializationException e) {throw new RuntimeException(e);}
             // load the position list into the acquisition engine
+            try { this.script.setPositionList(positionList); } 
+            catch (MMScriptException e) {throw new RuntimeException(e);}
             this.engine.setPositionList(positionList);
         }
         // otherwise, load a position list from a file
@@ -114,6 +116,8 @@ public class SlideImager implements Module {
             try {
                 positionList = new PositionList();
                 positionList.load(posListFile.getPath());
+                try { this.script.setPositionList(positionList); } 
+                catch (MMScriptException e) {throw new RuntimeException(e);}
                 this.engine.setPositionList(positionList);
             } 
             catch (MMException e) {throw new RuntimeException(e);}
