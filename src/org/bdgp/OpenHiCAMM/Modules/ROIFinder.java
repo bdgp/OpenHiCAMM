@@ -90,7 +90,7 @@ public class ROIFinder implements Module {
             MMAcquisition mmacquisition = acquisition.getAcquisition();
             try { mmacquisition.initialize(); } 
             catch (MMScriptException e) {throw new RuntimeException(e);}
-        	logger.info(String.format("Initialized acquisitio"));
+        	logger.info(String.format("Initialized acquisition"));
 
             // Get the image cache object
             ImageCache imageCache = mmacquisition.getImageCache();
