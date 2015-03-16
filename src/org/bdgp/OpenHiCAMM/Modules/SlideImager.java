@@ -5,6 +5,8 @@ import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -145,7 +147,7 @@ public class SlideImager implements Module {
     }
 
     @Override
-    public Status run(final Task task, final Map<String,Config> conf, final Logger logger) {
+    public Status run(Task task, Map<String,Config> conf, Logger logger) {
     	logger.info(String.format("Running task: %s", task));
     	for (Config c : conf.values()) {
     		logger.info(String.format("Using configuration: %s", c));
@@ -158,8 +160,8 @@ public class SlideImager implements Module {
     	PositionList posList = this.loadPositionList(conf, logger);
 
         // Get Dao objects ready for use
-        final Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
-        final Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+        Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
+        Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
 
         // get the image number of this task
         Integer imageNumber = new Integer(taskConfigDao.selectOne(
@@ -167,10 +169,10 @@ public class SlideImager implements Module {
         logger.info(String.format("Using imageNumber: %s", imageNumber)); 
 
         // Set rootDir and acqName
-        final String rootDir = new File(
+        String rootDir = new File(
                 workflowRunner.getWorkflowDir(), 
                 workflowRunner.getInstance().getStorageLocation()).getPath();
-        final String acqName = "images";
+        String acqName = "images";
 
         // If this is the first position, start the acquisition engine
         if (imageNumber == 0) {
@@ -214,102 +216,141 @@ public class SlideImager implements Module {
                  try { Thread.sleep(1000); } 
                  catch (InterruptedException e) { logger.info("Thread was interrupted."); } 
             }
-        }
+
+            // get the prefix name and log it
+            JSONObject summaryMetadata = this.engine.getSummaryMetadata();
+            String prefix;
+            try { prefix = summaryMetadata.getString("Prefix"); } 
+            catch (JSONException e) { throw new RuntimeException(e); }
+            logger.info(String.format("Started acquisition to root directory %s, prefix %s", 
+                    Util.escape(rootDir), Util.escape(prefix)));
             
-        // get the prefix name and log it
-        JSONObject summaryMetadata = this.engine.getSummaryMetadata();
-        String prefix;
-        try { prefix = summaryMetadata.getString("Prefix"); } 
-        catch (JSONException e) { throw new RuntimeException(e); }
-        logger.info(String.format("Started acquisition to root directory %s, prefix %s", 
-                Util.escape(rootDir), Util.escape(prefix)));
-        
-        // Write the acquisition record
-        Acquisition acquisition = new Acquisition(prefix, rootDir);
-        acqDao.insertOrUpdate(acquisition,"name","directory");
-        acquisition = acqDao.reload(acquisition);
-        logger.info(String.format("Using acquisition record: %s", acquisition));
+            // Write the acquisition record
+            Acquisition acquisition = new Acquisition(prefix, rootDir);
+            acqDao.insertOrUpdate(acquisition,"name","directory");
+            acquisition = acqDao.reload(acquisition);
+            logger.info(String.format("Using acquisition record: %s", acquisition));
 
-        // Get the ImageCache object for this acquisition
-        MMAcquisition mmacquisition = acquisition.getAcquisition();
-        try { mmacquisition.initialize(); } 
-        catch (MMScriptException e) {throw new RuntimeException(e);}
-        logger.info(String.format("Initialized MMAcquisition object"));
-        ImageCache imageCache = mmacquisition.getImageCache();
-        if (imageCache == null) throw new RuntimeException("MMAcquisition object was not initialized; imageCache is null!");
-        if (!imageCache.isFinished()) throw new RuntimeException("ImageCache is not finished!");
+            // Get the ImageCache object for this acquisition
+            MMAcquisition mmacquisition = acquisition.getAcquisition();
+            try { mmacquisition.initialize(); } 
+            catch (MMScriptException e) {throw new RuntimeException(e);}
+            logger.info(String.format("Initialized MMAcquisition object"));
+            ImageCache imageCache = mmacquisition.getImageCache();
+            if (imageCache == null) throw new RuntimeException("MMAcquisition object was not initialized; imageCache is null!");
+            if (!imageCache.isFinished()) throw new RuntimeException("ImageCache is not finished!");
 
-        // Get the tagged image that corresponds to this imageNumber from the image cache
-        List<String> taggedImages = new ArrayList<String>(imageCache.imageKeys());
-        logger.info(String.format("Found %d taggedImages: %s", taggedImages.size(), taggedImages.toString()));
-        if (taggedImages.size() <= imageNumber) {
-            throw new RuntimeException(String.format(
-                    "imageNumber for this task is %d, but there are only %d images in image cache!",
-                    imageNumber, taggedImages.size()));
+            // Get the tagged image that corresponds to this imageNumber from the image cache
+            List<String> taggedImages = new ArrayList<String>(imageCache.imageKeys());
+            logger.info(String.format("Found %d taggedImages: %s", taggedImages.size(), taggedImages.toString()));
+            
+            // get all sibling tasks
+            Dao<Task> taskDao = this.workflowRunner.getTaskStatus();
+            Dao<TaskDispatch> taskDispatchDao = this.workflowRunner.getTaskDispatch();
+            TaskDispatch td = taskDispatchDao.selectOne(where("id", task.getId()));
+            List<TaskDispatch> tds = td != null? 
+                    taskDispatchDao.select(where("parentTaskId", td.getParentTaskId())) :
+                    null;
+            Map<Integer,Task> tasks = new HashMap<Integer,Task>();
+            if (tds != null) {
+                for (TaskDispatch t : tds) {
+                	Task tt = taskDao.selectOneOrDie(where("id", t.getTaskId()));
+                	TaskConfig imageNumConf = taskConfigDao.selectOneOrDie(
+                			where("id", new Integer(tt.getId()).toString()).
+                			and("key", "imageNumber"));
+                    tasks.put(new Integer(imageNumConf.getValue()), tt);
+                }
+            }
+            else {
+            	for (Task tt : taskDao.select(where("moduleId", this.moduleId))) {
+                	TaskConfig imageNumConf = taskConfigDao.selectOneOrDie(
+                			where("id", new Integer(tt.getId()).toString()).
+                			and("key", "imageNumber"));
+                    tasks.put(new Integer(imageNumConf.getValue()), tt);
+            	}
+            }
+
+            // For image acquisition, only the first task actually does any work, the
+            // other tasks represent each image, so that the downstream processing tasks
+            // can dispatch correctly. So we can update the status and configs for the 
+            // sibling tasks in the first task.
+            for (int imageNum=0; imageNum<taggedImages.size(); ++imageNum) {
+            	Task t = tasks.get(imageNum);
+            	if (t == null) throw new RuntimeException(String.format(
+            			"Could not get task record for image number %d!", imageNum));
+
+                String[] taggedImageKeys = taggedImages.get(imageNum).split("_");
+                TaggedImage taggedImage = imageCache.getImage(
+                        new Integer(taggedImageKeys[0]),
+                        new Integer(taggedImageKeys[1]),
+                        new Integer(taggedImageKeys[2]),
+                        new Integer(taggedImageKeys[3]));
+                if (taggedImage == null) throw new RuntimeException("taggedImage is null!");
+
+                try { logger.info(String.format("Analyzing taggedImage with tags:\n%s", taggedImage.tags.toString(2))); } 
+                catch (JSONException e) {throw new RuntimeException(e);}
+
+                // Save the image label. This can be used by downstream processing scripts to get the TaggedImage
+                // out of the ImageCache.
+                String imageLabel = MDUtils.getLabel(taggedImage.tags);
+                TaskConfig imageLabelConf = new TaskConfig(new Integer(t.getId()).toString(),"imageLabel",imageLabel);
+                taskConfigDao.insertOrUpdate(imageLabelConf,"id","key");
+                conf.put("imageLabel", imageLabelConf);
+                logger.info(String.format("Created imageLabel task config: %s", imageLabelConf));
+
+                // get the slide ID and slide Position ID from the config
+                if (!conf.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
+                Integer slideId = new Integer(conf.get("slideId").getValue());
+                logger.info(String.format("Using slideId: %d", slideId));
+
+                if (!conf.containsKey("slidePosId")) throw new RuntimeException("No slidePosId found for image!");
+                Integer slidePosId = new Integer(conf.get("slidePosId").getValue());
+                logger.info(String.format("Using slidePosId: %d", slidePosId));
+
+                // Create image DB record
+                Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+                Image image;
+                try {
+                    image = new Image(slideId, slidePosId, acquisition, 
+                        MDUtils.getChannelIndex(taggedImage.tags),
+                        MDUtils.getSliceIndex(taggedImage.tags),
+                        MDUtils.getFrameIndex(taggedImage.tags),
+                        MDUtils.getPositionIndex(taggedImage.tags));
+                }
+                catch (JSONException e) {throw new RuntimeException(e);}
+
+                imageDao.insert(image);
+                logger.info(String.format("Inserted image: %s", image));
+
+                // Store the Image ID as a Task Config variable
+                TaskConfig imageId = new TaskConfig(
+                        new Integer(t.getId()).toString(),
+                        "imageId",
+                        new Integer(image.getId()).toString());
+                taskConfigDao.insertOrUpdate(imageId,"id","key");
+                conf.put("imageId", imageId);
+                logger.info(String.format("Inserted/Updated imageId config: %s", imageId));
+
+                // Also store the taggedImage object as a config value. This
+                // is required when not running in offline mode, since the acquisition
+                // folder will not have been written yet.
+                TaskConfig taggedImageConf = new TaskConfig(
+                        new Integer(t.getId()).toString(),
+                        "taggedImage",
+                        null,
+                        taggedImage);
+                conf.put(taggedImageConf.getKey(), taggedImageConf);
+                logger.info(String.format("Added taggedImage conf: %s", taggedImageConf));
+                
+                // Now update the task status to success.
+                t.setStatus(Status.SUCCESS);
+                taskDao.update(t, "id");
+            }
         }
-        String[] taggedImageKeys = taggedImages.get(imageNumber).split("_");
-        TaggedImage taggedImage = imageCache.getImage(
-                new Integer(taggedImageKeys[0]),
-                new Integer(taggedImageKeys[1]),
-                new Integer(taggedImageKeys[2]),
-                new Integer(taggedImageKeys[3]));
-        if (taggedImage == null) throw new RuntimeException("taggedImage is null!");
-
-        try { logger.info(String.format("Analyzing taggedImage with tags:\n%s", taggedImage.tags.toString(2))); } 
-        catch (JSONException e) {throw new RuntimeException(e);}
-
-        // Save the image label. This can be used by downstream processing scripts to get the TaggedImage
-        // out of the ImageCache.
-        String imageLabel = MDUtils.getLabel(taggedImage.tags);
-        TaskConfig imageLabelConf = new TaskConfig(new Integer(task.getId()).toString(),"imageLabel",imageLabel);
-        taskConfigDao.insertOrUpdate(imageLabelConf,"id","key");
-        conf.put("imageLabel", imageLabelConf);
-        logger.info(String.format("Created imageLabel task config: %s", imageLabelConf));
-
-        // get the slide ID and slide Position ID from the config
-        if (!conf.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
-        Integer slideId = new Integer(conf.get("slideId").getValue());
-        logger.info(String.format("Using slideId: %d", slideId));
-
-        if (!conf.containsKey("slidePosId")) throw new RuntimeException("No slidePosId found for image!");
-        Integer slidePosId = new Integer(conf.get("slidePosId").getValue());
-        logger.info(String.format("Using slidePosId: %d", slidePosId));
-
-        // Create image DB record
-        Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-        Image image;
-        try {
-            image = new Image(slideId, slidePosId, acquisition, 
-                MDUtils.getChannelIndex(taggedImage.tags),
-                MDUtils.getSliceIndex(taggedImage.tags),
-                MDUtils.getFrameIndex(taggedImage.tags),
-                MDUtils.getPositionIndex(taggedImage.tags));
+        else {
+        	// If we got here it means something went wrong with the image acquisition
+        	return Status.FAIL;
         }
-        catch (JSONException e) {throw new RuntimeException(e);}
-
-        imageDao.insert(image);
-        logger.info(String.format("Inserted image: %s", image));
-
-        // Store the Image ID as a Task Config variable
-        TaskConfig imageId = new TaskConfig(
-                new Integer(task.getId()).toString(),
-                "imageId",
-                new Integer(image.getId()).toString());
-        taskConfigDao.insertOrUpdate(imageId,"id","key");
-        conf.put("imageId", imageId);
-        logger.info(String.format("Inserted/Updated imageId config: %s", imageId));
-
-        // Also store the taggedImage object as a config value. This
-        // is required when not running in offline mode, since the acquisition
-        // folder will not have been written yet.
-        TaskConfig taggedImageConf = new TaskConfig(
-                new Integer(task.getId()).toString(),
-                "taggedImage",
-                null,
-                taggedImage);
-        conf.put(taggedImageConf.getKey(), taggedImageConf);
-        logger.info(String.format("Added taggedImage conf: %s", taggedImageConf));
-
         return Status.SUCCESS;
     }
 
