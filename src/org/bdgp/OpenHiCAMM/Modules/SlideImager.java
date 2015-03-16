@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.prefs.Preferences;
 
+import mmcorej.CMMCore;
 import mmcorej.TaggedImage;
 
 import org.bdgp.OpenHiCAMM.Dao;
@@ -50,7 +51,10 @@ import org.micromanager.utils.MMSerializationException;
 import static org.bdgp.OpenHiCAMM.Util.where;
 
 public class SlideImager implements Module {
-    WorkflowRunner workflowRunner;
+    private static final int DUMMY_IMAGES = 15;
+	private static final long DUMMY_SLEEP = 500;
+
+	WorkflowRunner workflowRunner;
     String moduleId;
     AcqControlDlg acqControlDlg;
     ScriptInterface script;
@@ -151,7 +155,7 @@ public class SlideImager implements Module {
         	throw new RuntimeException("acqControlDlg is not initialized!");
     	}
     	// load the position list and acquistion settings
-    	this.loadPositionList(conf, logger);
+    	PositionList posList = this.loadPositionList(conf, logger);
 
         // Get Dao objects ready for use
         final Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
@@ -173,6 +177,29 @@ public class SlideImager implements Module {
             logger.info(String.format("This task is the acquisition task")); 
             logger.info(String.format("Using rootDir: %s", rootDir)); 
             logger.info(String.format("Requesting to use acqName: %s", acqName)); 
+            
+            // Move stage to starting position and take some dummy pictures to adjust the camera
+            if (posList.getNumberOfPositions() > 0) {
+                CMMCore core = this.script.getMMCore();
+                MultiStagePosition pos = posList.getPosition(0);
+                String xyStage = core.getXYStageDevice();
+                try {
+					core.setXYPosition(xyStage, pos.getX(), pos.getY());
+                    // wait for the stage to finish moving
+                    while (core.deviceBusy(xyStage)) {}
+				} 
+                catch (Exception e) {throw new RuntimeException(e);}
+                
+                // Acquire N dummy images to calibrate the camera
+                for (int i=0; i<DUMMY_IMAGES; ++i) {
+                	// Take a picture but don't save it
+                    try { core.snapImage(); } 
+                    catch (Exception e) {throw new RuntimeException(e);}
+                    // wait a second before taking the next one.
+                    try { Thread.sleep(DUMMY_SLEEP); } 
+                    catch (InterruptedException e) {logger.info("Sleep thread was interrupted");}
+                }
+            }
 
             // Start the acquisition engine. This runs asynchronously.
             String returnAcqName = acqControlDlg.runAcquisition(acqName, rootDir);
