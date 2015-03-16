@@ -475,7 +475,7 @@ public class SlideImager implements Module {
                         this.moduleId, parentTask.getId()));
                 continue;
         	}
-        	// Get the associated slide
+        	// Get the associated slide.
         	Slide slide;
             if (parentTaskConf.containsKey("slideId")) {
             	slide = slideDao.selectOneOrDie(where("id",new Integer(parentTaskConf.get("slideId").getValue())));
