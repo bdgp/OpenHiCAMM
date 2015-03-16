@@ -180,6 +180,7 @@ public class SlideImager implements Module {
             
             // Move stage to starting position and take some dummy pictures to adjust the camera
             if (posList.getNumberOfPositions() > 0) {
+            	logger.info("Moving stage to starting position");
                 CMMCore core = this.script.getMMCore();
                 MultiStagePosition pos = posList.getPosition(0);
                 String xyStage = core.getXYStageDevice();
@@ -195,6 +196,7 @@ public class SlideImager implements Module {
                 	// Take a picture but don't save it
                     try { core.snapImage(); } 
                     catch (Exception e) {throw new RuntimeException(e);}
+                    logger.info(String.format("Acquired %d dummy images to calibrate the camera...", i+1));
                     // wait a second before taking the next one.
                     try { Thread.sleep(DUMMY_SLEEP); } 
                     catch (InterruptedException e) {logger.info("Sleep thread was interrupted");}
