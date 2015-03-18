@@ -21,14 +21,20 @@ import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javax.swing.JRadioButton;
+import javax.swing.ButtonGroup;
 
 @SuppressWarnings("serial")
 public class SlideImagerDialog extends JPanel {
 	JTextField acqSettingsText;
 	JTextField posListText;
 	JComboBox<String> moduleId;
+	private final ButtonGroup takeDummyImages = new ButtonGroup();
+	JRadioButton takeDummyImagesYes;
+	JRadioButton takeDummyImagesNo;
+
 	public SlideImagerDialog(final AcqControlDlg acqControlDlg, WorkflowRunner workflowRunner) {
-		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][]"));
+		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][]"));
 		
 		JButton btnShowAcquisitionDialog = new JButton("Show Acquisition Dialog");
 		if (acqControlDlg == null) {
@@ -100,5 +106,17 @@ public class SlideImagerDialog extends JPanel {
         moduleId.setModel(new DefaultComboBoxModel<String>(moduleIds.toArray(new String[0])));
         moduleId.setEnabled(true);
         this.add(moduleId, "cell 0 6,growx");
+        
+        JLabel lblTakeSeveralDummy = new JLabel("Take several dummy images to adjust camera?");
+        add(lblTakeSeveralDummy, "flowx,cell 0 7");
+        
+        takeDummyImagesYes = new JRadioButton("Yes");
+        takeDummyImages.add(takeDummyImagesYes);
+        takeDummyImagesYes.setSelected(true);
+        add(takeDummyImagesYes, "cell 0 7");
+        
+        takeDummyImagesNo = new JRadioButton("No");
+        takeDummyImages.add(takeDummyImagesNo);
+        add(takeDummyImagesNo, "cell 0 7");
 	}
 }

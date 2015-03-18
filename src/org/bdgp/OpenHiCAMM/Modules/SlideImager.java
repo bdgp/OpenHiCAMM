@@ -179,7 +179,10 @@ public class SlideImager implements Module {
             logger.info(String.format("Requesting to use acqName: %s", acqName)); 
             
             // Move stage to starting position and take some dummy pictures to adjust the camera
-            if (posList.getNumberOfPositions() > 0) {
+            if (conf.containsKey("takeDummyImages") && 
+                conf.get("takeDummyImages").getValue().equals("yes") && 
+                posList.getNumberOfPositions() > 0) 
+            {
             	logger.info("Moving stage to starting position");
                 CMMCore core = this.script.getMMCore();
                 MultiStagePosition pos = posList.getPosition(0);
@@ -385,6 +388,15 @@ public class SlideImager implements Module {
                             "posListModuleId", 
                             slideImagerDialog.moduleId.getSelectedItem().toString()));
                 }
+
+                if (slideImagerDialog.takeDummyImagesYes.isSelected()) {
+                    configs.add(new Config(moduleId, 
+                            "takeDummyImages", "yes"));
+                }
+                else if (slideImagerDialog.takeDummyImagesNo.isSelected()) {
+                    configs.add(new Config(moduleId, 
+                            "takeDummyImages", "no"));
+                }
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -404,6 +416,15 @@ public class SlideImager implements Module {
                 if (conf.containsKey("posListModuleId")) {
                     Config posListModuleId = conf.get("posListModuleId");
                     slideImagerDialog.moduleId.setSelectedItem(posListModuleId.getValue());
+                }
+
+                if (conf.containsKey("takeDummyImages") && conf.get("takeDummyImages").getValue().equals("Yes")) {
+                    slideImagerDialog.takeDummyImagesYes.setSelected(true);
+                    slideImagerDialog.takeDummyImagesNo.setSelected(false);
+                }
+                else {
+                    slideImagerDialog.takeDummyImagesYes.setSelected(false);
+                    slideImagerDialog.takeDummyImagesNo.setSelected(true);
                 }
                 return slideImagerDialog;
             }
