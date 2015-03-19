@@ -418,7 +418,7 @@ public class SlideImager implements Module {
                     slideImagerDialog.moduleId.setSelectedItem(posListModuleId.getValue());
                 }
 
-                if (conf.containsKey("takeDummyImages") && conf.get("takeDummyImages").getValue().equals("Yes")) {
+                if (conf.containsKey("takeDummyImages") && conf.get("takeDummyImages").getValue().equals("yes")) {
                     slideImagerDialog.takeDummyImagesYes.setSelected(true);
                     slideImagerDialog.takeDummyImagesNo.setSelected(false);
                 }
