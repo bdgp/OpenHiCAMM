@@ -311,23 +311,10 @@ public class WorkflowDialog extends JDialog {
         wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         wrd.pack();
 
-        // If we're not resuming, delete and re-create the task records
-        if (!resume) {
-            workflowRunner.deleteTaskRecords();
-            workflowRunner.createTaskRecords();
-        }
-        // In resume mode, the task records aren't re-created. So we need to clear out 
-        // invalid statuses and the parent Task ID flags.
-        else {
-        	Dao<Task> taskStatus = workflowRunner.getTaskStatus();
-        	taskStatus.update(set("status", Status.NEW), where("status", Status.IN_PROGRESS));
-        	taskStatus.update(set("parentTaskId", null));
-        }
-
         // Refresh the UI controls
         refresh();
         // Start the workflow runner
-        workflowRunner.run(startModuleId, null);
+        workflowRunner.run(startModuleId, resume, null);
 
         // Make the workflow runner dialog visible
         SwingUtilities.invokeLater(new Runnable() {

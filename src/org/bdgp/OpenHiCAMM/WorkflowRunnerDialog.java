@@ -3,7 +3,9 @@ package org.bdgp.OpenHiCAMM;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 
@@ -99,13 +101,13 @@ public class WorkflowRunnerDialog extends JDialog {
         btnClose.setEnabled(false);
         getContentPane().add(btnClose, "cell 1 2");
         workflowRunner.addTaskListener(new TaskListener() {
-        	int completedTasks = 0;
         	boolean stopped = false;
+        	Set<Task> seen = new HashSet<Task>();
             @Override public void notifyTask(Task task) {
-            	if (stopped == false) {
-                    completedTasks++;
-                    progressBar.setValue(completedTasks);
-                    if (completedTasks == tasks.size()) {
+            	if (stopped == false && !seen.contains(task)) {
+            	    seen.add(task);
+                    progressBar.setValue(seen.size());
+                    if (seen.size() == tasks.size()) {
                         btnStop.setEnabled(false);
                         btnKill.setEnabled(false);
                         btnClose.setEnabled(true);

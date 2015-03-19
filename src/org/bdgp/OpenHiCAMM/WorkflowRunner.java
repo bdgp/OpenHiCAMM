@@ -9,8 +9,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -31,14 +33,13 @@ import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.TaskListener;
 
-import com.github.mdr.ascii.java.GraphBuilder;
-import com.github.mdr.ascii.java.GraphLayouter;
 import com.j256.ormlite.field.FieldType;
 import com.j256.ormlite.field.SqlType;
 import com.j256.ormlite.stmt.StatementBuilder.StatementType;
 import com.j256.ormlite.support.CompiledStatement;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
+import static org.bdgp.OpenHiCAMM.Util.set;
 
 public class WorkflowRunner {
     /**
@@ -76,6 +77,8 @@ public class WorkflowRunner {
     
     private String instancePath;
     private String instanceDbName;
+    
+    private Set<Task> notifiedTasks;
     
     /**
      * Constructor for WorkflowRunner. This loads the workflow.txt file 
@@ -149,6 +152,9 @@ public class WorkflowRunner {
         
         // init the logger
         this.initLogger();
+        
+        // init the notified tasks set
+        this.notifiedTasks = new HashSet<Task>();
     }
     
     /**
@@ -243,8 +249,8 @@ public class WorkflowRunner {
             @Override public int compare(WorkflowModule a, WorkflowModule b) {
                 return a.getModuleName().compareTo(b.getModuleName());
             }});
-        GraphBuilder<String> graph = new GraphBuilder<String>();
         Map<String,String> labels = new HashMap<String,String>();
+        GraphEasy graph = new GraphEasy();
         while (modules.size() > 0) {
             List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
             for (WorkflowModule module : modules) {
@@ -290,7 +296,6 @@ public class WorkflowRunner {
                 // build a workflow graph
                 String label = String.format("%s:%s", module.getId(), m.getTaskType());
                 labels.put(module.getId(), label);
-                graph.addVertex(label);
                 if (module.getParentId() != null) {
                     graph.addEdge(labels.get(module.getParentId()), label);
                 }
@@ -300,15 +305,18 @@ public class WorkflowRunner {
             modules = childModules;
         }
         // draw the workflow module graph
-        GraphLayouter<String> layout = new GraphLayouter<String>();
-        this.logger.info(String.format("Workflow Graph:%n%s", layout.layout(graph.build())));
+        this.logger.info(String.format("PATH=%s", System.getenv("PATH")));
+        try { this.logger.info(String.format("Workflow Graph:%n%s", graph.graph())); }
+        catch (IOException e) {
+            this.logger.warning(String.format("Could not draw workflow graph: %s", e));
+        }
 
         // Draw the task dispatch graph
         List<Task> tasks = this.taskStatus.select();
-        final int MAX_TASKS_IN_GRAPH = 50;
+        final int MAX_TASKS_IN_GRAPH = 200;
         // If there are too many tasks, skip drawing the graph
         if (tasks.size() < MAX_TASKS_IN_GRAPH) {
-            GraphBuilder<String> taskGraph = new GraphBuilder<String>();
+            GraphEasy taskGraph = new GraphEasy();
             Map<Integer,String> taskLabels = new HashMap<Integer,String>();
             Collections.sort(tasks, new Comparator<Task>() {
                 @Override public int compare(Task a, Task b) {
@@ -319,7 +327,6 @@ public class WorkflowRunner {
                 Module module = this.moduleInstances.get(task.getModuleId());
                 String label = String.format("%s:%s:%s", task.getName(), task.getStatus(), module.getTaskType());
                 taskLabels.put(task.getId(), label);
-                taskGraph.addVertex(label);
             }
             List<TaskDispatch> dispatches = this.taskDispatch.select();
             for (TaskDispatch dispatch : dispatches) {
@@ -327,22 +334,51 @@ public class WorkflowRunner {
                 String child = taskLabels.get(dispatch.getTaskId());
                 taskGraph.addEdge(parent, child);
             }
-            GraphLayouter<String> taskLayout = new GraphLayouter<String>();
-            this.logger.info(String.format("Task Dispatch Graph:%n%s", taskLayout.layout(taskGraph.build())));
+            this.logger.info(String.format("PATH=%s", System.getenv("PATH")));
+            try { this.logger.info(String.format("Task Dispatch Graph:%n%s", taskGraph.graph())); }
+            catch (IOException e) {
+                this.logger.warning(String.format("Could not draw task graph: %s", e));
+            }
         }
         else {
             this.logger.info(String.format("Too many tasks (%d), not drawing the task graph", tasks.size()));
         }
     }
     
-    public Future<Status> run(final String startModuleId, final Map<String,Config> inheritedTaskConfig) {
+    /**
+     * Start the workflow runner
+     * @param startModuleId The starting module
+     * @param resume Should we resume a previous run?
+     * @param inheritedTaskConfig Inherited task configuration. Can be null.
+     * @return
+     */
+    public Future<Status> run(
+            final String startModuleId, 
+            final boolean resume,
+            final Map<String,Config> inheritedTaskConfig) 
+    {
         int cores = Runtime.getRuntime().availableProcessors();
         this.pool = Executors.newFixedThreadPool(cores);
+        this.notifiedTasks.clear();
         Future<Status> future = pool.submit(new Callable<Status>() {
             @Override
             public Status call() {
             	try {
                     WorkflowRunner.this.isStopped = false;
+
+                    // If we're not resuming, delete and re-create the task records
+                    if (!resume) {
+                        WorkflowRunner.this.deleteTaskRecords();
+                        WorkflowRunner.this.createTaskRecords();
+                    }
+                    // In resume mode, the task records aren't re-created. So we need to clear out 
+                    // invalid statuses and the parent Task ID flags.
+                    else {
+                        Dao<Task> taskStatus = WorkflowRunner.this.getTaskStatus();
+                        taskStatus.update(set("status", Status.NEW), where("status", Status.IN_PROGRESS));
+                        taskStatus.update(set("parentTaskId", null));
+                    }
+
                     // Log some information on this workflow
                     WorkflowRunner.this.logWorkflowInfo();
                     // start the first task(s)
@@ -371,7 +407,10 @@ public class WorkflowRunner {
                         catch (InterruptedException e) {throw new RuntimeException(e);} 
                         catch (ExecutionException e) {throw new RuntimeException(e);} 
                     }
-                    return coalesceStatuses(statuses);
+                    Status status = coalesceStatuses(statuses);
+                    // Display a summary of all the task statuses
+                    showTaskSummary();
+                    return status;
             	}
             	catch (Throwable e) {
                     StringWriter sw = new StringWriter();
@@ -385,6 +424,13 @@ public class WorkflowRunner {
         return future;
     }
     
+    /**
+     * Display a summary of all the task statuses
+     */
+    private void showTaskSummary() {
+        // TODO Auto-generated method stub
+    }
+
     /**
      * Given a task, call all of its successors.
      * @param task
@@ -464,7 +510,10 @@ public class WorkflowRunner {
                 
                 // notify any task listeners
                 for (TaskListener listener : taskListeners) {
-                    listener.notifyTask(task);
+                    if (!WorkflowRunner.this.notifiedTasks.contains(task)) {
+                        WorkflowRunner.this.notifiedTasks.add(task);
+                        listener.notifyTask(task);
+                    }
                 }
                 
                 WorkflowRunner.this.logger.info(String.format("%s: Setting task status to %s", task.getName(), status));
@@ -558,6 +607,13 @@ public class WorkflowRunner {
 
                             // Otherwise, add the task to 
                             childFutures.add(future);
+                        }
+                        // Make sure all tasks have been notified
+                        for (TaskListener listener : taskListeners) {
+                            if (!WorkflowRunner.this.notifiedTasks.contains(childTask)) {
+                                WorkflowRunner.this.notifiedTasks.add(childTask);
+                                listener.notifyTask(childTask);
+                            }
                         }
                     }
                 }
