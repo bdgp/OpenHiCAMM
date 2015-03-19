@@ -229,7 +229,7 @@ public class WorkflowRunner {
         }
     }
     
-    public void logWorkflowInfo() {
+    public void logWorkflowInfo(String startModuleId) {
         // log some info on this workflow
         this.logger.info(
                 String.format("Running workflow instance: %s",
@@ -243,15 +243,14 @@ public class WorkflowRunner {
         
         // Log the workflow module info
         this.logger.info("Workflow Modules:");
-        // TODO: Only include modules and tasks in current phase in the workflow/task graphs
-        List<WorkflowModule> modules = this.workflow.select(where("parentId",null));
-        Collections.sort(modules, new Comparator<WorkflowModule>() {
-            @Override public int compare(WorkflowModule a, WorkflowModule b) {
-                return a.getModuleName().compareTo(b.getModuleName());
-            }});
+        List<WorkflowModule> modules = this.workflow.select(where("id",startModuleId));
         Map<String,String> labels = new HashMap<String,String>();
         GraphEasy graph = new GraphEasy();
         while (modules.size() > 0) {
+            Collections.sort(modules, new Comparator<WorkflowModule>() {
+                @Override public int compare(WorkflowModule a, WorkflowModule b) {
+                    return a.getModuleName().compareTo(b.getModuleName());
+                }});
             List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
             for (WorkflowModule module : modules) {
                 Module m = moduleInstances.get(module.getId());
@@ -380,7 +379,7 @@ public class WorkflowRunner {
                     }
 
                     // Log some information on this workflow
-                    WorkflowRunner.this.logWorkflowInfo();
+                    WorkflowRunner.this.logWorkflowInfo(startModuleId);
                     // start the first task(s)
                     List<Task> start = taskStatus.select(where("moduleId",startModuleId));
                     List<Future<Status>> futures = new ArrayList<Future<Status>>();
@@ -409,7 +408,7 @@ public class WorkflowRunner {
                     }
                     Status status = coalesceStatuses(statuses);
                     // Display a summary of all the task statuses
-                    showTaskSummary();
+                    logTaskSummary();
                     return status;
             	}
             	catch (Throwable e) {
@@ -427,8 +426,48 @@ public class WorkflowRunner {
     /**
      * Display a summary of all the task statuses
      */
-    private void showTaskSummary() {
-        // TODO Auto-generated method stub
+    private void logTaskSummary() {
+        List<WorkflowModule> modules = this.workflow.select(where("parentId",null));
+        this.logger.info("");
+        this.logger.info("Task Status Summary:");
+        this.logger.info("====================");
+        while (modules.size() > 0) {
+            Collections.sort(modules, new Comparator<WorkflowModule>() {
+                @Override public int compare(WorkflowModule a, WorkflowModule b) {
+                    return a.getModuleName().compareTo(b.getModuleName());
+                }});
+
+            List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
+            for (WorkflowModule module : modules) {
+                List<Task> tasks = this.taskStatus.select(where("moduleId",module.getId()));
+                Collections.sort(tasks, new Comparator<Task>() {
+                    @Override public int compare(Task a, Task b) {
+                        return a.getId()-b.getId();
+                    }});
+                final Map<Status,Integer> stats = new HashMap<Status,Integer>();
+                for (Task task : tasks) {
+                    stats.put(task.getStatus(), 
+                            stats.containsKey(task.getStatus())? stats.get(task.getStatus())+1 : 1);
+                }
+                List<Status> sortedStats = new ArrayList<Status>(stats.keySet());
+                Collections.sort(sortedStats, new Comparator<Status>() {
+                    @Override public int compare(Status a, Status b) {
+                        return stats.get(b).compareTo(stats.get(a));
+                    }});
+                for (Status status : sortedStats) {
+                    this.logger.info(String.format("Module %s: Status %s: %d / %d tasks (%.02f%%)",
+                            Util.escape(module.getId()), 
+                            status, 
+                            stats.get(status), 
+                            tasks.size(),
+                            ((double)stats.get(status) / (double)tasks.size())*100.0));
+                }
+                // now evaluate any child nodes
+                childModules.addAll(this.workflow.select(where("parentId",module.getId())));
+            }
+            modules = childModules;
+        }
+        this.logger.info("");
     }
 
     /**
@@ -507,17 +546,12 @@ public class WorkflowRunner {
                     taskModule.cleanup(task); 
                 }
                 WorkflowRunner.this.logger.info(String.format("%s: Finished running task", task.getName()));
-                
-                // notify any task listeners
-                for (TaskListener listener : taskListeners) {
-                    if (!WorkflowRunner.this.notifiedTasks.contains(task)) {
-                        WorkflowRunner.this.notifiedTasks.add(task);
-                        listener.notifyTask(task);
-                    }
-                }
-                
                 WorkflowRunner.this.logger.info(String.format("%s: Setting task status to %s", task.getName(), status));
                 task.setStatus(status);
+
+                // notify any task listeners
+                notifyTaskListeners(task);
+                
                 if (status == Status.SUCCESS) {
                     try {
                     	// We need to update the status of this task AND flag the unprocessed child tasks that 
@@ -590,6 +624,11 @@ public class WorkflowRunner {
                                 WorkflowRunner.this.logger.severe(String.format(
                                         "Child task %s was cancelled, not running successive sibling tasks",
                                         childTask.getName()));
+                                // update the status of the cancelled task to ERROR
+                                childTask.setStatus(Status.ERROR);
+                                WorkflowRunner.this.getTaskStatus().update(childTask,"id");
+                                // notify task listeners
+                                notifyTaskListeners(childTask);
                                 break;
                             }
                             if (childTaskType == Module.TaskType.SERIAL && future.isDone()) {
@@ -601,6 +640,8 @@ public class WorkflowRunner {
                                 	WorkflowRunner.this.logger.severe(String.format(
                                 			"Child task %s returned status %s, not running successive sibling tasks",
                                 			childTask.getName(), s));
+                                	// notify the task listeners
+                                	notifyTaskListeners(childTask);
                                 	break;
                                 }
                             }
@@ -608,12 +649,9 @@ public class WorkflowRunner {
                             // Otherwise, add the task to 
                             childFutures.add(future);
                         }
-                        // Make sure all tasks have been notified
-                        for (TaskListener listener : taskListeners) {
-                            if (!WorkflowRunner.this.notifiedTasks.contains(childTask)) {
-                                WorkflowRunner.this.notifiedTasks.add(childTask);
-                                listener.notifyTask(childTask);
-                            }
+                        else {
+                            // Make sure all tasks have been notified
+                            notifyTaskListeners(childTask);
                         }
                     }
                 }
@@ -653,6 +691,15 @@ public class WorkflowRunner {
             throw new RuntimeException("Unknown task type: "+taskModule.getTaskType());
         }
         return future;
+    }
+    
+    private void notifyTaskListeners(Task task) {
+        for (TaskListener listener : taskListeners) {
+            if (!WorkflowRunner.this.notifiedTasks.contains(task)) {
+                WorkflowRunner.this.notifiedTasks.add(task);
+                listener.notifyTask(task);
+            }
+        }
     }
     
     /**
