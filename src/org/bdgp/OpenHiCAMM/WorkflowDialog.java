@@ -12,7 +12,6 @@ import javax.swing.SwingUtilities;
 
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.Task;
-import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.WorkflowInstance;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
@@ -36,7 +35,6 @@ import java.util.Map;
 import java.util.logging.Level;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
-import static org.bdgp.OpenHiCAMM.Util.set;
 
 /**
  * The main workflow dialog.
