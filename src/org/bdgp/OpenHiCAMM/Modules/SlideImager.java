@@ -223,7 +223,7 @@ public class SlideImager implements Module {
             String prefix;
             try { prefix = summaryMetadata.getString("Prefix"); } 
             catch (JSONException e) { throw new RuntimeException(e); }
-            logger.info(String.format("Started acquisition to root directory %s, prefix %s", 
+            logger.info(String.format("Acquisition was saved to root directory %s, prefix %s", 
                     Util.escape(rootDir), Util.escape(prefix)));
             
             // Write the acquisition record
@@ -248,7 +248,7 @@ public class SlideImager implements Module {
             // get all sibling tasks
             Dao<Task> taskDao = this.workflowRunner.getTaskStatus();
             Dao<TaskDispatch> taskDispatchDao = this.workflowRunner.getTaskDispatch();
-            TaskDispatch td = taskDispatchDao.selectOne(where("id", task.getId()));
+            TaskDispatch td = taskDispatchDao.selectOne(where("taskId", task.getId()));
             List<TaskDispatch> tds = td != null? 
                     taskDispatchDao.select(where("parentTaskId", td.getParentTaskId())) :
                     null;
@@ -288,8 +288,8 @@ public class SlideImager implements Module {
                         new Integer(taggedImageKeys[3]));
                 if (taggedImage == null) throw new RuntimeException("taggedImage is null!");
 
-                try { logger.info(String.format("Analyzing taggedImage with tags:\n%s", taggedImage.tags.toString(2))); } 
-                catch (JSONException e) {throw new RuntimeException(e);}
+                // try { logger.info(String.format("Analyzing taggedImage with tags:\n%s", taggedImage.tags.toString(2))); } 
+                // catch (JSONException e) {throw new RuntimeException(e);}
 
                 // Save the image label. This can be used by downstream processing scripts to get the TaggedImage
                 // out of the ImageCache.
