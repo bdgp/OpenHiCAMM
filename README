@@ -4,6 +4,11 @@ OpenHiCAMM Installation Instructions
 # build and install fiji and micromanager as outlined in the script file:
 ./install-fiji-micromanager.sh
 
+# (Optional) install graph-easy for logging workflow and task graphs, e.g.:
+brew install cpanminus && sudo cpanm Graph::Easy  # Mac
+or
+sudo apt-get install cpanminus && sudo cpanm Graph::Easy  # Ubuntu/Debian GNU/Linux
+
 # set the fiji.dir variable (set to your Fiji installation folder)
 echo "fiji.dir=/Applications/Fiji.app" >./build.properties
 

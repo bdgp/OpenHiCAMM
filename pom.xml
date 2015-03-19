@@ -99,14 +99,6 @@
                   <groupId>com.miglayout</groupId>
                   <artifactId>miglayout</artifactId>
                 </artifactItem>
-                <artifactItem>
-                  <groupId>com.github.mdr</groupId>
-                  <artifactId>ascii-graphs_2.10</artifactId>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.scala-lang</groupId>
-                  <artifactId>scala-library</artifactId>
-                </artifactItem>
               </artifactItems>
               <outputDirectory>${fiji.dir}/jars</outputDirectory>
               <overWriteReleases>true</overWriteReleases>
@@ -194,16 +186,6 @@
       <groupId>com.miglayout</groupId>
       <artifactId>miglayout</artifactId>
       <version>3.7.4</version>
-    </dependency>
-    <dependency>
-      <groupId>com.github.mdr</groupId>
-      <artifactId>ascii-graphs_2.10</artifactId>
-      <version>0.0.6</version>
-    </dependency>
-    <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-library</artifactId>
-      <version>2.10.1</version>
     </dependency>
   </dependencies>
 </project>
