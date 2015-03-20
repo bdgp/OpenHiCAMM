@@ -2,9 +2,12 @@ package org.bdgp.OpenHiCAMM;
 
 import java.awt.Dialog;
 import java.awt.Dimension;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
@@ -18,9 +21,12 @@ import javax.swing.JTextArea;
 import javax.swing.JButton;
 import javax.swing.JProgressBar;
 import javax.swing.JLabel;
+import javax.swing.SwingUtilities;
 
 import org.bdgp.OpenHiCAMM.DB.Task;
+import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.TaskListener;
+import static org.bdgp.OpenHiCAMM.Util.where;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -31,7 +37,8 @@ public class WorkflowRunnerDialog extends JDialog {
     private WorkflowRunner workflowRunner;
     
     public WorkflowRunnerDialog(WorkflowDialog workflowDialog, 
-            WorkflowRunner runner) 
+            WorkflowRunner runner,
+            String startModuleId) 
     {
         super(workflowDialog, "Workflow Runner", Dialog.ModalityType.DOCUMENT_MODAL);
     	final WorkflowRunnerDialog self = this;
@@ -42,10 +49,10 @@ public class WorkflowRunnerDialog extends JDialog {
         JLabel lblLogOutput = new JLabel("Log Output");
         getContentPane().add(lblLogOutput, "cell 0 0");
         
-        // TODO: make the log window collapsible, show last important log message (sans timestamp) in the progress bar message
         final JTextArea text = new JTextArea();
         text.setFont(new Font("Monospaced", Font.PLAIN, 12));
         text.setEditable(false);
+
         JScrollPane textScrollPane = new JScrollPane(text);
         textScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         textScrollPane.setPreferredSize(new Dimension(1600, 768));
@@ -55,9 +62,9 @@ public class WorkflowRunnerDialog extends JDialog {
         JLabel lblProgress = new JLabel("Progress");
         getContentPane().add(lblProgress, "cell 0 1");
         
-        // TODO: only count tasks in current phase in the progress bar
         final JProgressBar progressBar = new JProgressBar();
         getContentPane().add(progressBar, "cell 1 1,growx");
+        progressBar.setStringPainted(true);
         
         final JButton btnStop = new JButton("Stop");
         btnStop.addActionListener(new ActionListener() {
@@ -75,22 +82,45 @@ public class WorkflowRunnerDialog extends JDialog {
         });
         getContentPane().add(btnKill, "cell 1 2");
         
+        // Get the set of tasks that will be run using this the start module ID
+        final Set<Task> tasks = new HashSet<Task>();
+        List<WorkflowModule> modules = workflowRunner.getWorkflow().select(where("id",startModuleId));
+        while (modules.size() > 0) {
+            Collections.sort(modules, new Comparator<WorkflowModule>() {
+                @Override public int compare(WorkflowModule a, WorkflowModule b) {
+                    return a.getModuleName().compareTo(b.getModuleName());
+                }});
+            List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
+            for (WorkflowModule module : modules) {
+                tasks.addAll(workflowRunner.getTaskStatus().select(where("moduleId",module.getId())));
+                childModules.addAll(workflowRunner.getWorkflow().select(where("parentId",module.getId())));
+            }
+            modules = childModules;
+        }
+        progressBar.setIndeterminate(false);
+        progressBar.setMaximum(tasks.size());
+        
+        final Boolean[] stopped = {false};
+        final Set<Task> seen = new HashSet<Task>();
+
         // logging output
         workflowRunner.addLogHandler(new Handler() {
-            @Override public void publish(LogRecord record) {
-                text.append(String.format("[%s:%s:%s] %s%n", 
-                    record.getLoggerName(),
-                    new Date(record.getMillis()), 
-                    record.getLevel(), 
-                    record.getMessage()));
+            @Override public void publish(final LogRecord record) {
+                SwingUtilities.invokeLater(new Runnable() {
+                   @Override public void run() {
+                        text.append(String.format("[%s:%s:%s] %s%n", 
+                            record.getLoggerName(),
+                            new Date(record.getMillis()), 
+                            record.getLevel(), 
+                            record.getMessage()));
+                        progressBar.setString(String.format("%s (%.2f%%)",
+                                record.getMessage(),
+                                ((double)seen.size() / (double)tasks.size()) * 100.0));
+                    }
+                });
             }
             @Override public void flush() {}
             @Override public void close() throws SecurityException { }});
-        
-        // progress bar
-        final List<Task> tasks = workflowRunner.getTaskStatus().select();
-        progressBar.setIndeterminate(false);
-        progressBar.setMaximum(tasks.size());
         
         final JButton btnClose = new JButton("Close");
         btnClose.addActionListener(new ActionListener() {
@@ -101,34 +131,44 @@ public class WorkflowRunnerDialog extends JDialog {
         btnClose.setEnabled(false);
         getContentPane().add(btnClose, "cell 1 2");
         workflowRunner.addTaskListener(new TaskListener() {
-        	boolean stopped = false;
-        	Set<Task> seen = new HashSet<Task>();
-            @Override public void notifyTask(Task task) {
-            	if (stopped == false && !seen.contains(task)) {
-            	    seen.add(task);
-                    progressBar.setValue(seen.size());
-                    if (seen.size() == tasks.size()) {
+            @Override public void notifyTask(final Task task) {
+                SwingUtilities.invokeLater(new Runnable() {
+                   @Override public void run() {
+                        if (stopped[0] == false && !seen.contains(task)) {
+                            seen.add(task);
+                            progressBar.setValue(seen.size());
+                            if (seen.size() == tasks.size()) {
+                                btnStop.setEnabled(false);
+                                btnKill.setEnabled(false);
+                                btnClose.setEnabled(true);
+                            }
+                        }
+                   }
+                });
+            }
+			@Override public void stopped() {
+                SwingUtilities.invokeLater(new Runnable() {
+                   @Override public void run() {
+                        progressBar.setValue(0);
+                        stopped[0] = true;
                         btnStop.setEnabled(false);
                         btnKill.setEnabled(false);
                         btnClose.setEnabled(true);
-                    }
-            	}
-            }
-			@Override public void stopped() {
-                progressBar.setValue(0);
-                stopped = true;
-                btnStop.setEnabled(false);
-                btnKill.setEnabled(false);
-                btnClose.setEnabled(true);
+                   }
+                });
 			}
 			@Override public void killed() {
-                progressBar.setValue(0);
-                stopped = true;
-                btnStop.setEnabled(false);
-                btnKill.setEnabled(false);
-                btnClose.setEnabled(true);
-			}});
-        
+                SwingUtilities.invokeLater(new Runnable() {
+                   @Override public void run() {
+                        progressBar.setValue(0);
+                        stopped[0] = true;
+                        btnStop.setEnabled(false);
+                        btnKill.setEnabled(false);
+                        btnClose.setEnabled(true);
+                   }
+                });
+			}
+        });
     }
 
 }
