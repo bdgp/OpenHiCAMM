@@ -1,12 +1,17 @@
 package org.bdgp.OpenHiCAMM.Modules;
 
+import ij.IJ;
+import ij.ImagePlus;
+import ij.measure.ResultsTable;
+import ij.plugin.filter.Analyzer;
+import ij.process.ImageProcessor;
+
 import java.awt.Component;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import mmcorej.CMMCore;
 import mmcorej.TaggedImage;
 
 import org.bdgp.OpenHiCAMM.Dao;
@@ -35,6 +40,7 @@ import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
 import org.micromanager.api.ScriptInterface;
 import org.micromanager.api.StagePosition;
+import org.micromanager.utils.ImageUtils;
 import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMScriptException;
 import org.micromanager.utils.MMSerializationException;
@@ -81,27 +87,26 @@ public class ROIFinder implements Module {
         // Get the taggedImage object
         TaggedImage taggedImage;
         if (!config.containsKey("taggedImage")) {
-        	logger.info("Running in offline mode");
             // Initialize the acquisition
             Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
             Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
-        	logger.info(String.format("Using acquisition: %s", acquisition));
+            logger.info(String.format("Using acquisition: %s", acquisition));
             MMAcquisition mmacquisition = acquisition.getAcquisition();
             try { mmacquisition.initialize(); } 
             catch (MMScriptException e) {throw new RuntimeException(e);}
-        	logger.info(String.format("Initialized acquisition"));
+            logger.info(String.format("Initialized acquisition"));
 
             // Get the image cache object
             ImageCache imageCache = mmacquisition.getImageCache();
             if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
             // Get the tagged image from the image cache
             taggedImage = image.getImage(imageCache);
+            logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
         }
         else {
-        	logger.info("Running in online mode");
         	taggedImage = (TaggedImage)config.get("taggedImage").getObject();
+        	logger.info(String.format("Got taggedImage from task config: %s", taggedImage));
         }
-        logger.info(String.format("Got taggedImage: %s", taggedImage));
 
     	try {
 			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
@@ -117,14 +122,9 @@ public class ROIFinder implements Module {
 			logger.info(String.format("Running process() to get list of ROIs"));
 			List<ROI> rois = process(image, taggedImage, logger);
 			
-			// get the current stage position
-            double[] x_stage = new double[] {0.0};
-            double[] y_stage = new double[] {0.0};
-            CMMCore core = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
-            String xyStage = core.getXYStageDevice();
-            try { core.getXYPosition(xyStage, x_stage, y_stage); } 
-            catch (Exception e) { throw new RuntimeException(e); }
-
+			double x_stage = MDUtils.getXPositionUm(taggedImage.tags);
+			double y_stage = MDUtils.getYPositionUm(taggedImage.tags);
+			
             // Convert the ROIs into a PositionList
 			PositionList posList = new PositionList();
 			for (ROI roi : rois) {
@@ -132,8 +132,8 @@ public class ROIFinder implements Module {
 				StagePosition sp = new StagePosition();
 				sp.numAxes = 2;
 				sp.stageName = "XYStage";
-				sp.x = x_stage[0]+(((((double)roi.getX1()+(double)roi.getX2())/2.0)-(double)imageWidth)*pixelSizeUm);
-				sp.y = y_stage[0]+(((((double)roi.getY1()+(double)roi.getY2())/2.0)-(double)imageHeight)*pixelSizeUm);
+				sp.x = x_stage+(((((double)roi.getX1()+(double)roi.getX2())/2.0)-(double)imageWidth)*pixelSizeUm);
+				sp.y = y_stage+(((((double)roi.getY1()+(double)roi.getY2())/2.0)-(double)imageHeight)*pixelSizeUm);
 				msp.setLabel(roi.toString());
 				msp.add(sp);
 				msp.setDefaultXYStage("XYStage");
@@ -174,22 +174,75 @@ public class ROIFinder implements Module {
     
     public List<ROI> process(Image image, TaggedImage taggedImage, Logger logger) {
     	List<ROI> rois = new ArrayList<ROI>();
-    	try {
-            int width = MDUtils.getWidth(taggedImage.tags);
-            int height = MDUtils.getHeight(taggedImage.tags);
-            logger.info(String.format("Image dimensions: (%d,%d)", width, height));
+        ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
+        ImagePlus imp = new ImagePlus(image.toString(), processor);
 
-    		int roiCount = (int)(Math.random() * 10.0 + 10.0);
-    		for (int i=0; i<roiCount; ++i) {
-                int roiWidth = (int)(Math.random() * 100.0 + 150.0);
-                int roiHeight = (int)(Math.random() * 100.0 + 150.0);
-                int roiX = (int)(Math.random() * (width-roiWidth));
-                int roiY = (int)(Math.random() * (height-roiHeight));
-                ROI roi = new ROI(image.getId(), roiX, roiY, roiX+roiWidth, roiY+roiHeight);
+        // Convert to gray
+        IJ.run(imp, "8-bit", "");
+
+        // Resize to 1/4
+        int w=imp.getWidth();
+        int h=imp.getHeight();
+        logger.info(String.format("Image dimensions: (%d,%d)", w, h));
+        int ws=w/4;
+        int hs=h/4;
+
+        String scale = String.format("x=0.25 y=0.25 width=%d height=%d interpolation=Bicubic average", ws, hs);
+        logger.info(String.format("Scaling: %s", scale));
+        IJ.run(imp, "Scale...", scale);
+
+        // Crop after scale
+        int rw=(w/2)-(ws/2);
+        int rh=(h/2)-(hs/2);
+        logger.info(String.format("Cropping: %d, %d, %d, %d", rw, rh, ws, hs));
+        imp.setRoi(rw,rh,ws,hs);
+        IJ.run(imp, "Crop", "");
+
+        // Binarize
+        logger.info(String.format("Binarizing"));
+        IJ.run(imp, "Auto Threshold", "method=Huang");
+
+        // Morphological operations: close gaps, fill holes
+        logger.info(String.format("Closing gaps"));
+        IJ.run(imp, "Close-", "");
+        logger.info(String.format("Filling holes"));
+        IJ.run(imp, "Fill Holes", "");
+
+        // Detect the objects
+        logger.info(String.format("Analyzing particles"));
+        IJ.run(imp, "Analyze Particles...", "display exclude clear add in_situ");
+
+        // Get the objects and iterate through them
+        ResultsTable rt = Analyzer.getResultsTable();
+        for (int i=0; i < rt.getCounter(); i++) {
+            double area = rt.getValue("Area", i); // area of the object
+            double bx = rt.getValue("BX", i); // x of bounding box
+            double by = rt.getValue("BY", i); // y of bounding box
+            double width = rt.getValue("Width", i); // width of bounding box
+            double height = rt.getValue("Height", i); // height of bounding box
+            logger.info(String.format(
+            		"Found object: area=%.02f, bx=%.2f, by=%.2f, width=%.2f, heighh=%.2f",
+            		area, bx, by, width, height));
+
+            // Area usually > 18,000 but embryo may be cut off at boundary; don’t know how your ROI code would deal with that
+            // -> I’d suggest:
+            // Select for area > 2000, check if object is at boundary of image (bx or by == 1)
+            // ROI: upper left corner = bx/by with width/height
+            final int MIN_AREA = 2000;
+            if (area >= MIN_AREA && bx > 1 && by > 1 && bx+width < w && by+height < h) {
+                ROI roi = new ROI(image.getId(), (int)bx, (int)by, (int)(bx+width), (int)(by+height));
                 logger.info(String.format("Created new ROI record: %s", roi));
                 rois.add(roi);
-    		}
-    	} catch (JSONException e) {throw new RuntimeException(e);}
+            }
+            else {
+            	if (area < MIN_AREA) {
+            		logger.info(String.format("Skipping, area %.2f is less than %d", area, MIN_AREA));
+            	}
+            	if (!(bx > 1 && by > 1 && bx+width < w && by+height < h)) {
+            		logger.info(String.format("Skipping, ROI hits edge"));
+            	}
+            }
+        }
     	return rois;
     }
     
