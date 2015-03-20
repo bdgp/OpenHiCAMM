@@ -1,7 +1,6 @@
 package org.bdgp.OpenHiCAMM.Modules;
 
 import java.awt.Component;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -71,11 +70,6 @@ public class TIGenerator implements Module {
         {
             Task task = new Task(moduleId, Status.NEW);
             workflow.getTaskStatus().insert(task);
-            task.createStorageLocation(
-                    parentTask != null? parentTask.getStorageLocation() : null, 
-                    new File(workflow.getWorkflowDir(), 
-                            workflow.getInstance().getStorageLocation()).getPath());
-            workflow.getTaskStatus().update(task,"id");
             tasks.add(task);
             workflow.getLogger().info(String.format("%s: createTaskRecords: Created new task record: %s", this.moduleId, task));
             

@@ -1,7 +1,6 @@
 package org.bdgp.OpenHiCAMM.Modules;
 
 import java.awt.Component;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -72,11 +71,6 @@ public class ImageStitcher implements Module {
         {
             Task task = new Task(moduleId, Status.NEW);
             workflowRunner.getTaskStatus().insert(task);
-            task.createStorageLocation(
-                    parentTask != null? parentTask.getStorageLocation(): null, 
-                    new File(workflowRunner.getWorkflowDir(),
-                            workflowRunner.getInstance().getStorageLocation()).getPath());
-            workflowRunner.getTaskStatus().update(task,"id");
             tasks.add(task);
             workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created new task record: %s", 
             		this.moduleId, task));

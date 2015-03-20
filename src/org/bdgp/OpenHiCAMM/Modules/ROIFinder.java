@@ -1,7 +1,6 @@
 package org.bdgp.OpenHiCAMM.Modules;
 
 import java.awt.Component;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -239,11 +238,6 @@ public class ROIFinder implements Module {
             			this.moduleId, parentTask));
                 Task task = new Task(moduleId, Status.NEW);
                 workflowRunner.getTaskStatus().insert(task);
-                task.createStorageLocation(
-                		parentTask.getStorageLocation(), 
-                		new File(workflowRunner.getWorkflowDir(),
-                				workflowRunner.getInstance().getStorageLocation()).getPath());
-                workflowRunner.getTaskStatus().update(task,"id");
                 tasks.add(task);
             	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created new task record: %s",
             			this.moduleId, task));

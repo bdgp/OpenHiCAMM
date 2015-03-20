@@ -56,12 +56,12 @@ public class Logger extends java.util.logging.Logger {
     	public LogFileHandler(String pattern, boolean append) 
     	throws IOException, SecurityException
     	{
-    		super(pattern, 10000000, 10, append);
+    		super(pattern, append);
     	}
     	public LogFileHandler(String pattern) 
             throws IOException, SecurityException 
         {
-    		super(pattern, 10000000, 10, false);
+    		super(pattern, false);
     		setFormatter();
     	}
 		public LogFileHandler(String pattern, int limit, int count, boolean append) 

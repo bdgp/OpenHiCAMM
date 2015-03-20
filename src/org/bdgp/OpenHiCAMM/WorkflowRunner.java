@@ -520,8 +520,8 @@ public class WorkflowRunner {
                 // instantiate a logger for the task
                 Logger taskLogger = Logger.create(
                         new File(WorkflowRunner.this.getWorkflowDir(),
-                                new File(WorkflowRunner.this.getInstance().getStorageLocation(),
-                                        new File(task.getStorageLocation(), LOG_FILE).getPath()).getPath()).getPath(),
+                                new File(WorkflowRunner.this.getInstance().getStorageLocation(), 
+                                		LOG_FILE).getPath()).getPath(),
                                         String.format("%s", task.getName()),
                                         logLevel);
                 for (Handler handler : WorkflowRunner.this.logHandlers) {

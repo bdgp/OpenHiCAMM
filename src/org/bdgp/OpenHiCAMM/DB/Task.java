@@ -1,7 +1,5 @@
 package org.bdgp.OpenHiCAMM.DB;
 
-import java.io.File;
-
 import org.bdgp.OpenHiCAMM.Util;
 
 import com.j256.ormlite.field.DataType;
@@ -19,15 +17,10 @@ public class Task {
        this.moduleId = moduleId;
        this.status = status;
     }
-    public Task(String moduleId, String storageLocation, Status status) {
-       this.moduleId = moduleId;
-       this.storageLocation = storageLocation;
-       this.status = status;
-    }
     public String toString() {
-    	return String.format("%s(id=%d, parentTaskId=%d, moduleId=%s, storageLocation=%s, status=%s)", 
+    	return String.format("%s(id=%d, parentTaskId=%d, moduleId=%s, status=%s)", 
     			this.getName(), 
-    			this.id, this.parentTaskId, Util.escape(moduleId), Util.escape(storageLocation), status);
+    			this.id, this.parentTaskId, Util.escape(moduleId), status);
     }
     
     @DatabaseField(generatedId=true,canBeNull=false)
@@ -43,9 +36,6 @@ public class Task {
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING)
     private String moduleId;
     
-    @DatabaseField(canBeNull=true,dataType=DataType.LONG_STRING)
-    private String storageLocation;
-    
     public static enum Status {ERROR, FAIL, SUCCESS, IN_PROGRESS, DEFER, NEW};
     
     @DatabaseField(canBeNull=false)
@@ -59,19 +49,6 @@ public class Task {
     }
     public Status getStatus() {
         return status;
-    }
-    public String getStorageLocation() {
-        return storageLocation;
-    }
-    public String createStorageLocation(String parent, String toplevel) {
-        // create a new directory for the task instance
-    	File dir = parent != null? new File(parent, this.getName()) : new File(this.getName());
-        File path = new File(toplevel, dir.getPath());
-        if (!path.exists() && !path.mkdirs()) {
-            throw new RuntimeException("Could not create directory "+path.toString());
-        }
-        this.storageLocation = dir.toString();
-        return this.storageLocation;
     }
     public String getModuleId() {
         return moduleId;
@@ -92,8 +69,6 @@ public class Task {
 		result = prime * result
 				+ ((parentTaskId == null) ? 0 : parentTaskId.hashCode());
 		result = prime * result + ((status == null) ? 0 : status.hashCode());
-		result = prime * result
-				+ ((storageLocation == null) ? 0 : storageLocation.hashCode());
 		return result;
 	}
 	@Override
@@ -118,11 +93,6 @@ public class Task {
 		} else if (!parentTaskId.equals(other.parentTaskId))
 			return false;
 		if (status != other.status)
-			return false;
-		if (storageLocation == null) {
-			if (other.storageLocation != null)
-				return false;
-		} else if (!storageLocation.equals(other.storageLocation))
 			return false;
 		return true;
 	}

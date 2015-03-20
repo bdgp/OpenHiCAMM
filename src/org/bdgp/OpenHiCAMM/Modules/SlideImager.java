@@ -571,11 +571,6 @@ public class SlideImager implements Module {
                 // Create task record
                 Task task = new Task(moduleId, Status.NEW);
                 workflowRunner.getTaskStatus().insert(task);
-                task.createStorageLocation(
-                        parentTask != null? parentTask.getStorageLocation() : null, 
-                        new File(workflowRunner.getWorkflowDir(), 
-                                workflowRunner.getInstance().getStorageLocation()).getPath());
-                workflowRunner.getTaskStatus().update(task,"id");
                 tasks.add(task);
                 workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created task record: %s", 
                         this.moduleId, task));
