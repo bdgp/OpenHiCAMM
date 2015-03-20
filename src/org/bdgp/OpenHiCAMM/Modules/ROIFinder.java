@@ -194,8 +194,9 @@ public class ROIFinder implements Module {
         IJ.run(imp, "Scale...", scaleOp);
 
         // Crop after scale
-        double rw=(w/2)-(ws/2);
-        double rh=(h/2)-(hs/2);
+        double crop = 2.0;
+        double rw=(w/crop)-(ws/crop);
+        double rh=(h/crop)-(hs/crop);
         logger.info(String.format("Cropping: %d, %d, %d, %d", rw, rh, ws, hs));
         imp.setRoi((int)rw,(int)rh,(int)ws,(int)hs);
         IJ.run(imp, "Crop", "");
