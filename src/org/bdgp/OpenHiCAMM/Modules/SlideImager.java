@@ -343,15 +343,7 @@ public class SlideImager implements Module {
                         taggedImage);
                 conf.put(taggedImageConf.getKey(), taggedImageConf);
                 logger.info(String.format("Added taggedImage conf: %s", taggedImageConf));
-                
-                // Now update the task status to success.
-                t.setStatus(Status.SUCCESS);
-                taskDao.update(t, "id");
             }
-        }
-        else {
-        	// If we got here it means something went wrong with the image acquisition
-        	return Status.FAIL;
         }
         return Status.SUCCESS;
     }
