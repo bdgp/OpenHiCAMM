@@ -366,6 +366,53 @@ public class WorkflowRunner {
     }
     
     /**
+     * Display a summary of all the task statuses
+     */
+    private void logTaskSummary() {
+        List<WorkflowModule> modules = this.workflow.select(where("parentId",null));
+        this.logger.info("");
+        this.logger.info("Task Status Summary:");
+        this.logger.info("====================");
+        while (modules.size() > 0) {
+            Collections.sort(modules, new Comparator<WorkflowModule>() {
+                @Override public int compare(WorkflowModule a, WorkflowModule b) {
+                    return a.getModuleName().compareTo(b.getModuleName());
+                }});
+
+            List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
+            for (WorkflowModule module : modules) {
+                List<Task> tasks = this.taskStatus.select(where("moduleId",module.getId()));
+                Collections.sort(tasks, new Comparator<Task>() {
+                    @Override public int compare(Task a, Task b) {
+                        return a.getId()-b.getId();
+                    }});
+                final Map<Status,Integer> stats = new HashMap<Status,Integer>();
+                for (Task task : tasks) {
+                    stats.put(task.getStatus(), 
+                            stats.containsKey(task.getStatus())? stats.get(task.getStatus())+1 : 1);
+                }
+                List<Status> sortedStats = new ArrayList<Status>(stats.keySet());
+                Collections.sort(sortedStats, new Comparator<Status>() {
+                    @Override public int compare(Status a, Status b) {
+                        return stats.get(b).compareTo(stats.get(a));
+                    }});
+                for (Status status : sortedStats) {
+                    this.logger.info(String.format("Module %s: Status %s: %d / %d tasks (%.02f%%)",
+                            Util.escape(module.getId()), 
+                            status, 
+                            stats.get(status), 
+                            tasks.size(),
+                            ((double)stats.get(status) / (double)tasks.size())*100.0));
+                }
+                // now evaluate any child nodes
+                childModules.addAll(this.workflow.select(where("parentId",module.getId())));
+            }
+            modules = childModules;
+        }
+        this.logger.info("");
+    }
+
+    /**
      * Start the workflow runner
      * @param startModuleId The starting module
      * @param resume Should we resume a previous run?
@@ -444,53 +491,6 @@ public class WorkflowRunner {
         return future;
     }
     
-    /**
-     * Display a summary of all the task statuses
-     */
-    private void logTaskSummary() {
-        List<WorkflowModule> modules = this.workflow.select(where("parentId",null));
-        this.logger.info("");
-        this.logger.info("Task Status Summary:");
-        this.logger.info("====================");
-        while (modules.size() > 0) {
-            Collections.sort(modules, new Comparator<WorkflowModule>() {
-                @Override public int compare(WorkflowModule a, WorkflowModule b) {
-                    return a.getModuleName().compareTo(b.getModuleName());
-                }});
-
-            List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
-            for (WorkflowModule module : modules) {
-                List<Task> tasks = this.taskStatus.select(where("moduleId",module.getId()));
-                Collections.sort(tasks, new Comparator<Task>() {
-                    @Override public int compare(Task a, Task b) {
-                        return a.getId()-b.getId();
-                    }});
-                final Map<Status,Integer> stats = new HashMap<Status,Integer>();
-                for (Task task : tasks) {
-                    stats.put(task.getStatus(), 
-                            stats.containsKey(task.getStatus())? stats.get(task.getStatus())+1 : 1);
-                }
-                List<Status> sortedStats = new ArrayList<Status>(stats.keySet());
-                Collections.sort(sortedStats, new Comparator<Status>() {
-                    @Override public int compare(Status a, Status b) {
-                        return stats.get(b).compareTo(stats.get(a));
-                    }});
-                for (Status status : sortedStats) {
-                    this.logger.info(String.format("Module %s: Status %s: %d / %d tasks (%.02f%%)",
-                            Util.escape(module.getId()), 
-                            status, 
-                            stats.get(status), 
-                            tasks.size(),
-                            ((double)stats.get(status) / (double)tasks.size())*100.0));
-                }
-                // now evaluate any child nodes
-                childModules.addAll(this.workflow.select(where("parentId",module.getId())));
-            }
-            modules = childModules;
-        }
-        this.logger.info("");
-    }
-
     /**
      * Given a task, call all of its successors.
      * @param task
