@@ -185,8 +185,8 @@ public class ROIFinder implements Module {
         int h=imp.getHeight();
         logger.info(String.format("Image dimensions: (%d,%d)", w, h));
         double scale = 0.25;
-        int ws=(int)((double)w*scale);
-        int hs=(int)((double)h*scale);
+        double ws=(double)w*scale;
+        double hs=(double)h*scale;
 
         String scaleOp = String.format("x=%f y=%f width=%d height=%d interpolation=Bicubic average", 
         		scale, scale, ws, hs);
@@ -194,10 +194,10 @@ public class ROIFinder implements Module {
         IJ.run(imp, "Scale...", scaleOp);
 
         // Crop after scale
-        int rw=(w/2)-(ws/2);
-        int rh=(h/2)-(hs/2);
+        double rw=(w/2)-(ws/2);
+        double rh=(h/2)-(hs/2);
         logger.info(String.format("Cropping: %d, %d, %d, %d", rw, rh, ws, hs));
-        imp.setRoi(rw,rh,ws,hs);
+        imp.setRoi((int)rw,(int)rh,(int)ws,(int)hs);
         IJ.run(imp, "Crop", "");
 
         // Binarize
