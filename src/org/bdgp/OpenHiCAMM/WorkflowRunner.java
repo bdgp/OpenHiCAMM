@@ -311,29 +311,50 @@ public class WorkflowRunner {
         }
 
         // Draw the task dispatch graph
-        List<Task> tasks = this.taskStatus.select();
-        final int MAX_TASKS_IN_GRAPH = 200;
-        // If there are too many tasks, skip drawing the graph
-        if (tasks.size() < MAX_TASKS_IN_GRAPH) {
-            GraphEasy taskGraph = new GraphEasy();
-            Map<Integer,String> taskLabels = new HashMap<Integer,String>();
-            Collections.sort(tasks, new Comparator<Task>() {
-                @Override public int compare(Task a, Task b) {
-                    return a.getId()-b.getId();
-                }});
-            for (int t=0; t<tasks.size(); ++t) {
-                Task task = tasks.get(t);
+        // Start with all tasks associated with the start module ID
+        List<Task> tasks = this.taskStatus.select(where("moduleId", startModuleId));
+        List<TaskDispatch> dispatches = new ArrayList<TaskDispatch>();
+        GraphEasy taskGraph = new GraphEasy();
+        // Add all task dispatches associated with the first set of tasks
+        for (Task task : tasks) {
+        	dispatches.addAll(this.taskDispatch.select(where("parentTaskId", task.getId())));
+        }
+        // Iterate through the task dispatch tree and load all edges into the graph
+        Set<Task> seen = new HashSet<Task>();
+        while (dispatches.size() > 0) {
+        	List<TaskDispatch> childDispatches = new ArrayList<TaskDispatch>();
+        	for (TaskDispatch td : dispatches) {
+        		// Get the parent task label
+        		Task parentTask = this.taskStatus.selectOneOrDie(where("id", td.getParentTaskId()));
+                Module parentModule = this.moduleInstances.get(parentTask.getModuleId());
+                String parentLabel = String.format("%s:%s:%s", 
+                		parentTask.getName(), parentTask.getStatus(), parentModule.getTaskType());
+                // Get the child task label
+        		Task task = this.taskStatus.selectOneOrDie(where("id", td.getTaskId()));
                 Module module = this.moduleInstances.get(task.getModuleId());
                 String label = String.format("%s:%s:%s", task.getName(), task.getStatus(), module.getTaskType());
-                taskLabels.put(task.getId(), label);
-            }
-            List<TaskDispatch> dispatches = this.taskDispatch.select();
-            for (TaskDispatch dispatch : dispatches) {
-                String parent = taskLabels.get(dispatch.getParentTaskId());
-                String child = taskLabels.get(dispatch.getTaskId());
-                taskGraph.addEdge(parent, child);
-            }
-            this.logger.info(String.format("PATH=%s", System.getenv("PATH")));
+                // Add the edge and record the tasks as being visited
+        		taskGraph.addEdge(parentLabel, label);
+        		seen.add(parentTask);
+        		seen.add(task);
+        		// Get the next set of child dispatches
+        		childDispatches.addAll(this.taskDispatch.select(where("parentTaskId", task.getId())));
+        	}
+        	dispatches = childDispatches;
+        }
+        // Now find all the singleton tasks with no dispatch records
+        for (Task task : tasks) {
+        	// If the task was never included in an edge, then display it as a singleton task
+        	if (!seen.contains(task)) {
+                Module module = this.moduleInstances.get(task.getModuleId());
+                String label = String.format("%s:%s:%s", task.getName(), task.getStatus(), module.getTaskType());
+        		taskGraph.addEdge(label);
+        		seen.add(task);
+        	}
+        }
+        // If there are too many tasks, skip drawing the graph
+        final int MAX_TASKS_IN_GRAPH = 200;
+        if (tasks.size() < MAX_TASKS_IN_GRAPH) {
             try { this.logger.info(String.format("Task Dispatch Graph:%n%s", taskGraph.graph())); }
             catch (IOException e) {
                 this.logger.warning(String.format("Could not draw task graph: %s", e));
