@@ -207,6 +207,7 @@ public class SlideImager implements Module {
             }
 
             // Start the acquisition engine. This runs asynchronously.
+            logger.info(String.format("Now running the image acquisition sequence, please wait..."));
             String returnAcqName = acqControlDlg.runAcquisition(acqName, rootDir);
             if (returnAcqName == null) {
                 throw new RuntimeException("acqControlDlg.runAcquisition returned null acquisition name");
