@@ -184,12 +184,14 @@ public class ROIFinder implements Module {
         int w=imp.getWidth();
         int h=imp.getHeight();
         logger.info(String.format("Image dimensions: (%d,%d)", w, h));
-        int ws=w/4;
-        int hs=h/4;
+        double scale = 0.25;
+        int ws=(int)((double)w*scale);
+        int hs=(int)((double)h*scale);
 
-        String scale = String.format("x=0.25 y=0.25 width=%d height=%d interpolation=Bicubic average", ws, hs);
-        logger.info(String.format("Scaling: %s", scale));
-        IJ.run(imp, "Scale...", scale);
+        String scaleOp = String.format("x=%f y=%f width=%d height=%d interpolation=Bicubic average", 
+        		scale, scale, ws, hs);
+        logger.info(String.format("Scaling: %s", scaleOp));
+        IJ.run(imp, "Scale...", scaleOp);
 
         // Crop after scale
         int rw=(w/2)-(ws/2);
@@ -215,11 +217,11 @@ public class ROIFinder implements Module {
         // Get the objects and iterate through them
         ResultsTable rt = Analyzer.getResultsTable();
         for (int i=0; i < rt.getCounter(); i++) {
-            double area = rt.getValue("Area", i); // area of the object
-            double bx = rt.getValue("BX", i); // x of bounding box
-            double by = rt.getValue("BY", i); // y of bounding box
-            double width = rt.getValue("Width", i); // width of bounding box
-            double height = rt.getValue("Height", i); // height of bounding box
+            double area = rt.getValue("Area", i) / (scale*scale); // area of the object
+            double bx = rt.getValue("BX", i) / scale; // x of bounding box
+            double by = rt.getValue("BY", i) / scale; // y of bounding box
+            double width = rt.getValue("Width", i) / scale; // width of bounding box
+            double height = rt.getValue("Height", i) / scale; // height of bounding box
             logger.info(String.format(
             		"Found object: area=%.02f, bx=%.2f, by=%.2f, width=%.2f, heighh=%.2f",
             		area, bx, by, width, height));
@@ -230,7 +232,7 @@ public class ROIFinder implements Module {
             // ROI: upper left corner = bx/by with width/height
             final int MIN_AREA = 2000;
             if (area >= MIN_AREA && bx > 1 && by > 1 && bx+width < w && by+height < h) {
-                ROI roi = new ROI(image.getId(), (int)bx, (int)by, (int)(bx+width), (int)(by+height));
+                ROI roi = new ROI(image.getId(), (int)(bx*scale), (int)(by*scale), (int)(bx+width), (int)(by+height));
                 logger.info(String.format("Created new ROI record: %s", roi));
                 rois.add(roi);
             }
