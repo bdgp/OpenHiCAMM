@@ -61,7 +61,7 @@ public class Logger extends java.util.logging.Logger {
     	public LogFileHandler(String pattern) 
             throws IOException, SecurityException 
         {
-    		super(pattern, true);
+    		super(pattern, false);
     		setFormatter();
     	}
 		public LogFileHandler(String pattern, int limit, int count, boolean append) 
