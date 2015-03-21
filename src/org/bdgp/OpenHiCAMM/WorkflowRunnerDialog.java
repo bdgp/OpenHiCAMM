@@ -2,12 +2,8 @@ package org.bdgp.OpenHiCAMM;
 
 import java.awt.Dialog;
 import java.awt.Dimension;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
-import java.util.ArrayList;
 import java.util.Set;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
@@ -24,9 +20,7 @@ import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 
 import org.bdgp.OpenHiCAMM.DB.Task;
-import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.TaskListener;
-import static org.bdgp.OpenHiCAMM.Util.where;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -34,7 +28,10 @@ import java.awt.Font;
 
 @SuppressWarnings("serial")
 public class WorkflowRunnerDialog extends JDialog {
-    private WorkflowRunner workflowRunner;
+    WorkflowRunner workflowRunner;
+    String startModuleId;
+    JProgressBar progressBar;
+    Integer maxTasks;
     
     public WorkflowRunnerDialog(WorkflowDialog workflowDialog, 
             WorkflowRunner runner,
@@ -43,6 +40,8 @@ public class WorkflowRunnerDialog extends JDialog {
         super(workflowDialog, "Workflow Runner", Dialog.ModalityType.DOCUMENT_MODAL);
     	final WorkflowRunnerDialog self = this;
         this.workflowRunner = runner;
+        this.startModuleId = startModuleId;
+
         getContentPane().setLayout(new MigLayout("", "[][grow]", "[grow][][]"));
         setPreferredSize(new Dimension(1600,768));
         
@@ -62,7 +61,7 @@ public class WorkflowRunnerDialog extends JDialog {
         JLabel lblProgress = new JLabel("Progress");
         getContentPane().add(lblProgress, "cell 0 1");
         
-        final JProgressBar progressBar = new JProgressBar();
+        progressBar = new JProgressBar();
         getContentPane().add(progressBar, "cell 1 1,growx");
         progressBar.setStringPainted(true);
         
@@ -82,26 +81,9 @@ public class WorkflowRunnerDialog extends JDialog {
         });
         getContentPane().add(btnKill, "cell 1 2");
         
-        // Get the set of tasks that will be run using this the start module ID
-        final Set<Task> tasks = new HashSet<Task>();
-        List<WorkflowModule> modules = workflowRunner.getWorkflow().select(where("id",startModuleId));
-        while (modules.size() > 0) {
-            Collections.sort(modules, new Comparator<WorkflowModule>() {
-                @Override public int compare(WorkflowModule a, WorkflowModule b) {
-                    return a.getModuleName().compareTo(b.getModuleName());
-                }});
-            List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
-            for (WorkflowModule module : modules) {
-                tasks.addAll(workflowRunner.getTaskStatus().select(where("moduleId",module.getId())));
-                childModules.addAll(workflowRunner.getWorkflow().select(where("parentId",module.getId())));
-            }
-            modules = childModules;
-        }
-        progressBar.setIndeterminate(false);
-        progressBar.setMaximum(tasks.size());
-        
-        final Boolean[] stopped = {false};
         final Set<Task> seen = new HashSet<Task>();
+        final Boolean[] stopped = {false};
+        progressBar.setIndeterminate(false);
 
         // logging output
         workflowRunner.addLogHandler(new Handler() {
@@ -113,9 +95,12 @@ public class WorkflowRunnerDialog extends JDialog {
                             new Date(record.getMillis()), 
                             record.getLevel(), 
                             record.getMessage()));
-                        progressBar.setString(String.format("%s (%.2f%%)",
+                        progressBar.setString(String.format("%s%s",
                                 record.getMessage(),
-                                ((double)seen.size() / (double)tasks.size()) * 100.0));
+                                WorkflowRunnerDialog.this.maxTasks != null? 
+                                        String.format(" (%.2f%%)", 
+                                                ((double)seen.size() / (double)WorkflowRunnerDialog.this.maxTasks) * 100.0) : 
+                                        ""));
                     }
                 });
             }
@@ -137,7 +122,9 @@ public class WorkflowRunnerDialog extends JDialog {
                         if (stopped[0] == false && !seen.contains(task)) {
                             seen.add(task);
                             progressBar.setValue(seen.size());
-                            if (seen.size() == tasks.size()) {
+                            if (WorkflowRunnerDialog.this.maxTasks != null && 
+                                seen.size() == WorkflowRunnerDialog.this.maxTasks) 
+                            {
                                 btnStop.setEnabled(false);
                                 btnKill.setEnabled(false);
                                 btnClose.setEnabled(true);
@@ -168,6 +155,11 @@ public class WorkflowRunnerDialog extends JDialog {
                    }
                 });
 			}
+            @Override
+            public void taskCount(int taskCount) {
+                WorkflowRunnerDialog.this.maxTasks = taskCount;
+                progressBar.setMaximum(WorkflowRunnerDialog.this.maxTasks);
+            }
         });
     }
 

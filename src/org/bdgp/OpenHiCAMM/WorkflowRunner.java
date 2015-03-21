@@ -197,6 +197,7 @@ public class WorkflowRunner {
     	this.logger.info("Creating new task records");
     	this.createTaskRecords(null, null);
     }
+
     public void createTaskRecords(WorkflowModule module, List<Task> tasks) {
     	List<Task> childTasks = new ArrayList<Task>();
     	if (module != null) {
@@ -445,6 +446,10 @@ public class WorkflowRunner {
                         taskStatus.update(set("status", Status.NEW), where("status", Status.IN_PROGRESS));
                         taskStatus.update(set("parentTaskId", null));
                     }
+                    // Notify the task listeners of the maximum task count
+                    for (TaskListener listener : taskListeners) {
+                        listener.taskCount(getTaskCount(startModuleId));
+                    }
 
                     // Log some information on this workflow
                     WorkflowRunner.this.logWorkflowInfo(startModuleId);
@@ -538,21 +543,10 @@ public class WorkflowRunner {
                 WorkflowRunner.this.logger.info(String.format("%s: Previous status was: %s", task.getName(), status));
             	if (WorkflowRunner.this.isStopped == true) return status;
                 
-                // instantiate a logger for the task
-                Logger taskLogger = Logger.create(
-                        new File(WorkflowRunner.this.getWorkflowDir(),
-                                new File(WorkflowRunner.this.getInstance().getStorageLocation(), 
-                                		LOG_FILE).getPath()).getPath(),
-                                        String.format("%s", task.getName()),
-                                        logLevel);
-                for (Handler handler : WorkflowRunner.this.logHandlers) {
-                    taskLogger.addHandler(handler);
-                }
-                
                 // run the task
                 WorkflowRunner.this.logger.info(String.format("%s: Running task", task.getName()));
                 try {
-                    status = taskModule.run(task, config, taskLogger);
+                    status = taskModule.run(task, config, WorkflowRunner.this.logger);
                 } 
                 // Uncaught exceptions set the status to ERROR
                 catch (Throwable e) {
@@ -714,6 +708,25 @@ public class WorkflowRunner {
         return future;
     }
     
+    public int getTaskCount(String startModuleId) {
+        // Get the set of tasks that will be run using this the start module ID
+        final Set<Task> tasks = new HashSet<Task>();
+        List<WorkflowModule> modules = this.getWorkflow().select(where("id",startModuleId));
+        while (modules.size() > 0) {
+            Collections.sort(modules, new Comparator<WorkflowModule>() {
+                @Override public int compare(WorkflowModule a, WorkflowModule b) {
+                    return a.getModuleName().compareTo(b.getModuleName());
+                }});
+            List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
+            for (WorkflowModule module : modules) {
+                tasks.addAll(this.getTaskStatus().select(where("moduleId",module.getId())));
+                childModules.addAll(this.getWorkflow().select(where("parentId",module.getId())));
+            }
+            modules = childModules;
+        }
+        return tasks.size();
+    }
+
     private void notifyTaskListeners(Task task) {
         for (TaskListener listener : taskListeners) {
             if (!WorkflowRunner.this.notifiedTasks.contains(task)) {
@@ -739,7 +752,7 @@ public class WorkflowRunner {
      * Stop any new tasks from getting queued up.
      */
     public void stop() {
-    	logger.warning("Stopping all jobs");
+    	this.logger.warning("Stopping all jobs");
         isStopped = true;
 
         // notify any task listeners
@@ -753,7 +766,7 @@ public class WorkflowRunner {
      * Stop all actively executing tasks and stop processing any waiting tasks.
      */
     public List<Runnable> kill() {
-    	logger.warning("Killing all jobs");
+    	this.logger.warning("Killing all jobs");
     	isStopped = true;
         // notify any task listeners
         for (TaskListener listener : taskListeners) {
