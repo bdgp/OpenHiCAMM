@@ -171,15 +171,18 @@ public class WorkflowRunner {
     }
     
     public void deleteTaskRecords() {
-        List<WorkflowModule> modules = workflow.select(where("parentId",null));
-        for (WorkflowModule module : modules) {
-            deleteTaskRecords(module);
+        List<WorkflowModule> modules = this.workflow.select(where("parentId", null));
+        for (WorkflowModule m : modules) {
+            this.deleteTaskRecords(m);
         }
-        this.logger.info(String.format("Removed old task, taskdispatch and taskconfig records"));
+    }
+    public void deleteTaskRecords(String moduleId) {
+        WorkflowModule module = this.workflow.selectOneOrDie(where("id",moduleId));
+        this.deleteTaskRecords(module);
     }
     public void deleteTaskRecords(WorkflowModule module) {
         // Delete any child task/dispatch records
-        List<WorkflowModule> childModules = workflow.select(where("parentId",module.getId()));
+        List<WorkflowModule> childModules = this.workflow.select(where("parentId",module.getId()));
         for (WorkflowModule child : childModules) {
             deleteTaskRecords(child);
         }
@@ -193,17 +196,14 @@ public class WorkflowRunner {
         taskStatus.delete(where("moduleId",module.getId()));
     }
     
-    public void createTaskRecords() {
-    	this.logger.info("Creating new task records");
-    	this.createTaskRecords(null, null);
+    public void createTaskRecords(String moduleId) {
+        WorkflowModule module = this.workflow.selectOneOrDie(where("id",moduleId));
+        createTaskRecords(module, new ArrayList<Task>());
     }
-
     public void createTaskRecords(WorkflowModule module, List<Task> tasks) {
     	List<Task> childTasks = new ArrayList<Task>();
-    	if (module != null) {
-            Module m = this.moduleInstances.get(module.getId());
-            childTasks = m.createTaskRecords(tasks != null? tasks : new ArrayList<Task>());
-    	}
+        Module m = this.moduleInstances.get(module.getId());
+        childTasks = m.createTaskRecords(tasks != null? tasks : new ArrayList<Task>());
         List<WorkflowModule> modules = workflow.select(
         		where("parentId",module != null? module.getId() : null));
         for (WorkflowModule mod : modules) {
@@ -436,8 +436,9 @@ public class WorkflowRunner {
 
                     // If we're not resuming, delete and re-create the task records
                     if (!resume) {
+                        //WorkflowRunner.this.deleteTaskRecords(startModuleId);
                         WorkflowRunner.this.deleteTaskRecords();
-                        WorkflowRunner.this.createTaskRecords();
+                        WorkflowRunner.this.createTaskRecords(startModuleId);
                     }
                     // In resume mode, the task records aren't re-created. So we need to clear out 
                     // invalid statuses and the parent Task ID flags.
