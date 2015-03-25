@@ -13,6 +13,7 @@ import javax.swing.JButton;
 
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
+import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.micromanager.dialogs.AcqControlDlg;
 
@@ -21,8 +22,11 @@ import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import javax.swing.JRadioButton;
 import javax.swing.ButtonGroup;
+
+import static org.bdgp.OpenHiCAMM.Util.where;
 
 @SuppressWarnings("serial")
 public class SlideImagerDialog extends JPanel {
@@ -99,8 +103,15 @@ public class SlideImagerDialog extends JPanel {
         List<String> moduleIds = new ArrayList<String>();
         moduleIds.add("- Select -");
         Dao<WorkflowModule> modules = workflowRunner.getWorkflowDb().table(WorkflowModule.class);
+        Dao<ModuleConfig> moduleConfigDao = workflowRunner.getInstanceDb().table(ModuleConfig.class);
         for (WorkflowModule module : modules.select()) {
-            moduleIds.add(module.getId());
+            List<ModuleConfig> moduleConfigs = moduleConfigDao.select(
+                    where("id", module.getId()).
+                    and("key", "canProduceROIs").
+                    and("value", "yes"));
+            if (moduleConfigs.size() > 0) {
+                moduleIds.add(module.getId());
+            }
         }
         Collections.sort(moduleIds);
         moduleId.setModel(new DefaultComboBoxModel<String>(moduleIds.toArray(new String[0])));

@@ -23,6 +23,7 @@ import org.bdgp.OpenHiCAMM.WorkflowRunner;
 import org.bdgp.OpenHiCAMM.DB.Acquisition;
 import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.Image;
+import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.ROI;
 import org.bdgp.OpenHiCAMM.DB.Slide;
 import org.bdgp.OpenHiCAMM.DB.SlidePos;
@@ -61,6 +62,11 @@ public class ROIFinder implements Module {
         this.moduleId = moduleId;
         OpenHiCAMM mmslide = workflowRunner.getOpenHiCAMM();
         this.script = mmslide.getApp();
+        
+        // set initial configs
+        workflowRunner.getModuleConfig().insertOrUpdate(
+                new ModuleConfig(this.moduleId, "canProduceROIs", "yes"), 
+                "id", "key");
     }
 
     @Override
@@ -214,7 +220,8 @@ public class ROIFinder implements Module {
         // Detect the objects
         logger.info(String.format("Analyzing particles"));
         IJ.run(imp, "Analyze Particles...", "display exclude clear add in_situ");
-
+        
+        Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
         // Get the objects and iterate through them
         ResultsTable rt = Analyzer.getResultsTable();
         for (int i=0; i < rt.getCounter(); i++) {
@@ -236,6 +243,7 @@ public class ROIFinder implements Module {
                 ROI roi = new ROI(image.getId(), (int)(bx*scale), (int)(by*scale), (int)(bx+width), (int)(by+height));
                 logger.info(String.format("Created new ROI record: %s", roi));
                 rois.add(roi);
+                roiDao.insert(roi);
             }
             else {
             	if (area < MIN_AREA) {
