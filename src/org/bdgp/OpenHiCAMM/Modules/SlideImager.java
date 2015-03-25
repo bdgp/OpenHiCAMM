@@ -51,7 +51,7 @@ import org.micromanager.utils.MMSerializationException;
 import static org.bdgp.OpenHiCAMM.Util.where;
 
 public class SlideImager implements Module {
-    private static final int DUMMY_IMAGES = 15;
+    private static final int DUMMY_IMAGES = 10;
 	private static final long DUMMY_SLEEP = 500;
 
 	WorkflowRunner workflowRunner;
