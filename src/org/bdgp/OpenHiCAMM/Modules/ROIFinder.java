@@ -195,7 +195,7 @@ public class ROIFinder implements Module {
         double hs=(double)h*scale;
 
         String scaleOp = String.format("x=%f y=%f width=%d height=%d interpolation=Bicubic average", 
-        		scale, scale, ws, hs);
+        		scale, scale, (int)ws, (int)hs);
         logger.info(String.format("Scaling: %s", scaleOp));
         IJ.run(imp, "Scale...", scaleOp);
 
@@ -203,7 +203,7 @@ public class ROIFinder implements Module {
         double crop = 2.0;
         double rw=(w/crop)-(ws/crop);
         double rh=(h/crop)-(hs/crop);
-        logger.info(String.format("Cropping: %d, %d, %d, %d", rw, rh, ws, hs));
+        logger.info(String.format("Cropping: %d, %d, %d, %d", (int)rw, (int)rh, (int)ws, (int)hs));
         imp.setRoi((int)rw,(int)rh,(int)ws,(int)hs);
         IJ.run(imp, "Crop", "");
 
@@ -231,7 +231,7 @@ public class ROIFinder implements Module {
             double width = rt.getValue("Width", i) / scale; // width of bounding box
             double height = rt.getValue("Height", i) / scale; // height of bounding box
             logger.info(String.format(
-            		"Found object: area=%.02f, bx=%.2f, by=%.2f, width=%.2f, heighh=%.2f",
+            		"Found object: area=%.2f, bx=%.2f, by=%.2f, width=%.2f, heighh=%.2f",
             		area, bx, by, width, height));
 
             // Area usually > 18,000 but embryo may be cut off at boundary; don’t know how your ROI code would deal with that
