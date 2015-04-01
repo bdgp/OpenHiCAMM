@@ -217,6 +217,9 @@ public class ROIFinder implements Module {
         logger.info(String.format("Filling holes"));
         IJ.run(imp, "Fill Holes", "");
 
+        // Set the measurements
+        IJ.run(imp, "Set Measurements...", "area mean min bounding redirect=None decimal=3");
+
         // Detect the objects
         logger.info(String.format("Analyzing particles"));
         IJ.run(imp, "Analyze Particles...", "display exclude clear add in_situ");
@@ -224,6 +227,7 @@ public class ROIFinder implements Module {
         Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
         // Get the objects and iterate through them
         ResultsTable rt = Analyzer.getResultsTable();
+        logger.info(String.format("ResultsTable Column Headings: %s", rt.getColumnHeadings()));
         for (int i=0; i < rt.getCounter(); i++) {
             double area = rt.getValue("Area", i) / (scale*scale); // area of the object
             double bx = rt.getValue("BX", i) / scale; // x of bounding box
