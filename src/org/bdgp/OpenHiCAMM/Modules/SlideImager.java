@@ -174,9 +174,22 @@ public class SlideImager implements Module {
 
         // If this is the first position, start the acquisition engine
         if (imageNumber == 0) {
+            CMMCore core = this.script.getMMCore();
             logger.info(String.format("This task is the acquisition task")); 
             logger.info(String.format("Using rootDir: %s", rootDir)); 
             logger.info(String.format("Requesting to use acqName: %s", acqName)); 
+            
+            // Set the pixel size in um
+            Config pixelSizeUm = conf.get("pixelSizeUm");
+            if (pixelSizeUm == null) throw new RuntimeException("Config variable pixelSizeUm was not set!");
+            try {
+                String pixelSizeConfig = core.getCurrentPixelSizeConfig();
+                logger.info(String.format("Using current pixelSizeConfig value: %s", pixelSizeConfig));
+                logger.info(String.format("Setting pixel size to: %s", pixelSizeUm.getValue()));
+                core.setPixelSizeUm(pixelSizeConfig, new Double(pixelSizeUm.getValue()));
+            } 
+            catch (NumberFormatException e) {throw new RuntimeException(e);} 
+            catch (Exception e) {throw new RuntimeException(e);}
             
             // Move stage to starting position and take some dummy pictures to adjust the camera
             if (conf.containsKey("takeDummyImages") && 
@@ -184,7 +197,6 @@ public class SlideImager implements Module {
                 posList.getNumberOfPositions() > 0) 
             {
             	logger.info("Moving stage to starting position");
-                CMMCore core = this.script.getMMCore();
                 MultiStagePosition pos = posList.getPosition(0);
                 String xyStage = core.getXYStageDevice();
                 try {
@@ -390,6 +402,11 @@ public class SlideImager implements Module {
                     configs.add(new Config(moduleId, 
                             "takeDummyImages", "no"));
                 }
+
+            	Double pxPerUm = (Double)slideImagerDialog.pixelSizeUm.getValue();
+            	if (pxPerUm != null) {
+            	    configs.add(new Config(SlideImager.this.moduleId, "pxPerUm", pxPerUm.toString()));
+            	}
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -419,6 +436,11 @@ public class SlideImager implements Module {
                     slideImagerDialog.takeDummyImagesYes.setSelected(false);
                     slideImagerDialog.takeDummyImagesNo.setSelected(true);
                 }
+
+            	if (conf.containsKey("pixelSizeUm")) {
+            	    slideImagerDialog.pixelSizeUm.setValue(new Double(conf.get("pixelSizeUm").getValue()));
+            	}
+
                 return slideImagerDialog;
             }
             @Override
@@ -440,6 +462,11 @@ public class SlideImager implements Module {
                     errors.add(new ValidationError(moduleId, 
                             "You must enter one of either a position list file, or a position list name."));
                 }
+
+            	Double pixelSizeUm = (Double)slideImagerDialog.pixelSizeUm.getValue();
+            	if (pixelSizeUm == null || pixelSizeUm == 0.0) {
+            	    errors.add(new ValidationError(SlideImager.this.moduleId, "Please enter a nonzero value for pixelSizeUm"));
+            	}
                 return errors.toArray(new ValidationError[0]);
             }
         };

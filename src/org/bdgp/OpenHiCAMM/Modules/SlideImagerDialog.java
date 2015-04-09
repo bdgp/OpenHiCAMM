@@ -10,6 +10,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.JButton;
+import javax.swing.SpinnerNumberModel;
 
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
@@ -28,6 +29,10 @@ import javax.swing.ButtonGroup;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
+import javax.swing.JSpinner;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+
 @SuppressWarnings("serial")
 public class SlideImagerDialog extends JPanel {
 	JTextField acqSettingsText;
@@ -36,9 +41,10 @@ public class SlideImagerDialog extends JPanel {
 	private final ButtonGroup takeDummyImages = new ButtonGroup();
 	JRadioButton takeDummyImagesYes;
 	JRadioButton takeDummyImagesNo;
+	DoubleSpinner pixelSizeUm;
 
 	public SlideImagerDialog(final AcqControlDlg acqControlDlg, WorkflowRunner workflowRunner) {
-		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][]"));
+		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][][]"));
 		
 		JButton btnShowAcquisitionDialog = new JButton("Show Acquisition Dialog");
 		if (acqControlDlg == null) {
@@ -129,5 +135,46 @@ public class SlideImagerDialog extends JPanel {
         takeDummyImagesNo = new JRadioButton("No");
         takeDummyImages.add(takeDummyImagesNo);
         add(takeDummyImagesNo, "cell 0 7");
+        
+        JLabel lblSetPixelSize = new JLabel("Set Pixel Size Per Micrometer:");
+        add(lblSetPixelSize, "flowx,cell 0 8");
+        
+        pixelSizeUm = new DoubleSpinner();
+        pixelSizeUm.setValue(new Double(1.383));
+        add(pixelSizeUm, "cell 0 8");
 	}
+
+    public static class DoubleSpinner extends JSpinner {
+
+        private static final long serialVersionUID = 1L;
+        private static final double STEP_RATIO = 0.1;
+
+        private SpinnerNumberModel model;
+
+        public DoubleSpinner() {
+            super();
+            // Model setup
+            model = new SpinnerNumberModel(0.0, -1000000.0, 1000000.0, 1.0);
+            this.setModel(model);
+
+            // Step recalculation
+            this.addChangeListener(new ChangeListener() {
+                @Override
+                public void stateChanged(ChangeEvent e) {
+                    Double value = getDouble();
+                    // Steps are sensitive to the current magnitude of the value
+                    long magnitude = Math.round(Math.log10(value));
+                    double stepSize = STEP_RATIO * Math.pow(10, magnitude);
+                    model.setStepSize(stepSize);
+                }
+            });
+        }
+
+        /**
+         * Returns the current value as a Double
+         */
+        public Double getDouble() {
+            return (Double)getValue();
+        }
+    }
 }
