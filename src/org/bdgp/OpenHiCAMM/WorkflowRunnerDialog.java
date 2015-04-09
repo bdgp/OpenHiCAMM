@@ -86,6 +86,7 @@ public class WorkflowRunnerDialog extends JDialog {
         progressBar.setIndeterminate(false);
 
         // logging output
+        final int MAX_LENGTH = 100;
         workflowRunner.addLogHandler(new Handler() {
             @Override public void publish(final LogRecord record) {
                 SwingUtilities.invokeLater(new Runnable() {
@@ -96,7 +97,9 @@ public class WorkflowRunnerDialog extends JDialog {
                             record.getLevel(), 
                             record.getMessage()));
                         progressBar.setString(String.format("%s%s",
-                                record.getMessage(),
+                                record.getMessage().length() < MAX_LENGTH? 
+                                        record.getMessage() : 
+                                        record.getMessage().substring(0, MAX_LENGTH)+"...",
                                 WorkflowRunnerDialog.this.maxTasks != null? 
                                         String.format(" (%.2f%%)", 
                                                 ((double)seen.size() / (double)WorkflowRunnerDialog.this.maxTasks) * 100.0) : 
