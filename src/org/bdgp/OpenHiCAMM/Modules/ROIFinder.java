@@ -278,6 +278,10 @@ public class ROIFinder implements Module {
             @Override
             public Config[] retrieve() {
             	List<Config> configs = new ArrayList<Config>();
+            	Double pxPerUm = (Double)dialog.pxPerUm.getValue();
+            	if (pxPerUm != null) {
+            	    configs.add(new Config(ROIFinder.this.moduleId, "pxPerUm", pxPerUm.toString()));
+            	}
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -286,11 +290,18 @@ public class ROIFinder implements Module {
             	for (Config c : configs) {
             		confs.put(c.getKey(), c);
             	}
+            	if (confs.containsKey("pxPerUm")) {
+            	    dialog.pxPerUm.setValue(new Double(confs.get("pxPerUm").getValue()));
+            	}
                 return dialog;
             }
             @Override
             public ValidationError[] validate() {
             	List<ValidationError> errors = new ArrayList<ValidationError>();
+            	Double pxPerUm = (Double)dialog.pxPerUm.getValue();
+            	if (pxPerUm == null || pxPerUm == 0.0) {
+            	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for the pxPerUm"));
+            	}
                 return errors.toArray(new ValidationError[0]);
             }
         };
