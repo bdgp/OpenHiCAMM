@@ -139,6 +139,7 @@ public class SlideImagerDialog extends JPanel {
         JLabel lblSetPixelSize = new JLabel("Set Pixel Size Per Micrometer:");
         add(lblSetPixelSize, "flowx,cell 0 8");
         
+        // calculated px/um: 1.38257875001752
         pixelSizeUm = new DoubleSpinner();
         pixelSizeUm.setValue(new Double(1.383));
         add(pixelSizeUm, "cell 0 8");
