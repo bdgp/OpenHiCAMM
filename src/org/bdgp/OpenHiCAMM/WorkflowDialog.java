@@ -58,6 +58,7 @@ public class WorkflowDialog extends JDialog {
     OpenHiCAMM mmslide;
     // The workflow runner module
     WorkflowRunner workflowRunner;
+    private JButton btnShowImageLog;
 
     public WorkflowDialog(Frame parentFrame, OpenHiCAMM mmslide) {
         super(parentFrame, "OpenHiCAMM");
@@ -69,7 +70,7 @@ public class WorkflowDialog extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
             }});
-        getContentPane().setLayout(new MigLayout("", "[][grow]", "[][][][][]"));
+        getContentPane().setLayout(new MigLayout("", "[][grow]", "[][][][][][]"));
         
         JLabel lblChooseWorkflowDirectory = new JLabel("Workflow Directory");
         getContentPane().add(lblChooseWorkflowDirectory, "cell 0 0,alignx trailing");
@@ -186,6 +187,19 @@ public class WorkflowDialog extends JDialog {
         editWorkflowButton = new JButton("Edit Workflow...");
         editWorkflowButton.setEnabled(false);
         getContentPane().add(editWorkflowButton, "cell 1 0");
+        
+        btnShowImageLog = new JButton("Show Image Log");
+        btnShowImageLog.setEnabled(false);
+        btnShowImageLog.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (WorkflowDialog.this.workflowRunner != null) {
+                    ImageLog imageLog = new ImageLog(
+                            WorkflowDialog.this.workflowRunner.getImageLogRecords().toArray(new ImageLog.ImageLogRecord[0]));
+                    imageLog.setVisible(true);
+                }
+            }
+        });
+        getContentPane().add(btnShowImageLog, "cell 1 5,alignx right");
         editWorkflowButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -267,8 +281,10 @@ public class WorkflowDialog extends JDialog {
                 btnCreateNewInstance.setEnabled(true);
 
                 // should the resume button be enabled?
+                btnShowImageLog.setEnabled(false);
                 resumeButton.setEnabled(false);
                 if (workflowRunner != null) {
+                    btnShowImageLog.setEnabled(true);
                 	List<Task> tasks = workflowRunner.getTaskStatus().select();
                 	if (tasks.size() > 0) {
                 		resumeButton.setEnabled(true);

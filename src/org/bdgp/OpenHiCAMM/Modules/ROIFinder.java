@@ -11,10 +11,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import mmcorej.TaggedImage;
 
 import org.bdgp.OpenHiCAMM.Dao;
+import org.bdgp.OpenHiCAMM.ImageLog;
+import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
 import org.bdgp.OpenHiCAMM.Logger;
 import org.bdgp.OpenHiCAMM.OpenHiCAMM;
 import org.bdgp.OpenHiCAMM.Util;
@@ -70,7 +73,7 @@ public class ROIFinder implements Module {
     }
 
     @Override
-    public Status run(Task task, Map<String,Config> config, Logger logger) {
+    public Status run(Task task, Map<String,Config> config, final Logger logger) {
     	logger.info(String.format("Running task: %s", task));
     	for (Config c : config.values()) {
             logger.info(String.format("Using config: %s", c));
@@ -83,38 +86,45 @@ public class ROIFinder implements Module {
         logger.info(String.format("Using image ID: %d", imageId));
 
         Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-        Image image = imageDao.selectOneOrDie(where("id",imageId));
+        final Image image = imageDao.selectOneOrDie(where("id",imageId));
         logger.info(String.format("Using image: %s", image));
         
         Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
         Slide slide = slideDao.selectOneOrDie(where("id",image.getSlideId()));
         logger.info(String.format("Using slide: %s", slide));
         
-        // Get the taggedImage object
-        TaggedImage taggedImage;
-        if (!config.containsKey("taggedImage")) {
-            // Initialize the acquisition
-            Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
-            Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
-            logger.info(String.format("Using acquisition: %s", acquisition));
-            MMAcquisition mmacquisition = acquisition.getAcquisition();
-            try { mmacquisition.initialize(); } 
-            catch (MMScriptException e) {throw new RuntimeException(e);}
-            logger.info(String.format("Initialized acquisition"));
+        Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
 
-            // Get the image cache object
-            ImageCache imageCache = mmacquisition.getImageCache();
-            if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
-            // Get the tagged image from the image cache
-            taggedImage = image.getImage(imageCache);
-            logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
-        }
-        else {
-        	taggedImage = (TaggedImage)config.get("taggedImage").getObject();
-        	logger.info(String.format("Got taggedImage from task config: %s", taggedImage));
-        }
+        // Initialize the acquisition
+        Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
+        logger.info(String.format("Using acquisition: %s", acquisition));
+        MMAcquisition mmacquisition = acquisition.getAcquisition();
+        try { mmacquisition.initialize(); } 
+        catch (MMScriptException e) {throw new RuntimeException(e);}
+        logger.info(String.format("Initialized acquisition"));
+
+        // Get the image cache object
+        ImageCache imageCache = mmacquisition.getImageCache();
+        if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+        // Get the tagged image from the image cache
+        TaggedImage taggedImage = getTaggedImage(image, logger);
+        logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
 
     	try {
+			// Fill in list of ROIs
+			logger.info(String.format("Running process() to get list of ROIs"));
+			List<ROI> rois = process(image, taggedImage, logger, new ImageLog.NullImageLogRecord());
+
+			// Add an image logger instance to the workflow runner for this module
+            this.workflowRunner.addImageLogRecord(new Callable<ImageLog.ImageLogRecord>() {
+                @Override public ImageLogRecord call() throws Exception {
+                    ImageLog.ImageLogRecord imageLog = new ImageLog.ImageLogRecord(
+                            ROIFinder.this.moduleId, ROIFinder.this.moduleId);
+                    TaggedImage taggedImage = ROIFinder.this.getTaggedImage(image, logger);
+                    ROIFinder.this.process(image, taggedImage, logger, imageLog);
+                    return imageLog;
+                }});
+			
 			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
 			logger.info(String.format("Using positionIndex: %d", positionIndex));
 
@@ -123,10 +133,6 @@ public class ROIFinder implements Module {
 			
 			int imageWidth = MDUtils.getWidth(taggedImage.tags);
 			int imageHeight = MDUtils.getHeight(taggedImage.tags);
-
-			// Fill in list of ROIs
-			logger.info(String.format("Running process() to get list of ROIs"));
-			List<ROI> rois = process(image, taggedImage, logger);
 			
 			double x_stage = MDUtils.getXPositionUm(taggedImage.tags);
 			double y_stage = MDUtils.getYPositionUm(taggedImage.tags);
@@ -178,13 +184,34 @@ public class ROIFinder implements Module {
     	catch (JSONException e) { throw new RuntimeException(e); }
     }
     
-    public List<ROI> process(Image image, TaggedImage taggedImage, Logger logger) {
+    public TaggedImage getTaggedImage(Image image, Logger logger) {
+        // Initialize the acquisition
+        Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+        Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
+        logger.info(String.format("Using acquisition: %s", acquisition));
+        MMAcquisition mmacquisition = acquisition.getAcquisition();
+        try { mmacquisition.initialize(); } 
+        catch (MMScriptException e) {throw new RuntimeException(e);}
+        logger.info(String.format("Initialized acquisition"));
+
+        // Get the image cache object
+        ImageCache imageCache = mmacquisition.getImageCache();
+        if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+        // Get the tagged image from the image cache
+        TaggedImage taggedImage = image.getImage(imageCache);
+        logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
+
+        return taggedImage;
+    }
+    
+    public List<ROI> process(Image image, TaggedImage taggedImage, Logger logger, ImageLogRecord imageLog) {
     	List<ROI> rois = new ArrayList<ROI>();
         ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
         ImagePlus imp = new ImagePlus(image.toString(), processor);
-
+        
         // Convert to gray
         IJ.run(imp, "8-bit", "");
+        imageLog.addImage(imp, "Convert to gray");
 
         // Resize to 1/4
         int w=imp.getWidth();
@@ -198,6 +225,7 @@ public class ROIFinder implements Module {
         		scale, scale, (int)ws, (int)hs);
         logger.info(String.format("Scaling: %s", scaleOp));
         IJ.run(imp, "Scale...", scaleOp);
+        imageLog.addImage(imp, "Scaling: scaleOp");
 
         // Crop after scale
         double crop = 2.0;
@@ -206,23 +234,29 @@ public class ROIFinder implements Module {
         logger.info(String.format("Cropping: %d, %d, %d, %d", (int)rw, (int)rh, (int)ws, (int)hs));
         imp.setRoi((int)rw,(int)rh,(int)ws,(int)hs);
         IJ.run(imp, "Crop", "");
+        imageLog.addImage(imp, String.format("Cropping: %d, %d, %d, %d", (int)rw, (int)rh, (int)ws, (int)hs));
 
         // Binarize
         logger.info(String.format("Binarizing"));
         IJ.run(imp, "Auto Threshold", "method=Huang");
+        imageLog.addImage(imp, "Binarizing");
 
         // Morphological operations: close gaps, fill holes
         logger.info(String.format("Closing gaps"));
         IJ.run(imp, "Close-", "");
+        imageLog.addImage(imp, "Closing gaps");
         logger.info(String.format("Filling holes"));
         IJ.run(imp, "Fill Holes", "");
+        imageLog.addImage(imp, "Filling holes");
 
         // Set the measurements
         IJ.run(imp, "Set Measurements...", "area mean min bounding redirect=None decimal=3");
+        imageLog.addImage(imp, "Set measurements");
 
         // Detect the objects
         logger.info(String.format("Analyzing particles"));
         IJ.run(imp, "Analyze Particles...", "display exclude clear add in_situ");
+        imageLog.addImage(imp, "Analyzing particles");
         
         Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
         // Get the objects and iterate through them
@@ -248,6 +282,11 @@ public class ROIFinder implements Module {
                 logger.info(String.format("Created new ROI record: %s", roi));
                 rois.add(roi);
                 roiDao.insert(roi);
+                
+                // Draw the ROI rectangle
+                imp.setRoi(roi.getX1(), roi.getY1(), roi.getX2()-roi.getX2()+1, roi.getY2()-roi.getY1()+1);
+                IJ.setForegroundColor(255, 255, 0);
+                IJ.run(imp, "Draw", "");
             }
             else {
             	if (area < MIN_AREA) {
@@ -258,6 +297,7 @@ public class ROIFinder implements Module {
             	}
             }
         }
+        imageLog.addImage(imp, "Adding ROIs to image");
     	return rois;
     }
     

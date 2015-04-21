@@ -22,6 +22,7 @@ import java.util.concurrent.FutureTask;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 
+import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
 import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.Task;
@@ -79,6 +80,8 @@ public class WorkflowRunner {
     private String instanceDbName;
     
     private Set<Task> notifiedTasks;
+    
+    private List<Callable<ImageLog.ImageLogRecord>> imageLog; 
     
     /**
      * Constructor for WorkflowRunner. This loads the workflow.txt file 
@@ -155,6 +158,8 @@ public class WorkflowRunner {
         
         // init the notified tasks set
         this.notifiedTasks = new HashSet<Task>();
+        
+        this.imageLog = new ArrayList<Callable<ImageLog.ImageLogRecord>>();
     }
     
     /**
@@ -439,6 +444,9 @@ public class WorkflowRunner {
                         //WorkflowRunner.this.deleteTaskRecords(startModuleId);
                         WorkflowRunner.this.deleteTaskRecords();
                         WorkflowRunner.this.createTaskRecords(startModuleId);
+                        
+                        // Remove the image log records
+                        WorkflowRunner.this.imageLog.clear();
                     }
                     // In resume mode, the task records aren't re-created. So we need to clear out 
                     // invalid statuses and the parent Task ID flags.
@@ -828,5 +836,18 @@ public class WorkflowRunner {
     }
     public Logger getLogger() {
     	return this.logger;
+    }
+
+    public void addImageLogRecord(final ImageLog.ImageLogRecord record) {
+        this.imageLog.add(new Callable<ImageLog.ImageLogRecord>() {
+            @Override public ImageLogRecord call() throws Exception {
+                return record;
+            }});
+    }
+    public void addImageLogRecord(Callable<ImageLog.ImageLogRecord> record) {
+        this.imageLog.add(record);
+    }
+    public List<Callable<ImageLog.ImageLogRecord>> getImageLogRecords() {
+        return this.imageLog;
     }
 }
