@@ -193,8 +193,7 @@ public class WorkflowDialog extends JDialog {
         btnShowImageLog.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 if (WorkflowDialog.this.workflowRunner != null) {
-                    ImageLog imageLog = new ImageLog(
-                            WorkflowDialog.this.workflowRunner.getImageLogRecords().toArray(new ImageLog.ImageLogRecord[0]));
+                    ImageLog imageLog = new ImageLog(WorkflowDialog.this.workflowRunner.getImageLogRecords());
                     imageLog.setVisible(true);
                 }
             }

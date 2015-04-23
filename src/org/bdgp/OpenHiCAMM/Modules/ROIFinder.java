@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.FutureTask;
 
 import mmcorej.TaggedImage;
 
@@ -36,6 +37,7 @@ import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.json.JSONException;
 import org.micromanager.acquisition.MMAcquisition;
@@ -54,7 +56,7 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 /**
  * Return x/y/len/width of bounding box surrounding the ROI
  */
-public class ROIFinder implements Module {
+public class ROIFinder implements Module, ImageLogger {
     WorkflowRunner workflowRunner;
     String moduleId;
     ScriptInterface script;
@@ -115,16 +117,6 @@ public class ROIFinder implements Module {
 			logger.info(String.format("Running process() to get list of ROIs"));
 			List<ROI> rois = process(image, taggedImage, logger, new ImageLog.NullImageLogRecord());
 
-			// Add an image logger instance to the workflow runner for this module
-            this.workflowRunner.addImageLogRecord(new Callable<ImageLog.ImageLogRecord>() {
-                @Override public ImageLogRecord call() throws Exception {
-                    ImageLog.ImageLogRecord imageLog = new ImageLog.ImageLogRecord(
-                            ROIFinder.this.moduleId, ROIFinder.this.moduleId);
-                    TaggedImage taggedImage = ROIFinder.this.getTaggedImage(image, logger);
-                    ROIFinder.this.process(image, taggedImage, logger, imageLog);
-                    return imageLog;
-                }});
-			
 			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
 			logger.info(String.format("Using positionIndex: %d", positionIndex));
 
@@ -365,4 +357,47 @@ public class ROIFinder implements Module {
 	}
 
 	@Override public void cleanup(Task task) { }
+
+    @Override
+    public List<FutureTask<ImageLogRecord>> logImages() {
+        final Logger logger = this.workflowRunner.getLogger();
+
+        // Get the Image record
+    	Config imageIdConf = this.workflowRunner.getTaskConfig().selectOneOrDie(where("id", this.moduleId).and("key", "imageId"));
+    	if (imageIdConf == null) throw new RuntimeException("No imageId task configuration was set by the slide imager!");
+        Integer imageId = new Integer(imageIdConf.getValue());
+
+        logger.info(String.format("Using image ID: %d", imageId));
+        Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+        final Image image = imageDao.selectOneOrDie(where("id",imageId));
+        logger.info(String.format("Using image: %s", image));
+
+        // Initialize the acquisition
+        Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+        Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
+        logger.info(String.format("Using acquisition: %s", acquisition));
+        MMAcquisition mmacquisition = acquisition.getAcquisition();
+        try { mmacquisition.initialize(); } 
+        catch (MMScriptException e) {throw new RuntimeException(e);}
+        logger.info(String.format("Initialized acquisition"));
+
+        // Get the image cache object
+        ImageCache imageCache = mmacquisition.getImageCache();
+        if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+        // Get the tagged image from the image cache
+        TaggedImage taggedImage = getTaggedImage(image, logger);
+        logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
+
+        // Add an image logger instance to the workflow runner for this module
+        List<FutureTask<ImageLogRecord>> imageLogRecords = new ArrayList<FutureTask<ImageLogRecord>>();
+        imageLogRecords.add(new FutureTask<ImageLogRecord>(new Callable<ImageLogRecord>() {
+            @Override public ImageLogRecord call() throws Exception {
+                ImageLog.ImageLogRecord imageLog = new ImageLog.ImageLogRecord(
+                        ROIFinder.this.moduleId, ROIFinder.this.moduleId);
+                TaggedImage taggedImage = ROIFinder.this.getTaggedImage(image, logger);
+                ROIFinder.this.process(image, taggedImage, logger, imageLog);
+                return imageLog;
+            }}));
+        return imageLogRecords;
+    }
 }

@@ -18,6 +18,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 
 import javax.swing.ListSelectionModel;
 
@@ -32,7 +35,7 @@ import org.micromanager.utils.MMScriptException;
 @SuppressWarnings("serial")
 public class ImageLog extends JFrame {
     private JTable table;
-    public ImageLog(final ImageLogRecord[] records) {
+    public ImageLog(final List<FutureTask<ImageLogRecord>> records) {
         super("Image Log");
         setLayout(new MigLayout("", "[grow]", "[grow][grow]"));
         
@@ -42,15 +45,19 @@ public class ImageLog extends JFrame {
                 return colNames[col];
             }
             @Override public int getRowCount() {
-                return records.length;
+                return records.size();
             }
             @Override public int getColumnCount() {
                 return colNames.length;
             }
             @Override public Object getValueAt(int rowIndex, int columnIndex) {
-                return columnIndex == 0? records[rowIndex].moduleId : 
-                       columnIndex == 1? records[rowIndex].imageStackName : 
-                       null;
+                try {
+                    return columnIndex == 0? records.get(rowIndex).get().moduleId : 
+                           columnIndex == 1? records.get(rowIndex).get().imageStackName : 
+                           null;
+                } 
+                catch (InterruptedException e) {throw new RuntimeException(e);} 
+                catch (ExecutionException e) {throw new RuntimeException(e);}
             }
             @Override public boolean isCellEditable(int row, int col) { 
                 return false; 
@@ -60,14 +67,18 @@ public class ImageLog extends JFrame {
         table.addKeyListener(new KeyAdapter() {
             @Override public void keyTyped(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    records[table.getSelectedRow()].display();
+                    try { records.get(table.getSelectedRow()).get().display(); } 
+                    catch (InterruptedException e1) {throw new RuntimeException(e1);} 
+                    catch (ExecutionException e1) {throw new RuntimeException(e1);}
                 }
             }
         });
         table.addMouseListener(new MouseAdapter() {
             @Override public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
-                    records[table.getSelectedRow()].display();
+                    try { records.get(table.getSelectedRow()).get().display(); } 
+                    catch (InterruptedException e1) {throw new RuntimeException(e1);} 
+                    catch (ExecutionException e1) {throw new RuntimeException(e1);}
                 }
             }
         });
