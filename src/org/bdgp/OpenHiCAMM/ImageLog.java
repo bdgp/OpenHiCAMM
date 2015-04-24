@@ -13,11 +13,13 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.JScrollPane;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -35,25 +37,35 @@ import org.micromanager.utils.MMScriptException;
 @SuppressWarnings("serial")
 public class ImageLog extends JFrame {
     private JTable table;
-    public ImageLog(final List<FutureTask<ImageLogRecord>> records) {
+    private List<FutureTask<ImageLogRecord>> records;
+
+    public void setRecords(List<FutureTask<ImageLogRecord>> records) {
+        this.records.clear();
+        this.records.addAll(records);
+    }
+
+    public ImageLog() {
         super("Image Log");
-        setLayout(new MigLayout("", "[grow]", "[grow][grow]"));
+        this.records = new ArrayList<FutureTask<ImageLogRecord>>();
+
+        setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+        getContentPane().setLayout(new MigLayout("", "[300px:n,grow]", "[100px:n,grow]"));
         
         table = new JTable(new AbstractTableModel() {
-            String[] colNames = new String[] {"Module ID", "Image Stack Name"};
+            String[] colNames = new String[] {"Task Name", "Image Stack Name"};
             @Override public String getColumnName(int col) {
                 return colNames[col];
             }
             @Override public int getRowCount() {
-                return records.size();
+                return ImageLog.this.records.size();
             }
             @Override public int getColumnCount() {
                 return colNames.length;
             }
             @Override public Object getValueAt(int rowIndex, int columnIndex) {
                 try {
-                    return columnIndex == 0? records.get(rowIndex).get().moduleId : 
-                           columnIndex == 1? records.get(rowIndex).get().imageStackName : 
+                    return columnIndex == 0? ImageLog.this.records.get(rowIndex).get().taskName : 
+                           columnIndex == 1? ImageLog.this.records.get(rowIndex).get().imageStackName : 
                            null;
                 } 
                 catch (InterruptedException e) {throw new RuntimeException(e);} 
@@ -66,8 +78,8 @@ public class ImageLog extends JFrame {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.addKeyListener(new KeyAdapter() {
             @Override public void keyTyped(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    try { records.get(table.getSelectedRow()).get().display(); } 
+                if (e.getKeyCode() == KeyEvent.VK_ENTER && table.getSelectedRow() >= 0) {
+                    try { ImageLog.this.records.get(table.getSelectedRow()).get().display(); } 
                     catch (InterruptedException e1) {throw new RuntimeException(e1);} 
                     catch (ExecutionException e1) {throw new RuntimeException(e1);}
                 }
@@ -75,8 +87,8 @@ public class ImageLog extends JFrame {
         });
         table.addMouseListener(new MouseAdapter() {
             @Override public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    try { records.get(table.getSelectedRow()).get().display(); } 
+                if (e.getClickCount() == 2 && table.getSelectedRow() >= 0) {
+                    try { ImageLog.this.records.get(table.getSelectedRow()).get().display(); } 
                     catch (InterruptedException e1) {throw new RuntimeException(e1);} 
                     catch (ExecutionException e1) {throw new RuntimeException(e1);}
                 }
@@ -87,21 +99,24 @@ public class ImageLog extends JFrame {
         table.setAutoCreateRowSorter(true);
 
         JScrollPane scrollPane = new JScrollPane(table);
-        add(scrollPane, "cell 0 0,grow");
+        getContentPane().add(scrollPane, "cell 0 0,grow");
+        
+        this.getContentPane().setPreferredSize(new Dimension(500, 500));
+        this.pack(); 
     }
     
     public static class ImageLogRecord {
-        private String moduleId;
+        private String taskName;
         private String imageStackName;
         private VirtualAcquisitionDisplay vad;
 
         public ImageLogRecord(
-                String moduleId, 
+                String taskName, 
                 String imageStackName) 
         {
-            this.moduleId = moduleId;
+            this.taskName = taskName;
             this.imageStackName = imageStackName;
-            if (this.moduleId != null) {
+            if (this.taskName != null) {
                 try { 
                     TaggedImageStorage storage = new TaggedImageStorageLive();
                     ImageCache cache = new MMImageCache(storage);

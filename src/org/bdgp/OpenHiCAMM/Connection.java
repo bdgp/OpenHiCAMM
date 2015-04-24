@@ -32,11 +32,15 @@ public class Connection extends JdbcPooledConnectionSource {
     private static SecureRandom random = new SecureRandom();
     private static Server server;
     
-    public Connection(String string) throws SQLException {
-        super(string);
-    }
+    private String url;
+    private String user;
+    private String pw;
+    
     public Connection(String string, String user, String pw) throws SQLException {
         super(string, user, pw);
+        this.url = string;
+        this.user = user;
+        this.pw = pw;
     }
     
     public static Connection get(String dbPath) {
@@ -170,6 +174,21 @@ public class Connection extends JdbcPooledConnectionSource {
             server.start();
     	}
 	}
+    
+    public void startDatabaseManager() {
+        try {
+            File dbMgrJar = new File(org.hsqldb.util.DatabaseManager.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath());
+            Runtime.getRuntime().exec(new String[] {
+                    "java","-jar",dbMgrJar.getPath(),
+                    "--driver","org.hsqldb.jdbcDriver",
+                    "--url",this.url,
+                    "--user",this.user,
+                    "--password",this.pw
+            });
+        } 
+        catch (URISyntaxException e1) {throw new RuntimeException(e1);}
+        catch (IOException e1) {throw new RuntimeException(e1);}
+    }
 
 	public <T> Dao<T> table(Class<T> class_) {
         try {

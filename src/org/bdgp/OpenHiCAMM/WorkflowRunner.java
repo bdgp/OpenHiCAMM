@@ -832,12 +832,42 @@ public class WorkflowRunner {
     	return this.logger;
     }
 
+    public List<FutureTask<ImageLogRecord>> getImageLogRecords(Task task, Map<String,Config> config, Logger logger) {
+        List<FutureTask<ImageLogRecord>> imageLogRecords = new ArrayList<FutureTask<ImageLogRecord>>();
+        // add the configuration
+        List<ModuleConfig> moduleConfigs = this.getModuleConfig().select(where("id", task.getModuleId()));
+        for (ModuleConfig mc : moduleConfigs) {
+            config.put(mc.getKey(), mc);
+        }
+        List<TaskConfig> taskConfigs = this.getTaskConfig().select(where("id", new Integer(task.getId()).toString()));
+        for (TaskConfig tc : taskConfigs) {
+            config.put(tc.getKey(), tc);
+        }
+        // run the image logger on this task
+        if (this.moduleInstances.containsKey(task.getModuleId())) {
+            Module m = this.moduleInstances.get(task.getModuleId());
+            if (ImageLogger.class.isAssignableFrom(m.getClass())) {
+                imageLogRecords.addAll(((ImageLogger)m).logImages(task, config, logger));
+            }
+        }
+        // run the image logger on child tasks
+        List<TaskDispatch> tds = this.getTaskDispatch().select(where("parentTaskId", task.getId()));
+        for (TaskDispatch td : tds) {
+            Task childTask = this.getTaskStatus().selectOneOrDie(where("id", td.getTaskId()));
+            this.getImageLogRecords(childTask, config, logger);
+        }
+            
+        return imageLogRecords;
+    }
+    
     public List<FutureTask<ImageLogRecord>> getImageLogRecords() {
         List<FutureTask<ImageLogRecord>> imageLogRecords = new ArrayList<FutureTask<ImageLogRecord>>();
-        for (Map.Entry<String, Module> entry : this.moduleInstances.entrySet()) {
-            Module m = entry.getValue();
-            if (ImageLogger.class.isAssignableFrom(m.getClass())) {
-                imageLogRecords.addAll(((ImageLogger)m).logImages());
+        List<WorkflowModule> modules = this.workflow.select(where("parentId", null));
+        for (WorkflowModule module : modules) {
+            List<Task> tasks = this.taskStatus.select(where("moduleId", module.getId()));
+            for (Task task : tasks) {
+                Map<String,Config> config = new HashMap<String,Config>();
+                imageLogRecords.addAll(getImageLogRecords(task, config, this.getLogger()));
             }
         }
         return imageLogRecords;

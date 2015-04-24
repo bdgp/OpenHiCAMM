@@ -359,45 +359,45 @@ public class ROIFinder implements Module, ImageLogger {
 	@Override public void cleanup(Task task) { }
 
     @Override
-    public List<FutureTask<ImageLogRecord>> logImages() {
-        final Logger logger = this.workflowRunner.getLogger();
+    public List<FutureTask<ImageLogRecord>> logImages(final Task task, Map<String,Config> config, final Logger logger) {
+        List<FutureTask<ImageLogRecord>> imageLogRecords = new ArrayList<FutureTask<ImageLogRecord>>();
 
         // Get the Image record
-    	Config imageIdConf = this.workflowRunner.getTaskConfig().selectOneOrDie(where("id", this.moduleId).and("key", "imageId"));
-    	if (imageIdConf == null) throw new RuntimeException("No imageId task configuration was set by the slide imager!");
-        Integer imageId = new Integer(imageIdConf.getValue());
+    	Config imageIdConf = config.get("imageId");
+    	if (imageIdConf != null) {
+            Integer imageId = new Integer(imageIdConf.getValue());
 
-        logger.info(String.format("Using image ID: %d", imageId));
-        Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-        final Image image = imageDao.selectOneOrDie(where("id",imageId));
-        logger.info(String.format("Using image: %s", image));
+            logger.info(String.format("Using image ID: %d", imageId));
+            Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+            final Image image = imageDao.selectOneOrDie(where("id",imageId));
+            logger.info(String.format("Using image: %s", image));
 
-        // Initialize the acquisition
-        Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
-        Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
-        logger.info(String.format("Using acquisition: %s", acquisition));
-        MMAcquisition mmacquisition = acquisition.getAcquisition();
-        try { mmacquisition.initialize(); } 
-        catch (MMScriptException e) {throw new RuntimeException(e);}
-        logger.info(String.format("Initialized acquisition"));
+            // Initialize the acquisition
+            Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+            Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
+            logger.info(String.format("Using acquisition: %s", acquisition));
+            MMAcquisition mmacquisition = acquisition.getAcquisition();
+            try { mmacquisition.initialize(); } 
+            catch (MMScriptException e) {throw new RuntimeException(e);}
+            logger.info(String.format("Initialized acquisition"));
 
-        // Get the image cache object
-        ImageCache imageCache = mmacquisition.getImageCache();
-        if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
-        // Get the tagged image from the image cache
-        TaggedImage taggedImage = getTaggedImage(image, logger);
-        logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
+            // Get the image cache object
+            ImageCache imageCache = mmacquisition.getImageCache();
+            if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+            // Get the tagged image from the image cache
+            TaggedImage taggedImage = getTaggedImage(image, logger);
+            logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
 
-        // Add an image logger instance to the workflow runner for this module
-        List<FutureTask<ImageLogRecord>> imageLogRecords = new ArrayList<FutureTask<ImageLogRecord>>();
-        imageLogRecords.add(new FutureTask<ImageLogRecord>(new Callable<ImageLogRecord>() {
-            @Override public ImageLogRecord call() throws Exception {
-                ImageLog.ImageLogRecord imageLog = new ImageLog.ImageLogRecord(
-                        ROIFinder.this.moduleId, ROIFinder.this.moduleId);
-                TaggedImage taggedImage = ROIFinder.this.getTaggedImage(image, logger);
-                ROIFinder.this.process(image, taggedImage, logger, imageLog);
-                return imageLog;
-            }}));
+            // Add an image logger instance to the workflow runner for this module
+            imageLogRecords.add(new FutureTask<ImageLogRecord>(new Callable<ImageLogRecord>() {
+                @Override public ImageLogRecord call() throws Exception {
+                    ImageLog.ImageLogRecord imageLog = new ImageLog.ImageLogRecord(
+                            task.getName(), task.getName());
+                    TaggedImage taggedImage = ROIFinder.this.getTaggedImage(image, logger);
+                    ROIFinder.this.process(image, taggedImage, logger, imageLog);
+                    return imageLog;
+                }}));
+    	}
         return imageLogRecords;
     }
 }

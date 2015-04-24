@@ -59,6 +59,9 @@ public class WorkflowDialog extends JDialog {
     // The workflow runner module
     WorkflowRunner workflowRunner;
     private JButton btnShowImageLog;
+    private JButton btnShowDatabaseManager;
+
+    ImageLog imageLog;
 
     public WorkflowDialog(Frame parentFrame, OpenHiCAMM mmslide) {
         super(parentFrame, "OpenHiCAMM");
@@ -189,16 +192,32 @@ public class WorkflowDialog extends JDialog {
         getContentPane().add(editWorkflowButton, "cell 1 0");
         
         btnShowImageLog = new JButton("Show Image Log");
-        btnShowImageLog.setEnabled(false);
+        btnShowImageLog.setEnabled(true);
         btnShowImageLog.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 if (WorkflowDialog.this.workflowRunner != null) {
-                    ImageLog imageLog = new ImageLog(WorkflowDialog.this.workflowRunner.getImageLogRecords());
+                    if (imageLog == null) {
+                        imageLog = new ImageLog();
+                    }
+                    imageLog.setRecords(WorkflowDialog.this.workflowRunner.getImageLogRecords());
                     imageLog.setVisible(true);
                 }
             }
         });
         getContentPane().add(btnShowImageLog, "cell 1 5,alignx right");
+
+        btnShowDatabaseManager = new JButton("Show Database Manager");
+        btnShowDatabaseManager.setEnabled(true);
+        btnShowDatabaseManager.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (WorkflowDialog.this.workflowRunner != null) {
+                    WorkflowDialog.this.workflowRunner.getWorkflowDb().startDatabaseManager();
+                    WorkflowDialog.this.workflowRunner.getInstanceDb().startDatabaseManager();
+                }
+            }
+        });
+        getContentPane().add(btnShowDatabaseManager, "cell 1 5,alignx right");
+
         editWorkflowButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -280,10 +299,8 @@ public class WorkflowDialog extends JDialog {
                 btnCreateNewInstance.setEnabled(true);
 
                 // should the resume button be enabled?
-                btnShowImageLog.setEnabled(false);
                 resumeButton.setEnabled(false);
                 if (workflowRunner != null) {
-                    btnShowImageLog.setEnabled(true);
                 	List<Task> tasks = workflowRunner.getTaskStatus().select();
                 	if (tasks.size() > 0) {
                 		resumeButton.setEnabled(true);
