@@ -1,6 +1,7 @@
 package org.bdgp.OpenHiCAMM;
 
 import ij.ImagePlus;
+import ij.ImageStack;
 import ij.process.ImageProcessor;
 
 import javax.swing.JFrame;
@@ -26,27 +27,22 @@ import java.util.concurrent.FutureTask;
 
 import javax.swing.ListSelectionModel;
 
-import org.micromanager.acquisition.MMImageCache;
-import org.micromanager.acquisition.TaggedImageStorageLive;
-import org.micromanager.api.ImageCache;
-import org.micromanager.api.TaggedImageStorage;
-import org.micromanager.imagedisplay.VirtualAcquisitionDisplay;
 import org.micromanager.utils.ImageUtils;
-import org.micromanager.utils.MMScriptException;
 
 @SuppressWarnings("serial")
 public class ImageLog extends JFrame {
     private JTable table;
-    private List<FutureTask<ImageLogRecord>> records;
+    private List<ImageLogRecord> records;
 
-    public void setRecords(List<FutureTask<ImageLogRecord>> records) {
+    public void setRecords(List<ImageLogRecord> records) {
         this.records.clear();
         this.records.addAll(records);
     }
 
-    public ImageLog() {
+    public ImageLog(List<ImageLogRecord> records) {
         super("Image Log");
-        this.records = new ArrayList<FutureTask<ImageLogRecord>>();
+        this.records = new ArrayList<ImageLogRecord>();
+        this.setRecords(records);
 
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         getContentPane().setLayout(new MigLayout("", "[300px:n,grow]", "[100px:n,grow]"));
@@ -63,13 +59,9 @@ public class ImageLog extends JFrame {
                 return colNames.length;
             }
             @Override public Object getValueAt(int rowIndex, int columnIndex) {
-                try {
-                    return columnIndex == 0? ImageLog.this.records.get(rowIndex).get().taskName : 
-                           columnIndex == 1? ImageLog.this.records.get(rowIndex).get().imageStackName : 
-                           null;
-                } 
-                catch (InterruptedException e) {throw new RuntimeException(e);} 
-                catch (ExecutionException e) {throw new RuntimeException(e);}
+                return columnIndex == 0? ImageLog.this.records.get(rowIndex).getTaskName() : 
+                       columnIndex == 1? ImageLog.this.records.get(rowIndex).getImageStackName() : 
+                       null;
             }
             @Override public boolean isCellEditable(int row, int col) { 
                 return false; 
@@ -78,8 +70,10 @@ public class ImageLog extends JFrame {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.addKeyListener(new KeyAdapter() {
             @Override public void keyTyped(KeyEvent e) {
+                FutureTask<ImageLogRunner> futureTask = ImageLog.this.records.get(table.getSelectedRow()).getRunner();
+                futureTask.run();
                 if (e.getKeyCode() == KeyEvent.VK_ENTER && table.getSelectedRow() >= 0) {
-                    try { ImageLog.this.records.get(table.getSelectedRow()).get().display(); } 
+                    try { futureTask.get().display(); } 
                     catch (InterruptedException e1) {throw new RuntimeException(e1);} 
                     catch (ExecutionException e1) {throw new RuntimeException(e1);}
                 }
@@ -87,8 +81,10 @@ public class ImageLog extends JFrame {
         });
         table.addMouseListener(new MouseAdapter() {
             @Override public void mouseClicked(MouseEvent e) {
+                FutureTask<ImageLogRunner> futureTask = ImageLog.this.records.get(table.getSelectedRow()).getRunner();
+                futureTask.run();
                 if (e.getClickCount() == 2 && table.getSelectedRow() >= 0) {
-                    try { ImageLog.this.records.get(table.getSelectedRow()).get().display(); } 
+                    try { futureTask.get().display(); } 
                     catch (InterruptedException e1) {throw new RuntimeException(e1);} 
                     catch (ExecutionException e1) {throw new RuntimeException(e1);}
                 }
@@ -108,22 +104,30 @@ public class ImageLog extends JFrame {
     public static class ImageLogRecord {
         private String taskName;
         private String imageStackName;
-        private VirtualAcquisitionDisplay vad;
+        private FutureTask<ImageLogRunner> runner;
 
         public ImageLogRecord(
                 String taskName, 
-                String imageStackName) 
+                String imageStackName,
+                FutureTask<ImageLogRunner> runner) 
         {
             this.taskName = taskName;
             this.imageStackName = imageStackName;
-            if (this.taskName != null) {
-                try { 
-                    TaggedImageStorage storage = new TaggedImageStorageLive();
-                    ImageCache cache = new MMImageCache(storage);
-                    this.vad = new VirtualAcquisitionDisplay(cache, this.imageStackName); 
-                } 
-                catch (MMScriptException e) {throw new RuntimeException(e);}
-            }
+            this.runner = runner;
+        }
+        
+        public FutureTask<ImageLogRunner> getRunner() { return this.runner; }
+        public String getTaskName() { return this.taskName; }
+        public String getImageStackName() { return this.imageStackName; }
+        
+    }
+    
+    public static class ImageLogRunner {
+        private ImageStack imageStack;
+        private String imageStackName;
+        
+        public ImageLogRunner(String imageStackName) {
+            this.imageStackName = imageStackName;
         }
         
         public void addImage(TaggedImage image, String description) {
@@ -132,7 +136,14 @@ public class ImageLog extends JFrame {
             ip.setFont(font);
             ip.setColor(new Color(1.0f, 1.0f, 1.0f));
             ip.drawString(description, 0, 0);
-            this.vad.getHyperImage().getImageStack().addSlice(ip);
+
+            if (this.imageStack == null) {
+                this.imageStack = new ImageStack(ip.getWidth(), ip.getHeight());
+            }
+            if (ip.getWidth() != this.imageStack.getWidth() || ip.getHeight() != this.imageStack.getHeight()) {
+                ip = ip.resize(this.imageStack.getWidth(), this.imageStack.getHeight());
+            }
+            this.imageStack.addSlice(description, ip);
         }
         public void addImage(ImagePlus imp, String description) {
             ImageProcessor ip = imp.getProcessor();
@@ -140,19 +151,27 @@ public class ImageLog extends JFrame {
             ip.setFont(font);
             ip.setColor(new Color(1.0f, 1.0f, 1.0f));
             ip.drawString(description, 0, 0);
-            this.vad.getHyperImage().getImageStack().addSlice(ip);
+
+            if (this.imageStack == null) {
+                this.imageStack = new ImageStack(ip.getWidth(), ip.getHeight());
+            }
+            this.imageStack.addSlice(description, ip);
         }
         
         public void display() {
-            vad.show();
+            if (imageStack != null) {
+                ImagePlus imp = new ImagePlus(this.imageStackName, this.imageStack);
+                imp.show();
+            }
         }
     }
     
-    public static class NullImageLogRecord extends ImageLogRecord {
-        public NullImageLogRecord() {
-            super(null, null);
+    public static class NullImageLogRunner extends ImageLogRunner {
+        public NullImageLogRunner() {
+            super(null);
         }
-        public void addImage(TaggedImage image) { }
-        public void display() {}
+        @Override public void addImage(TaggedImage image, String description) { }
+        @Override public void addImage(ImagePlus image, String description) { }
+        @Override public void display() { }
     }
 }

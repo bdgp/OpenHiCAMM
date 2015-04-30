@@ -19,6 +19,7 @@ import mmcorej.TaggedImage;
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.ImageLog;
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
+import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
 import org.bdgp.OpenHiCAMM.Logger;
 import org.bdgp.OpenHiCAMM.OpenHiCAMM;
 import org.bdgp.OpenHiCAMM.Util;
@@ -115,7 +116,7 @@ public class ROIFinder implements Module, ImageLogger {
     	try {
 			// Fill in list of ROIs
 			logger.info(String.format("Running process() to get list of ROIs"));
-			List<ROI> rois = process(image, taggedImage, logger, new ImageLog.NullImageLogRecord());
+			List<ROI> rois = process(image, taggedImage, logger, new ImageLog.NullImageLogRunner());
 
 			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
 			logger.info(String.format("Using positionIndex: %d", positionIndex));
@@ -196,7 +197,7 @@ public class ROIFinder implements Module, ImageLogger {
         return taggedImage;
     }
     
-    public List<ROI> process(Image image, TaggedImage taggedImage, Logger logger, ImageLogRecord imageLog) {
+    public List<ROI> process(Image image, TaggedImage taggedImage, Logger logger, ImageLogRunner imageLog) {
     	List<ROI> rois = new ArrayList<ROI>();
         ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
         ImagePlus imp = new ImagePlus(image.toString(), processor);
@@ -209,15 +210,18 @@ public class ROIFinder implements Module, ImageLogger {
         int w=imp.getWidth();
         int h=imp.getHeight();
         logger.info(String.format("Image dimensions: (%d,%d)", w, h));
-        double scale = 0.25;
+
+//        double scale = 0.25;
+        double scale = 1.0;
+
         double ws=(double)w*scale;
         double hs=(double)h*scale;
 
-        String scaleOp = String.format("x=%f y=%f width=%d height=%d interpolation=Bicubic average", 
-        		scale, scale, (int)ws, (int)hs);
-        logger.info(String.format("Scaling: %s", scaleOp));
-        IJ.run(imp, "Scale...", scaleOp);
-        imageLog.addImage(imp, "Scaling: scaleOp");
+//        String scaleOp = String.format("x=%f y=%f width=%d height=%d interpolation=Bicubic average", 
+//        		scale, scale, (int)ws, (int)hs);
+//        logger.info(String.format("Scaling: %s", scaleOp));
+//        IJ.run(imp, "Scale...", scaleOp);
+//        imageLog.addImage(imp, taggedImage.tags, "Scaling: scaleOp");
 
         // Crop after scale
         double crop = 2.0;
@@ -249,7 +253,7 @@ public class ROIFinder implements Module, ImageLogger {
         logger.info(String.format("Analyzing particles"));
         IJ.run(imp, "Analyze Particles...", "display exclude clear add in_situ");
         imageLog.addImage(imp, "Analyzing particles");
-        
+       
         Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
         // Get the objects and iterate through them
         ResultsTable rt = Analyzer.getResultsTable();
@@ -359,8 +363,8 @@ public class ROIFinder implements Module, ImageLogger {
 	@Override public void cleanup(Task task) { }
 
     @Override
-    public List<FutureTask<ImageLogRecord>> logImages(final Task task, Map<String,Config> config, final Logger logger) {
-        List<FutureTask<ImageLogRecord>> imageLogRecords = new ArrayList<FutureTask<ImageLogRecord>>();
+    public List<ImageLogRecord> logImages(final Task task, Map<String,Config> config, final Logger logger) {
+        List<ImageLogRecord> imageLogRecords = new ArrayList<ImageLogRecord>();
 
         // Get the Image record
     	Config imageIdConf = config.get("imageId");
@@ -389,14 +393,15 @@ public class ROIFinder implements Module, ImageLogger {
             logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
 
             // Add an image logger instance to the workflow runner for this module
-            imageLogRecords.add(new FutureTask<ImageLogRecord>(new Callable<ImageLogRecord>() {
-                @Override public ImageLogRecord call() throws Exception {
-                    ImageLog.ImageLogRecord imageLog = new ImageLog.ImageLogRecord(
-                            task.getName(), task.getName());
+            imageLogRecords.add(new ImageLogRecord(task.getName(), task.getName(),
+                    new FutureTask<ImageLogRunner>(new Callable<ImageLogRunner>() {
+                @Override public ImageLogRunner call() throws Exception {
+                    ImageLogRunner imageLogRunner = new ImageLogRunner(task.getName());
                     TaggedImage taggedImage = ROIFinder.this.getTaggedImage(image, logger);
-                    ROIFinder.this.process(image, taggedImage, logger, imageLog);
-                    return imageLog;
-                }}));
+                    ROIFinder.this.process(image, taggedImage, logger, imageLogRunner);
+                    return imageLogRunner;
+                }
+            })));
     	}
         return imageLogRecords;
     }

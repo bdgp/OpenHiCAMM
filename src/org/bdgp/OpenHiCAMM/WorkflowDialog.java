@@ -10,6 +10,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.SwingUtilities;
 
+import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.WorkflowInstance;
@@ -196,10 +197,8 @@ public class WorkflowDialog extends JDialog {
         btnShowImageLog.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 if (WorkflowDialog.this.workflowRunner != null) {
-                    if (imageLog == null) {
-                        imageLog = new ImageLog();
-                    }
-                    imageLog.setRecords(WorkflowDialog.this.workflowRunner.getImageLogRecords());
+                    List<ImageLogRecord> records = WorkflowDialog.this.workflowRunner.getImageLogRecords();
+                    imageLog = new ImageLog(records);
                     imageLog.setVisible(true);
                 }
             }

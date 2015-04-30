@@ -179,17 +179,18 @@ public class SlideImager implements Module {
             logger.info(String.format("Using rootDir: %s", rootDir)); 
             logger.info(String.format("Requesting to use acqName: %s", acqName)); 
             
+            // TODO: How to set the pixel size using the MM API?
             // Set the pixel size in um
-            Config pixelSizeUm = conf.get("pixelSizeUm");
-            if (pixelSizeUm == null) throw new RuntimeException("Config variable pixelSizeUm was not set!");
-            try {
-                String pixelSizeConfig = core.getCurrentPixelSizeConfig();
-                logger.info(String.format("Using current pixelSizeConfig value: %s", pixelSizeConfig));
-                logger.info(String.format("Setting pixel size to: %s", pixelSizeUm.getValue()));
-                core.setPixelSizeUm(pixelSizeConfig, new Double(pixelSizeUm.getValue()));
-            } 
-            catch (NumberFormatException e) {throw new RuntimeException(e);} 
-            catch (Exception e) {throw new RuntimeException(e);}
+//            Config pixelSizeUm = conf.get("pixelSizeUm");
+//            if (pixelSizeUm == null) throw new RuntimeException("Config variable pixelSizeUm was not set!");
+//            try {
+//                String pixelSizeConfig = core.getCurrentPixelSizeConfig();
+//                logger.info(String.format("Using current pixelSizeConfig value: %s", pixelSizeConfig));
+//                logger.info(String.format("Setting pixel size to: %s", pixelSizeUm.getValue()));
+//                core.setPixelSizeUm(pixelSizeConfig, new Double(pixelSizeUm.getValue()));
+//            } 
+//            catch (NumberFormatException e) {throw new RuntimeException(e);} 
+//            catch (Exception e) {throw new RuntimeException(e);}
             
             // Move stage to starting position and take some dummy pictures to adjust the camera
             if (conf.containsKey("takeDummyImages") && 
@@ -403,9 +404,9 @@ public class SlideImager implements Module {
                             "takeDummyImages", "no"));
                 }
 
-            	Double pxPerUm = (Double)slideImagerDialog.pixelSizeUm.getValue();
-            	if (pxPerUm != null) {
-            	    configs.add(new Config(SlideImager.this.moduleId, "pxPerUm", pxPerUm.toString()));
+            	Double pixelSizeUm = (Double)slideImagerDialog.pixelSizeUm.getValue();
+            	if (pixelSizeUm != null) {
+            	    configs.add(new Config(SlideImager.this.moduleId, "pixelSizeUm", pixelSizeUm.toString()));
             	}
                 return configs.toArray(new Config[0]);
             }

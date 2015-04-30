@@ -832,8 +832,8 @@ public class WorkflowRunner {
     	return this.logger;
     }
 
-    public List<FutureTask<ImageLogRecord>> getImageLogRecords(Task task, Map<String,Config> config, Logger logger) {
-        List<FutureTask<ImageLogRecord>> imageLogRecords = new ArrayList<FutureTask<ImageLogRecord>>();
+    public List<ImageLogRecord> getImageLogRecords(Task task, Map<String,Config> config, Logger logger) {
+        List<ImageLogRecord> imageLogRecords = new ArrayList<ImageLogRecord>();
         // add the configuration
         List<ModuleConfig> moduleConfigs = this.getModuleConfig().select(where("id", task.getModuleId()));
         for (ModuleConfig mc : moduleConfigs) {
@@ -854,14 +854,14 @@ public class WorkflowRunner {
         List<TaskDispatch> tds = this.getTaskDispatch().select(where("parentTaskId", task.getId()));
         for (TaskDispatch td : tds) {
             Task childTask = this.getTaskStatus().selectOneOrDie(where("id", td.getTaskId()));
-            this.getImageLogRecords(childTask, config, logger);
+            imageLogRecords.addAll(this.getImageLogRecords(childTask, config, logger));
         }
             
         return imageLogRecords;
     }
     
-    public List<FutureTask<ImageLogRecord>> getImageLogRecords() {
-        List<FutureTask<ImageLogRecord>> imageLogRecords = new ArrayList<FutureTask<ImageLogRecord>>();
+    public List<ImageLogRecord> getImageLogRecords() {
+        List<ImageLogRecord> imageLogRecords = new ArrayList<ImageLogRecord>();
         List<WorkflowModule> modules = this.workflow.select(where("parentId", null));
         for (WorkflowModule module : modules) {
             List<Task> tasks = this.taskStatus.select(where("moduleId", module.getId()));
