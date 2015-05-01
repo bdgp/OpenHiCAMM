@@ -854,7 +854,9 @@ public class WorkflowRunner {
         List<TaskDispatch> tds = this.getTaskDispatch().select(where("parentTaskId", task.getId()));
         for (TaskDispatch td : tds) {
             Task childTask = this.getTaskStatus().selectOneOrDie(where("id", td.getTaskId()));
-            imageLogRecords.addAll(this.getImageLogRecords(childTask, config, logger));
+            Map<String,Config> conf = new HashMap<String,Config>();
+            conf.putAll(config);
+            imageLogRecords.addAll(this.getImageLogRecords(childTask, conf, logger));
         }
             
         return imageLogRecords;

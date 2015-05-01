@@ -13,9 +13,7 @@ import javax.swing.JTable;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.JScrollPane;
 
-import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.KeyAdapter;
@@ -73,7 +71,10 @@ public class ImageLog extends JFrame {
                 FutureTask<ImageLogRunner> futureTask = ImageLog.this.records.get(table.getSelectedRow()).getRunner();
                 futureTask.run();
                 if (e.getKeyCode() == KeyEvent.VK_ENTER && table.getSelectedRow() >= 0) {
-                    try { futureTask.get().display(); } 
+                    try { 
+                        ImageLogRunner imageLogRunner = futureTask.get();
+                        if (imageLogRunner != null) imageLogRunner.display(); 
+                    }
                     catch (InterruptedException e1) {throw new RuntimeException(e1);} 
                     catch (ExecutionException e1) {throw new RuntimeException(e1);}
                 }
@@ -84,7 +85,10 @@ public class ImageLog extends JFrame {
                 FutureTask<ImageLogRunner> futureTask = ImageLog.this.records.get(table.getSelectedRow()).getRunner();
                 futureTask.run();
                 if (e.getClickCount() == 2 && table.getSelectedRow() >= 0) {
-                    try { futureTask.get().display(); } 
+                    try { 
+                        ImageLogRunner imageLogRunner = futureTask.get();
+                        if (imageLogRunner != null) imageLogRunner.display();
+                    } 
                     catch (InterruptedException e1) {throw new RuntimeException(e1);} 
                     catch (ExecutionException e1) {throw new RuntimeException(e1);}
                 }
@@ -132,11 +136,6 @@ public class ImageLog extends JFrame {
         
         public void addImage(TaggedImage image, String description) {
             ImageProcessor ip = ImageUtils.makeProcessor(image);
-            Font font = new Font("SansSerif", Font.PLAIN, 8);
-            ip.setFont(font);
-            ip.setColor(new Color(1.0f, 1.0f, 1.0f));
-            ip.drawString(description, 0, 0);
-
             if (this.imageStack == null) {
                 this.imageStack = new ImageStack(ip.getWidth(), ip.getHeight());
             }
@@ -147,13 +146,11 @@ public class ImageLog extends JFrame {
         }
         public void addImage(ImagePlus imp, String description) {
             ImageProcessor ip = imp.getProcessor();
-            Font font = new Font("SansSerif", Font.PLAIN, 8);
-            ip.setFont(font);
-            ip.setColor(new Color(1.0f, 1.0f, 1.0f));
-            ip.drawString(description, 0, 0);
-
             if (this.imageStack == null) {
                 this.imageStack = new ImageStack(ip.getWidth(), ip.getHeight());
+            }
+            if (ip.getWidth() != this.imageStack.getWidth() || ip.getHeight() != this.imageStack.getHeight()) {
+                ip = ip.resize(this.imageStack.getWidth(), this.imageStack.getHeight());
             }
             this.imageStack.addSlice(description, ip);
         }
