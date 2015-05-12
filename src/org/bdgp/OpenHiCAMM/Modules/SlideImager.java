@@ -5,6 +5,8 @@ import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,17 +89,30 @@ public class SlideImager implements Module {
         // otherwise, try loading from the posListModuleId conf
     	PositionList positionList;
         if (conf.containsKey("posListModuleId")) {
+            // get a sorted list of all the SlidePosList records for the posListModuleId module
             Config posListModuleId = conf.get("posListModuleId");
             Dao<SlidePosList> posListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
             Integer slideId = new Integer(conf.get("slideId").getValue());
-            SlidePosList posList = posListDao.selectOne(
-                            where("slideId",slideId).
-                            and("moduleId",posListModuleId.getValue()));
-            if (posList == null) {
+            List<SlidePosList> posLists = posListDao.select(
+                    where("slideId", slideId).
+                    and("moduleId", posListModuleId.getValue()));
+            Collections.sort(posLists, new Comparator<SlidePosList>() {
+                @Override public int compare(SlidePosList a, SlidePosList b) {
+                    return a.getId()-b.getId();
+                }});
+            if (posLists.isEmpty()) {
                 throw new RuntimeException("Position list from module \""+posListModuleId.getValue()+"\" not found in database");
             }
-            // get the position list from the DB
-            positionList = posList.getPositionList();
+            // Merge the list of PositionLists into a single positionList
+            positionList = posLists.get(0).getPositionList();
+            for (int i=1; i<posLists.size(); ++i) {
+                SlidePosList spl = posLists.get(i);
+                PositionList pl = spl.getPositionList();
+                for (int j=0; j<pl.getNumberOfPositions(); ++j) {
+                    MultiStagePosition msp = pl.getPosition(j);
+                    positionList.addPosition(msp);
+                }
+            }
             // log the position list to the console
             try {
 				logger.info(String.format("Read position list from module %s:%n%s", 
@@ -526,18 +541,37 @@ public class SlideImager implements Module {
             	slide = slideDao.reload(slide, "experimentId");
             	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created new slide: %s", this.moduleId, slide.toString()));
             }
+            conf.put("slideId", new Config(this.moduleId, "slideId", new Integer(slide.getId()).toString()));
+
             // get the position list for the slide
             SlidePosList posList = null;
             // first try to load a position list from the DB
             if (conf.containsKey("posListModuleId")) {
+                // get a sorted list of all the SlidePosList records for the posListModuleId module
                 Config posListModuleId = conf.get("posListModuleId");
-                posList = posListDao.selectOne(
-                		where("slideId",slide.getId()).
-                		and("moduleId",posListModuleId.getValue()));
-                if (posList == null) {
+                List<SlidePosList> posLists = posListDao.select(
+                        where("slideId", slide.getId()).
+                        and("moduleId", posListModuleId.getValue()));
+                Collections.sort(posLists, new Comparator<SlidePosList>() {
+                    @Override public int compare(SlidePosList a, SlidePosList b) {
+                        return a.getId()-b.getId();
+                    }});
+                if (posLists.isEmpty()) {
                     throw new RuntimeException("Position list from module \""+posListModuleId.getValue()+"\" not found in database");
                 }
-            	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Read position list from module %s", 
+
+                // Merge the list of PositionLists into a single positionList
+                PositionList positionList = posLists.get(0).getPositionList();
+                for (int i=1; i<posLists.size(); ++i) {
+                    SlidePosList spl = posLists.get(i);
+                    PositionList pl = spl.getPositionList();
+                    for (int j=0; j<pl.getNumberOfPositions(); ++j) {
+                        MultiStagePosition msp = pl.getPosition(j);
+                        positionList.addPosition(msp);
+                    }
+                }
+                posList = new SlidePosList(posLists.get(0).getModuleId(), posLists.get(0).getSlideId(), null, positionList);
+                workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Read position list from module %s", 
             			this.moduleId, conf.get("posListModuleId")));
             }
             // otherwise, load a position list from a file

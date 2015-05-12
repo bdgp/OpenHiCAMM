@@ -14,6 +14,8 @@ public class SlidePosList {
     private int id;
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,uniqueCombo=true) 
     private String moduleId;
+    @DatabaseField(canBeNull=true,uniqueCombo=true) 
+    private Integer taskId;
     @DatabaseField(canBeNull=false,uniqueCombo=true) 
     private Integer slideId;
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,useGetSet=true) 
@@ -21,14 +23,16 @@ public class SlidePosList {
     private PositionList positionList;
 
     public SlidePosList() {}
-    public SlidePosList(String moduleId, Slide slide, PositionList positionList) {
+    public SlidePosList(String moduleId, Integer slideId, Integer taskId, PositionList positionList) {
     	this.moduleId = moduleId;
-    	this.slideId = slide.getId();
+    	this.slideId = slideId;
+    	this.taskId = taskId;
         setPositionList(positionList);
     }
-    public SlidePosList(String moduleId, Slide slide, String posList) {
+    public SlidePosList(String moduleId, Integer slideId, Integer taskId, String posList) {
     	this.moduleId = moduleId;
-    	this.slideId = slide.getId();
+    	this.slideId = slideId;
+    	this.taskId = taskId;
         setPosList(posList);
     }
     public void setPositionList(PositionList positionList) {
@@ -44,13 +48,17 @@ public class SlidePosList {
     }
     public int getId() { return this.id; }
     public String getModuleId() { return this.moduleId; }
+    public Integer getTaskId() { return this.taskId; }
     public String getPosList() { return this.posList; }
     public PositionList getPositionList() { return this.positionList; }
     public Integer getSlideId() { return this.slideId; }
     
     public String toString() {
-    	return String.format("%s(id=%d, moduleId=%s, slideId=%d)", 
+    	return String.format("%s(id=%d, moduleId=%s, slideId=%d, taskId=%s)", 
     			this.getClass().getSimpleName(),
-    			this.id, Util.escape(this.moduleId), this.slideId);
+    			this.id, 
+    			Util.escape(this.moduleId), 
+    			this.slideId,
+    			Util.escape(this.taskId));
     }
 }

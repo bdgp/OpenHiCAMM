@@ -121,7 +121,8 @@ public class ROIFinder implements Module, ImageLogger {
 			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
 			logger.info(String.format("Using positionIndex: %d", positionIndex));
 
-			double pixelSizeUm = MDUtils.getPixelSizeUm(taggedImage.tags);
+			//double pixelSizeUm = MDUtils.getPixelSizeUm(taggedImage.tags);
+			double pixelSizeUm = new Double(config.get("pixelSizeUm").getValue());
 			logger.info(String.format("Using pixedSizeUm: %f", pixelSizeUm));
 			
 			int imageWidth = MDUtils.getWidth(taggedImage.tags);
@@ -155,14 +156,14 @@ public class ROIFinder implements Module, ImageLogger {
 			// First, delete any old slidepos and slideposlist records
 			logger.info(String.format("Deleting old position lists"));
 			List<SlidePosList> oldSlidePosLists = slidePosListDao.select(
-					where("slideId",slide.getId()).and("moduleId",this.moduleId));
+					where("slideId",slide.getId()).and("moduleId",this.moduleId).and("taskId", task.getId()));
 			for (SlidePosList oldSlidePosList : oldSlidePosLists) {
 				slidePosDao.delete(where("slidePosListId",oldSlidePosList.getId()));
 			}
-			slidePosListDao.delete(where("slideId",slide.getId()).and("moduleId",this.moduleId));
+			slidePosListDao.delete(where("slideId",slide.getId()).and("moduleId",this.moduleId).and("taskId", task.getId()));
 
-			// Create SlidePosList and SlidePos DB records
-			SlidePosList slidePosList = new SlidePosList(this.moduleId, slide, posList);
+			// Create/Update SlidePosList and SlidePos DB records
+			SlidePosList slidePosList = new SlidePosList(this.moduleId, slide.getId(), task.getId(), posList);
 			slidePosListDao.insert(slidePosList);
 			logger.info(String.format("Created new SlidePosList: %s", slidePosList));
 
