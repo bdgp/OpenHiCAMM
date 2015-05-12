@@ -136,6 +136,7 @@ public class ImageLog extends JFrame {
         
         public void addImage(TaggedImage image, String description) {
             ImageProcessor ip = ImageUtils.makeProcessor(image);
+            ip = ip.duplicate();
             if (this.imageStack == null) {
                 this.imageStack = new ImageStack(ip.getWidth(), ip.getHeight());
             }
@@ -146,6 +147,7 @@ public class ImageLog extends JFrame {
         }
         public void addImage(ImagePlus imp, String description) {
             ImageProcessor ip = imp.getProcessor();
+            ip = ip.duplicate();
             if (this.imageStack == null) {
                 this.imageStack = new ImageStack(ip.getWidth(), ip.getHeight());
             }

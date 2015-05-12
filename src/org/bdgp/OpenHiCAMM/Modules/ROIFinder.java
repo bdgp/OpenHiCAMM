@@ -205,6 +205,10 @@ public class ROIFinder implements Module, ImageLogger {
         // Convert to gray
         IJ.run(imp, "8-bit", "");
         imageLog.addImage(imp, "Convert to gray");
+        
+        // Subtract background
+//        IJ.run(imp, "Subtract Background...", "rolling=200 light");
+//        imageLog.addImage(imp, "Subtract Background");
 
         // Resize to 1/4
         int w=imp.getWidth();
@@ -217,11 +221,11 @@ public class ROIFinder implements Module, ImageLogger {
         double ws=(double)w*scale;
         double hs=(double)h*scale;
 
-//        String scaleOp = String.format("x=%f y=%f width=%d height=%d interpolation=Bicubic average", 
-//        		scale, scale, (int)ws, (int)hs);
-//        logger.info(String.format("Scaling: %s", scaleOp));
-//        IJ.run(imp, "Scale...", scaleOp);
-//        imageLog.addImage(imp, taggedImage.tags, "Scaling: scaleOp");
+        String scaleOp = String.format("x=%f y=%f width=%d height=%d interpolation=Bicubic average", 
+        		scale, scale, (int)ws, (int)hs);
+        logger.info(String.format("Scaling: %s", scaleOp));
+        IJ.run(imp, "Scale...", scaleOp);
+        imageLog.addImage(imp, "Scaling: scaleOp");
 
         // Crop after scale
         double crop = 2.0;
@@ -234,7 +238,7 @@ public class ROIFinder implements Module, ImageLogger {
 
         // Binarize
         logger.info(String.format("Binarizing"));
-        IJ.run(imp, "Auto Threshold", "method=Huang");
+        IJ.run(imp, "Auto Threshold", "method=Huang white");
         imageLog.addImage(imp, "Binarizing");
 
         // Morphological operations: close gaps, fill holes
@@ -280,7 +284,7 @@ public class ROIFinder implements Module, ImageLogger {
                 roiDao.insert(roi);
                 
                 // Draw the ROI rectangle
-                imp.setRoi(roi.getX1(), roi.getY1(), roi.getX2()-roi.getX2()+1, roi.getY2()-roi.getY1()+1);
+                imp.setRoi(roi.getX1(), roi.getY1(), roi.getX2()-roi.getX1()+1, roi.getY2()-roi.getY1()+1);
                 IJ.setForegroundColor(255, 255, 0);
                 IJ.run(imp, "Draw", "");
             }
