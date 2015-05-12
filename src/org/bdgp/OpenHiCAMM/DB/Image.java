@@ -11,7 +11,6 @@ import com.j256.ormlite.table.DatabaseTable;
 public class Image {
     @DatabaseField(generatedId=true, canBeNull=false) private int id;
     @DatabaseField(canBeNull=false) private int slideId;
-    @DatabaseField(canBeNull=false) private int slidePosId;
     @DatabaseField(canBeNull=false,uniqueCombo=true) private int acquisitionId;
     @DatabaseField(canBeNull=false,uniqueCombo=true) private int channel;
     @DatabaseField(canBeNull=false,uniqueCombo=true) private int slice;
@@ -19,9 +18,8 @@ public class Image {
     @DatabaseField(canBeNull=false,uniqueCombo=true) private int position;
     
     public Image() {}
-    public Image (int slideId, int slidePosId, Acquisition acquisition, int channel, int slice, int frame, int position) {
+    public Image (int slideId, Acquisition acquisition, int channel, int slice, int frame, int position) {
         this.slideId = slideId;
-        this.slidePosId = slidePosId;
         this.channel = channel;
         this.slice = slice;
         this.frame = frame;
@@ -29,9 +27,8 @@ public class Image {
         if (acquisition == null) throw new RuntimeException("Acquisition is null");
         this.acquisitionId = acquisition.getId();
     }
-    public Image (int slideId, int slidePosId, int acquisitionId, int channel, int slice, int frame, int position) {
+    public Image (int slideId, int acquisitionId, int channel, int slice, int frame, int position) {
         this.slideId = slideId;
-        this.slidePosId = slidePosId;
         this.channel = channel;
         this.slice = slice;
         this.frame = frame;
@@ -42,7 +39,6 @@ public class Image {
     public String getName() {return String.format("I%05d", this.id);}
 
     public int getSlideId() {return this.slideId;}
-    public int getSlidePosId() {return this.slidePosId;}
     public int getAcquisitionId() {return this.acquisitionId;}
     public int getChannel() {return this.channel;}
     public int getSlice() {return this.slice;}
@@ -55,10 +51,9 @@ public class Image {
     
     public String toString() {
     	return String.format(
-    			"%s(slideId=%d, slidePosId=%d, channel=%d, slice=%d, frame=%d, position=%d, acquisitionId=%d)",
+    			"%s(slideId=%d, channel=%d, slice=%d, frame=%d, position=%d, acquisitionId=%d)",
     			this.getClass().getSimpleName(),
     			this.slideId,
-    			this.slidePosId,
     			this.channel, 
     			this.slice,
     			this.frame,

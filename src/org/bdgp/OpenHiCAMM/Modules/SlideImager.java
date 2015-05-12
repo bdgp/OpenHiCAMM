@@ -318,15 +318,11 @@ public class SlideImager implements Module {
                 Integer slideId = new Integer(conf.get("slideId").getValue());
                 logger.info(String.format("Using slideId: %d", slideId));
 
-                if (!conf.containsKey("slidePosId")) throw new RuntimeException("No slidePosId found for image!");
-                Integer slidePosId = new Integer(conf.get("slidePosId").getValue());
-                logger.info(String.format("Using slidePosId: %d", slidePosId));
-
                 // Create image DB record
                 Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
                 Image image;
                 try {
-                    image = new Image(slideId, slidePosId, acquisition, 
+                    image = new Image(slideId, acquisition, 
                         MDUtils.getChannelIndex(taggedImage.tags),
                         MDUtils.getSliceIndex(taggedImage.tags),
                         MDUtils.getFrameIndex(taggedImage.tags),
@@ -555,7 +551,7 @@ public class SlideImager implements Module {
                 try { 
                     PositionList positionList = new PositionList();
                     positionList.load(posListFile.getPath()); 
-                    posList = new SlidePosList(this.moduleId, slide, positionList);
+                    posList = new SlidePosList(this.moduleId, slide.getId(), null, positionList);
                 } 
                 catch (MMException e) {throw new RuntimeException(e);}
                 
@@ -612,20 +608,6 @@ public class SlideImager implements Module {
                 taskConfigDao.insert(slideId);
                 workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created task config: %s", 
                         this.moduleId, slideId));
-
-                // Insert the slidePosId as a task config
-                SlidePos slidePos = posDao.selectOne(
-                        where("slidePosListId",posList.getId()).
-                        and("slidePosListIndex",i));
-                if (slidePos != null) {
-                	TaskConfig slidePosId = new TaskConfig(
-                            new Integer(task.getId()).toString(), 
-                            "slidePosId", 
-                            new Integer(slidePos.getId()).toString());
-                    taskConfigDao.insert(slidePosId);
-                    workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created task config: %s", 
-                            this.moduleId, slidePosId));
-                }
 
                 // Create task dispatch record
                 if (parentTask != null) {
