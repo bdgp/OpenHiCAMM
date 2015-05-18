@@ -68,9 +68,9 @@ public class ImageLog extends JFrame {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.addKeyListener(new KeyAdapter() {
             @Override public void keyTyped(KeyEvent e) {
-                FutureTask<ImageLogRunner> futureTask = ImageLog.this.records.get(table.getSelectedRow()).getRunner();
-                futureTask.run();
                 if (e.getKeyCode() == KeyEvent.VK_ENTER && table.getSelectedRow() >= 0) {
+                    FutureTask<ImageLogRunner> futureTask = ImageLog.this.records.get(table.getSelectedRow()).getRunner();
+                    futureTask.run();
                     try { 
                         ImageLogRunner imageLogRunner = futureTask.get();
                         if (imageLogRunner != null) imageLogRunner.display(); 
@@ -82,9 +82,9 @@ public class ImageLog extends JFrame {
         });
         table.addMouseListener(new MouseAdapter() {
             @Override public void mouseClicked(MouseEvent e) {
-                FutureTask<ImageLogRunner> futureTask = ImageLog.this.records.get(table.getSelectedRow()).getRunner();
-                futureTask.run();
-                if (e.getClickCount() == 2 && table.getSelectedRow() >= 0) {
+                if (table.getSelectedRow() >= 0 && e.getClickCount() == 2) {
+                    FutureTask<ImageLogRunner> futureTask = ImageLog.this.records.get(table.getSelectedRow()).getRunner();
+                    futureTask.run();
                     try { 
                         ImageLogRunner imageLogRunner = futureTask.get();
                         if (imageLogRunner != null) imageLogRunner.display();
