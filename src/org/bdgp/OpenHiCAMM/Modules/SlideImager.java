@@ -244,7 +244,7 @@ public class SlideImager implements Module {
             // wait until the current acquisition finishes
             while (acqControlDlg.isAcquisitionRunning()) {
                  try { Thread.sleep(1000); } 
-                 catch (InterruptedException e) { logger.info("Thread was interrupted."); } 
+                 catch (InterruptedException e) {throw new RuntimeException(e);}
             }
 
             // get the prefix name and log it

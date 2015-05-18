@@ -634,7 +634,7 @@ public class WorkflowRunner {
                 List<TaskDispatch> childTaskIds = taskDispatch.select(
                         where("parentTaskId",task.getId()));
                 List<Future<Status>> childFutures = new ArrayList<Future<Status>>();
-                if (status == Status.SUCCESS) {
+                if (status == Status.SUCCESS && !pool.isShutdown()) {
                     // Sort task dispatches by task ID
                     Collections.sort(childTaskIds, new Comparator<TaskDispatch>() {
                         @Override public int compare(TaskDispatch a, TaskDispatch b) {
