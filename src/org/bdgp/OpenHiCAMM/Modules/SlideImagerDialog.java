@@ -42,6 +42,8 @@ public class SlideImagerDialog extends JPanel {
 	JRadioButton takeDummyImagesYes;
 	JRadioButton takeDummyImagesNo;
 	DoubleSpinner pixelSizeUm;
+	
+	public static final double DEFAULT_PIXEL_SIZE_UM = 0.4735;
 
 	public SlideImagerDialog(final AcqControlDlg acqControlDlg, WorkflowRunner workflowRunner) {
 		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][][]"));
@@ -139,9 +141,8 @@ public class SlideImagerDialog extends JPanel {
         JLabel lblSetPixelSize = new JLabel("Set Pixel Size Per Micrometer:");
         add(lblSetPixelSize, "flowx,cell 0 8");
         
-        // calculated px/um: 1.38257875001752
         pixelSizeUm = new DoubleSpinner();
-        pixelSizeUm.setValue(new Double(1.383));
+        pixelSizeUm.setValue(new Double(DEFAULT_PIXEL_SIZE_UM));
         add(pixelSizeUm, "cell 0 8");
 	}
 

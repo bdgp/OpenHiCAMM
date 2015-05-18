@@ -138,8 +138,8 @@ public class ROIFinder implements Module, ImageLogger {
 				StagePosition sp = new StagePosition();
 				sp.numAxes = 2;
 				sp.stageName = "XYStage";
-				sp.x = x_stage+(((((double)roi.getX1()+(double)roi.getX2())/2.0)-(double)imageWidth)*pixelSizeUm);
-				sp.y = y_stage+(((((double)roi.getY1()+(double)roi.getY2())/2.0)-(double)imageHeight)*pixelSizeUm);
+				sp.x = x_stage-(((((double)roi.getX1()+(double)roi.getX2())/2.0)-(double)imageWidth/2.0)*pixelSizeUm);
+				sp.y = y_stage-(((((double)roi.getY1()+(double)roi.getY2())/2.0)-(double)imageHeight/2.0)*pixelSizeUm);
 				msp.setLabel(roi.toString());
 				msp.add(sp);
 				msp.setDefaultXYStage("XYStage");
