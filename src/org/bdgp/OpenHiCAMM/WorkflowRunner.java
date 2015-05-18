@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,6 +32,7 @@ import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.DB.WorkflowInstance;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.TaskListener;
@@ -125,10 +127,24 @@ public class WorkflowRunner {
         
         this.taskListeners = new ArrayList<TaskListener>();
         this.mmslide = mmslide;
-        this.moduleInstances = new HashMap<String,Module>();
         this.isStopped = true;
-
+        
         // instantiate the workflow module object instances
+        this.moduleInstances = new HashMap<String,Module>();
+        this.loadModuleInstances();
+
+        // init the logger
+        this.initLogger();
+        
+        // init the notified tasks set
+        this.notifiedTasks = new HashSet<Task>();
+    }
+
+    // instantiate the workflow module object instances
+    public void loadModuleInstances() {
+        this.moduleInstances.clear();
+        
+        // Re-load the module instances
         for (WorkflowModule w : workflow.select()) {
             // Make sure parent IDs are defined
             if (w.getParentId() != null) {
@@ -873,5 +889,27 @@ public class WorkflowRunner {
             }
         }
         return imageLogRecords;
+    }
+
+    /**
+     * Get the set of Configuration objects to pass to the Workflow Configuration Dialog.
+     * @return a map of the configuration name -> configuration
+     */
+    public Map<String,Configuration> getConfigurations() {
+    	// get list of JPanels and load them with the configuration interfaces
+    	Map<String,Configuration> configurations = new LinkedHashMap<String,Configuration>();
+    	Dao<WorkflowModule> modules = this.getWorkflowDb().table(WorkflowModule.class);
+    	List<WorkflowModule> ms = modules.select(where("parentId", null));
+
+    	while (ms.size() > 0) {
+    		List<WorkflowModule> newms = new ArrayList<WorkflowModule>();
+    		for (WorkflowModule m : ms) {
+                Module module = this.moduleInstances.get(m.getId());
+                configurations.put(m.getId(), module.configure());
+    			newms.addAll(modules.select(where("parentId",m.getId())));
+    		}
+    		ms = newms;
+    	}
+    	return configurations;
     }
 }

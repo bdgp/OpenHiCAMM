@@ -16,7 +16,6 @@ import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.WorkflowInstance;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
-import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -30,12 +29,9 @@ import java.awt.event.WindowListener;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
-
-import static org.bdgp.OpenHiCAMM.Util.where;
 
 /**
  * The main workflow dialog.
@@ -151,7 +147,7 @@ public class WorkflowDialog extends JDialog {
             public void actionPerformed(ActionEvent e) {
                 initWorkflowRunner(false);
                 
-                Map<String,Configuration> configurations = getConfigurations();
+                Map<String,Configuration> configurations = workflowRunner.getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                     WorkflowDialog.this, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
                 config.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -163,7 +159,7 @@ public class WorkflowDialog extends JDialog {
         startButton = new JButton("Start");
         startButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                Map<String,Configuration> configurations = getConfigurations();
+                Map<String,Configuration> configurations = workflowRunner.getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                     WorkflowDialog.this, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
                 if (config.validateConfiguration()) {
@@ -177,7 +173,7 @@ public class WorkflowDialog extends JDialog {
         resumeButton = new JButton("Resume");
         resumeButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                Map<String,Configuration> configurations = getConfigurations();
+                Map<String,Configuration> configurations = workflowRunner.getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                     WorkflowDialog.this, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
                 if (config.validateConfiguration()) {
@@ -291,6 +287,17 @@ public class WorkflowDialog extends JDialog {
             Collections.sort(workflowInstances, Collections.reverseOrder());
             workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
             workflowInstance.setEnabled(true);
+            if (workflowInstances.size()>0) {
+                initWorkflowRunner(false);
+                // should the resume button be enabled?
+                resumeButton.setEnabled(false);
+                if (workflowRunner != null) {
+                    List<Task> tasks = workflowRunner.getTaskStatus().select();
+                    if (tasks.size() > 0) {
+                        resumeButton.setEnabled(true);
+                    }
+                }
+            }
                 
             if (startModules.size() > 0) {
                 btnConfigure.setEnabled(true);
@@ -353,32 +360,4 @@ public class WorkflowDialog extends JDialog {
         });
     }
 
-    /**
-     * Get the set of Configuration objects to pass to the Workflow Configuration Dialog.
-     * @return a map of the configuration name -> configuration
-     */
-    public Map<String,Configuration> getConfigurations() {
-    	// get list of JPanels and load them with the configuration interfaces
-    	initWorkflowRunner(false);
-    	Map<String,Configuration> configurations = new LinkedHashMap<String,Configuration>();
-    	Dao<WorkflowModule> modules = workflowRunner.getWorkflowDb().table(WorkflowModule.class);
-    	List<WorkflowModule> ms = modules.select(where("parentId", null));
-
-    	while (ms.size() > 0) {
-    		List<WorkflowModule> newms = new ArrayList<WorkflowModule>();
-    		for (WorkflowModule m : ms) {
-    			try {
-    				Module module = m.getModule().newInstance();
-    				module.initialize(workflowRunner, m.getId());
-    				configurations.put(m.getId(), module.configure());
-    			}
-    			catch (InstantiationException e1) {throw new RuntimeException(e1);} 
-    			catch (IllegalAccessException e1) {throw new RuntimeException(e1);}
-
-    			newms.addAll(modules.select(where("parentId",m.getId())));
-    		}
-    		ms = newms;
-    	}
-    	return configurations;
-    }
 }
