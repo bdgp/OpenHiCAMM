@@ -68,7 +68,6 @@ public class OpenHiCAMM implements MMPlugin {
 
         // open the slide workflow dialog
         SwingUtilities.invokeLater(new Runnable() {
-            @SuppressWarnings("deprecation")
 			public void run() {
             	if (dialog == null) dialog = new WorkflowDialog(OpenHiCAMM.this.app.getAcqDlg(), OpenHiCAMM.this);
                 //dialog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
