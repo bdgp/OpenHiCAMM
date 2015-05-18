@@ -372,7 +372,7 @@ public class WorkflowRunner {
         	}
         }
         // If there are too many tasks, skip drawing the graph
-        final int MAX_TASKS_IN_GRAPH = 200;
+        final int MAX_TASKS_IN_GRAPH = 25;
         if (tasks.size() < MAX_TASKS_IN_GRAPH) {
             try { this.logger.info(String.format("Task Dispatch Graph:%n%s", taskGraph.graph())); }
             catch (IOException e) {
