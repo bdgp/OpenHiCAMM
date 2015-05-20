@@ -10,12 +10,16 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.FutureTask;
 import java.util.prefs.Preferences;
 
 import mmcorej.CMMCore;
 import mmcorej.TaggedImage;
 
 import org.bdgp.OpenHiCAMM.Dao;
+import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
+import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
 import org.bdgp.OpenHiCAMM.Logger;
 import org.bdgp.OpenHiCAMM.OpenHiCAMM;
 import org.bdgp.OpenHiCAMM.Util;
@@ -33,6 +37,7 @@ import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.TaskConfig;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -52,7 +57,7 @@ import org.micromanager.utils.MMSerializationException;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public class SlideImager implements Module {
+public class SlideImager implements Module, ImageLogger {
     private static final int DUMMY_IMAGES = 10;
 	private static final long DUMMY_SLEEP = 500;
 
@@ -193,19 +198,6 @@ public class SlideImager implements Module {
             logger.info(String.format("This task is the acquisition task")); 
             logger.info(String.format("Using rootDir: %s", rootDir)); 
             logger.info(String.format("Requesting to use acqName: %s", acqName)); 
-            
-            // TODO: How to set the pixel size using the MM API?
-            // Set the pixel size in um
-//            Config pixelSizeUm = conf.get("pixelSizeUm");
-//            if (pixelSizeUm == null) throw new RuntimeException("Config variable pixelSizeUm was not set!");
-//            try {
-//                String pixelSizeConfig = core.getCurrentPixelSizeConfig();
-//                logger.info(String.format("Using current pixelSizeConfig value: %s", pixelSizeConfig));
-//                logger.info(String.format("Setting pixel size to: %s", pixelSizeUm.getValue()));
-//                core.setPixelSizeUm(pixelSizeConfig, new Double(pixelSizeUm.getValue()));
-//            } 
-//            catch (NumberFormatException e) {throw new RuntimeException(e);} 
-//            catch (Exception e) {throw new RuntimeException(e);}
             
             // Move stage to starting position and take some dummy pictures to adjust the camera
             if (conf.containsKey("takeDummyImages") && 
@@ -672,5 +664,49 @@ public class SlideImager implements Module {
                 this.engine.abortRequest();
             }
         }
+    }
+
+    @Override
+    public List<ImageLogRecord> logImages(final Task task, final Map<String,Config> config, final Logger logger) {
+        List<ImageLogRecord> imageLogRecords = new ArrayList<ImageLogRecord>();
+
+        // Add an image logger instance to the workflow runner for this module
+        imageLogRecords.add(new ImageLogRecord(task.getName(), task.getName(),
+                new FutureTask<ImageLogRunner>(new Callable<ImageLogRunner>() {
+            @Override public ImageLogRunner call() throws Exception {
+                // Get the Image record
+                Config imageIdConf = config.get("imageId");
+                if (imageIdConf != null) {
+                    Integer imageId = new Integer(imageIdConf.getValue());
+
+                    logger.info(String.format("Using image ID: %d", imageId));
+                    Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+                    final Image image = imageDao.selectOneOrDie(where("id",imageId));
+                    logger.info(String.format("Using image: %s", image));
+
+                    // Initialize the acquisition
+                    Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+                    Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
+                    logger.info(String.format("Using acquisition: %s", acquisition));
+                    MMAcquisition mmacquisition = acquisition.getAcquisition();
+                    try { mmacquisition.initialize(); } 
+                    catch (MMScriptException e) {throw new RuntimeException(e);}
+                    logger.info(String.format("Initialized acquisition"));
+
+                    // Get the image cache object
+                    ImageCache imageCache = mmacquisition.getImageCache();
+                    if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+                    // Get the tagged image from the image cache
+                    TaggedImage taggedImage = image.getImage(imageCache);
+                    logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
+
+                    ImageLogRunner imageLogRunner = new ImageLogRunner(task.getName());
+                    imageLogRunner.addImage(taggedImage, "The image");
+                    return imageLogRunner;
+                }
+                return null;
+            }
+        })));
+        return imageLogRecords;
     }
 }
