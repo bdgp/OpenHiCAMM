@@ -114,23 +114,26 @@ public class ROIFinder implements Module, ImageLogger {
         logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
 
     	try {
-			// Fill in list of ROIs
-			logger.info(String.format("Running process() to get list of ROIs"));
-			List<ROI> rois = process(image, taggedImage, logger, new ImageLog.NullImageLogRunner());
+			double pixelSizeUm = new Double(config.get("pixelSizeUm").getValue());
+			logger.info(String.format("Using pixedSizeUm: %f", pixelSizeUm));
+			
+			double minRoiArea = new Double(config.get("minRoiArea").getValue());
+			logger.info(String.format("Using minRoiArea: %f", minRoiArea));
 
 			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
 			logger.info(String.format("Using positionIndex: %d", positionIndex));
 
-			//double pixelSizeUm = MDUtils.getPixelSizeUm(taggedImage.tags);
-			double pixelSizeUm = new Double(config.get("pixelSizeUm").getValue());
-			logger.info(String.format("Using pixedSizeUm: %f", pixelSizeUm));
-			
 			int imageWidth = MDUtils.getWidth(taggedImage.tags);
 			int imageHeight = MDUtils.getHeight(taggedImage.tags);
+			String positionName = MDUtils.getPositionName(taggedImage.tags);
 			
 			double x_stage = MDUtils.getXPositionUm(taggedImage.tags);
 			double y_stage = MDUtils.getYPositionUm(taggedImage.tags);
 			
+			// Fill in list of ROIs
+			logger.info(String.format("Running process() to get list of ROIs"));
+			List<ROI> rois = process(image, taggedImage, logger, new ImageLog.NullImageLogRunner(), minRoiArea);
+
             // Convert the ROIs into a PositionList
 			PositionList posList = new PositionList();
 			for (ROI roi : rois) {
@@ -140,7 +143,7 @@ public class ROIFinder implements Module, ImageLogger {
 				sp.stageName = "XYStage";
 				sp.x = x_stage-(((((double)roi.getX1()+(double)roi.getX2())/2.0)-(double)imageWidth/2.0)*pixelSizeUm);
 				sp.y = y_stage-(((((double)roi.getY1()+(double)roi.getY2())/2.0)-(double)imageHeight/2.0)*pixelSizeUm);
-				msp.setLabel(roi.toString());
+				msp.setLabel(String.format("%s: %s", positionName, roi.toString()));
 				msp.add(sp);
 				msp.setDefaultXYStage("XYStage");
 				posList.addPosition(msp);
@@ -198,7 +201,7 @@ public class ROIFinder implements Module, ImageLogger {
         return taggedImage;
     }
     
-    public List<ROI> process(Image image, TaggedImage taggedImage, Logger logger, ImageLogRunner imageLog) {
+    public List<ROI> process(Image image, TaggedImage taggedImage, Logger logger, ImageLogRunner imageLog, double minRoiArea) {
     	List<ROI> rois = new ArrayList<ROI>();
         ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
         ImagePlus imp = new ImagePlus(image.toString(), processor);
@@ -277,8 +280,7 @@ public class ROIFinder implements Module, ImageLogger {
             // -> I’d suggest:
             // Select for area > 2000, check if object is at boundary of image (bx or by == 1)
             // ROI: upper left corner = bx/by with width/height
-            final int MIN_AREA = 2000;
-            if (area >= MIN_AREA && bx > 1 && by > 1 && bx+width < w && by+height < h) {
+            if (area >= minRoiArea && bx > 1 && by > 1 && bx+width < w && by+height < h) {
                 ROI roi = new ROI(image.getId(), (int)(bx*scale), (int)(by*scale), (int)(bx+width), (int)(by+height));
                 logger.info(String.format("Created new ROI record: %s", roi));
                 rois.add(roi);
@@ -290,8 +292,8 @@ public class ROIFinder implements Module, ImageLogger {
                 IJ.run(imp, "Draw", "");
             }
             else {
-            	if (area < MIN_AREA) {
-            		logger.info(String.format("Skipping, area %.2f is less than %d", area, MIN_AREA));
+            	if (area < minRoiArea) {
+            		logger.info(String.format("Skipping, area %.2f is less than %.2f", area, minRoiArea));
             	}
             	if (!(bx > 1 && by > 1 && bx+width < w && by+height < h)) {
             		logger.info(String.format("Skipping, ROI hits edge"));
@@ -319,6 +321,16 @@ public class ROIFinder implements Module, ImageLogger {
             @Override
             public Config[] retrieve() {
             	List<Config> configs = new ArrayList<Config>();
+
+            	Double pixelSizeUm = (Double)dialog.pixelSizeUm.getValue();
+            	if (pixelSizeUm != null) {
+            	    configs.add(new Config(ROIFinder.this.moduleId, "pixelSizeUm", pixelSizeUm.toString()));
+            	}
+
+            	Double minRoiArea = (Double)dialog.minRoiArea.getValue();
+            	if (minRoiArea != null) {
+            	    configs.add(new Config(ROIFinder.this.moduleId, "minRoiArea", minRoiArea.toString()));
+            	}
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -327,11 +339,28 @@ public class ROIFinder implements Module, ImageLogger {
             	for (Config c : configs) {
             		confs.put(c.getKey(), c);
             	}
+
+            	if (confs.containsKey("pixelSizeUm")) {
+            	    dialog.pixelSizeUm.setValue(new Double(confs.get("pixelSizeUm").getValue()));
+            	}
+            	if (confs.containsKey("minRoiArea")) {
+            	    dialog.minRoiArea.setValue(new Double(confs.get("minRoiArea").getValue()));
+            	}
                 return dialog;
             }
             @Override
             public ValidationError[] validate() {
             	List<ValidationError> errors = new ArrayList<ValidationError>();
+
+            	Double pixelSizeUm = (Double)dialog.pixelSizeUm.getValue();
+            	if (pixelSizeUm == null || pixelSizeUm == 0.0) {
+            	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for pixelSizeUm"));
+            	}
+
+            	Double minRoiArea = (Double)dialog.minRoiArea.getValue();
+            	if (minRoiArea == null || minRoiArea == 0.0) {
+            	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for Min ROI Area"));
+            	}
                 return errors.toArray(new ValidationError[0]);
             }
         };
@@ -398,11 +427,13 @@ public class ROIFinder implements Module, ImageLogger {
                     ImageCache imageCache = mmacquisition.getImageCache();
                     if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
                     // Get the tagged image from the image cache
-                    TaggedImage taggedImage = getTaggedImage(image, logger);
+                    TaggedImage taggedImage = image.getImage(imageCache);
                     logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
 
+                    double minRoiArea = new Double(config.get("minRoiArea").getValue());
+
                     ImageLogRunner imageLogRunner = new ImageLogRunner(task.getName());
-                    ROIFinder.this.process(image, taggedImage, logger, imageLogRunner);
+                    ROIFinder.this.process(image, taggedImage, logger, imageLogRunner, minRoiArea);
                     return imageLogRunner;
                 }
                 return null;

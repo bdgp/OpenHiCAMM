@@ -414,11 +414,6 @@ public class SlideImager implements Module {
                     configs.add(new Config(moduleId, 
                             "takeDummyImages", "no"));
                 }
-
-            	Double pixelSizeUm = (Double)slideImagerDialog.pixelSizeUm.getValue();
-            	if (pixelSizeUm != null) {
-            	    configs.add(new Config(SlideImager.this.moduleId, "pixelSizeUm", pixelSizeUm.toString()));
-            	}
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -449,10 +444,6 @@ public class SlideImager implements Module {
                     slideImagerDialog.takeDummyImagesNo.setSelected(true);
                 }
 
-            	if (conf.containsKey("pixelSizeUm")) {
-            	    slideImagerDialog.pixelSizeUm.setValue(new Double(conf.get("pixelSizeUm").getValue()));
-            	}
-
                 return slideImagerDialog;
             }
             @Override
@@ -475,10 +466,6 @@ public class SlideImager implements Module {
                             "You must enter one of either a position list file, or a position list name."));
                 }
 
-            	Double pixelSizeUm = (Double)slideImagerDialog.pixelSizeUm.getValue();
-            	if (pixelSizeUm == null || pixelSizeUm == 0.0) {
-            	    errors.add(new ValidationError(SlideImager.this.moduleId, "Please enter a nonzero value for pixelSizeUm"));
-            	}
                 return errors.toArray(new ValidationError[0]);
             }
         };
