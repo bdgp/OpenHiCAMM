@@ -44,7 +44,7 @@ public class WorkflowConfigurationDialog extends JDialog {
 	    this.configurations = configurations;
 	    this.config = config;
 
-	    this.setPreferredSize(new Dimension(800,825));
+	    this.setPreferredSize(new Dimension(1024,768));
 	    final WorkflowConfigurationDialog thisDialog = this;
         getContentPane().setLayout(new MigLayout("", "[grow][]", "[grow][]"));
         
