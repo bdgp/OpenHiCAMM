@@ -327,6 +327,11 @@ public class ROIFinder implements Module, ImageLogger {
             	    configs.add(new Config(ROIFinder.this.moduleId, "pixelSizeUm", pixelSizeUm.toString()));
             	}
 
+            	Double hiResPixelSizeUm = (Double)dialog.hiResPixelSizeUm.getValue();
+            	if (hiResPixelSizeUm != null) {
+            	    configs.add(new Config(ROIFinder.this.moduleId, "hiResPixelSizeUm", hiResPixelSizeUm.toString()));
+            	}
+
             	Double minRoiArea = (Double)dialog.minRoiArea.getValue();
             	if (minRoiArea != null) {
             	    configs.add(new Config(ROIFinder.this.moduleId, "minRoiArea", minRoiArea.toString()));
@@ -343,6 +348,9 @@ public class ROIFinder implements Module, ImageLogger {
             	if (confs.containsKey("pixelSizeUm")) {
             	    dialog.pixelSizeUm.setValue(new Double(confs.get("pixelSizeUm").getValue()));
             	}
+            	if (confs.containsKey("hiResPixelSizeUm")) {
+            	    dialog.hiResPixelSizeUm.setValue(new Double(confs.get("hiResPixelSizeUm").getValue()));
+            	}
             	if (confs.containsKey("minRoiArea")) {
             	    dialog.minRoiArea.setValue(new Double(confs.get("minRoiArea").getValue()));
             	}
@@ -355,6 +363,11 @@ public class ROIFinder implements Module, ImageLogger {
             	Double pixelSizeUm = (Double)dialog.pixelSizeUm.getValue();
             	if (pixelSizeUm == null || pixelSizeUm == 0.0) {
             	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for pixelSizeUm"));
+            	}
+
+            	Double hiResPixelSizeUm = (Double)dialog.hiResPixelSizeUm.getValue();
+            	if (hiResPixelSizeUm == null || hiResPixelSizeUm == 0.0) {
+            	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for hiResPixelSizeUm"));
             	}
 
             	Double minRoiArea = (Double)dialog.minRoiArea.getValue();
