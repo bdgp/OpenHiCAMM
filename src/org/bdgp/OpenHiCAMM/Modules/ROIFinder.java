@@ -115,8 +115,11 @@ public class ROIFinder implements Module, ImageLogger {
 
     	try {
 			double pixelSizeUm = new Double(config.get("pixelSizeUm").getValue());
-			logger.info(String.format("Using pixedSizeUm: %f", pixelSizeUm));
+			logger.info(String.format("Using pixelSizeUm: %f", pixelSizeUm));
 			
+			double hiResPixelSizeUm = new Double(config.get("hiResixelSizeUm").getValue());
+			logger.info(String.format("Using hiResPixelSizeUm: %f", hiResPixelSizeUm));
+
 			double minRoiArea = new Double(config.get("minRoiArea").getValue());
 			logger.info(String.format("Using minRoiArea: %f", minRoiArea));
 
@@ -127,6 +130,9 @@ public class ROIFinder implements Module, ImageLogger {
 			int imageHeight = MDUtils.getHeight(taggedImage.tags);
 			String positionName = MDUtils.getPositionName(taggedImage.tags);
 			
+            long cameraWidth = this.script.getMMCore().getImageWidth();
+            long cameraHeight = this.script.getMMCore().getImageHeight();
+           
 			double x_stage = MDUtils.getXPositionUm(taggedImage.tags);
 			double y_stage = MDUtils.getYPositionUm(taggedImage.tags);
 			
@@ -137,18 +143,37 @@ public class ROIFinder implements Module, ImageLogger {
             // Convert the ROIs into a PositionList
 			PositionList posList = new PositionList();
 			for (ROI roi : rois) {
-				MultiStagePosition msp = new MultiStagePosition();
-				StagePosition sp = new StagePosition();
-				sp.numAxes = 2;
-				sp.stageName = "XYStage";
-				sp.x = x_stage-(((((double)roi.getX1()+(double)roi.getX2())/2.0)-(double)imageWidth/2.0)*pixelSizeUm);
-				sp.y = y_stage-(((((double)roi.getY1()+(double)roi.getY2())/2.0)-(double)imageHeight/2.0)*pixelSizeUm);
-				msp.setLabel(String.format("%s: %s", positionName, roi.toString()));
-				msp.add(sp);
-				msp.setDefaultXYStage("XYStage");
-				posList.addPosition(msp);
-				logger.info(String.format("Storing StagePosition(numAxes: %d, stageName: %s, x=%.2f, y=%.2f)",
-						sp.numAxes, Util.escape(sp.stageName), sp.x, sp.y));
+			    // We need to potentially create a grid of Stage positions in order to capture all of the 
+			    // ROI.
+			    long roiWidth = roi.getX2()-roi.getX1()+1;
+			    long roiHeight = roi.getY2()-roi.getY1()+1;
+			    long tileWidth = (long)Math.floor((double)cameraWidth * hiResPixelSizeUm);
+			    long tileHeight = (long)Math.floor((double)cameraHeight * hiResPixelSizeUm);
+			    long tileXCount = (long)Math.ceil((double)roiWidth / (double)tileWidth);
+			    long tileYCount = (long)Math.ceil((double)roiHeight / (double)tileHeight);
+			    long tileSetWidth = tileXCount * tileWidth;
+			    long tileSetHeight = tileYCount * tileHeight;
+			    long tileXOffset = (long)Math.floor((roi.getX1() + ((double)roiWidth / 2.0)) - ((double)tileSetWidth / 2.0) + ((double)tileWidth / 2.0));
+			    long tileYOffset = (long)Math.floor((roi.getY1() + ((double)roiHeight / 2.0)) - ((double)tileSetHeight / 2.0) + ((double)tileHeight / 2.0));
+
+			    for (int x=0; x < tileXCount; ++x) {
+                    for (int y=0; y < tileYCount; ++y) {
+                        long tileX = (x*tileWidth) + tileXOffset;
+                        long tileY = (y*tileHeight) + tileYOffset;
+                        MultiStagePosition msp = new MultiStagePosition();
+                        StagePosition sp = new StagePosition();
+                        sp.numAxes = 2;
+                        sp.stageName = "XYStage";
+                        sp.x = x_stage-((tileX-(double)imageWidth/2.0)*pixelSizeUm);
+                        sp.y = y_stage-((tileY-(double)imageHeight/2.0)*pixelSizeUm);
+                        msp.setLabel(String.format("%s: %s", positionName, roi.toString()));
+                        msp.add(sp);
+                        msp.setDefaultXYStage("XYStage");
+                        posList.addPosition(msp);
+                        logger.info(String.format("Storing StagePosition(numAxes: %d, stageName: %s, x=%.2f, y=%.2f, tileX=%d, tileY=%d)",
+                                sp.numAxes, Util.escape(sp.stageName), sp.x, sp.y, tileX, tileY));
+                    }
+			    }
 			}
 			try { logger.info(String.format("Produced position list of ROIs:%n%s", posList.serialize())); } 
 			catch (MMSerializationException e) {throw new RuntimeException(e);}
