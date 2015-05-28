@@ -147,8 +147,8 @@ public class ROIFinder implements Module, ImageLogger {
 			    // ROI.
 			    long roiWidth = roi.getX2()-roi.getX1()+1;
 			    long roiHeight = roi.getY2()-roi.getY1()+1;
-			    long tileWidth = (long)Math.floor((double)cameraWidth * hiResPixelSizeUm);
-			    long tileHeight = (long)Math.floor((double)cameraHeight * hiResPixelSizeUm);
+			    long tileWidth = (long)Math.floor(((double)cameraWidth / hiResPixelSizeUm) * pixelSizeUm);
+			    long tileHeight = (long)Math.floor(((double)cameraHeight / hiResPixelSizeUm) * pixelSizeUm);
 			    long tileXCount = (long)Math.ceil((double)roiWidth / (double)tileWidth);
 			    long tileYCount = (long)Math.ceil((double)roiHeight / (double)tileHeight);
 			    long tileSetWidth = tileXCount * tileWidth;
