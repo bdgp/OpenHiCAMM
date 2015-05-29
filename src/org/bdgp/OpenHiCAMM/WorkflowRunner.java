@@ -43,7 +43,6 @@ import com.j256.ormlite.stmt.StatementBuilder.StatementType;
 import com.j256.ormlite.support.CompiledStatement;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
-import static org.bdgp.OpenHiCAMM.Util.set;
 
 public class WorkflowRunner {
     /**
@@ -440,7 +439,6 @@ public class WorkflowRunner {
      */
     public Future<Status> run(
             final String startModuleId, 
-            final boolean resume,
             final Map<String,Config> inheritedTaskConfig) 
     {
         int cores = Runtime.getRuntime().availableProcessors();
@@ -452,19 +450,11 @@ public class WorkflowRunner {
             	try {
                     WorkflowRunner.this.isStopped = false;
 
-                    // If we're not resuming, delete and re-create the task records
-                    if (!resume) {
-                        //WorkflowRunner.this.deleteTaskRecords(startModuleId);
-                        WorkflowRunner.this.deleteTaskRecords();
-                        WorkflowRunner.this.createTaskRecords(startModuleId);
-                    }
-                    // In resume mode, the task records aren't re-created. So we need to clear out 
-                    // invalid statuses and the parent Task ID flags.
-                    else {
-                        Dao<Task> taskStatus = WorkflowRunner.this.getTaskStatus();
-                        taskStatus.update(set("status", Status.NEW), where("status", Status.IN_PROGRESS));
-                        taskStatus.update(set("parentTaskId", null));
-                    }
+                    // delete and re-create the task records
+                    // WorkflowRunner.this.deleteTaskRecords(startModuleId);
+                    WorkflowRunner.this.deleteTaskRecords();
+                    WorkflowRunner.this.createTaskRecords(startModuleId);
+
                     // Notify the task listeners of the maximum task count
                     for (TaskListener listener : taskListeners) {
                         listener.taskCount(getTaskCount(startModuleId));
@@ -768,28 +758,14 @@ public class WorkflowRunner {
     }
     
     /** 
-     * Stop any new tasks from getting queued up.
-     */
-    public void stop() {
-    	this.logger.warning("Stopping all jobs");
-        isStopped = true;
-
-        // notify any task listeners
-        for (TaskListener listener : taskListeners) {
-            listener.stopped();
-        }
-        pool.shutdown();
-    }
-
-    /** 
      * Stop all actively executing tasks and stop processing any waiting tasks.
      */
-    public List<Runnable> kill() {
-    	this.logger.warning("Killing all jobs");
+    public List<Runnable> stop() {
+    	this.logger.warning("Stopping all jobs");
     	isStopped = true;
         // notify any task listeners
         for (TaskListener listener : taskListeners) {
-            listener.killed();
+            listener.stopped();
         }
         List<Runnable> runnables = pool.shutdownNow();
         return runnables;
