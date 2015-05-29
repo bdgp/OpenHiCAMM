@@ -12,7 +12,6 @@ import javax.swing.SwingUtilities;
 
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
-import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.WorkflowInstance;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
@@ -46,7 +45,6 @@ public class WorkflowDialog extends JDialog {
     JComboBox<String> startModule;
     JButton editWorkflowButton;
     JButton startButton;
-    JButton resumeButton;
     JLabel lblConfigure;
     JButton btnConfigure;
     JButton btnCreateNewInstance;
@@ -90,15 +88,6 @@ public class WorkflowDialog extends JDialog {
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
                     initWorkflowRunner(false);
-
-                    // should the resume button be enabled?
-                    resumeButton.setEnabled(false);
-                    if (workflowRunner != null) {
-                        List<Task> tasks = workflowRunner.getTaskStatus().select();
-                        if (tasks.size() > 0) {
-                            resumeButton.setEnabled(true);
-                        }
-                    }
                 }
             }});
         
@@ -163,26 +152,12 @@ public class WorkflowDialog extends JDialog {
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                     WorkflowDialog.this, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
                 if (config.validateConfiguration()) {
-                	start(false);
+                	start();
                 }
             }
         });
         startButton.setEnabled(false);
         getContentPane().add(startButton, "flowx,cell 1 4,alignx trailing");
-        
-        resumeButton = new JButton("Resume");
-        resumeButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                Map<String,Configuration> configurations = workflowRunner.getConfigurations();
-                WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
-                    WorkflowDialog.this, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
-                if (config.validateConfiguration()) {
-                	start(true);
-                }
-            }
-        });
-        resumeButton.setEnabled(false);
-        getContentPane().add(resumeButton, "flowx,cell 1 4, alignx trailing");
         
         editWorkflowButton = new JButton("Edit Workflow...");
         editWorkflowButton.setEnabled(false);
@@ -289,29 +264,12 @@ public class WorkflowDialog extends JDialog {
             workflowInstance.setEnabled(true);
             if (workflowInstances.size()>0) {
                 initWorkflowRunner(false);
-                // should the resume button be enabled?
-                resumeButton.setEnabled(false);
-                if (workflowRunner != null) {
-                    List<Task> tasks = workflowRunner.getTaskStatus().select();
-                    if (tasks.size() > 0) {
-                        resumeButton.setEnabled(true);
-                    }
-                }
             }
                 
             if (startModules.size() > 0) {
                 btnConfigure.setEnabled(true);
                 startButton.setEnabled(true);
                 btnCreateNewInstance.setEnabled(true);
-
-                // should the resume button be enabled?
-                resumeButton.setEnabled(false);
-                if (workflowRunner != null) {
-                	List<Task> tasks = workflowRunner.getTaskStatus().select();
-                	if (tasks.size() > 0) {
-                		resumeButton.setEnabled(true);
-                	}
-                }
             }
     	}
     }
@@ -331,10 +289,9 @@ public class WorkflowDialog extends JDialog {
 
     /**
      * Start the workflow runner and open the Workflow Runner dialog.
-     * @param resume Are we running in "New" or "Resume" mode? 
      * Resume mode does not delete and re-create the Task/TaskConfig records before starting.
      */
-    public void start(boolean resume) {
+    public void start() {
         // Make sure the workflow runner is initialized
         initWorkflowRunner(false);
         // Get the selected start module
@@ -350,7 +307,7 @@ public class WorkflowDialog extends JDialog {
         // Refresh the UI controls
         refresh();
         // Start the workflow runner
-        workflowRunner.run(startModuleId, resume, null);
+        workflowRunner.run(startModuleId, null);
 
         // Make the workflow runner dialog visible
         SwingUtilities.invokeLater(new Runnable() {

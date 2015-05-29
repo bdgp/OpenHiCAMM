@@ -73,16 +73,7 @@ public class WorkflowRunnerDialog extends JDialog {
         });
         getContentPane().add(btnStop, "flowx,cell 1 2,alignx trailing");
         
-        final JButton btnKill = new JButton("Kill");
-        btnKill.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                workflowRunner.kill();
-            }
-        });
-        getContentPane().add(btnKill, "cell 1 2");
-        
         final Set<Task> seen = new HashSet<Task>();
-        final Boolean[] stopped = {false};
         progressBar.setIndeterminate(false);
 
         // logging output
@@ -122,14 +113,13 @@ public class WorkflowRunnerDialog extends JDialog {
             @Override public void notifyTask(final Task task) {
                 SwingUtilities.invokeLater(new Runnable() {
                    @Override public void run() {
-                        if (stopped[0] == false && !seen.contains(task)) {
+                        if (!seen.contains(task)) {
                             seen.add(task);
                             progressBar.setValue(seen.size());
                             if (WorkflowRunnerDialog.this.maxTasks != null && 
                                 seen.size() == WorkflowRunnerDialog.this.maxTasks) 
                             {
                                 btnStop.setEnabled(false);
-                                btnKill.setEnabled(false);
                                 btnClose.setEnabled(true);
                             }
                         }
@@ -140,20 +130,7 @@ public class WorkflowRunnerDialog extends JDialog {
                 SwingUtilities.invokeLater(new Runnable() {
                    @Override public void run() {
                         progressBar.setValue(0);
-                        stopped[0] = true;
                         btnStop.setEnabled(false);
-                        btnKill.setEnabled(false);
-                        btnClose.setEnabled(true);
-                   }
-                });
-			}
-			@Override public void killed() {
-                SwingUtilities.invokeLater(new Runnable() {
-                   @Override public void run() {
-                        progressBar.setValue(0);
-                        stopped[0] = true;
-                        btnStop.setEnabled(false);
-                        btnKill.setEnabled(false);
                         btnClose.setEnabled(true);
                    }
                 });
