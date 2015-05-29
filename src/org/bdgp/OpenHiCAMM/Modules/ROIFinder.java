@@ -117,7 +117,7 @@ public class ROIFinder implements Module, ImageLogger {
 			double pixelSizeUm = new Double(config.get("pixelSizeUm").getValue());
 			logger.info(String.format("Using pixelSizeUm: %f", pixelSizeUm));
 			
-			double hiResPixelSizeUm = new Double(config.get("hiResixelSizeUm").getValue());
+			double hiResPixelSizeUm = new Double(config.get("hiResPixelSizeUm").getValue());
 			logger.info(String.format("Using hiResPixelSizeUm: %f", hiResPixelSizeUm));
 
 			double minRoiArea = new Double(config.get("minRoiArea").getValue());
