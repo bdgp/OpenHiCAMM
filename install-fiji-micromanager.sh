@@ -45,7 +45,7 @@ cd micromanager
 # Configure, build, and install
 ./autogen.sh
 ./configure --enable-imagej-plugin="$FIJIDIR" --with-ij-jar="$(echo "$FIJIDIR"/jars/ij*.jar)"
-ant -f buildscripts/fetchdeps.xml
+make fetchdeps
 
 make -j "$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
 make install
