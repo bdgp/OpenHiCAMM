@@ -135,6 +135,10 @@
       <id>ormlite</id>
       <url>http://ormlite.com/releases/</url>
     </repository>
+    <repository>
+      <id>imagej</id>
+      <url>http://maven.imagej.net/content/repositories/thirdparty/</url>
+    </repository>
   </repositories>
   <dependencies>
     <dependency>
@@ -155,17 +159,17 @@
     <dependency>
       <groupId>MicroManager</groupId>
       <artifactId>MMJ_</artifactId>
-      <version>1.4.21</version>
+      <version>1.4.22</version>
     </dependency>
     <dependency>
       <groupId>MicroManager</groupId>
       <artifactId>MMCoreJ</artifactId>
-      <version>1.4.21</version>
+      <version>1.4.22</version>
     </dependency>
     <dependency>
       <groupId>MicroManager</groupId>
       <artifactId>PixelCalibrator</artifactId>
-      <version>1.4.21</version>
+      <version>1.4.22</version>
     </dependency>
     <dependency>
       <groupId>org.hsqldb</groupId>
@@ -191,6 +195,11 @@
       <groupId>com.miglayout</groupId>
       <artifactId>miglayout</artifactId>
       <version>3.7.4</version>
+    </dependency>
+    <dependency>
+      <groupId>edu.mines</groupId>
+      <artifactId>mines-jtk</artifactId>
+      <version>20100113</version>
     </dependency>
   </dependencies>
 </project>
