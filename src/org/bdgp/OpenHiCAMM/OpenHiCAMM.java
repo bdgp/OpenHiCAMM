@@ -12,7 +12,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
-import org.bdgp.OpenHiCAMM.Modules.AutoFocus;
 import org.bdgp.OpenHiCAMM.Modules.ImageStitcher;
 import org.bdgp.OpenHiCAMM.Modules.ROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.SlideImager;
@@ -39,7 +38,7 @@ public class OpenHiCAMM implements MMPlugin {
 	
     // Add the AutoFocus plugin
 	static {
-        MMStudio.getInstance().installAutofocusPlugin(AutoFocus.class);
+        MMStudio.getInstance().installAutofocusPlugin("BDGPAutoFocus");
 	}
 
 	/**

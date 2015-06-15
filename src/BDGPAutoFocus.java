@@ -1,4 +1,4 @@
-package org.bdgp.OpenHiCAMM.Modules;
+
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -30,7 +30,7 @@ import edu.mines.jtk.dsp.FftReal;
  * @author: Pakpoom Subsoontorn & Hernan Garcia, changed to FFT Bandpass Analysis by Stephan Preib
  * 
  */
-public class AutoFocus extends AutofocusBase implements PlugIn, Autofocus {
+public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
    private static final String KEY_SIZE_FIRST = "1st step size";
    private static final String KEY_NUM_FIRST = "1st step number";
@@ -69,7 +69,7 @@ public class AutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     private double curSh;
     private double bestSh;
 
-    public AutoFocus() {
+    public BDGPAutoFocus() {
     	super();
 
       // set-up properties
