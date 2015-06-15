@@ -9,7 +9,6 @@ import ij.process.ImageProcessor;
 import ij.process.ShortProcessor;
 
 import java.awt.Color;
-import java.util.prefs.Preferences;
 import java.util.Date;
 import java.lang.System;
 
@@ -33,40 +32,36 @@ import edu.mines.jtk.dsp.FftReal;
  */
 public class AutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
-    private static final String KEY_SIZE_FIRST = "size_first";
-    private static final String KEY_NUM_FIRST = "num_first";
-    private static final String KEY_SIZE_SECOND = "size_second";
-    private static final String KEY_NUM_SECOND = "num_second";
-    private static final String KEY_THRES = "thres";
-    private static final String KEY_CROP_SIZE = "crop_size";
-    private static final String KEY_CHANNEL = "channel";
-    private static final String AF_SETTINGS_NODE = "micro-manager/extensions/autofocus";
-    private static final String AF_DEVICE_NAME = "JAF(H&P)";
+   private static final String KEY_SIZE_FIRST = "1st step size";
+   private static final String KEY_NUM_FIRST = "1st step number";
+   private static final String KEY_SIZE_SECOND = "2nd step size";
+   private static final String KEY_NUM_SECOND = "2nd step number";
+   private static final String KEY_THRES    = "Threshold";
+   private static final String KEY_CROP_SIZE = "Crop ratio";
+   private static final String KEY_CHANNEL = "Channel";
+   //private static final String AF_SETTINGS_NODE = "micro-manager/extensions/autofocus";
+   
+   private static final String AF_DEVICE_NAME = "BDGP";
 
     /*private ImagePlus outputRough = null;
     private ImageStack outputStackRough = null;
     private ImagePlus outputFine = null;
     private ImageStack outputStackFine = null;*/
 
-
     private CMMCore core_;
     private ImageProcessor ipCurrent_ = null;
 
-
-    public double SIZE_FIRST = 2; //
-    public double NUM_FIRST = 1; // +/- #of snapshot
+    public double SIZE_FIRST = 2;//
+    public int NUM_FIRST = 1; // +/- #of snapshot
     public double SIZE_SECOND = 0.2;
-    public double NUM_SECOND = 5;
+    public int NUM_SECOND = 5;
     public double THRES = 0.02;
-    public double CROP_SIZE = 0.2;
-    public String CHANNEL = "Bright-Field";
-
+    public double CROP_SIZE = 0.2; 
+    public String CHANNEL="";
 
     private double indx = 0; //snapshot show new window iff indx = 1
 
     private boolean verbose_ = true; // displaying debug info or not
-
-    private Preferences prefs_; //********
 
     private double curDist;
     private double baseDist;
@@ -74,11 +69,19 @@ public class AutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     private double curSh;
     private double bestSh;
 
-    public AutoFocus()
-    { //constructor!!!
-        Preferences root = Preferences.userNodeForPackage(this.getClass());
-        prefs_ = root.node(root.absolutePath() + "/" + AF_SETTINGS_NODE);
-        loadSettings();
+    public AutoFocus() {
+    	super();
+
+      // set-up properties
+      createProperty(KEY_SIZE_FIRST, Double.toString(SIZE_FIRST));
+      createProperty(KEY_NUM_FIRST, Integer.toString(NUM_FIRST));
+      createProperty(KEY_SIZE_SECOND, Double.toString(SIZE_SECOND));
+      createProperty(KEY_NUM_SECOND, Integer.toString(NUM_SECOND));
+      createProperty(KEY_THRES, Double.toString(THRES));
+      createProperty(KEY_CROP_SIZE, Double.toString(CROP_SIZE));
+      createProperty(KEY_CHANNEL, CHANNEL);
+      
+      loadSettings();
     }
 
     public void run(String arg)
@@ -91,11 +94,6 @@ public class AutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             verbose_ = false;
         else
             verbose_ = true;
-
-        if (arg.compareTo("options") == 0)
-        {
-            showOptionsDialog();
-        }
 
         if (core_ == null)
         {
@@ -630,34 +628,24 @@ public class AutoFocus extends AutofocusBase implements PlugIn, Autofocus {
         core_ = core;
     }
 
-    public void showOptionsDialog()
-    {
-        AFOptionsDlg dlg = new AFOptionsDlg(this);
-        dlg.setVisible(true);
-        saveSettings();
-    }
+    @Override
+    public void applySettings() {
+      try {
+         SIZE_FIRST = Double.parseDouble(getPropertyValue(KEY_SIZE_FIRST));
+         NUM_FIRST = Integer.parseInt(getPropertyValue(KEY_NUM_FIRST));
+         SIZE_SECOND = Double.parseDouble(getPropertyValue(KEY_SIZE_SECOND));
+         NUM_SECOND = Integer.parseInt(getPropertyValue(KEY_NUM_SECOND));
+         THRES = Double.parseDouble(getPropertyValue(KEY_THRES));
+         CROP_SIZE = Double.parseDouble(getPropertyValue(KEY_CROP_SIZE));
+         CHANNEL = getPropertyValue(KEY_CHANNEL);
+      
+      } catch (NumberFormatException e) {
+         e.printStackTrace();
+      } catch (MMException e) {
+         e.printStackTrace();
+      }
+   }
 
-    public void loadSettings()
-    {
-        SIZE_FIRST = prefs_.getDouble(KEY_SIZE_FIRST, SIZE_FIRST);
-        NUM_FIRST = prefs_.getDouble(KEY_NUM_FIRST, NUM_FIRST);
-        SIZE_SECOND = prefs_.getDouble(KEY_SIZE_SECOND, SIZE_SECOND);
-        NUM_SECOND = prefs_.getDouble(KEY_NUM_SECOND, NUM_SECOND);
-        THRES = prefs_.getDouble(KEY_THRES, THRES);
-        CROP_SIZE = prefs_.getDouble(KEY_CROP_SIZE, CROP_SIZE);
-        CHANNEL = prefs_.get(KEY_CHANNEL, CHANNEL);
-    }
-
-    public void saveSettings()
-    {
-        prefs_.putDouble(KEY_SIZE_FIRST, SIZE_FIRST);
-        prefs_.putDouble(KEY_NUM_FIRST, NUM_FIRST);
-        prefs_.putDouble(KEY_SIZE_SECOND, SIZE_SECOND);
-        prefs_.putDouble(KEY_NUM_SECOND, NUM_SECOND);
-        prefs_.putDouble(KEY_THRES, THRES);
-        prefs_.putDouble(KEY_CROP_SIZE, CROP_SIZE);
-        prefs_.put(KEY_CHANNEL, CHANNEL);
-    }
 
     /**
      * <p>Title: </p>
@@ -751,11 +739,6 @@ public class AutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
 
 	@Override
-	public void applySettings() {
-		loadSettings();
-	}
-
-	@Override
 	public double computeScore(ImageProcessor impro) {
         return computeFFT(impro, 15, 80, 1);
 	}
@@ -782,7 +765,6 @@ public class AutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
 	@Override
 	public int getNumberOfImages() {
-		// TODO Auto-generated method stub
 		return 0;
 	}
 }

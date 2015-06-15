@@ -12,11 +12,13 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
+import org.bdgp.OpenHiCAMM.Modules.AutoFocus;
 import org.bdgp.OpenHiCAMM.Modules.ImageStitcher;
 import org.bdgp.OpenHiCAMM.Modules.ROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.SlideImager;
 import org.bdgp.OpenHiCAMM.Modules.TIGenerator;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
+import org.micromanager.MMStudio;
 import org.micromanager.api.MMPlugin;
 import org.micromanager.api.ScriptInterface;
 import org.micromanager.utils.JavaUtils;
@@ -34,6 +36,11 @@ public class OpenHiCAMM implements MMPlugin {
 	 */
 	public static String menuName = "OpenHiCAMM";	
 	public static String tooltipDescription = "Automated microscope imaging workflow tool";
+	
+    // Add the AutoFocus plugin
+	static {
+        MMStudio.getInstance().installAutofocusPlugin(AutoFocus.class);
+	}
 
 	/**
 	 * The main app calls this method to remove the module window
@@ -147,7 +154,7 @@ public class OpenHiCAMM implements MMPlugin {
             moduleNames.add(ROIFinder.class.getName());
             moduleNames.add(TIGenerator.class.getName());
             moduleNames.add(ImageStitcher.class.getName());
-
+            
             // Look in the mmslidemodules/ directory for any additional workflow modules.
             File pluginRootDir = new File(System.getProperty("org.bdgp.mmslide.module.path", MMSLIDEMODULESDIR));
             List<Class<?>> classes = JavaUtils.findAndLoadClasses(pluginRootDir, 0);
