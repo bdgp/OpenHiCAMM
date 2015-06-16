@@ -3,6 +3,7 @@
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.ImageWindow;
+import ij.io.FileSaver;
 import ij.plugin.PlugIn;
 import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
@@ -31,6 +32,7 @@ import edu.mines.jtk.dsp.FftReal;
  * 
  */
 public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
+   private boolean verbose_ = true; // displaying debug info or not
 
    private static final String KEY_SIZE_FIRST = "1st step size";
    private static final String KEY_NUM_FIRST = "1st step number";
@@ -60,8 +62,6 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     public String CHANNEL="";
 
     private double indx = 0; //snapshot show new window iff indx = 1
-
-    private boolean verbose_ = true; // displaying debug info or not
 
     private double curDist;
     private double baseDist;
@@ -114,12 +114,12 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
         {
             core_.setShutterOpen(true);
             core_.setAutoShutter(false);
-
+            
             //########System setup##########
-            core_.setConfig("Channel", CHANNEL);
+            //core_.setConfig("Channel", CHANNEL);
             core_.waitForSystem();
-            core_.waitForDevice(core_.getShutterDevice());
-
+            //core_.waitForDevice(core_.getShutterDevice());
+            
             //set z-distance to the lowest z-distance of the stack
             curDist = core_.getPosition(core_.getFocusDevice());
             baseDist = curDist - SIZE_FIRST * NUM_FIRST;
@@ -144,14 +144,14 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             double focusBin = 4.0;
             double exposureFactor = (bin/focusBin) * (bin/focusBin);
 
-            //IJ.log("Setting Exposure to "+ exposure * exposureFactor +"....");
+            if (verbose_) IJ.log("Setting Exposure to "+ exposure * exposureFactor +"....");
             core_.setExposure(exposure * exposureFactor);
 
-            //IJ.log("Setting Binning to 4....");
+            if (verbose_) IJ.log("Setting Binning to 4....");
             core_.setProperty(core_.getCameraDevice(), "Binning", "4");
 
-            //IJ.log("Setting Camera to 8bit ...");
-            core_.setProperty(core_.getCameraDevice(), "PixelType", "8bit");
+            if (verbose_) IJ.log("Setting Camera to 8bit ...");
+            core_.setProperty(core_.getCameraDevice(), "PixelType", "Grayscale");
 
             //
             // End of insertion
@@ -170,8 +170,9 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
                 //curSh = sharpNess(ipCurrent_);
                 curSh = computeFFT(ipCurrent_, 15, 80, 1);
+                if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", baseDist + i * SIZE_FIRST, curSh));
 
-                //IJ.log(curDist + "\t" + curSh);
+                if (verbose_) IJ.log(curDist + "\t" + curSh);
 
                 if (curSh > bestSh)
                 {
@@ -203,8 +204,9 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
                 //curSh = sharpNess(ipCurrent_);
                 curSh = computeFFT(ipCurrent_, 15, 80, 1);
+                if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", baseDist + i * SIZE_FIRST, curSh));
 
-                //IJ.log(curDist + "\t" + curSh);
+                if (verbose_) IJ.log(curDist + "\t" + curSh);
 
                 if (curSh > bestSh)
                 {
@@ -222,13 +224,13 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             //
 
             // reset binning and re-adjust the exposure
-            // IJ.log("ReSet Exposure....");
+            if (verbose_) IJ.log("ReSet Exposure....");
             core_.setExposure(exposure);
 
-            // IJ.log("ReSet Binning....");
+            if (verbose_) IJ.log("ReSet Binning....");
             core_.setProperty(core_.getCameraDevice(), "Binning", binning);
 
-            //IJ.log("ReSet Camera Bits....");
+            if (verbose_) IJ.log("ReSet Camera Bits....");
             core_.setProperty(core_.getCameraDevice(), "PixelType", bits);
 
             //
@@ -546,6 +548,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
 
     //take a snapshot and save pixel values in ipCurrent_
+    static int imgCounter=0;
     private boolean snapSingleImage()
     {
 
@@ -556,6 +559,13 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             ImagePlus implus = newWindow(); // this step will create a new window iff indx = 1
             implus.getProcessor().setPixels(img);
             ipCurrent_ = implus.getProcessor();
+            if (verbose_) {
+                FileSaver fileSaver = new FileSaver(implus);
+                String filename = String.format("debug_%d.tif", imgCounter);
+                imgCounter++;
+                fileSaver.saveAsTiff(filename);
+                IJ.log(String.format("Wrote image to file: %s", filename));
+            }
         } catch (Exception e)
         {
             IJ.error(e.getMessage());
