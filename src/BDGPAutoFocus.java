@@ -32,7 +32,7 @@ import edu.mines.jtk.dsp.FftReal;
  * 
  */
 public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
-   private boolean verbose_ = true; // displaying debug info or not
+   private static boolean verbose_ = false; // displaying debug info or not
 
    private static final String KEY_SIZE_FIRST = "1st step size";
    private static final String KEY_NUM_FIRST = "1st step number";
@@ -67,10 +67,17 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     private double baseDist;
     private double bestDist;
     private double curSh;
+    private double curShScale; //sharpness rescaling factor
     private double bestSh;
+    
+    // variables for skipping autofocus every acquisition
+    private int skipCounter = -1;
+    public static final int MAX_SKIP = 20;
 
     public BDGPAutoFocus() {
     	super();
+    	
+    	this.skipCounter = -1;
 
       // set-up properties
       createProperty(KEY_SIZE_FIRST, Double.toString(SIZE_FIRST));
@@ -86,6 +93,14 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
     public void run(String arg)
     {
+        // only run autofocus every MAX_SKIP acquisitions
+        skipCounter++;
+        if (skipCounter > MAX_SKIP) skipCounter = 0;
+        if (skipCounter != 0) {
+            IJ.log(String.format("Skipping autofocus %d/%d", skipCounter, MAX_SKIP));
+            return;
+        }
+        
         bestDist = 5000;
         bestSh = 0;
         
