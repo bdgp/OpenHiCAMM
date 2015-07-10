@@ -54,7 +54,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     private ImageProcessor ipCurrent_ = null;
 
     public double SIZE_FIRST = 2;//
-    public int NUM_FIRST = 1; // +/- #of snapshot
+    public int NUM_FIRST = 10; // +/- #of snapshot
     public double SIZE_SECOND = 0.2;
     public int NUM_SECOND = 5;
     public double THRES = 0.02;
@@ -169,7 +169,10 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                 // indx =0;
 
                 //curSh = sharpNess(ipCurrent_);
-                curSh = computeFFT(ipCurrent_, 15, 80, 1);
+                curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
+                curShScale = computeFFT(ipCurrent_, 5, 20, 0.75); //local rescaling
+                curSh = curSh / curShScale;
+                
                 if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", baseDist + i * SIZE_FIRST, curSh));
 
                 if (verbose_) IJ.log(curDist + "\t" + curSh);
@@ -203,7 +206,10 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                 // indx =0;
 
                 //curSh = sharpNess(ipCurrent_);
-                curSh = computeFFT(ipCurrent_, 15, 80, 1);
+                curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
+                curShScale = computeFFT(ipCurrent_, 5, 20, 0.75); //local rescaling
+                curSh = curSh / curShScale;
+                
                 if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", baseDist + i * SIZE_FIRST, curSh));
 
                 if (verbose_) IJ.log(curDist + "\t" + curSh);
@@ -545,7 +551,6 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
         return sum;
     }
-
 
     //take a snapshot and save pixel values in ipCurrent_
     static int imgCounter=0;
