@@ -8,8 +8,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 import java.util.prefs.Preferences;
@@ -46,6 +48,7 @@ import org.micromanager.MMOptions;
 import org.micromanager.MMStudio;
 import org.micromanager.acquisition.AcquisitionWrapperEngine;
 import org.micromanager.acquisition.MMAcquisition;
+import org.micromanager.api.Autofocus;
 import org.micromanager.api.ImageCache;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
@@ -225,6 +228,28 @@ public class SlideImager implements Module, ImageLogger {
                     catch (InterruptedException e) {logger.info("Sleep thread was interrupted");}
                 }
             }
+            
+            // Set the autofocus device
+            try { 
+                this.script.getAutofocusManager().selectDevice("BDGP"); 
+                Autofocus autofocus = this.script.getAutofocus();
+
+                // Only pass these settings to the autofocus object:
+                Set<String> autoFocusKeys = new HashSet<String>();
+                autoFocusKeys.add("minAutoFocus");
+                autoFocusKeys.add("maxAutoFocus");
+
+                // Set the autofocus property values
+                for (Map.Entry<String, Config> entry : conf.entrySet()) {
+                    if (autoFocusKeys.contains(entry.getKey())) {
+                        autofocus.setPropertyValue(entry.getKey(), entry.getValue().getValue());
+                    }
+                }
+                
+                // now apply the settings
+                autofocus.applySettings();
+            } 
+            catch (MMException e) {throw new RuntimeException(e);}
 
             // Start the acquisition engine. This runs asynchronously.
             logger.info(String.format("Now running the image acquisition sequence, please wait..."));
@@ -406,6 +431,14 @@ public class SlideImager implements Module, ImageLogger {
                     configs.add(new Config(moduleId, 
                             "takeDummyImages", "no"));
                 }
+                
+                if (((Double)slideImagerDialog.minAutoFocus.getValue()).doubleValue() != 0.0) {
+                    configs.add(new Config(moduleId, "minAutoFocus", slideImagerDialog.minAutoFocus.getValue().toString()));
+                }
+                if (((Double)slideImagerDialog.maxAutoFocus.getValue()).doubleValue() != 0.0) {
+                    configs.add(new Config(moduleId, "maxAutoFocus", slideImagerDialog.maxAutoFocus.getValue().toString()));
+                }
+
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -434,6 +467,13 @@ public class SlideImager implements Module, ImageLogger {
                 else {
                     slideImagerDialog.takeDummyImagesYes.setSelected(false);
                     slideImagerDialog.takeDummyImagesNo.setSelected(true);
+                }
+                
+                if (conf.containsKey("minAutoFocus")) {
+                    slideImagerDialog.minAutoFocus.setValue(new Double(conf.get("minAutoFocus").getValue()));
+                }
+                if (conf.containsKey("maxAutoFocus")) {
+                    slideImagerDialog.maxAutoFocus.setValue(new Double(conf.get("maxAutoFocus").getValue()));
                 }
 
                 return slideImagerDialog;

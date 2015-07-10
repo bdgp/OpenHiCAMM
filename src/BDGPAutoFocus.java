@@ -45,6 +45,9 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
    
    private static final String AF_DEVICE_NAME = "BDGP";
 
+   private static final String KEY_MIN_AUTOFOCUS = "minAutoFocus";
+   private static final String KEY_MAX_AUTOFOCUS = "maxAutoFocus";
+
     /*private ImagePlus outputRough = null;
     private ImageStack outputStackRough = null;
     private ImagePlus outputFine = null;
@@ -73,6 +76,9 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     // variables for skipping autofocus every acquisition
     private int skipCounter = -1;
     public static final int MAX_SKIP = 20;
+    
+    private Double minAutoFocus;
+    private Double maxAutoFocus;
 
     public BDGPAutoFocus() {
     	super();
@@ -88,6 +94,9 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
       createProperty(KEY_CROP_SIZE, Double.toString(CROP_SIZE));
       createProperty(KEY_CHANNEL, CHANNEL);
       
+      createProperty(KEY_MIN_AUTOFOCUS, "");
+      createProperty(KEY_MAX_AUTOFOCUS, "");
+      
       loadSettings();
     }
 
@@ -97,7 +106,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
         skipCounter++;
         if (skipCounter > MAX_SKIP) skipCounter = 0;
         if (skipCounter != 0) {
-            IJ.log(String.format("Skipping autofocus %d/%d", skipCounter, MAX_SKIP));
+            if (verbose_) IJ.log(String.format("Skipping autofocus %d/%d", skipCounter, MAX_SKIP));
             return;
         }
         
@@ -668,6 +677,11 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
          THRES = Double.parseDouble(getPropertyValue(KEY_THRES));
          CROP_SIZE = Double.parseDouble(getPropertyValue(KEY_CROP_SIZE));
          CHANNEL = getPropertyValue(KEY_CHANNEL);
+         
+         minAutoFocus = getPropertyValue(KEY_MIN_AUTOFOCUS).equals("")? null : 
+             Double.parseDouble(getPropertyValue(KEY_MIN_AUTOFOCUS));
+         maxAutoFocus = getPropertyValue(KEY_MAX_AUTOFOCUS).equals("")? null : 
+             Double.parseDouble(getPropertyValue(KEY_MAX_AUTOFOCUS));
       
       } catch (NumberFormatException e) {
          e.printStackTrace();

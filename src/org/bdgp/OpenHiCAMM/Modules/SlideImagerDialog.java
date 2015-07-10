@@ -18,6 +18,8 @@ import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.micromanager.dialogs.AcqControlDlg;
 
+import mmcorej.CMMCore;
+
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
@@ -41,9 +43,11 @@ public class SlideImagerDialog extends JPanel {
 	private final ButtonGroup takeDummyImages = new ButtonGroup();
 	JRadioButton takeDummyImagesYes;
 	JRadioButton takeDummyImagesNo;
+    DoubleSpinner minAutoFocus;
+    DoubleSpinner maxAutoFocus;
 	
-	public SlideImagerDialog(final AcqControlDlg acqControlDlg, WorkflowRunner workflowRunner) {
-		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][][]"));
+	public SlideImagerDialog(final AcqControlDlg acqControlDlg, final WorkflowRunner workflowRunner) {
+		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][][][]"));
 		
 		JButton btnShowAcquisitionDialog = new JButton("Show Acquisition Dialog");
 		if (acqControlDlg == null) {
@@ -134,6 +138,44 @@ public class SlideImagerDialog extends JPanel {
         takeDummyImagesNo = new JRadioButton("No");
         takeDummyImages.add(takeDummyImagesNo);
         add(takeDummyImagesNo, "cell 0 7");
+        
+        JLabel lblSetMinimumAutofocus = new JLabel("Set Minimum AutoFocus Z axis value:");
+        add(lblSetMinimumAutofocus, "flowx,cell 0 8");
+        
+        minAutoFocus = new DoubleSpinner();
+        add(minAutoFocus, "cell 0 8");
+        
+        JLabel lblSetMaximumAutofocus = new JLabel("Set Maximum AutoFocus Z axis value: ");
+        add(lblSetMaximumAutofocus, "flowx,cell 0 9");
+        
+        maxAutoFocus = new DoubleSpinner();
+        add(maxAutoFocus, "cell 0 9");
+        
+        JButton minGetFromStage = new JButton("Get From Stage");
+        minGetFromStage.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                CMMCore core = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
+                try {
+                    double curDist = core.getPosition(core.getFocusDevice());
+                    minAutoFocus.setValue(curDist);
+                } 
+                catch (Exception e1) {throw new RuntimeException(e1);}
+            }
+        });
+        add(minGetFromStage, "cell 0 8");
+        
+        JButton maxGetFromStage = new JButton("Get From Stage");
+        maxGetFromStage.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                CMMCore core = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
+                try {
+                    double curDist = core.getPosition(core.getFocusDevice());
+                    maxAutoFocus.setValue(curDist);
+                } 
+                catch (Exception e1) {throw new RuntimeException(e1);}
+            }
+        });
+        add(maxGetFromStage, "cell 0 9");
 	}
 
     public static class DoubleSpinner extends JSpinner {
