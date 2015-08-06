@@ -136,6 +136,20 @@ public class ROIFinder implements Module, ImageLogger {
 			double x_stage = MDUtils.getXPositionUm(taggedImage.tags);
 			double y_stage = MDUtils.getYPositionUm(taggedImage.tags);
 			
+			double minZ = new Double(config.get("minZ").getValue());
+			logger.info(String.format("Using minZ: %f", minZ));
+			
+			double maxZ = new Double(config.get("maxZ").getValue());
+			logger.info(String.format("Using maxZ: %f", maxZ));
+
+			double zStep = new Double(config.get("zStep").getValue());
+			logger.info(String.format("Using zStep: %f", zStep));
+
+            double curZ;
+            try { curZ = this.script.getMMCore().getPosition(this.script.getMMCore().getFocusDevice()); } 
+            catch (Exception e) {throw new RuntimeException(e);}
+			logger.info(String.format("Current Z value: %f", curZ));
+
 			// Fill in list of ROIs
 			logger.info(String.format("Running process() to get list of ROIs"));
 			List<ROI> rois = process(image, taggedImage, logger, new ImageLog.NullImageLogRunner(), minRoiArea);
@@ -155,25 +169,28 @@ public class ROIFinder implements Module, ImageLogger {
 			    long tileSetHeight = tileYCount * tileHeight;
 			    long tileXOffset = (long)Math.floor((roi.getX1() + ((double)roiWidth / 2.0)) - ((double)tileSetWidth / 2.0) + ((double)tileWidth / 2.0));
 			    long tileYOffset = (long)Math.floor((roi.getY1() + ((double)roiHeight / 2.0)) - ((double)tileSetHeight / 2.0) + ((double)tileHeight / 2.0));
-
-			    for (int x=0; x < tileXCount; ++x) {
-                    for (int y=0; y < tileYCount; ++y) {
-                        long tileX = (x*tileWidth) + tileXOffset;
-                        long tileY = (y*tileHeight) + tileYOffset;
-                        MultiStagePosition msp = new MultiStagePosition();
-                        StagePosition sp = new StagePosition();
-                        sp.numAxes = 2;
-                        sp.stageName = "XYStage";
-                        sp.x = x_stage-((tileX-(double)imageWidth/2.0)*pixelSizeUm);
-                        sp.y = y_stage-((tileY-(double)imageHeight/2.0)*pixelSizeUm);
-                        msp.setLabel(String.format("%s: %s", positionName, roi.toString()));
-                        msp.add(sp);
-                        msp.setDefaultXYStage("XYStage");
-                        posList.addPosition(msp);
-                        logger.info(String.format("Storing StagePosition(numAxes: %d, stageName: %s, x=%.2f, y=%.2f, tileX=%d, tileY=%d)",
-                                sp.numAxes, Util.escape(sp.stageName), sp.x, sp.y, tileX, tileY));
+			    
+                MultiStagePosition msp = new MultiStagePosition();
+                msp.setLabel(String.format("%s: %s", positionName, roi.toString()));
+                msp.setDefaultXYStage("XYStage");
+                for (double z = curZ+minZ; z <= curZ+maxZ; z += curZ+zStep) {
+                    for (int x=0; x < tileXCount; ++x) {
+                        for (int y=0; y < tileYCount; ++y) {
+                            long tileX = (x*tileWidth) + tileXOffset;
+                            long tileY = (y*tileHeight) + tileYOffset;
+                            StagePosition sp = new StagePosition();
+                            sp.numAxes = 2;
+                            sp.stageName = "XYStage";
+                            sp.x = x_stage-((tileX-(double)imageWidth/2.0)*pixelSizeUm);
+                            sp.y = y_stage-((tileY-(double)imageHeight/2.0)*pixelSizeUm);
+                            sp.z = z;
+                            msp.add(sp);
+                            logger.info(String.format("Storing StagePosition(numAxes: %d, stageName: %s, x=%.2f, y=%.2f, z=%.2f, tileX=%d, tileY=%d)",
+                                    sp.numAxes, Util.escape(sp.stageName), sp.x, sp.y, sp.z, tileX, tileY));
+                    	}
                     }
 			    }
+                posList.addPosition(msp);
 			}
 			try { logger.info(String.format("Produced position list of ROIs:%n%s", posList.serialize())); } 
 			catch (MMSerializationException e) {throw new RuntimeException(e);}
@@ -361,6 +378,21 @@ public class ROIFinder implements Module, ImageLogger {
             	if (minRoiArea != null) {
             	    configs.add(new Config(ROIFinder.this.moduleId, "minRoiArea", minRoiArea.toString()));
             	}
+
+            	Double minZ = (Double)dialog.minZ.getValue();
+            	if (minZ != null) {
+            	    configs.add(new Config(ROIFinder.this.moduleId, "minZ", minZ.toString()));
+            	}
+
+            	Double maxZ = (Double)dialog.maxZ.getValue();
+            	if (maxZ != null) {
+            	    configs.add(new Config(ROIFinder.this.moduleId, "maxZ", minZ.toString()));
+            	}
+
+            	Double zStep = (Double)dialog.zStep.getValue();
+            	if (zStep != null) {
+            	    configs.add(new Config(ROIFinder.this.moduleId, "zStep", zStep.toString()));
+            	}
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -378,6 +410,15 @@ public class ROIFinder implements Module, ImageLogger {
             	}
             	if (confs.containsKey("minRoiArea")) {
             	    dialog.minRoiArea.setValue(new Double(confs.get("minRoiArea").getValue()));
+            	}
+            	if (confs.containsKey("minZ")) {
+            	    dialog.minZ.setValue(new Double(confs.get("minZ").getValue()));
+            	}
+            	if (confs.containsKey("maxZ")) {
+            	    dialog.maxZ.setValue(new Double(confs.get("maxZ").getValue()));
+            	}
+            	if (confs.containsKey("zStep")) {
+            	    dialog.zStep.setValue(new Double(confs.get("zStep").getValue()));
             	}
                 return dialog;
             }
@@ -398,6 +439,10 @@ public class ROIFinder implements Module, ImageLogger {
             	Double minRoiArea = (Double)dialog.minRoiArea.getValue();
             	if (minRoiArea == null || minRoiArea == 0.0) {
             	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for Min ROI Area"));
+            	}
+            	Double zStep = (Double)dialog.zStep.getValue();
+            	if (zStep == null || zStep == 0.0) {
+            	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for Z-step"));
             	}
                 return errors.toArray(new ValidationError[0]);
             }

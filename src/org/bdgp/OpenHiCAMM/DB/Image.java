@@ -12,10 +12,10 @@ public class Image {
     @DatabaseField(generatedId=true, canBeNull=false) private int id;
     @DatabaseField(canBeNull=false) private int slideId;
     @DatabaseField(canBeNull=false,uniqueCombo=true) private int acquisitionId;
-    @DatabaseField(canBeNull=false,uniqueCombo=true) private int channel;
-    @DatabaseField(canBeNull=false,uniqueCombo=true) private int slice;
-    @DatabaseField(canBeNull=false,uniqueCombo=true) private int frame;
-    @DatabaseField(canBeNull=false,uniqueCombo=true) private int position;
+    @DatabaseField(canBeNull=false,uniqueCombo=true) private int channel; // fluorescence channel
+    @DatabaseField(canBeNull=false,uniqueCombo=true) private int slice; // position on z-stack
+    @DatabaseField(canBeNull=false,uniqueCombo=true) private int frame; // time-point
+    @DatabaseField(canBeNull=false,uniqueCombo=true) private int position; //x,y position
     
     public Image() {}
     public Image (int slideId, Acquisition acquisition, int channel, int slice, int frame, int position) {

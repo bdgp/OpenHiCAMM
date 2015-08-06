@@ -15,14 +15,23 @@ public class ROIFinderDialog extends JPanel {
 	DoubleSpinner pixelSizeUm;
 	DoubleSpinner minRoiArea;
 	DoubleSpinner hiResPixelSizeUm;
+	private JLabel lblMinRoiArea;
+	private JLabel lblHiresPixelSize;
+	private JLabel lblMinRelativeZ;
+	private JLabel lblMaxRelativeZ;
+	private JLabel lblZStepum;
+	DoubleSpinner minZ;
+	DoubleSpinner maxZ;
+	DoubleSpinner zStep;
 
 	public static final double DEFAULT_PIXEL_SIZE_UM = 0.4735;
 	public static final double DEFAULT_MIN_ROI_AREA = 2000.0;
-	private JLabel lblMinRoiArea;
-	private JLabel lblHiresPixelSize;
+	public static final double DEFAULT_MIN_Z = -20.0;
+	public static final double DEFAULT_MAX_Z = 20.0;
+	public static final double DEFAULT_Z_STEP = 2.0;
 
 	public ROIFinderDialog() {
-		this.setLayout(new MigLayout("", "[][grow]", "[][][][]"));
+		this.setLayout(new MigLayout("", "[][grow]", "[][][][][][]"));
         
         lblMinRoiArea = new JLabel("Min ROI Area");
         add(lblMinRoiArea, "cell 0 0");
@@ -44,6 +53,27 @@ public class ROIFinderDialog extends JPanel {
         hiResPixelSizeUm = new DoubleSpinner();
         hiResPixelSizeUm.setValue(new Double(DEFAULT_PIXEL_SIZE_UM));
         add(hiResPixelSizeUm, "cell 1 2");
+        
+        lblMinRelativeZ = new JLabel("Z-start (um):");
+        add(lblMinRelativeZ, "cell 0 3");
+        
+        minZ = new DoubleSpinner();
+        minZ.setValue(new Double(DEFAULT_MIN_Z));
+        add(minZ, "cell 1 3");
+        
+        lblMaxRelativeZ = new JLabel("Z-end (um):");
+        add(lblMaxRelativeZ, "cell 0 4");
+        
+        maxZ = new DoubleSpinner();
+        maxZ.setValue(new Double(DEFAULT_MAX_Z));
+        add(maxZ, "cell 1 4");
+        
+        lblZStepum = new JLabel("Z-step (um):");
+        add(lblZStepum, "cell 0 5");
+        
+        zStep = new DoubleSpinner();
+        zStep.setValue(new Double(DEFAULT_Z_STEP));
+        add(zStep, "cell 1 5");
 	}
 	
     public static class DoubleSpinner extends JSpinner {
