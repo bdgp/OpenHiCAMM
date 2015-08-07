@@ -676,21 +676,20 @@ public class SlideImager implements Module, ImageLogger {
     
     /**
      * Get the total number of images that will be produced by the acqusition engine given 
-     * the current settings. We have to break encapsulation to get this number, since
-     * unfortunately the AcquisitionWrapperEngine.getTotalImages() method is private.
+     * the current settings.      
      * @return the total number of images
      */
     public Integer getTotalImages() {
-        try {
-            Method method = this.engine.getClass().getDeclaredMethod("getTotalImages");
-            method.setAccessible(true);
-            return (Integer)method.invoke(this.engine);
-        } 
-        catch (NoSuchMethodException e) {throw new RuntimeException(e);} 
-        catch (SecurityException e) {throw new RuntimeException(e);}
-        catch (IllegalAccessException e) {throw new RuntimeException(e);} 
-        catch (IllegalArgumentException e) {throw new RuntimeException(e);} 
-        catch (InvocationTargetException e) {throw new RuntimeException(e);}
+        String summary = this.engine.getVerboseSummary();
+        workflowRunner.getLogger().info(String.format("Verbose summary:%n%s%n", summary));
+
+        Pattern pattern = Pattern.compile("^Total images: ([0-9]+)$", Pattern.MULTILINE);
+        Matcher matcher = pattern.matcher(summary);
+        if (!matcher.find()) {
+            throw new RuntimeException(String.format(
+                "Could not parse Total images field from summary:%n%s", summary));
+        }
+        return new Integer(matcher.group(1));
     }
     
     @Override
