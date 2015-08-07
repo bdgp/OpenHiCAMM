@@ -342,7 +342,7 @@ public class ROIFinder implements Module, ImageLogger {
     @Override
     public Configuration configure() {
         return new Configuration() {
-            ROIFinderDialog dialog = new ROIFinderDialog();
+            ROIFinderDialog dialog = new ROIFinderDialog(ROIFinder.this);
             @Override
             public Config[] retrieve() {
             	List<Config> configs = new ArrayList<Config>();

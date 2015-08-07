@@ -6,9 +6,20 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
+import org.micromanager.utils.ImageUtils;
+import org.bdgp.OpenHiCAMM.Logger;
+import org.bdgp.OpenHiCAMM.DB.Image;
+
+import ij.ImagePlus;
+import ij.process.ImageProcessor;
+import mmcorej.TaggedImage;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JLabel;
+import javax.swing.JButton;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 
 @SuppressWarnings("serial")
 public class ROIFinderDialog extends JPanel {
@@ -20,16 +31,17 @@ public class ROIFinderDialog extends JPanel {
 	public static final double DEFAULT_MIN_ROI_AREA = 2000.0;
 	private JLabel lblMinRoiArea;
 	private JLabel lblHiresPixelSize;
+	private JButton btnRoiTest;
 
-	public ROIFinderDialog() {
+	public ROIFinderDialog(final ROIFinder roiFinder) {
 		this.setLayout(new MigLayout("", "[][grow]", "[][][][]"));
         
         lblMinRoiArea = new JLabel("Min ROI Area");
         add(lblMinRoiArea, "cell 0 0");
         
-                minRoiArea = new DoubleSpinner();
-                minRoiArea.setValue(new Double(DEFAULT_MIN_ROI_AREA));
-                add(minRoiArea, "cell 1 0");
+        minRoiArea = new DoubleSpinner();
+        minRoiArea.setValue(new Double(DEFAULT_MIN_ROI_AREA));
+        add(minRoiArea, "cell 1 0");
         
         JLabel lblPixelSizeum = new JLabel("Pixel Size (um)");
         add(lblPixelSizeum, "cell 0 1");
@@ -44,6 +56,24 @@ public class ROIFinderDialog extends JPanel {
         hiResPixelSizeUm = new DoubleSpinner();
         hiResPixelSizeUm.setValue(new Double(DEFAULT_PIXEL_SIZE_UM));
         add(hiResPixelSizeUm, "cell 1 2");
+        
+        btnRoiTest = new JButton("ROI Test");
+        btnRoiTest.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                try { roiFinder.script.getMMCore().snapImage(); } 
+                catch (Exception e1) {throw new RuntimeException(e1);}
+                TaggedImage taggedImage;
+                try { taggedImage = roiFinder.script.getMMCore().getTaggedImage(); } 
+                catch (Exception e1) {throw new RuntimeException(e1);}
+
+                ImageLogRunner imageLogRunner = new ImageLogRunner("Test");
+                Logger logger = Logger.create(null, "ROIFinder Test", null);
+                Image image = new Image();
+                roiFinder.process(image, taggedImage, logger, imageLogRunner, (Double)minRoiArea.getValue());
+                imageLogRunner.display();
+            }
+        });
+        add(btnRoiTest, "cell 0 3");
 	}
 	
     public static class DoubleSpinner extends JSpinner {
