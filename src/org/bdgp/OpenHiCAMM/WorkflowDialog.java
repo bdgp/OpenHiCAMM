@@ -250,7 +250,14 @@ public class WorkflowDialog extends JDialog {
             }
 
             Collections.sort(startModules);
+            String startModuleId = null;
+            if (startModule.getModel() != null) {
+                startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
+            }
             startModule.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
+            if (startModuleId != null) {
+                startModule.setSelectedItem(startModuleId);
+            }
             startModule.setEnabled(true);
             
             // get the list of workflow instances
