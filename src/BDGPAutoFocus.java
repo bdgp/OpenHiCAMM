@@ -10,6 +10,8 @@ import ij.process.ImageProcessor;
 import ij.process.ShortProcessor;
 
 import java.awt.Color;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Date;
 import java.lang.System;
 
@@ -32,7 +34,7 @@ import edu.mines.jtk.dsp.FftReal;
  * 
  */
 public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
-   private static boolean verbose_ = false; // displaying debug info or not
+   private static boolean verbose_ = true; // displaying debug info or not
 
    private static final String KEY_SIZE_FIRST = "1st step size";
    private static final String KEY_NUM_FIRST = "1st step number";
@@ -59,7 +61,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     public double SIZE_FIRST = 2;//
     public int NUM_FIRST = 10; // +/- #of snapshot
     public double SIZE_SECOND = 0.2;
-    public int NUM_SECOND = 5;
+    public int NUM_SECOND = 1;
     public double THRES = 0.02;
     public double CROP_SIZE = 0.2; 
     public String CHANNEL="";
@@ -146,7 +148,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             
             //set z-distance to the lowest z-distance of the stack
             curDist = core_.getPosition(core_.getFocusDevice());
-            baseDist = curDist - SIZE_FIRST * NUM_FIRST;
+            baseDist = curDist - SIZE_FIRST * NUM_FIRST; //-30
             core_.setPosition(core_.getFocusDevice(), baseDist);
             core_.waitForDevice(core_.getFocusDevice());
             delay_time(300);
@@ -194,7 +196,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
                 //curSh = sharpNess(ipCurrent_);
                 curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
-                curShScale = computeFFT(ipCurrent_, 5, 20, 0.75); //local rescaling
+                curShScale = computeFFT(ipCurrent_, 9, 10, 0.75); //local rescaling
                 curSh = curSh / curShScale;
                 
                 if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", baseDist + i * SIZE_FIRST, curSh));
@@ -206,17 +208,17 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                     bestSh = curSh;
                     bestDist = curDist;
                 }
-                else if (bestSh - curSh > THRES * bestSh && bestDist < 5000)
+                /*else if (bestSh - curSh > THRES * bestSh && bestDist < 5000)
                 {
                     break;
-                }
+                }*/
             }
 
             baseDist = bestDist - SIZE_SECOND * NUM_SECOND;
             core_.setPosition(core_.getFocusDevice(), baseDist);
             delay_time(100);
 
-            bestSh = 0;
+            //bestSh = 0;
 
             //Fine search
             for (int i = 0; i < 2 * NUM_SECOND + 1; i++)
@@ -231,7 +233,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
                 //curSh = sharpNess(ipCurrent_);
                 curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
-                curShScale = computeFFT(ipCurrent_, 5, 20, 0.75); //local rescaling
+                curShScale = computeFFT(ipCurrent_, 9, 10, 0.75); //local rescaling
                 curSh = curSh / curShScale;
                 
                 if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", baseDist + i * SIZE_FIRST, curSh));
@@ -245,7 +247,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                 }
                 else if (bestSh - curSh > THRES * bestSh && bestDist < 5000)
                 {
-                    break;
+                   break;
                 }
             }
 
@@ -269,14 +271,19 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
             core_.setPosition(core_.getFocusDevice(), bestDist);
             // indx =1;
-            snapSingleImage();
+            //if (verbose_) snapSingleImage();
             // indx =0;
             core_.setShutterOpen(false);
             core_.setAutoShutter(true);
+            
+            //Thread.sleep(10000);
         } 
         catch (Exception e)
         {
-            IJ.error(e.getMessage());
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            e.printStackTrace(pw);
+            IJ.error(sw.toString());
             e.printStackTrace();
         }
     }
@@ -454,13 +461,14 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
     public static float[] computePowerSpectrum(float[] complex)
     {
-            int wComplex = complex.length / 2;
+           int wComplex = complex.length / 2;
 
             float[] powerSpectrum = new float[wComplex];
 
             for (int pos = 0; pos < wComplex; pos++)
                     powerSpectrum[pos] = (float)Math.sqrt(Math.pow(complex[pos*2],2) + Math.pow(complex[pos*2 + 1],2));
-
+                     
+         
             return powerSpectrum;
     }
 
@@ -648,6 +656,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     public double fullFocus()
     {
         run("silent");
+        //run("");
         return 0;
     }
 
@@ -659,6 +668,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     public double incrementalFocus()
     {
         run("silent");
+        //run("");
         return 0;
     }
 
