@@ -15,6 +15,8 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 import java.util.prefs.Preferences;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import mmcorej.CMMCore;
 import mmcorej.TaggedImage;
@@ -552,6 +554,20 @@ public class SlideImager implements Module, ImageLogger {
             if (parentTaskConf.containsKey("slideId")) {
             	slide = slideDao.selectOneOrDie(where("id",new Integer(parentTaskConf.get("slideId").getValue())));
             	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Inherited slideId %s", this.moduleId, parentTaskConf.get("slideId")));
+            }
+            // if posListModuleId is set, use the most recent slide
+            else if (conf.containsKey("posListModuleId")) {
+                List<Slide> slides = slideDao.select();
+                Collections.sort(slides, new Comparator<Slide>() {
+                    @Override public int compare(Slide a, Slide b) {
+                        return b.getId()-a.getId();
+                    }});
+                if (slides.size() > 0) {
+                    slide = slides.get(0);
+                }
+                else {
+                    throw new RuntimeException("No slides were found!");
+                }
             }
             // If no associated slide is registered, create a slide to represent this task
             else {
