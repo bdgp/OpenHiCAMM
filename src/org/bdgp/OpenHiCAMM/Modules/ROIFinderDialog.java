@@ -7,12 +7,9 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
-import org.micromanager.utils.ImageUtils;
 import org.bdgp.OpenHiCAMM.Logger;
 import org.bdgp.OpenHiCAMM.DB.Image;
 
-import ij.ImagePlus;
-import ij.process.ImageProcessor;
 import mmcorej.TaggedImage;
 import net.miginfocom.swing.MigLayout;
 
