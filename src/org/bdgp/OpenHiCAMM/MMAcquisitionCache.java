@@ -50,7 +50,10 @@ public class MMAcquisitionCache {
         public boolean isExisting() { return existing; }
         public MMAcquisition getAcquisition() { 
             if (this.acquisition == null) {
-                try { this.acquisition = new MMAcquisition(name, dir, show, diskCached, existing); } 
+                try { 
+                    this.acquisition = new MMAcquisition(name, dir, show, diskCached, existing); 
+                    this.acquisition.initialize(); 
+                } 
                 catch (MMScriptException e) {throw new RuntimeException(e);}
             }
             return this.acquisition;
