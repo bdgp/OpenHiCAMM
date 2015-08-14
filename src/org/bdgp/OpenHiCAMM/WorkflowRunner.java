@@ -138,6 +138,19 @@ public class WorkflowRunner {
         
         // init the notified tasks set
         this.notifiedTasks = new HashSet<Task>();
+        
+        // move default moduleconfig into the instance moduleconfig
+        for (WorkflowModule w : workflow.select()) {
+            List<ModuleConfig> configs = this.moduleConfig.select(where("id", w.getId()));
+            Set<String> keySet = new HashSet<String>();
+            for (ModuleConfig mc : configs) {
+                keySet.add(mc.getKey());
+            }
+            List<ModuleConfig> defaultConfigs = this.workflowDb.table(ModuleConfig.class).select(where("id", w.getId()));
+            for (ModuleConfig dc : defaultConfigs) {
+                if (!keySet.contains(dc.getKey())) this.moduleConfig.insertOrUpdate(dc,"id","key");
+            }
+        }
     }
 
     // instantiate the workflow module object instances

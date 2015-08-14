@@ -49,7 +49,6 @@ import org.micromanager.api.ScriptInterface;
 import org.micromanager.api.StagePosition;
 import org.micromanager.utils.ImageUtils;
 import org.micromanager.utils.MDUtils;
-import org.micromanager.utils.MMScriptException;
 import org.micromanager.utils.MMSerializationException;
 
 import static org.bdgp.OpenHiCAMM.Util.where;

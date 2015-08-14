@@ -3,7 +3,6 @@ package org.bdgp.OpenHiCAMM.DB;
 import org.bdgp.OpenHiCAMM.MMAcquisitionCache;
 import org.bdgp.OpenHiCAMM.Util;
 import org.micromanager.acquisition.MMAcquisition;
-import org.micromanager.utils.MMScriptException;
 
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
