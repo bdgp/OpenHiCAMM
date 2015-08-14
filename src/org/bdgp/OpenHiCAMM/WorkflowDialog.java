@@ -139,7 +139,10 @@ public class WorkflowDialog extends JDialog {
                 
                 Map<String,Configuration> configurations = workflowRunner.getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
-                    WorkflowDialog.this, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
+                    WorkflowDialog.this, 
+                    configurations, 
+                    workflowRunner.getInstanceDb().table(ModuleConfig.class),
+                    workflowRunner.getWorkflowDb().table(ModuleConfig.class));
                 config.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 config.pack();
                 config.setVisible(true);
@@ -151,7 +154,10 @@ public class WorkflowDialog extends JDialog {
             public void actionPerformed(ActionEvent e) {
                 Map<String,Configuration> configurations = workflowRunner.getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
-                    WorkflowDialog.this, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
+                    WorkflowDialog.this, 
+                    configurations, 
+                    workflowRunner.getInstanceDb().table(ModuleConfig.class),
+                    workflowRunner.getWorkflowDb().table(ModuleConfig.class));
                 if (config.validateConfiguration()) {
                 	start(false);
                 }
@@ -165,7 +171,10 @@ public class WorkflowDialog extends JDialog {
             public void actionPerformed(ActionEvent e) {
                 Map<String,Configuration> configurations = workflowRunner.getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
-                    WorkflowDialog.this, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
+                    WorkflowDialog.this, 
+                    configurations, 
+                    workflowRunner.getInstanceDb().table(ModuleConfig.class),
+                    workflowRunner.getWorkflowDb().table(ModuleConfig.class));
                 if (config.validateConfiguration()) {
                 	start(true);
                 }
