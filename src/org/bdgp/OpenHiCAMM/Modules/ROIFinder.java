@@ -96,20 +96,6 @@ public class ROIFinder implements Module, ImageLogger {
         Slide slide = slideDao.selectOneOrDie(where("id",image.getSlideId()));
         logger.info(String.format("Using slide: %s", slide));
         
-        Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
-
-        // Initialize the acquisition
-        Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
-        logger.info(String.format("Using acquisition: %s", acquisition));
-        MMAcquisition mmacquisition = acquisition.getAcquisition();
-        try { mmacquisition.initialize(); } 
-        catch (MMScriptException e) {throw new RuntimeException(e);}
-        logger.info(String.format("Initialized acquisition"));
-
-        // Get the image cache object
-        ImageCache imageCache = mmacquisition.getImageCache();
-        if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
-        // Get the tagged image from the image cache
         TaggedImage taggedImage = getTaggedImage(image, logger);
         logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
 
@@ -138,9 +124,16 @@ public class ROIFinder implements Module, ImageLogger {
 			
 			// Fill in list of ROIs
 			logger.info(String.format("Running process() to get list of ROIs"));
-			List<ROI> rois = process(image, taggedImage, logger, new ImageLog.NullImageLogRunner(), minRoiArea);
+			List<ROI> rois = new ArrayList<ROI>();
+			try {
+                rois = process(image, taggedImage, logger, new ImageLog.NullImageLogRunner(), minRoiArea);
+			}
+			catch (Exception e) {
+			    logger.warning(String.format("Exception during ROI processing: %s", e.toString()));
+			}
 
             // Convert the ROIs into a PositionList
+			Map<MultiStagePosition,ROI> roiMap = new HashMap<MultiStagePosition,ROI>();
 			PositionList posList = new PositionList();
 			for (ROI roi : rois) {
 			    // We need to potentially create a grid of Stage positions in order to capture all of the 
@@ -170,6 +163,7 @@ public class ROIFinder implements Module, ImageLogger {
                         msp.add(sp);
                         msp.setDefaultXYStage("XYStage");
                         posList.addPosition(msp);
+                        roiMap.put(msp, roi);
                         logger.info(String.format("Storing StagePosition(numAxes: %d, stageName: %s, x=%.2f, y=%.2f, tileX=%d, tileY=%d)",
                                 sp.numAxes, Util.escape(sp.stageName), sp.x, sp.y, tileX, tileY));
                     }
@@ -197,7 +191,11 @@ public class ROIFinder implements Module, ImageLogger {
 
 			MultiStagePosition[] msps = posList.getPositions();
 			for (int i=0; i<msps.length; ++i) {
-				SlidePos slidePos = new SlidePos(slidePosList.getId(), i, rois.get(i).getId());
+			    ROI roi = roiMap.get(msps[i]);
+			    if (roi == null) throw new RuntimeException(
+			            String.format("Error: could not get ROI for MSP %s using roiMap", msps[i]));
+
+				SlidePos slidePos = new SlidePos(slidePosList.getId(), i, roi.getId());
 				slidePosDao.insert(slidePos);
                 logger.info(String.format("Created new SlidePos record for position %d: %s", i, slidePos));
 			}
@@ -230,6 +228,7 @@ public class ROIFinder implements Module, ImageLogger {
     	List<ROI> rois = new ArrayList<ROI>();
         ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
         ImagePlus imp = new ImagePlus(image.toString(), processor);
+        //imp.show();
         
         // Convert to gray
         IJ.run(imp, "8-bit", "");
@@ -267,7 +266,7 @@ public class ROIFinder implements Module, ImageLogger {
 
         // Binarize
         logger.info(String.format("Binarizing"));
-        IJ.run(imp, "Auto Threshold", "method=Huang white");
+        IJ.run(imp, "Auto Threshold", "method=Huang white"); // array out of bounds exception
         imageLog.addImage(imp, "Binarizing");
 
         // Morphological operations: close gaps, fill holes
