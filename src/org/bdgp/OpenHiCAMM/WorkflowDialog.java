@@ -57,6 +57,7 @@ public class WorkflowDialog extends JDialog {
     private JButton btnShowDatabaseManager;
 
     ImageLog imageLog;
+    private JButton btnResume;
 
     public WorkflowDialog(Frame parentFrame, OpenHiCAMM mmslide) {
         super(parentFrame, "OpenHiCAMM");
@@ -68,7 +69,7 @@ public class WorkflowDialog extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
             }});
-        getContentPane().setLayout(new MigLayout("", "[][grow]", "[][][][][][]"));
+        getContentPane().setLayout(new MigLayout("", "[][835.00,grow]", "[][][][][][]"));
         
         JLabel lblChooseWorkflowDirectory = new JLabel("Workflow Directory");
         getContentPane().add(lblChooseWorkflowDirectory, "cell 0 0,alignx trailing");
@@ -152,13 +153,26 @@ public class WorkflowDialog extends JDialog {
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                     WorkflowDialog.this, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
                 if (config.validateConfiguration()) {
-                	start();
+                	start(false);
                 }
             }
         });
         startButton.setEnabled(false);
         getContentPane().add(startButton, "flowx,cell 1 4,alignx trailing");
         
+        btnResume = new JButton("Resume");
+        btnResume.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                Map<String,Configuration> configurations = workflowRunner.getConfigurations();
+                WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
+                    WorkflowDialog.this, configurations, workflowRunner.getInstanceDb().table(ModuleConfig.class));
+                if (config.validateConfiguration()) {
+                	start(true);
+                }
+            }
+        });
+        getContentPane().add(btnResume, "cell 1 4");
+
         editWorkflowButton = new JButton("Edit Workflow...");
         editWorkflowButton.setEnabled(false);
         getContentPane().add(editWorkflowButton, "cell 1 0");
@@ -187,7 +201,7 @@ public class WorkflowDialog extends JDialog {
             }
         });
         getContentPane().add(btnShowDatabaseManager, "cell 1 5,alignx right");
-
+        
         editWorkflowButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -298,7 +312,7 @@ public class WorkflowDialog extends JDialog {
      * Start the workflow runner and open the Workflow Runner dialog.
      * Resume mode does not delete and re-create the Task/TaskConfig records before starting.
      */
-    public void start() {
+    public void start(boolean resume) {
         // Make sure the workflow runner is initialized
         initWorkflowRunner(false);
         // Get the selected start module
@@ -314,7 +328,7 @@ public class WorkflowDialog extends JDialog {
         // Refresh the UI controls
         refresh();
         // Start the workflow runner
-        workflowRunner.run(startModuleId, null);
+        workflowRunner.run(startModuleId, null, resume);
 
         // Make the workflow runner dialog visible
         SwingUtilities.invokeLater(new Runnable() {

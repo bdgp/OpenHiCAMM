@@ -1,5 +1,6 @@
 package org.bdgp.OpenHiCAMM;
 
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -439,7 +440,8 @@ public class WorkflowRunner {
      */
     public Future<Status> run(
             final String startModuleId, 
-            final Map<String,Config> inheritedTaskConfig) 
+            final Map<String,Config> inheritedTaskConfig,
+            final boolean resume) 
     {
         int cores = Runtime.getRuntime().availableProcessors();
         this.pool = Executors.newFixedThreadPool(cores);
@@ -450,10 +452,12 @@ public class WorkflowRunner {
             	try {
                     WorkflowRunner.this.isStopped = false;
 
-                    // delete and re-create the task records
-                    // WorkflowRunner.this.deleteTaskRecords(startModuleId);
-                    WorkflowRunner.this.deleteTaskRecords();
-                    WorkflowRunner.this.createTaskRecords(startModuleId);
+                    if (!resume) {
+                        // delete and re-create the task records
+                        // WorkflowRunner.this.deleteTaskRecords(startModuleId);
+                        WorkflowRunner.this.deleteTaskRecords();
+                        WorkflowRunner.this.createTaskRecords(startModuleId);
+                    }
 
                     // Notify the task listeners of the maximum task count
                     for (TaskListener listener : taskListeners) {
