@@ -280,9 +280,6 @@ public class SlideImager implements Module, ImageLogger {
 
             // Get the ImageCache object for this acquisition
             MMAcquisition mmacquisition = acquisition.getAcquisition();
-            try { mmacquisition.initialize(); } 
-            catch (MMScriptException e) {throw new RuntimeException(e);}
-            logger.info(String.format("Initialized MMAcquisition object"));
             ImageCache imageCache = mmacquisition.getImageCache();
             if (imageCache == null) throw new RuntimeException("MMAcquisition object was not initialized; imageCache is null!");
             if (!imageCache.isFinished()) throw new RuntimeException("ImageCache is not finished!");
@@ -742,9 +739,6 @@ public class SlideImager implements Module, ImageLogger {
                     Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
                     logger.info(String.format("Using acquisition: %s", acquisition));
                     MMAcquisition mmacquisition = acquisition.getAcquisition();
-                    try { mmacquisition.initialize(); } 
-                    catch (MMScriptException e) {throw new RuntimeException(e);}
-                    logger.info(String.format("Initialized acquisition"));
 
                     // Get the image cache object
                     ImageCache imageCache = mmacquisition.getImageCache();
