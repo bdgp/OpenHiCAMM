@@ -1,5 +1,6 @@
 package org.bdgp.OpenHiCAMM.DB;
 
+import org.bdgp.OpenHiCAMM.MMAcquisitionCache;
 import org.bdgp.OpenHiCAMM.Util;
 import org.micromanager.acquisition.MMAcquisition;
 import org.micromanager.utils.MMScriptException;
@@ -24,12 +25,10 @@ public class Acquisition {
     public String getDirectory() { return this.directory; }
 
     public MMAcquisition getAcquisition() {
-    	try { return new MMAcquisition(name, directory, false, true, true); } 
-    	catch (MMScriptException e) {throw new RuntimeException(e);}
+    	return MMAcquisitionCache.getAcquisition(name, directory, false, true, true);
     }
     public MMAcquisition getAcquisition(boolean diskCached) {
-    	try { return new MMAcquisition(name, directory, false, diskCached, true); } 
-    	catch (MMScriptException e) {throw new RuntimeException(e);}
+    	return MMAcquisitionCache.getAcquisition(name, directory, false, diskCached, true); 
     }
     
     public String toString() {
