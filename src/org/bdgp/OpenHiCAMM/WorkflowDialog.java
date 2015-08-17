@@ -57,11 +57,11 @@ public class WorkflowDialog extends JDialog {
     OpenHiCAMM mmslide;
     // The workflow runner module
     WorkflowRunner workflowRunner;
-    private JButton btnShowImageLog;
-    private JButton btnShowDatabaseManager;
+    JButton btnShowImageLog;
+    JButton btnShowDatabaseManager;
 
     ImageLog imageLog;
-    private JButton btnResume;
+    JButton btnResume;
 
     public WorkflowDialog(Frame parentFrame, OpenHiCAMM mmslide) {
         super(parentFrame, "OpenHiCAMM");
@@ -184,6 +184,7 @@ public class WorkflowDialog extends JDialog {
                 }
             }
         });
+        btnResume.setEnabled(false);
         getContentPane().add(btnResume, "cell 1 4");
 
         editWorkflowButton = new JButton("Edit Workflow...");
@@ -304,6 +305,17 @@ public class WorkflowDialog extends JDialog {
                 btnConfigure.setEnabled(true);
                 startButton.setEnabled(true);
                 btnCreateNewInstance.setEnabled(true);
+
+                if (startModuleId != null) {
+                    List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
+                    btnResume.setEnabled(tasks.size() > 0);
+                }
+                else {
+                    btnResume.setEnabled(false);
+                }
+            }
+            else {
+                btnResume.setEnabled(false);
             }
     	}
     }
@@ -331,14 +343,16 @@ public class WorkflowDialog extends JDialog {
         // Get the selected start module
         String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
         
-        List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
-        if (tasks.size() > 0) {
-            if (JOptionPane.showConfirmDialog(null, 
-                    "There is existing run status data in the database. \n"+
-                            "Are you sure you want to overwrite the existing data?", 
-                            "Confirm Overwrite Existing Run", 
-                            JOptionPane.YES_NO_OPTION) == JOptionPane.NO_OPTION) 
-            { return; }
+        if (!resume) {
+            List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
+            if (tasks.size() > 0) {
+                if (JOptionPane.showConfirmDialog(null, 
+                        "There is existing run status data in the database. \n"+
+                                "Are you sure you want to overwrite the existing data?", 
+                                "Confirm Overwrite Existing Run", 
+                                JOptionPane.YES_NO_OPTION) == JOptionPane.NO_OPTION) 
+                { return; }
+            }
         }
         
         // re-init the logger. This ensures each workflow run gets logged to a separate file.

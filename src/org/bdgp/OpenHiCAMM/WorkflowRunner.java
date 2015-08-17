@@ -467,8 +467,8 @@ public class WorkflowRunner {
 
                     if (!resume) {
                         // delete and re-create the task records
-                        // WorkflowRunner.this.deleteTaskRecords(startModuleId);
-                        WorkflowRunner.this.deleteTaskRecords();
+                        //WorkflowRunner.this.deleteTaskRecords();
+                        WorkflowRunner.this.deleteTaskRecords(startModuleId);
                         WorkflowRunner.this.createTaskRecords(startModuleId);
                     }
 
@@ -491,7 +491,7 @@ public class WorkflowRunner {
                             try { status = future.get(); }
                             catch (InterruptedException e) {throw new RuntimeException(e);} 
                             catch (ExecutionException e) {throw new RuntimeException(e);} 
-                            if (status != Status.SUCCESS) {
+                            if (status != Status.SUCCESS && status != Status.DEFER) {
                                 WorkflowRunner.this.logger.severe(String.format(
                                         "Top-level task %s returned status %s, not running successive sibling tasks",
                                         t.getName(), status));
@@ -566,7 +566,16 @@ public class WorkflowRunner {
             @Override
             public Status call() {
                 Status status = task.getStatus();
-                WorkflowRunner.this.logger.info(String.format("%s: Previous status was: %s", task.getName(), status));
+            	
+            	if (status != Status.DEFER && status != Status.NEW && status != Status.IN_PROGRESS) {
+                    WorkflowRunner.this.logger.info(String.format(
+                            "%s: Previous status was: %s, skipping this task!", task.getName(), status));
+                    return status;
+            	}
+            	else {
+                    WorkflowRunner.this.logger.info(String.format(
+                            "%s: Previous status was: %s", task.getName(), status));
+            	}
             	if (WorkflowRunner.this.isStopped == true) return status;
                 
                 // run the task
@@ -677,7 +686,7 @@ public class WorkflowRunner {
                                 try { s = future.get(); } 
                                 catch (InterruptedException e) {throw new RuntimeException(e);} 
                                 catch (ExecutionException e) {throw new RuntimeException(e);}
-                                if (s != Task.Status.SUCCESS) {
+                                if (s != Task.Status.SUCCESS && s != Task.Status.DEFER) {
                                 	WorkflowRunner.this.logger.severe(String.format(
                                 			"Child task %s returned status %s, not running successive sibling tasks",
                                 			childTask.getName(), s));
