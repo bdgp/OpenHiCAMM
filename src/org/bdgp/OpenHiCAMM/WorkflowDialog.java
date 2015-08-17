@@ -57,6 +57,7 @@ public class WorkflowDialog extends JDialog {
     OpenHiCAMM mmslide;
     // The workflow runner module
     WorkflowRunner workflowRunner;
+    WorkflowRunnerDialog workflowRunnerDialog;
     JButton btnShowImageLog;
     JButton btnShowDatabaseManager;
 
@@ -347,6 +348,9 @@ public class WorkflowDialog extends JDialog {
         if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getInstance().getId()) || force) {
             workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, Level.INFO, mmslide);
 
+            workflowRunnerDialog = new WorkflowRunnerDialog(this, workflowRunner);
+            workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            workflowRunnerDialog.pack();
         }
     }
 
@@ -375,21 +379,17 @@ public class WorkflowDialog extends JDialog {
         // re-init the logger. This ensures each workflow run gets logged to a separate file.
         workflowRunner.initLogger();
 
-        final WorkflowRunnerDialog wrd = new WorkflowRunnerDialog(this, workflowRunner, startModuleId);
-        wrd.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        wrd.pack();
-
         // Refresh the UI controls
         refresh();
         // Start the workflow runner
         workflowRunner.run(startModuleId, null, resume);
 
         // Make the workflow runner dialog visible
+        final WorkflowRunnerDialog workflowRunnerDialog = this.workflowRunnerDialog;
         SwingUtilities.invokeLater(new Runnable() {
            @Override public void run() {
-                wrd.setVisible(true);
+                workflowRunnerDialog.setVisible(true);
             }
         });
     }
-
 }

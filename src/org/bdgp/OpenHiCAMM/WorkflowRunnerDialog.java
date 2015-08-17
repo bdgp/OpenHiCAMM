@@ -29,18 +29,15 @@ import java.awt.Font;
 @SuppressWarnings("serial")
 public class WorkflowRunnerDialog extends JDialog {
     WorkflowRunner workflowRunner;
-    String startModuleId;
     JProgressBar progressBar;
     Integer maxTasks;
     
     public WorkflowRunnerDialog(WorkflowDialog workflowDialog, 
-            WorkflowRunner runner,
-            String startModuleId) 
+            WorkflowRunner runner) 
     {
         super(workflowDialog, "Workflow Runner", Dialog.ModalityType.DOCUMENT_MODAL);
     	final WorkflowRunnerDialog self = this;
         this.workflowRunner = runner;
-        this.startModuleId = startModuleId;
 
         getContentPane().setLayout(new MigLayout("", "[][grow]", "[grow][][]"));
         setPreferredSize(new Dimension(1600,768));
