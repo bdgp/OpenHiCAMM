@@ -5,6 +5,7 @@ import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -12,6 +13,7 @@ import javax.swing.SwingUtilities;
 
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
+import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.WorkflowInstance;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
@@ -31,6 +33,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
+
+import static org.bdgp.OpenHiCAMM.Util.where;
 
 /**
  * The main workflow dialog.
@@ -326,6 +330,16 @@ public class WorkflowDialog extends JDialog {
         initWorkflowRunner(false);
         // Get the selected start module
         String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
+        
+        List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
+        if (tasks.size() > 0) {
+            if (JOptionPane.showConfirmDialog(null, 
+                    "There is existing run status data in the database. \n"+
+                            "Are you sure you want to overwrite the existing data?", 
+                            "Confirm Overwrite Existing Run", 
+                            JOptionPane.YES_NO_OPTION) == JOptionPane.NO_OPTION) 
+            { return; }
+        }
         
         // re-init the logger. This ensures each workflow run gets logged to a separate file.
         workflowRunner.initLogger();
