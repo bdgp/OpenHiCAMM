@@ -567,6 +567,7 @@ public class WorkflowRunner {
             public Status call() {
                 Status status = task.getStatus();
             	
+            	if (WorkflowRunner.this.isStopped == true) return status;
             	if (status != Status.DEFER && status != Status.NEW && status != Status.IN_PROGRESS) {
                     WorkflowRunner.this.logger.info(String.format(
                             "%s: Previous status was: %s, skipping this task!", task.getName(), status));
@@ -576,7 +577,6 @@ public class WorkflowRunner {
                     WorkflowRunner.this.logger.info(String.format(
                             "%s: Previous status was: %s", task.getName(), status));
             	}
-            	if (WorkflowRunner.this.isStopped == true) return status;
                 
                 // run the task
                 WorkflowRunner.this.logger.info(String.format("%s: Running task", task.getName()));

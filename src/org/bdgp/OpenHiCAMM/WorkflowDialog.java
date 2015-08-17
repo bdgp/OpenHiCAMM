@@ -93,6 +93,21 @@ public class WorkflowDialog extends JDialog {
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
                     initWorkflowRunner(false);
+
+                    // Set resume button enabled/disabled
+                    if (startModule.getModel() != null) {
+                        String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
+                        if (startModuleId != null) {
+                            List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
+                            btnResume.setEnabled(tasks.size() > 0);
+                        }
+                        else {
+                            btnResume.setEnabled(false);
+                        }
+                    }
+                    else {
+                        btnResume.setEnabled(false);
+                    }
                 }
             }});
         
@@ -295,7 +310,9 @@ public class WorkflowDialog extends JDialog {
                 workflowInstances.add(instance.getName());
             }
             Collections.sort(workflowInstances, Collections.reverseOrder());
+            String selectedInstance = (String)workflowInstance.getSelectedItem();
             workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
+            if (selectedInstance != null) workflowInstance.setSelectedItem(selectedInstance);
             workflowInstance.setEnabled(true);
             if (workflowInstances.size()>0) {
                 initWorkflowRunner(false);
