@@ -18,7 +18,6 @@ import javax.swing.JButton;
 import javax.swing.JProgressBar;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
-import javax.swing.text.DefaultCaret;
 
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.TaskListener;
@@ -32,13 +31,13 @@ public class WorkflowRunnerDialog extends JDialog {
     WorkflowRunner workflowRunner;
     JProgressBar progressBar;
     Integer maxTasks;
+    JTextArea text;
+    Set<Task> seen;
     
-    public WorkflowRunnerDialog(WorkflowDialog workflowDialog, 
-            WorkflowRunner runner) 
+    public WorkflowRunnerDialog(WorkflowDialog workflowDialog, final WorkflowRunner workflowRunner) 
     {
         super(workflowDialog, "Workflow Runner", Dialog.ModalityType.DOCUMENT_MODAL);
     	final WorkflowRunnerDialog self = this;
-        this.workflowRunner = runner;
 
         getContentPane().setLayout(new MigLayout("", "[][grow]", "[grow][][]"));
         setPreferredSize(new Dimension(1600,768));
@@ -46,13 +45,10 @@ public class WorkflowRunnerDialog extends JDialog {
         JLabel lblLogOutput = new JLabel("Log Output");
         getContentPane().add(lblLogOutput, "cell 0 0");
         
-        final JTextArea text = new JTextArea();
+        text = new JTextArea();
         text.setFont(new Font("Monospaced", Font.PLAIN, 12));
         text.setEditable(false);
         
-        text.append(String.format("workflowRunnerDialog=%s%n", this));
-        text.append(String.format("workflowRunner=%s%n", workflowRunner));
-
         JScrollPane textScrollPane = new JScrollPane(text);
         textScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         textScrollPane.setPreferredSize(new Dimension(1600, 768));
@@ -74,7 +70,7 @@ public class WorkflowRunnerDialog extends JDialog {
         });
         getContentPane().add(btnStop, "flowx,cell 1 2,alignx trailing");
         
-        final Set<Task> seen = new HashSet<Task>();
+        seen = new HashSet<Task>();
         progressBar.setIndeterminate(false);
 
         // logging output
@@ -151,5 +147,11 @@ public class WorkflowRunnerDialog extends JDialog {
             }
         });
     }
-
+    
+    public void reset() {
+        text.setText("");
+        seen.clear();
+        progressBar.setValue(0);
+        progressBar.setString("");
+    }
 }

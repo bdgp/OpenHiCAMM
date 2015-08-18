@@ -381,15 +381,23 @@ public class WorkflowDialog extends JDialog {
 
         // Refresh the UI controls
         refresh();
-        // Start the workflow runner
-        workflowRunner.run(startModuleId, null, resume);
+
+        // init the workflow runner dialog
+        if (workflowRunnerDialog == null) {
+            workflowRunnerDialog = new WorkflowRunnerDialog(this, workflowRunner);
+            workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            workflowRunnerDialog.pack();
+        }
 
         // Make the workflow runner dialog visible
-        final WorkflowRunnerDialog workflowRunnerDialog = this.workflowRunnerDialog;
         SwingUtilities.invokeLater(new Runnable() {
            @Override public void run() {
+                workflowRunnerDialog.reset();
                 workflowRunnerDialog.setVisible(true);
             }
         });
+
+        // Start the workflow runner
+        workflowRunner.run(startModuleId, null, resume);
     }
 }

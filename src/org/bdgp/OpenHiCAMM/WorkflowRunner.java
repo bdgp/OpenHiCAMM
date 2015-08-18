@@ -462,6 +462,7 @@ public class WorkflowRunner {
             public Status call() {
             	try {
                     WorkflowRunner.this.isStopped = false;
+                    long startTime = System.currentTimeMillis();
 
                     if (!resume) {
                         // delete and re-create the task records
@@ -489,7 +490,11 @@ public class WorkflowRunner {
                         if (WorkflowRunner.this.moduleInstances.get(t.getModuleId()).getTaskType() == Module.TaskType.SERIAL) {
                         	Status status;
                             try { status = future.get(); }
-                            catch (InterruptedException e) {throw new RuntimeException(e);} 
+                            catch (InterruptedException e) {
+                                WorkflowRunner.this.logger.severe(String.format(
+                                        "Top-level task %s was interrupted, setting status to DEFER", t.getName()));
+                                status = Status.DEFER;
+                            } 
                             catch (ExecutionException e) {throw new RuntimeException(e);} 
                             if (status != Status.SUCCESS && status != Status.DEFER) {
                                 WorkflowRunner.this.logger.severe(String.format(
@@ -508,6 +513,13 @@ public class WorkflowRunner {
                     Status status = coalesceStatuses(statuses);
                     // Display a summary of all the task statuses
                     logTaskSummary();
+
+                    long elapsedTime = System.currentTimeMillis() - startTime;
+                    WorkflowRunner.this.logger.info(String.format(
+                            "%nTime elapsed: %d hours, %d minutes, %.1f seconds", 
+                            (long)Math.floor(elapsedTime / (1000 * 60 * 60)),
+                            (long)Math.floor(elapsedTime / (1000 * 60)),
+                            elapsedTime / 1000.0));
                     return status;
             	}
             	catch (Throwable e) {
@@ -677,11 +689,15 @@ public class WorkflowRunner {
                                 break;
                             }
                             if (childTaskType == Module.TaskType.SERIAL && future.isDone()) {
-                            	Status s;
+                            	Status s = null;
                                 try { s = future.get(); } 
-                                catch (InterruptedException e) {throw new RuntimeException(e);} 
+                                catch (InterruptedException e) {
+                                	WorkflowRunner.this.logger.severe(String.format(
+                                			"Child task %s was interrupted",
+                                			childTask.getName()));
+                                } 
                                 catch (ExecutionException e) {throw new RuntimeException(e);}
-                                if (s != Task.Status.SUCCESS && s != Task.Status.DEFER) {
+                                if (s != null && s != Task.Status.SUCCESS && s != Task.Status.DEFER) {
                                 	WorkflowRunner.this.logger.severe(String.format(
                                 			"Child task %s returned status %s, not running successive sibling tasks",
                                 			childTask.getName(), s));
@@ -758,9 +774,9 @@ public class WorkflowRunner {
     }
 
     private void notifyTaskListeners(Task task) {
-        for (TaskListener listener : taskListeners) {
-            if (!WorkflowRunner.this.notifiedTasks.contains(task)) {
-                WorkflowRunner.this.notifiedTasks.add(task);
+        if (!WorkflowRunner.this.notifiedTasks.contains(task)) {
+            WorkflowRunner.this.notifiedTasks.add(task);
+            for (TaskListener listener : taskListeners) {
                 listener.notifyTask(task);
                 listener.debug(String.format("Notified task: %s", task));
             }
