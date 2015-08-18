@@ -23,6 +23,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.logging.Handler;
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
 
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
 import org.bdgp.OpenHiCAMM.DB.Config;
@@ -182,6 +183,7 @@ public class WorkflowRunner {
         }
         
         // init the logger
+        this.logHandlers = new ArrayList<Handler>();
         this.initLogger();
         
         // init the notified tasks set
@@ -245,20 +247,16 @@ public class WorkflowRunner {
     public void initLogger() {
     	// initialize the workflow logger
         this.logger = Logger.create(null, "WorkflowRunner", logLevel);
-
-        // Write to a log file in the instance dir
-        this.logHandlers = new ArrayList<Handler>();
-		try {
-            this.logHandlers.add(new Logger.LogFileHandler(
-            		new File(workflowDirectory,
-            				new File(instance.getStorageLocation(), LOG_FILE).getPath()).getPath()));
-		} 
-		catch (SecurityException e) {throw new RuntimeException(e);} 
-		catch (IOException e) {throw new RuntimeException(e);}
-
         for (Handler handler : this.logHandlers) {
             this.logger.addHandler(handler);
         }
+        try {
+            this.logger.addHandler(new Logger.LogFileHandler(
+                		new File(workflowDirectory,
+                				new File(instance.getStorageLocation(), LOG_FILE).getPath()).getPath()));
+        } 
+        catch (SecurityException e) {throw new RuntimeException(e);} 
+        catch (IOException e) {throw new RuntimeException(e);}
     }
     
     public void logWorkflowInfo(String startModuleId) {
@@ -474,7 +472,9 @@ public class WorkflowRunner {
 
                     // Notify the task listeners of the maximum task count
                     for (TaskListener listener : taskListeners) {
-                        listener.taskCount(getTaskCount(startModuleId));
+                        int taskCount = getTaskCount(startModuleId);
+                        listener.taskCount(taskCount);
+                        listener.debug(String.format("Set task count: %d", taskCount));
                     }
 
                     // Log some information on this workflow
@@ -568,36 +568,31 @@ public class WorkflowRunner {
                 Status status = task.getStatus();
             	
             	if (WorkflowRunner.this.isStopped == true) return status;
-            	if (status != Status.DEFER && status != Status.NEW && status != Status.IN_PROGRESS) {
-                    WorkflowRunner.this.logger.info(String.format(
-                            "%s: Previous status was: %s, skipping this task!", task.getName(), status));
-                    return status;
+                WorkflowRunner.this.logger.info(String.format(
+                        "%s: Previous status was: %s", task.getName(), status));
+
+            	if (status == Status.DEFER || status == Status.NEW || status == Status.IN_PROGRESS || status == Status.ERROR) {
+                    // run the task
+                    WorkflowRunner.this.logger.info(String.format("%s: Running task", task.getName()));
+                    try {
+                        status = taskModule.run(task, config, WorkflowRunner.this.logger);
+                    } 
+                    // Uncaught exceptions set the status to ERROR
+                    catch (Throwable e) {
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        WorkflowRunner.this.logger.severe(String.format("%s: Error reported during task:%n%s", 
+                                task.getName(), sw.toString()));
+                        status = Status.ERROR;
+                    }
+                    finally {
+                        WorkflowRunner.this.logger.info(String.format("%s: Calling cleanup", task.getName()));
+                        taskModule.cleanup(task); 
+                    }
+                    WorkflowRunner.this.logger.info(String.format("%s: Finished running task", task.getName()));
+                    WorkflowRunner.this.logger.info(String.format("%s: Setting task status to %s", task.getName(), status));
+                    task.setStatus(status);
             	}
-            	else {
-                    WorkflowRunner.this.logger.info(String.format(
-                            "%s: Previous status was: %s", task.getName(), status));
-            	}
-                
-                // run the task
-                WorkflowRunner.this.logger.info(String.format("%s: Running task", task.getName()));
-                try {
-                    status = taskModule.run(task, config, WorkflowRunner.this.logger);
-                } 
-                // Uncaught exceptions set the status to ERROR
-                catch (Throwable e) {
-                    StringWriter sw = new StringWriter();
-                    e.printStackTrace(new PrintWriter(sw));
-                    WorkflowRunner.this.logger.severe(String.format("%s: Error reported during task:%n%s", 
-                            task.getName(), sw.toString()));
-                    status = Status.ERROR;
-                }
-                finally {
-                    WorkflowRunner.this.logger.info(String.format("%s: Calling cleanup", task.getName()));
-                    taskModule.cleanup(task); 
-                }
-                WorkflowRunner.this.logger.info(String.format("%s: Finished running task", task.getName()));
-                WorkflowRunner.this.logger.info(String.format("%s: Setting task status to %s", task.getName(), status));
-                task.setStatus(status);
 
                 // notify any task listeners
                 notifyTaskListeners(task);
@@ -767,6 +762,7 @@ public class WorkflowRunner {
             if (!WorkflowRunner.this.notifiedTasks.contains(task)) {
                 WorkflowRunner.this.notifiedTasks.add(task);
                 listener.notifyTask(task);
+                listener.debug(String.format("Notified task: %s", task));
             }
         }
     }
@@ -791,6 +787,7 @@ public class WorkflowRunner {
     	isStopped = true;
         // notify any task listeners
         for (TaskListener listener : taskListeners) {
+            listener.debug("Called stop()");
             listener.stopped();
         }
         List<Runnable> runnables = pool.shutdownNow();
@@ -834,16 +831,20 @@ public class WorkflowRunner {
     
     public void addTaskListener(TaskListener listener) {
         taskListeners.add(listener);
+        listener.debug(String.format("Added to workflowRunner: %s", this));
     }
     public void removeTaskListener(TaskListener listener) {
         taskListeners.remove(listener);
+        listener.debug(String.format("Removed from workflowRunner: %s", this));
     }
     public void addLogHandler(Handler handler) {
     	logHandlers.add(handler);
     	this.logger.addHandler(handler);
+    	handler.publish(new LogRecord(Level.INFO, String.format("Add log handler %s to workflowRunner %s%n", handler, this)));
     }
     public boolean removeLogHandler(Handler handler) {
     	this.logger.removeHandler(handler);
+    	handler.publish(new LogRecord(Level.INFO, String.format("Remove log handler %s from workflowRunner %s%n", handler, this)));
     	return logHandlers.remove(handler);
     }
     public Logger getLogger() {

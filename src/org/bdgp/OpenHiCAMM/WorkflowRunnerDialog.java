@@ -18,6 +18,7 @@ import javax.swing.JButton;
 import javax.swing.JProgressBar;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
+import javax.swing.text.DefaultCaret;
 
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.TaskListener;
@@ -48,11 +49,14 @@ public class WorkflowRunnerDialog extends JDialog {
         final JTextArea text = new JTextArea();
         text.setFont(new Font("Monospaced", Font.PLAIN, 12));
         text.setEditable(false);
+        
+        text.append(String.format("workflowRunnerDialog=%s%n", this));
+        text.append(String.format("workflowRunner=%s%n", workflowRunner));
 
         JScrollPane textScrollPane = new JScrollPane(text);
         textScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         textScrollPane.setPreferredSize(new Dimension(1600, 768));
-
+        
         getContentPane().add(textScrollPane, "cell 1 0,grow");
         
         JLabel lblProgress = new JLabel("Progress");
@@ -84,6 +88,7 @@ public class WorkflowRunnerDialog extends JDialog {
                             new Date(record.getMillis()), 
                             record.getLevel(), 
                             record.getMessage()));
+                        text.setCaretPosition(text.getDocument().getLength());
                         progressBar.setString(String.format("%s%s",
                                 record.getMessage().length() < MAX_LENGTH? 
                                         record.getMessage() : 
@@ -139,6 +144,10 @@ public class WorkflowRunnerDialog extends JDialog {
                    @Override public void run() {
                         progressBar.setMaximum(WorkflowRunnerDialog.this.maxTasks);
                    }});
+            }
+            @Override
+            public void debug(String message) {
+                text.append(String.format("%s%n", message));
             }
         });
     }
