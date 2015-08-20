@@ -67,6 +67,7 @@ public class WorkflowDialog extends JDialog {
     JButton btnResume;
     JSpinner numThreads;
     private JLabel lblNumberOfThreads;
+    private boolean active = true;
 
     public WorkflowDialog(Frame parentFrame, OpenHiCAMM mmslide) {
         super(parentFrame, "OpenHiCAMM");
@@ -77,6 +78,8 @@ public class WorkflowDialog extends JDialog {
         directoryChooser.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+            	if (!active) return;
+            	refresh();
             }});
         getContentPane().setLayout(new MigLayout("", "[][483.00,grow]", "[][][][][][][]"));
         
@@ -96,6 +99,7 @@ public class WorkflowDialog extends JDialog {
         workflowInstance.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
+            	if (!active) return;
                 if (e.getStateChange() == ItemEvent.SELECTED) {
                     initWorkflowRunner(false);
 
@@ -114,11 +118,13 @@ public class WorkflowDialog extends JDialog {
                         btnResume.setEnabled(false);
                     }
                 }
+                refresh();
             }});
         
         btnCreateNewInstance = new JButton("Create New Instance");
         btnCreateNewInstance.addActionListener(new ActionListener() {
         	public void actionPerformed(ActionEvent arg0) {
+            	if (!active) return;
                 Connection workflowDb = Connection.get(
                     new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
                 Dao<WorkflowInstance> wfi = workflowDb.table(WorkflowInstance.class);
@@ -135,6 +141,7 @@ public class WorkflowDialog extends JDialog {
                 workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
                 workflowInstance.setEnabled(true);
                 workflowInstance.getModel().setSelectedItem(wf.getName());
+                refresh();
         	}
         });
         getContentPane().add(btnCreateNewInstance, "flowx,cell 1 1,alignx right");
@@ -148,7 +155,9 @@ public class WorkflowDialog extends JDialog {
         startModule.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
+            	if (!active) return;
                 if (e.getStateChange() == ItemEvent.SELECTED) { }
+                refresh();
             }});
         getContentPane().add(startModule, "cell 1 2,alignx trailing");
         
@@ -159,6 +168,7 @@ public class WorkflowDialog extends JDialog {
         btnConfigure.setEnabled(false);
         btnConfigure.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+            	if (!active) return;
                 initWorkflowRunner(false);
                 
                 Map<String,Configuration> configurations = workflowRunner.getConfigurations();
@@ -170,12 +180,14 @@ public class WorkflowDialog extends JDialog {
                 config.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 config.pack();
                 config.setVisible(true);
+                refresh();
             }
         });
         getContentPane().add(btnConfigure, "cell 1 3,alignx trailing");
         startButton = new JButton("Start");
         startButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+            	if (!active) return;
                 Map<String,Configuration> configurations = workflowRunner.getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                     WorkflowDialog.this, 
@@ -185,6 +197,7 @@ public class WorkflowDialog extends JDialog {
                 if (config.validateConfiguration()) {
                 	start(false);
                 }
+                refresh();
             }
         });
         
@@ -204,6 +217,7 @@ public class WorkflowDialog extends JDialog {
         btnResume = new JButton("Resume");
         btnResume.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+            	if (!active) return;
                 Map<String,Configuration> configurations = workflowRunner.getConfigurations();
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                     WorkflowDialog.this, 
@@ -213,6 +227,7 @@ public class WorkflowDialog extends JDialog {
                 if (config.validateConfiguration()) {
                 	start(true);
                 }
+                refresh();
             }
         });
         btnResume.setEnabled(false);
@@ -226,11 +241,13 @@ public class WorkflowDialog extends JDialog {
         btnShowImageLog.setEnabled(true);
         btnShowImageLog.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+            	if (!active) return;
                 if (WorkflowDialog.this.workflowRunner != null) {
                     List<ImageLogRecord> records = WorkflowDialog.this.workflowRunner.getImageLogRecords();
                     imageLog = new ImageLog(records);
                     imageLog.setVisible(true);
                 }
+                refresh();
             }
         });
         getContentPane().add(btnShowImageLog, "cell 1 6,alignx right");
@@ -239,10 +256,12 @@ public class WorkflowDialog extends JDialog {
         btnShowDatabaseManager.setEnabled(true);
         btnShowDatabaseManager.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+            	if (!active) return;
                 if (WorkflowDialog.this.workflowRunner != null) {
                     WorkflowDialog.this.workflowRunner.getWorkflowDb().startDatabaseManager();
                     WorkflowDialog.this.workflowRunner.getInstanceDb().startDatabaseManager();
                 }
+                refresh();
             }
         });
         getContentPane().add(btnShowDatabaseManager, "cell 1 6,alignx right");
@@ -250,6 +269,7 @@ public class WorkflowDialog extends JDialog {
         editWorkflowButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+            	if (!active) return;
                 WorkflowDesignerDialog designer = new WorkflowDesignerDialog(WorkflowDialog.this, new File(workflowDir.getText()));
                 designer.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 designer.pack();
@@ -267,10 +287,12 @@ public class WorkflowDialog extends JDialog {
                     @Override public void windowActivated(WindowEvent e) { }
                     @Override public void windowDeactivated(WindowEvent e) { }
                 });
+                refresh();
             }});
         
         openWorkflowButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+            	if (!active) return;
             	String oldWorkflowDir = workflowDir.getText();
                 if (directoryChooser.showDialog(WorkflowDialog.this,"Choose Workflow Directory") == JFileChooser.APPROVE_OPTION) {
                     workflowDir.setText(directoryChooser.getSelectedFile().getPath());
@@ -282,13 +304,15 @@ public class WorkflowDialog extends JDialog {
                 // If a workflow directory was given, enable the edit button and refresh the UI control state
                 if (workflowDir.getText().length() > 0) {
                     editWorkflowButton.setEnabled(true);
-                    refresh();
                 }
                 else {
                     editWorkflowButton.setEnabled(false);
                 }
+                refresh();
             }
         });
+        
+        refresh();
     }
     
     /**
@@ -296,60 +320,70 @@ public class WorkflowDialog extends JDialog {
      * a model state change is made that can change the UI state.
      */
     public void refresh() {
-        List<String> startModules = new ArrayList<String>();
-    	if (workflowDir.getText().length() > 0) {
-            Connection workflowDb = Connection.get(
-                    new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
-            // get list of starting modules
-            Dao<WorkflowModule> modules = workflowDb.table(WorkflowModule.class);
-            for (WorkflowModule module : modules.select()) {
-                if (module.getParentId() == null) {
-                    startModules.add(module.getId());
+    	try {
+    		active = false;
+            List<String> startModules = new ArrayList<String>();
+            if (workflowDir.getText().length() > 0) {
+                Connection workflowDb = Connection.get(
+                        new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
+                // get list of starting modules
+                Dao<WorkflowModule> modules = workflowDb.table(WorkflowModule.class);
+                for (WorkflowModule module : modules.select()) {
+                    if (module.getParentId() == null) {
+                        startModules.add(module.getId());
+                    }
                 }
-            }
 
-            Collections.sort(startModules);
-            String startModuleId = null;
-            if (startModule.getModel() != null) {
-                startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
-            }
-            startModule.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
-            if (startModuleId != null) {
-                startModule.setSelectedItem(startModuleId);
-            }
-            startModule.setEnabled(true);
-            
-            // get the list of workflow instances
-            List<String> workflowInstances = new ArrayList<String>();
-            Dao<WorkflowInstance> wfi = workflowDb.table(WorkflowInstance.class);
-            for (WorkflowInstance instance : wfi.select()) {
-                workflowInstances.add(instance.getName());
-            }
-            Collections.sort(workflowInstances, Collections.reverseOrder());
-            String selectedInstance = (String)workflowInstance.getSelectedItem();
-            workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
-            if (selectedInstance != null) workflowInstance.setSelectedItem(selectedInstance);
-            workflowInstance.setEnabled(true);
-            if (workflowInstances.size()>0) {
-                initWorkflowRunner(false);
-            }
-                
-            if (startModules.size() > 0) {
-                btnConfigure.setEnabled(true);
-                startButton.setEnabled(true);
-                btnCreateNewInstance.setEnabled(true);
-
+                Collections.sort(startModules);
+                String startModuleId = null;
+                if (startModule.getModel() != null) {
+                    startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
+                }
+                startModule.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
+                if (startModuleId == null && startModules.size() > 0) {
+                	startModuleId = startModules.get(0);
+                }
                 if (startModuleId != null) {
-                    List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
-                    btnResume.setEnabled(tasks.size() > 0);
+                    startModule.setSelectedItem(startModuleId);
+                }
+                startModule.setEnabled(true);
+                
+                // get the list of workflow instances
+                List<String> workflowInstances = new ArrayList<String>();
+                Dao<WorkflowInstance> wfi = workflowDb.table(WorkflowInstance.class);
+                for (WorkflowInstance instance : wfi.select()) {
+                    workflowInstances.add(instance.getName());
+                }
+                Collections.sort(workflowInstances, Collections.reverseOrder());
+                String selectedInstance = (String)workflowInstance.getSelectedItem();
+                if (selectedInstance == null && workflowInstances.size() > 0) selectedInstance = workflowInstances.get(0);
+                workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
+                if (selectedInstance != null) workflowInstance.setSelectedItem(selectedInstance);
+                workflowInstance.setEnabled(true);
+                if (workflowInstances.size() > 0) {
+                    initWorkflowRunner(false);
+                }
+                    
+                if (startModules.size() > 0) {
+                    btnConfigure.setEnabled(true);
+                    startButton.setEnabled(true);
+                    btnCreateNewInstance.setEnabled(true);
+
+                    if (startModuleId != null) {
+                        List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
+                        btnResume.setEnabled(tasks.size() > 0);
+                    }
+                    else {
+                        btnResume.setEnabled(false);
+                    }
                 }
                 else {
                     btnResume.setEnabled(false);
                 }
             }
-            else {
-                btnResume.setEnabled(false);
-            }
+    	}
+    	finally {
+    		active = true;
     	}
     }
 
