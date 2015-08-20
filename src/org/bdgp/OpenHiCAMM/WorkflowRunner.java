@@ -43,7 +43,9 @@ import com.j256.ormlite.field.FieldType;
 import com.j256.ormlite.field.SqlType;
 import com.j256.ormlite.stmt.StatementBuilder.StatementType;
 import com.j256.ormlite.support.CompiledStatement;
+import com.j256.ormlite.support.DatabaseConnection;
 
+import static org.bdgp.OpenHiCAMM.Util.set;
 import static org.bdgp.OpenHiCAMM.Util.where;
 
 public class WorkflowRunner {
@@ -84,6 +86,7 @@ public class WorkflowRunner {
     private String instanceDbName;
     
     private Set<Task> notifiedTasks;
+    private Logger.LogFileHandler logFileHandler;
     
     /**
      * Constructor for WorkflowRunner. This loads the workflow.txt file 
@@ -116,6 +119,13 @@ public class WorkflowRunner {
         this.instanceDbName = String.format("%s.db", this.instance.getName());
         this.instanceDb = Connection.get(new File(instancePath, instanceDbName).getPath());
 
+        
+        // init the notified tasks set
+        this.notifiedTasks = new HashSet<Task>();
+        // init the logger
+        this.logHandlers = new ArrayList<Handler>();
+        this.initLogger();
+        
         // set the number of cores to use in the thread pool
         this.maxThreads = Runtime.getRuntime().availableProcessors();
         this.pool = Executors.newFixedThreadPool(this.maxThreads);
@@ -134,12 +144,9 @@ public class WorkflowRunner {
         this.moduleInstances = new HashMap<String,Module>();
         this.loadModuleInstances();
 
-        // init the logger
-        this.initLogger();
-        
         // init the notified tasks set
         this.notifiedTasks = new HashSet<Task>();
-        
+
         // move default moduleconfig into the instance moduleconfig
         for (WorkflowModule w : workflow.select()) {
             List<ModuleConfig> configs = this.moduleConfig.select(where("id", w.getId()));
@@ -181,13 +188,6 @@ public class WorkflowRunner {
             catch (InstantiationException e) {throw new RuntimeException(e);} 
             catch (IllegalAccessException e) {throw new RuntimeException(e);}
         }
-        
-        // init the logger
-        this.logHandlers = new ArrayList<Handler>();
-        this.initLogger();
-        
-        // init the notified tasks set
-        this.notifiedTasks = new HashSet<Task>();
     }
     
     /**
@@ -244,19 +244,28 @@ public class WorkflowRunner {
         }
     }
     
-    public void initLogger() {
+    public Logger makeLogger(String label) {
     	// initialize the workflow logger
-        this.logger = Logger.create(null, "WorkflowRunner", logLevel);
+        Logger logger = Logger.create(null, label, logLevel);
         for (Handler handler : this.logHandlers) {
-            this.logger.addHandler(handler);
+            logger.addHandler(handler);
         }
+        logger.addHandler(this.logFileHandler);
+        return logger;
+    }
+
+    public Logger initLogger() {
+        // init the log file handler
         try {
-            this.logger.addHandler(new Logger.LogFileHandler(
-                		new File(workflowDirectory,
-                				new File(instance.getStorageLocation(), LOG_FILE).getPath()).getPath()));
+            this.logFileHandler =  new Logger.LogFileHandler(
+                    new File(this.workflowDirectory,
+                            new File(this.instance.getStorageLocation(), LOG_FILE).getPath()).getPath());
         } 
         catch (SecurityException e) {throw new RuntimeException(e);} 
         catch (IOException e) {throw new RuntimeException(e);}
+        
+        this.logger = this.makeLogger("WorkflowRunner");
+        return this.logger;
     }
     
     public void logWorkflowInfo(String startModuleId) {
@@ -464,7 +473,26 @@ public class WorkflowRunner {
                     WorkflowRunner.this.isStopped = false;
                     long startTime = System.currentTimeMillis();
 
-                    if (!resume) {
+                    if (resume) {
+                        // set all the tasks with status ERROR or DEFER to status NEW, since
+                        // we want to re-try these again.
+                        List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModuleId));
+                        while (tasks.size() > 0) {
+                            List<TaskDispatch> dispatch = new ArrayList<TaskDispatch>();
+                            for (Task task : tasks) {
+                                if (task.getStatus() == Status.ERROR || task.getStatus() == Status.DEFER) {
+                                    task.setStatus(Task.Status.NEW);
+                                    WorkflowRunner.this.taskStatus.update(task, "id");
+                                }
+                                dispatch.addAll(WorkflowRunner.this.taskDispatch.select(where("parentTaskId", task.getId())));
+                            }
+                            tasks.clear();
+                            for (TaskDispatch td : dispatch) {
+                                tasks.addAll(WorkflowRunner.this.taskStatus.select(where("id", td.getTaskId())));
+                            }
+                        }
+                    }
+                    else {
                         // delete and re-create the task records
                         //WorkflowRunner.this.deleteTaskRecords();
                         WorkflowRunner.this.deleteTaskRecords(startModuleId);
@@ -475,7 +503,7 @@ public class WorkflowRunner {
                     for (TaskListener listener : taskListeners) {
                         int taskCount = getTaskCount(startModuleId);
                         listener.taskCount(taskCount);
-                        listener.debug(String.format("Set task count: %d", taskCount));
+                        //listener.debug(String.format("Set task count: %d", taskCount));
                     }
 
                     // Log some information on this workflow
@@ -504,16 +532,55 @@ public class WorkflowRunner {
                             }
                         }
                     }
-                    List<Status> statuses = new ArrayList<Status>();
+                    
+                    // Force execute all the futures
                     for (Future<Status> future : futures) {
-                        try { statuses.add(future.get()); }
+                        try { future.get(); }
                         catch (InterruptedException e) {throw new RuntimeException(e);} 
                         catch (ExecutionException e) {throw new RuntimeException(e);} 
                     }
+                    
+                    // Wait until all tasks have completed
+                    CHECK_TASKS:
+                    while (true) {
+                        List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModuleId));
+                        while (tasks.size() > 0) {
+                            List<TaskDispatch> dispatch = new ArrayList<TaskDispatch>();
+                            for (Task task : tasks) {
+                                if (task.getStatus() == Status.NEW || task.getStatus() == Status.IN_PROGRESS) {
+                                    break CHECK_TASKS;
+                                }
+                                dispatch.addAll(WorkflowRunner.this.taskDispatch.select(where("parentTaskId", task.getId())));
+                            }
+                            tasks.clear();
+                            for (TaskDispatch td : dispatch) {
+                                tasks.addAll(WorkflowRunner.this.taskStatus.select(where("id", td.getTaskId())));
+                            }
+                        }
+                        WorkflowRunner.this.logger.info("Waiting for all tasks to complete...");
+                        Thread.sleep(5000);
+                    }
+
+                    // Coalesce all the statuses
+                    List<Status> statuses = new ArrayList<Status>();
+                    List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModuleId));
+                    while (tasks.size() > 0) {
+                        List<TaskDispatch> dispatch = new ArrayList<TaskDispatch>();
+                        for (Task task : tasks) {
+                            statuses.add(task.getStatus());
+                            dispatch.addAll(WorkflowRunner.this.taskDispatch.select(where("parentTaskId", task.getId())));
+                        }
+                        tasks.clear();
+                        for (TaskDispatch td : dispatch) {
+                            tasks.addAll(WorkflowRunner.this.taskStatus.select(where("id", td.getTaskId())));
+                        }
+                    }
                     Status status = coalesceStatuses(statuses);
+
                     // Display a summary of all the task statuses
                     logTaskSummary();
 
+                    // Display the elapsed time
                     long elapsedTime = System.currentTimeMillis() - startTime;
                     WorkflowRunner.this.logger.info(String.format(
                             "%nTime elapsed: %d hours, %d minutes, %.1f seconds", 
@@ -583,11 +650,12 @@ public class WorkflowRunner {
                 WorkflowRunner.this.logger.info(String.format(
                         "%s: Previous status was: %s", task.getName(), status));
 
-            	if (status == Status.DEFER || status == Status.NEW || status == Status.IN_PROGRESS || status == Status.ERROR) {
+            	if (status == Status.NEW || status == Status.IN_PROGRESS) {
                     // run the task
                     WorkflowRunner.this.logger.info(String.format("%s: Running task", task.getName()));
+                    Logger taskLogger = WorkflowRunner.this.makeLogger(task.getName());
                     try {
-                        status = taskModule.run(task, config, WorkflowRunner.this.logger);
+                        status = taskModule.run(task, config, taskLogger);
                     } 
                     // Uncaught exceptions set the status to ERROR
                     catch (Throwable e) {
@@ -615,7 +683,8 @@ public class WorkflowRunner {
                     	// will be ready to run. Both of these actions must be done in a single atomic DB
                     	// operation to avoid race conditions. As far as I can tell, the HSQLDB merge statement
                     	// is atomic, so hopefully this works.
-                    	CompiledStatement compiledStatement = taskStatus.getConnectionSource().getReadWriteConnection().compileStatement(
+                        DatabaseConnection db = taskStatus.getConnectionSource().getReadWriteConnection();
+                    	CompiledStatement compiledStatement = db.compileStatement(
                             "merge into TASK using (\n"+
                             "  select c.\"id\", p.\"id\", cast('IN_PROGRESS' as longvarchar)\n"+
                             "  from TASK p\n"+
@@ -630,7 +699,6 @@ public class WorkflowRunner {
                             "    and p2.\"id\"<>?\n"+
                             "    and p2.\"status\"<>'SUCCESS'\n"+
                             "  where c.\"status\" in ('NEW','DEFER')\n"+
-                            "    and c.\"parentTaskId\" is null\n"+
                             "    and p2.\"id\" is null\n"+
                             "    and p.\"id\"=?\n"+
                             "  union all\n"+
@@ -645,8 +713,8 @@ public class WorkflowRunner {
                     	compiledStatement.setObject(2, task.getId(), SqlType.INTEGER);
                     	compiledStatement.runUpdate();
                     }
-                    catch (SecurityException e) {throw new RuntimeException(e);}
-                    catch (SQLException e) {throw new RuntimeException(e);}
+                    catch (SecurityException e) { throw new RuntimeException(e); }
+                    catch (SQLException e) { throw new RuntimeException(e); }
                 }
                 else {
                 	// update the task status in the DB
@@ -717,21 +785,8 @@ public class WorkflowRunner {
                     }
                 }
 
-                // resolve all the futures into statuses
-                List<Status> statuses = new ArrayList<Status>();
-                statuses.add(status);
-                for (Future<Status> f : childFutures) {
-                    try {
-                        Status s = f.get();
-                        statuses.add(s);
-                    } 
-                    catch (ExecutionException e) {throw new RuntimeException(e);}
-                    catch (InterruptedException e) {throw new RuntimeException(e);}
-                }
-                // return the coalesced status
-                Status returnStatus = coalesceStatuses(statuses);
-                WorkflowRunner.this.logger.info(String.format("%s: Returning coalesced status: %s", task.getName(), returnStatus));
-                return returnStatus;
+                WorkflowRunner.this.logger.info(String.format("%s: Returning status: %s", task.getName(), status));
+                return status;
             }
         };
                 
@@ -778,7 +833,7 @@ public class WorkflowRunner {
             WorkflowRunner.this.notifiedTasks.add(task);
             for (TaskListener listener : taskListeners) {
                 listener.notifyTask(task);
-                listener.debug(String.format("Notified task: %s", task));
+                //listener.debug(String.format("Notified task: %s", task));
             }
         }
     }
@@ -803,7 +858,7 @@ public class WorkflowRunner {
     	isStopped = true;
         // notify any task listeners
         for (TaskListener listener : taskListeners) {
-            listener.debug("Called stop()");
+            //listener.debug("Called stop()");
             listener.stopped();
         }
         List<Runnable> runnables = pool.shutdownNow();
@@ -847,11 +902,11 @@ public class WorkflowRunner {
     
     public void addTaskListener(TaskListener listener) {
         taskListeners.add(listener);
-        listener.debug(String.format("Added to workflowRunner: %s", this));
+        //listener.debug(String.format("Added to workflowRunner: %s", this));
     }
     public void removeTaskListener(TaskListener listener) {
         taskListeners.remove(listener);
-        listener.debug(String.format("Removed from workflowRunner: %s", this));
+        //listener.debug(String.format("Removed from workflowRunner: %s", this));
     }
     public void addLogHandler(Handler handler) {
     	logHandlers.add(handler);
