@@ -2,6 +2,8 @@ package org.bdgp.OpenHiCAMM;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -360,6 +362,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	 */
 	public T reload(T value, String ... where) {
 		Class<T> class_ = this.getDataClass();
+		// get a map of the where values
 		Map<String,Object> values = new HashMap<String,Object>();
 		for (String w : where) {
 			try {
@@ -372,10 +375,41 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 			catch (NoSuchFieldException e) {throw new RuntimeException(e);} 
 			catch (SecurityException e) {throw new RuntimeException(e);}
 		}
+		// get the updated object values
 		T updated = where.length == 0?
 				this.selectOneOrDie(value) :
 				this.selectOneOrDie(values);
-		return updated;
+
+		// set the updated object values on the original field
+		FIELD:
+        for (Field field : class_.getDeclaredFields()) {
+            field.setAccessible(true);
+			try {
+				// make sure the field is an annotated database field. If not, skip it.
+                DatabaseFieldConfig dfield = DatabaseFieldConfig.fromField(
+				        connection.getDatabaseType(), class_.getName(), field);
+                if (dfield != null) {
+                	// first try setting using a setter
+                	String setterName = "set"+field.getName().substring(0,1).toUpperCase()+field.getName().substring(1);
+                	for (Method method : class_.getDeclaredMethods()) {
+                		if (method.getName().equals(setterName)) {
+                            method.setAccessible(true);
+                            try { method.invoke(value, field.get(updated)); } 
+                            catch (IllegalArgumentException e) {throw new RuntimeException(e);} 
+                            catch (IllegalAccessException e) {throw new RuntimeException(e);} 
+                            catch (InvocationTargetException e) {throw new RuntimeException(e);}
+                            continue FIELD;
+                		}
+                	}
+                	// next try setting using the raw field
+                    try { field.set(value, field.get(updated)); } 
+                    catch (IllegalArgumentException e) {throw new RuntimeException(e);} 
+                    catch (IllegalAccessException e) {throw new RuntimeException(e);}
+                }
+			} 
+			catch (SQLException e) {throw new RuntimeException(e);}
+        }
+		return value;
 	}
 	
 	/**

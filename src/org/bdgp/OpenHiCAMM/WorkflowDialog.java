@@ -7,6 +7,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.SwingUtilities;
@@ -191,6 +192,9 @@ public class WorkflowDialog extends JDialog {
         getContentPane().add(lblNumberOfThreads, "cell 0 4");
         
         numThreads = new JSpinner();
+        SpinnerNumberModel numThreadsModel = new SpinnerNumberModel();
+        numThreadsModel.setMinimum(1);
+        numThreads.setModel(numThreadsModel);
         numThreads.setValue(Runtime.getRuntime().availableProcessors());
         getContentPane().add(numThreads, "cell 1 4,alignx right");
 
