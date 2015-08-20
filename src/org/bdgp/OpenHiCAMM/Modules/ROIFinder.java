@@ -293,7 +293,7 @@ public class ROIFinder implements Module, ImageLogger {
             double width = rt.getValue("Width", i) / scale; // width of bounding box
             double height = rt.getValue("Height", i) / scale; // height of bounding box
             logger.info(String.format(
-            		"Found object: area=%.2f, bx=%.2f, by=%.2f, width=%.2f, heighh=%.2f",
+            		"Found object: area=%.2f, bx=%.2f, by=%.2f, width=%.2f, height=%.2f",
             		area, bx, by, width, height));
 
             // Area usually > 18,000 but embryo may be cut off at boundary; don’t know how your ROI code would deal with that
