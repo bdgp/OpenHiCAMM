@@ -159,17 +159,17 @@
     <dependency>
       <groupId>MicroManager</groupId>
       <artifactId>MMJ_</artifactId>
-      <version>1.4.22</version>
+      <version>1.4.23</version>
     </dependency>
     <dependency>
       <groupId>MicroManager</groupId>
       <artifactId>MMCoreJ</artifactId>
-      <version>1.4.22</version>
+      <version>1.4.23</version>
     </dependency>
     <dependency>
       <groupId>MicroManager</groupId>
       <artifactId>PixelCalibrator</artifactId>
-      <version>1.4.22</version>
+      <version>1.4.23</version>
     </dependency>
     <dependency>
       <groupId>org.hsqldb</groupId>
