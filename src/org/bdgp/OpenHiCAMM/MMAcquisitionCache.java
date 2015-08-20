@@ -21,7 +21,10 @@ public class MMAcquisitionCache {
     {
         MMCache mmCache = new MMCache(name, dir, show, diskCached, existing);
         if (!cache.contains(mmCache)) {
-            if (cache.size() >= MAX_CACHE) cache.remove(0);
+            if (cache.size() >= MAX_CACHE) {
+            	cache.remove(0);
+            	System.gc();
+            }
             cache.add(mmCache);
         }
         return cache.get(cache.indexOf(mmCache)).getAcquisition();
