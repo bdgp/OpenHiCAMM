@@ -33,6 +33,8 @@ public class WorkflowRunnerDialog extends JDialog {
     Integer maxTasks;
     JTextArea text;
     Set<Task> seen;
+    JButton btnStop;
+    JButton btnClose;
     
     public WorkflowRunnerDialog(WorkflowDialog workflowDialog, final WorkflowRunner workflowRunner) 
     {
@@ -62,7 +64,7 @@ public class WorkflowRunnerDialog extends JDialog {
         getContentPane().add(progressBar, "cell 1 1,growx");
         progressBar.setStringPainted(true);
         
-        final JButton btnStop = new JButton("Stop");
+        btnStop = new JButton("Stop");
         btnStop.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 workflowRunner.stop();
@@ -99,7 +101,7 @@ public class WorkflowRunnerDialog extends JDialog {
             @Override public void flush() {}
             @Override public void close() throws SecurityException { }});
         
-        final JButton btnClose = new JButton("Close");
+        btnClose = new JButton("Close");
         btnClose.addActionListener(new ActionListener() {
         	public void actionPerformed(ActionEvent e) {
         		self.dispose();
@@ -155,6 +157,8 @@ public class WorkflowRunnerDialog extends JDialog {
                 text.setText("");
                 progressBar.setValue(0);
                 progressBar.setString("");
+                btnStop.setEnabled(true);
+                btnClose.setEnabled(false);
             }});
     }
 }

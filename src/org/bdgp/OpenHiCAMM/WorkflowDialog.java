@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.logging.Level;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
+import javax.swing.JSpinner;
 
 /**
  * The main workflow dialog.
@@ -63,6 +64,8 @@ public class WorkflowDialog extends JDialog {
 
     ImageLog imageLog;
     JButton btnResume;
+    JSpinner numThreads;
+    private JLabel lblNumberOfThreads;
 
     public WorkflowDialog(Frame parentFrame, OpenHiCAMM mmslide) {
         super(parentFrame, "OpenHiCAMM");
@@ -74,7 +77,7 @@ public class WorkflowDialog extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
             }});
-        getContentPane().setLayout(new MigLayout("", "[][835.00,grow]", "[][][][][][]"));
+        getContentPane().setLayout(new MigLayout("", "[][483.00,grow]", "[][][][][][][]"));
         
         JLabel lblChooseWorkflowDirectory = new JLabel("Workflow Directory");
         getContentPane().add(lblChooseWorkflowDirectory, "cell 0 0,alignx trailing");
@@ -183,8 +186,16 @@ public class WorkflowDialog extends JDialog {
                 }
             }
         });
+        
+        lblNumberOfThreads = new JLabel("Number of Threads:");
+        getContentPane().add(lblNumberOfThreads, "cell 0 4");
+        
+        numThreads = new JSpinner();
+        numThreads.setValue(Runtime.getRuntime().availableProcessors());
+        getContentPane().add(numThreads, "cell 1 4,alignx right");
+
         startButton.setEnabled(false);
-        getContentPane().add(startButton, "flowx,cell 1 4,alignx trailing");
+        getContentPane().add(startButton, "flowx,cell 1 5,alignx trailing");
         
         btnResume = new JButton("Resume");
         btnResume.addActionListener(new ActionListener() {
@@ -201,7 +212,7 @@ public class WorkflowDialog extends JDialog {
             }
         });
         btnResume.setEnabled(false);
-        getContentPane().add(btnResume, "cell 1 4");
+        getContentPane().add(btnResume, "cell 1 5");
 
         editWorkflowButton = new JButton("Edit Workflow...");
         editWorkflowButton.setEnabled(false);
@@ -218,7 +229,7 @@ public class WorkflowDialog extends JDialog {
                 }
             }
         });
-        getContentPane().add(btnShowImageLog, "cell 1 5,alignx right");
+        getContentPane().add(btnShowImageLog, "cell 1 6,alignx right");
 
         btnShowDatabaseManager = new JButton("Show Database Manager");
         btnShowDatabaseManager.setEnabled(true);
@@ -230,7 +241,7 @@ public class WorkflowDialog extends JDialog {
                 }
             }
         });
-        getContentPane().add(btnShowDatabaseManager, "cell 1 5,alignx right");
+        getContentPane().add(btnShowDatabaseManager, "cell 1 6,alignx right");
         
         editWorkflowButton.addActionListener(new ActionListener() {
             @Override
@@ -348,7 +359,6 @@ public class WorkflowDialog extends JDialog {
         if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getInstance().getId()) || force) {
             workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, Level.INFO, mmslide);
 
-
         SwingUtilities.invokeLater(new Runnable() {
            @Override public void run() {
                 workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
@@ -365,6 +375,7 @@ public class WorkflowDialog extends JDialog {
     public void start(boolean resume) {
         // Make sure the workflow runner is initialized
         initWorkflowRunner(false);
+        this.workflowRunner.setMaxThreads((Integer)numThreads.getValue());
         // Get the selected start module
         String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
         

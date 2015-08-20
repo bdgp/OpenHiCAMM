@@ -45,7 +45,6 @@ import com.j256.ormlite.stmt.StatementBuilder.StatementType;
 import com.j256.ormlite.support.CompiledStatement;
 import com.j256.ormlite.support.DatabaseConnection;
 
-import static org.bdgp.OpenHiCAMM.Util.set;
 import static org.bdgp.OpenHiCAMM.Util.where;
 
 public class WorkflowRunner {
@@ -128,7 +127,7 @@ public class WorkflowRunner {
         
         // set the number of cores to use in the thread pool
         this.maxThreads = Runtime.getRuntime().availableProcessors();
-        this.pool = Executors.newFixedThreadPool(this.maxThreads);
+        this.pool = Executors.newFixedThreadPool(this.maxThreads+1);
 
 		// initialize various Dao's for convenience
         this.moduleConfig = this.instanceDb.table(ModuleConfig.class);
@@ -463,8 +462,7 @@ public class WorkflowRunner {
             final Map<String,Config> inheritedTaskConfig,
             final boolean resume) 
     {
-        int cores = Runtime.getRuntime().availableProcessors();
-        this.pool = Executors.newFixedThreadPool(cores);
+        this.pool = Executors.newFixedThreadPool(this.maxThreads+1);
         this.notifiedTasks.clear();
         Future<Status> future = pool.submit(new Callable<Status>() {
             @Override
@@ -905,6 +903,9 @@ public class WorkflowRunner {
     }
     public Logger getLogger() {
     	return this.logger;
+    }
+    public void setMaxThreads(int threads) {
+    	this.maxThreads = threads;
     }
 
     public List<ImageLogRecord> getImageLogRecords(Task task, Map<String,Config> config, Logger logger) {
