@@ -348,9 +348,13 @@ public class WorkflowDialog extends JDialog {
         if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getInstance().getId()) || force) {
             workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, Level.INFO, mmslide);
 
-            workflowRunnerDialog = new WorkflowRunnerDialog(this, workflowRunner);
-            workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            workflowRunnerDialog.pack();
+
+        SwingUtilities.invokeLater(new Runnable() {
+           @Override public void run() {
+                workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
+                workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                workflowRunnerDialog.pack();
+           }});
         }
     }
 
@@ -382,16 +386,15 @@ public class WorkflowDialog extends JDialog {
         // Refresh the UI controls
         refresh();
 
-        // init the workflow runner dialog
-        if (workflowRunnerDialog == null) {
-            workflowRunnerDialog = new WorkflowRunnerDialog(this, workflowRunner);
-            workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            workflowRunnerDialog.pack();
-        }
-
         // Make the workflow runner dialog visible
         SwingUtilities.invokeLater(new Runnable() {
            @Override public void run() {
+                // init the workflow runner dialog
+                if (workflowRunnerDialog == null) {
+                    workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
+                    workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                    workflowRunnerDialog.pack();
+                }
                 workflowRunnerDialog.reset();
                 workflowRunnerDialog.setVisible(true);
             }
