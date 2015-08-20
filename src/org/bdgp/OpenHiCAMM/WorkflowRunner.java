@@ -541,24 +541,9 @@ public class WorkflowRunner {
                     }
                     
                     // Wait until all tasks have completed
-                    CHECK_TASKS:
-                    while (true) {
-                        List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModuleId));
-                        while (tasks.size() > 0) {
-                            List<TaskDispatch> dispatch = new ArrayList<TaskDispatch>();
-                            for (Task task : tasks) {
-                                if (task.getStatus() == Status.NEW || task.getStatus() == Status.IN_PROGRESS) {
-                                    break CHECK_TASKS;
-                                }
-                                dispatch.addAll(WorkflowRunner.this.taskDispatch.select(where("parentTaskId", task.getId())));
-                            }
-                            tasks.clear();
-                            for (TaskDispatch td : dispatch) {
-                                tasks.addAll(WorkflowRunner.this.taskStatus.select(where("id", td.getTaskId())));
-                            }
-                        }
-                        WorkflowRunner.this.logger.info("Waiting for all tasks to complete...");
-                        Thread.sleep(5000);
+                    int taskCount = getTaskCount(startModuleId);
+                    while (WorkflowRunner.this.notifiedTasks.size() < taskCount) {
+                        Thread.sleep(1000);
                     }
 
                     // Coalesce all the statuses
