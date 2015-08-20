@@ -96,7 +96,6 @@ public class OpenHiCAMM implements MMPlugin {
                         textScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
                         textScrollPane.setPreferredSize(new Dimension(800, 600));
                         JOptionPane.showMessageDialog(dialog, textScrollPane);
-                        dialog.dispose();
                     }
                 });
             }
