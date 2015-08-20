@@ -149,9 +149,12 @@ public class WorkflowRunnerDialog extends JDialog {
     }
     
     public void reset() {
-        text.setText("");
         seen.clear();
-        progressBar.setValue(0);
-        progressBar.setString("");
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override public void run() {
+                text.setText("");
+                progressBar.setValue(0);
+                progressBar.setString("");
+            }});
     }
 }
