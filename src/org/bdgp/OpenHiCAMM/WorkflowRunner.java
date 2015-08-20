@@ -143,9 +143,6 @@ public class WorkflowRunner {
         this.moduleInstances = new HashMap<String,Module>();
         this.loadModuleInstances();
 
-        // init the notified tasks set
-        this.notifiedTasks = new HashSet<Task>();
-
         // move default moduleconfig into the instance moduleconfig
         for (WorkflowModule w : workflow.select()) {
             List<ModuleConfig> configs = this.moduleConfig.select(where("id", w.getId()));
@@ -627,6 +624,7 @@ public class WorkflowRunner {
         Callable<Status> callable = new Callable<Status>() {
             @Override
             public Status call() {
+            	WorkflowRunner.this.taskStatus.reload(task, "id");
                 Status status = task.getStatus();
             	
             	if (WorkflowRunner.this.isStopped == true) return status;
