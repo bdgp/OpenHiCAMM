@@ -208,7 +208,7 @@ public class WorkflowDialog extends JDialog {
         SpinnerNumberModel numThreadsModel = new SpinnerNumberModel();
         numThreadsModel.setMinimum(1);
         numThreads.setModel(numThreadsModel);
-        numThreads.setValue(Runtime.getRuntime().availableProcessors());
+        numThreads.setValue(1);
         getContentPane().add(numThreads, "cell 1 4,alignx right");
 
         startButton.setEnabled(false);
