@@ -8,7 +8,7 @@ import org.micromanager.utils.MMScriptException;
 
 public class MMAcquisitionCache {
     private static List<MMCache> cache = new ArrayList<MMCache>();
-    private static final int MAX_CACHE = 10;
+    private static final int MAX_CACHE = 2;
 
     private MMAcquisitionCache() { }
     
