@@ -275,7 +275,7 @@ public class SlideImager implements Module, ImageLogger {
             // Write the acquisition record
             Acquisition acquisition = new Acquisition(prefix, rootDir);
             acqDao.insertOrUpdate(acquisition,"name","directory");
-            acquisition = acqDao.reload(acquisition);
+            acqDao.reload(acquisition);
             logger.info(String.format("Using acquisition record: %s", acquisition));
 
             // Get the ImageCache object for this acquisition
@@ -568,7 +568,7 @@ public class SlideImager implements Module, ImageLogger {
             else {
             	slide = new Slide(moduleId);
             	slideDao.insertOrUpdate(slide,"experimentId");
-            	slide = slideDao.reload(slide, "experimentId");
+            	slideDao.reload(slide, "experimentId");
             	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created new slide: %s", this.moduleId, slide.toString()));
             }
             conf.put("slideId", new Config(this.moduleId, "slideId", new Integer(slide.getId()).toString()));
@@ -624,7 +624,7 @@ public class SlideImager implements Module, ImageLogger {
 
                 // store the loaded position list in the DB
                 posListDao.insertOrUpdate(posList,"moduleId","slideId");
-                posList = posListDao.reload(posList,"moduleId","slideId");
+                posListDao.reload(posList,"moduleId","slideId");
             	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created/Updated posList: %s", 
             			this.moduleId, posList));
                 // delete any old record first
