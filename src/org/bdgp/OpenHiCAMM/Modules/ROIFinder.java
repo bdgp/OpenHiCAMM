@@ -288,7 +288,7 @@ public class ROIFinder implements Module, ImageLogger {
 
         // Detect the objects
         logger.info(String.format("Analyzing particles"));
-        IJ.run(imp, "Analyze Particles...", "display exclude clear add in_situ");
+        IJ.run(imp, "Analyze Particles...", "exclude clear in_situ");
         imageLog.addImage(imp, "Analyzing particles");
        
         Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
