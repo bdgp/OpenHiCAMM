@@ -465,6 +465,9 @@ public class WorkflowRunner {
             @Override
             public Status call() {
             	try {
+            		// set ImageJ batch mode
+                    ij.macro.Interpreter.batchMode = true;
+
                     WorkflowRunner.this.isStopped = false;
                     long startTime = System.currentTimeMillis();
 
@@ -575,6 +578,10 @@ public class WorkflowRunner {
             		WorkflowRunner.this.logger.severe(String.format("Caught exception while running workflow: %s", 
             				sw.toString()));
             		throw new RuntimeException(e);
+            	}
+            	finally {
+            		// unset batch mode
+                    ij.macro.Interpreter.batchMode = false;
             	}
             }
         });

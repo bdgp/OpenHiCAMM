@@ -9,6 +9,7 @@ import ij.process.ImageProcessor;
 import java.awt.Component;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -221,6 +222,14 @@ public class ROIFinder implements Module, ImageLogger {
     }
     
     public List<ROI> process(Image image, TaggedImage taggedImage, Logger logger, ImageLogRunner imageLog, double minRoiArea) {
+    	// Display all the IJ menu entries
+        // @SuppressWarnings("unchecked")
+		// Iterator<Map.Entry<String, String>> it = ij.Menus.getCommands().entrySet().iterator();
+        // while (it.hasNext()) {
+        //   Map.Entry<String, String> entry = it.next();
+        //   logger.info(String.format("Menu Entry: %s -> %s", entry.getKey(), entry.getValue()));
+        // }
+    	
     	List<ROI> rois = new ArrayList<ROI>();
         ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
         ImagePlus imp = new ImagePlus(image.toString(), processor);
