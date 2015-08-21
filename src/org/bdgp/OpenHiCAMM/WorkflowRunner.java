@@ -565,11 +565,12 @@ public class WorkflowRunner {
 
                     // Display the elapsed time
                     long elapsedTime = System.currentTimeMillis() - startTime;
+                    long hours = (long)Math.floor(elapsedTime / (1000 * 60 * 60));
+                    long minutes = (long)Math.floor(elapsedTime / (1000 * 60)) - (hours * 60);
+                    double seconds = (elapsedTime / 1000.0) - (hours * 60 * 60) - (minutes * 60);
                     WorkflowRunner.this.logger.info(String.format(
                             "%nTime elapsed: %d hours, %d minutes, %.1f seconds", 
-                            (long)Math.floor(elapsedTime / (1000 * 60 * 60)),
-                            (long)Math.floor(elapsedTime / (1000 * 60)),
-                            elapsedTime / 1000.0));
+                            hours, minutes, seconds));
                     return status;
             	}
             	catch (Throwable e) {
