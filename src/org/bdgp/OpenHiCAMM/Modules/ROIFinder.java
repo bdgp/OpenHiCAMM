@@ -9,7 +9,6 @@ import ij.process.ImageProcessor;
 import java.awt.Component;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -480,4 +479,7 @@ public class ROIFinder implements Module, ImageLogger {
         })));
         return imageLogRecords;
     }
+
+    @Override
+    public void runIntialize() { }
 }

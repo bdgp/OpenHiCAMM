@@ -89,4 +89,7 @@ public class TIGenerator implements Module {
 	}
 
     @Override public void cleanup(Task task) { }
+
+    @Override
+    public void runIntialize() { }
 }

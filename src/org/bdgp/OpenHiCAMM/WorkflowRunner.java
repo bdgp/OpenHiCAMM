@@ -86,7 +86,12 @@ public class WorkflowRunner {
     
     private Set<Task> notifiedTasks;
     private Logger.LogFileHandler logFileHandler;
+    private boolean resume;
     
+    public boolean isResume() {
+        return resume;
+    }
+
     /**
      * Constructor for WorkflowRunner. This loads the workflow.txt file 
      * in the workflow directory and performs some consistency checks 
@@ -240,6 +245,19 @@ public class WorkflowRunner {
         }
     }
     
+    public void runInitialize(String moduleId) {
+        WorkflowModule module = this.workflow.selectOneOrDie(where("id",moduleId));
+        runInitialize(module);
+    }
+    public void runInitialize(WorkflowModule module) {
+        Module m = this.moduleInstances.get(module.getId());
+        m.runIntialize();
+        List<WorkflowModule> modules = workflow.select(where("parentId", module.getId()));
+        for (WorkflowModule mod : modules) {
+        	this.runInitialize(mod);
+        }
+    }
+
     public Logger makeLogger(String label) {
     	// initialize the workflow logger
         Logger logger = Logger.create(null, label, logLevel);
@@ -344,7 +362,12 @@ public class WorkflowRunner {
         catch (IOException e) {
             this.logger.warning(String.format("Could not draw workflow graph: %s", e));
         }
-
+        
+        // draw the task dispatch graph
+        // drawTaskDispatchGraph(startModuleId);
+    }
+    
+    public void drawTaskDispatchGraph(String startModuleId) {
         // Draw the task dispatch graph
         // Start with all tasks associated with the start module ID
         List<Task> tasks = this.taskStatus.select(where("moduleId", startModuleId));
@@ -459,6 +482,7 @@ public class WorkflowRunner {
             final Map<String,Config> inheritedTaskConfig,
             final boolean resume) 
     {
+        this.resume = resume;
         this.pool = Executors.newFixedThreadPool(this.maxThreads+1);
         this.notifiedTasks.clear();
         Future<Status> future = pool.submit(new Callable<Status>() {
@@ -471,7 +495,7 @@ public class WorkflowRunner {
                     WorkflowRunner.this.isStopped = false;
                     long startTime = System.currentTimeMillis();
 
-                    if (resume) {
+                    if (WorkflowRunner.this.resume) {
                         // set all the tasks with status ERROR or DEFER to status NEW, since
                         // we want to re-try these again.
                         List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModuleId));
@@ -496,6 +520,9 @@ public class WorkflowRunner {
                         WorkflowRunner.this.deleteTaskRecords(startModuleId);
                         WorkflowRunner.this.createTaskRecords(startModuleId);
                     }
+
+                    // call the runInitialize module method
+                    WorkflowRunner.this.runInitialize(startModuleId);
 
                     // Notify the task listeners of the maximum task count
                     for (TaskListener listener : taskListeners) {

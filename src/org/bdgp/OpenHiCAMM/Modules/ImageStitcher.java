@@ -91,4 +91,7 @@ public class ImageStitcher implements Module {
 	}
 
 	@Override public void cleanup(Task task) { }
+
+    @Override
+    public void runIntialize() { }
 }

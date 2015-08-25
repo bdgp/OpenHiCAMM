@@ -756,4 +756,7 @@ public class SlideImager implements Module, ImageLogger {
         })));
         return imageLogRecords;
     }
+
+    @Override
+    public void runIntialize() { }
 }

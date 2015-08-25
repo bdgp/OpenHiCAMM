@@ -32,6 +32,11 @@ public interface Module {
     public List<Task> createTaskRecords(List<Task> parentTasks);
     
     /**
+     * Perform some initialization before running the task.
+     */
+    public void runIntialize();
+    
+    /**
      * Run the task.
      */
     public Status run(Task task, Map<String,Config> config, Logger logger);
