@@ -32,7 +32,7 @@ public interface Module {
     public List<Task> createTaskRecords(List<Task> parentTasks);
     
     /**
-     * Perform some initialization before running the task.
+     * Perform some initialization before starting the run.
      */
     public void runIntialize();
     
