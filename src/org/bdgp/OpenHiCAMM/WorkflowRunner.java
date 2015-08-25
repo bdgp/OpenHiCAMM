@@ -251,7 +251,14 @@ public class WorkflowRunner {
     }
     public void runInitialize(WorkflowModule module) {
         Module m = this.moduleInstances.get(module.getId());
-        m.runIntialize();
+        // If there are any new/in-progress tasks, then call runInitialize()
+        List<Task> newTasks = new ArrayList<Task>();
+        newTasks.addAll(this.getTaskStatus().select(where("moduleId", module.getId()).and("status", Status.NEW)));
+        newTasks.addAll(this.getTaskStatus().select(where("moduleId", module.getId()).and("status", Status.IN_PROGRESS)));
+        if (newTasks.size() > 0) {
+            m.runIntialize();
+        }
+
         List<WorkflowModule> modules = workflow.select(where("parentId", module.getId()));
         for (WorkflowModule mod : modules) {
         	this.runInitialize(mod);
@@ -502,7 +509,10 @@ public class WorkflowRunner {
                         while (tasks.size() > 0) {
                             List<TaskDispatch> dispatch = new ArrayList<TaskDispatch>();
                             for (Task task : tasks) {
-                                if (task.getStatus() == Status.ERROR || task.getStatus() == Status.DEFER) {
+                                if (task.getStatus() == Status.ERROR || 
+                                    task.getStatus() == Status.DEFER || 
+                                    task.getStatus() == Status.IN_PROGRESS) 
+                                {
                                     task.setStatus(Task.Status.NEW);
                                     WorkflowRunner.this.taskStatus.update(task, "id");
                                 }
@@ -702,7 +712,11 @@ public class WorkflowRunner {
                         DatabaseConnection db = taskStatus.getConnectionSource().getReadWriteConnection();
                     	CompiledStatement compiledStatement = db.compileStatement(
                             "merge into TASK using (\n"+
-                            "  select c.\"id\", p.\"id\", cast('IN_PROGRESS' as longvarchar)\n"+
+                            "  select c.\"id\",\n"+
+                            "    p.\"id\",\n"+
+                            "    case when c.\"status\" in ('NEW','DEFER')\n"+
+                            "    then cast('IN_PROGRESS' as longvarchar)\n"+
+                            "    else c.\"status\" end\n"+
                             "  from TASK p\n"+
                             "  join TASKDISPATCH td\n"+
                             "    on p.\"id\"=td.\"parentTaskId\"\n"+
@@ -714,7 +728,7 @@ public class WorkflowRunner {
                             "    on c.\"id\"=td2.\"taskId\"\n"+
                             "    and p2.\"id\"<>?\n"+
                             "    and p2.\"status\"<>'SUCCESS'\n"+
-                            "  where c.\"status\" in ('NEW','DEFER')\n"+
+                            "  where c.\"status\" in ('NEW','DEFER','SUCCESS')\n"+
                             "    and p2.\"id\" is null\n"+
                             "    and p.\"id\"=?\n"+
                             "  union all\n"+
@@ -752,7 +766,8 @@ public class WorkflowRunner {
                         Task childTask = taskStatus.selectOneOrDie(
                                 where("id",childTaskId.getTaskId()));
 
-                        if (childTask.getStatus() == Status.IN_PROGRESS && 
+                        if ((childTask.getStatus() == Status.IN_PROGRESS ||
+                             childTask.getStatus() == Status.SUCCESS) && 
                             childTask.getParentTaskId() != null && 
                             childTask.getParentTaskId().equals(task.getId())) 
                         {
