@@ -21,8 +21,9 @@ public class ROIFinderDialog extends JPanel {
 	DoubleSpinner minRoiArea;
 	DoubleSpinner hiResPixelSizeUm;
 
-	public static final double DEFAULT_PIXEL_SIZE_UM = 0.4735;
-	public static final double DEFAULT_MIN_ROI_AREA = 2000.0;
+	public static final double DEFAULT_PIXEL_SIZE_UM = 0.48;
+	public static final double DEFAULT_HIRES_PIXEL_SIZE_UM = 0.124;
+	public static final double DEFAULT_MIN_ROI_AREA = 30000.0;
 	private JLabel lblMinRoiArea;
 	private JLabel lblHiresPixelSize;
 	private JButton btnRoiTest;
@@ -48,7 +49,7 @@ public class ROIFinderDialog extends JPanel {
         add(lblHiresPixelSize, "cell 0 2");
         
         hiResPixelSizeUm = new DoubleSpinner();
-        hiResPixelSizeUm.setValue(new Double(DEFAULT_PIXEL_SIZE_UM));
+        hiResPixelSizeUm.setValue(new Double(DEFAULT_HIRES_PIXEL_SIZE_UM));
         add(hiResPixelSizeUm, "cell 1 2");
         
         btnRoiTest = new JButton("ROI Test");

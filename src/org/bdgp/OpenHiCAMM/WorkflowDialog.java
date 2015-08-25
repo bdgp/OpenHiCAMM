@@ -370,7 +370,7 @@ public class WorkflowDialog extends JDialog {
                     startButton.setEnabled(true);
                     btnCreateNewInstance.setEnabled(true);
 
-                    if (startModuleId != null) {
+                    if (startModuleId != null && workflowRunner != null) {
                         List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
                         btnResume.setEnabled(tasks.size() > 0);
                     }
