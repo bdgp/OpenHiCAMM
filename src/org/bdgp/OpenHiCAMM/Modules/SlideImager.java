@@ -44,6 +44,8 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.micromanager.dialogs.AcqControlDlg;
+import org.micromanager.events.DisplayCreatedEvent;
+import org.micromanager.events.EventManager;
 import org.micromanager.MMOptions;
 import org.micromanager.MMStudio;
 import org.micromanager.acquisition.AcquisitionWrapperEngine;
@@ -57,6 +59,8 @@ import org.micromanager.utils.MMException;
 import org.micromanager.utils.MMScriptException;
 import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMSerializationException;
+
+import com.google.common.eventbus.Subscribe;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
@@ -166,6 +170,10 @@ public class SlideImager implements Module, ImageLogger {
         }
         return positionList;
     }
+    
+    @Subscribe public void showDisplay(DisplayCreatedEvent e) {
+        e.getDisplayWindow().setVisible(true);
+    }
 
     @Override
     public Status run(Task task, Map<String,Config> conf, Logger logger) {
@@ -252,16 +260,22 @@ public class SlideImager implements Module, ImageLogger {
             catch (MMException e) {throw new RuntimeException(e);}
 
             // Start the acquisition engine. This runs asynchronously.
-            logger.info(String.format("Now running the image acquisition sequence, please wait..."));
-            String returnAcqName = acqControlDlg.runAcquisition(acqName, rootDir);
-            if (returnAcqName == null) {
-                throw new RuntimeException("acqControlDlg.runAcquisition returned null acquisition name");
-            }
+            try {
+                EventManager.register(this);
+                logger.info(String.format("Now running the image acquisition sequence, please wait..."));
+                String returnAcqName = acqControlDlg.runAcquisition(acqName, rootDir);
+                if (returnAcqName == null) {
+                    throw new RuntimeException("acqControlDlg.runAcquisition returned null acquisition name");
+                }
 
-            // wait until the current acquisition finishes
-            while (acqControlDlg.isAcquisitionRunning()) {
-                 try { Thread.sleep(1000); } 
-                 catch (InterruptedException e) {throw new RuntimeException(e);}
+                // wait until the current acquisition finishes
+                while (acqControlDlg.isAcquisitionRunning()) {
+                     try { Thread.sleep(1000); } 
+                     catch (InterruptedException e) {throw new RuntimeException(e);}
+                }
+            }
+            finally {
+                EventManager.unregister(this);
             }
 
             // get the prefix name and log it
