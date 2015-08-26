@@ -52,12 +52,13 @@ import org.micromanager.acquisition.AcquisitionWrapperEngine;
 import org.micromanager.acquisition.MMAcquisition;
 import org.micromanager.api.Autofocus;
 import org.micromanager.api.ImageCache;
+import org.micromanager.api.ImageCacheListener;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
 import org.micromanager.api.ScriptInterface;
+import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMException;
 import org.micromanager.utils.MMScriptException;
-import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMSerializationException;
 
 import com.google.common.eventbus.Subscribe;
@@ -175,7 +176,7 @@ public class SlideImager implements Module, ImageLogger {
     }
 
     @Override
-    public Status run(Task task, Map<String,Config> conf, Logger logger) {
+    public Status run(Task task, final Map<String,Config> conf, final Logger logger) {
     	logger.info(String.format("Running task: %s", task));
     	for (Config c : conf.values()) {
     		logger.info(String.format("Using configuration: %s", c));
@@ -266,6 +267,20 @@ public class SlideImager implements Module, ImageLogger {
                 if (returnAcqName == null) {
                     throw new RuntimeException("acqControlDlg.runAcquisition returned null acquisition name");
                 }
+                final Integer[] imageCount = new Integer[]{0};
+                final int totalImages = getTotalImages();
+                this.engine.getImageCache().addImageCacheListener(new ImageCacheListener() {
+                    @Override public void imageReceived(TaggedImage taggedImage) {
+                        ++imageCount[0];
+                        logger.info(String.format("Acquired image: %s (%d/%d images)", 
+                                MDUtils.getLabel(taggedImage.tags),
+                                imageCount[0],
+                                totalImages));
+                    }
+                    @Override public void imagingFinished(String path) { 
+                        logger.info(String.format("Finished image acquisition."));
+                    }
+                });
 
                 // wait until the current acquisition finishes
                 while (acqControlDlg.isAcquisitionRunning()) {
@@ -327,6 +342,11 @@ public class SlideImager implements Module, ImageLogger {
             	}
             }
 
+            // get the slide ID and slide Position ID from the config
+            if (!conf.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
+            Integer slideId = new Integer(conf.get("slideId").getValue());
+            logger.info(String.format("Using slideId: %d", slideId));
+
             // For image acquisition, only the first task actually does any work, the
             // other tasks represent each image, so that the downstream processing tasks
             // can dispatch correctly. So we can update the status and configs for the 
@@ -337,41 +357,14 @@ public class SlideImager implements Module, ImageLogger {
             			"Could not get task record for image number %d!", imageNum));
 
                 String[] taggedImageKeys = taggedImages.get(imageNum).split("_");
-                TaggedImage taggedImage = imageCache.getImage(
+
+                // Create image DB record
+                Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+                Image image = new Image(slideId, acquisition, 
                         new Integer(taggedImageKeys[0]),
                         new Integer(taggedImageKeys[1]),
                         new Integer(taggedImageKeys[2]),
                         new Integer(taggedImageKeys[3]));
-                if (taggedImage == null) throw new RuntimeException("taggedImage is null!");
-
-                // try { logger.info(String.format("Analyzing taggedImage with tags:\n%s", taggedImage.tags.toString(2))); } 
-                // catch (JSONException e) {throw new RuntimeException(e);}
-
-                // Save the image label. This can be used by downstream processing scripts to get the TaggedImage
-                // out of the ImageCache.
-                String imageLabel = MDUtils.getLabel(taggedImage.tags);
-                TaskConfig imageLabelConf = new TaskConfig(new Integer(t.getId()).toString(),"imageLabel",imageLabel);
-                taskConfigDao.insertOrUpdate(imageLabelConf,"id","key");
-                conf.put("imageLabel", imageLabelConf);
-                logger.info(String.format("Created imageLabel task config: %s", imageLabelConf));
-
-                // get the slide ID and slide Position ID from the config
-                if (!conf.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
-                Integer slideId = new Integer(conf.get("slideId").getValue());
-                logger.info(String.format("Using slideId: %d", slideId));
-
-                // Create image DB record
-                Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-                Image image;
-                try {
-                    image = new Image(slideId, acquisition, 
-                        MDUtils.getChannelIndex(taggedImage.tags),
-                        MDUtils.getSliceIndex(taggedImage.tags),
-                        MDUtils.getFrameIndex(taggedImage.tags),
-                        MDUtils.getPositionIndex(taggedImage.tags));
-                }
-                catch (JSONException e) {throw new RuntimeException(e);}
-
                 imageDao.insert(image);
                 logger.info(String.format("Inserted image: %s", image));
 
@@ -383,17 +376,6 @@ public class SlideImager implements Module, ImageLogger {
                 taskConfigDao.insertOrUpdate(imageId,"id","key");
                 conf.put("imageId", imageId);
                 logger.info(String.format("Inserted/Updated imageId config: %s", imageId));
-
-                // Also store the taggedImage object as a config value. This
-                // is required when not running in offline mode, since the acquisition
-                // folder will not have been written yet.
-                TaskConfig taggedImageConf = new TaskConfig(
-                        new Integer(t.getId()).toString(),
-                        "taggedImage",
-                        null,
-                        taggedImage);
-                conf.put(taggedImageConf.getKey(), taggedImageConf);
-                logger.info(String.format("Added taggedImage conf: %s", taggedImageConf));
             }
         }
         return Status.SUCCESS;
