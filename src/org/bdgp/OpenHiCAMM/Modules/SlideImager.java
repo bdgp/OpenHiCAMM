@@ -181,30 +181,31 @@ public class SlideImager implements Module, ImageLogger {
     	for (Config c : conf.values()) {
     		logger.info(String.format("Using configuration: %s", c));
     	}
-    	// Make sure the acquisition control dialog was initialized
-    	if (this.acqControlDlg == null) {
-        	throw new RuntimeException("acqControlDlg is not initialized!");
-    	}
-    	// load the position list and acquistion settings
-    	PositionList posList = this.loadPositionList(conf, logger);
-
-        // Get Dao objects ready for use
-        Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
-        Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
-
-        // get the image number of this task
-        Integer imageNumber = new Integer(taskConfigDao.selectOne(
-                where("id",new Integer(task.getId()).toString()).and("key","imageNumber")).getValue());
+    	Config imageNumberConf = conf.get("imageNumber");
+    	if (imageNumberConf == null) throw new RuntimeException(String.format(
+    	        "Could not find imageNumber conf for task %s!", task));
+    	Integer imageNumber = new Integer(imageNumberConf.getValue());
         logger.info(String.format("Using imageNumber: %s", imageNumber)); 
-
-        // Set rootDir and acqName
-        String rootDir = new File(
-                workflowRunner.getWorkflowDir(), 
-                workflowRunner.getInstance().getStorageLocation()).getPath();
-        String acqName = "images";
 
         // If this is the first position, start the acquisition engine
         if (imageNumber == 0) {
+            // Make sure the acquisition control dialog was initialized
+            if (this.acqControlDlg == null) {
+                throw new RuntimeException("acqControlDlg is not initialized!");
+            }
+            // load the position list and acquistion settings
+            PositionList posList = this.loadPositionList(conf, logger);
+
+            // Get Dao objects ready for use
+            Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
+            Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+
+            // Set rootDir and acqName
+            String rootDir = new File(
+                    workflowRunner.getWorkflowDir(), 
+                    workflowRunner.getInstance().getStorageLocation()).getPath();
+            String acqName = "images";
+
             CMMCore core = this.script.getMMCore();
             logger.info(String.format("This task is the acquisition task")); 
             logger.info(String.format("Using rootDir: %s", rootDir)); 
