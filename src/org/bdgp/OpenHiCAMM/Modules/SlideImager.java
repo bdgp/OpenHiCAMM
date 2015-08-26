@@ -65,7 +65,6 @@ import com.google.common.eventbus.Subscribe;
 import static org.bdgp.OpenHiCAMM.Util.where;
 
 public class SlideImager implements Module, ImageLogger {
-    private static final int DUMMY_IMAGES = 10;
 	private static final long DUMMY_SLEEP = 500;
 
 	WorkflowRunner workflowRunner;
@@ -211,10 +210,10 @@ public class SlideImager implements Module, ImageLogger {
             logger.info(String.format("Requesting to use acqName: %s", acqName)); 
             
             // Move stage to starting position and take some dummy pictures to adjust the camera
-            if (conf.containsKey("takeDummyImages") && 
-                conf.get("takeDummyImages").getValue().equals("yes") && 
+            if (conf.containsKey("dummyImageCount") && 
                 posList.getNumberOfPositions() > 0) 
             {
+                Integer dummyImageCount = new Integer(conf.get("dummyImageCount").getValue());
             	logger.info("Moving stage to starting position");
                 MultiStagePosition pos = posList.getPosition(0);
                 String xyStage = core.getXYStageDevice();
@@ -226,7 +225,7 @@ public class SlideImager implements Module, ImageLogger {
                 catch (Exception e) {throw new RuntimeException(e);}
                 
                 // Acquire N dummy images to calibrate the camera
-                for (int i=0; i<DUMMY_IMAGES; ++i) {
+                for (int i=0; i<dummyImageCount; ++i) {
                 	// Take a picture but don't save it
                     try { core.snapImage(); } 
                     catch (Exception e) {throw new RuntimeException(e);}
@@ -433,16 +432,13 @@ public class SlideImager implements Module, ImageLogger {
                             "posListModuleId", 
                             slideImagerDialog.moduleId.getSelectedItem().toString()));
                 }
-
-                if (slideImagerDialog.takeDummyImagesYes.isSelected()) {
-                    configs.add(new Config(moduleId, 
-                            "takeDummyImages", "yes"));
-                }
-                else if (slideImagerDialog.takeDummyImagesNo.isSelected()) {
-                    configs.add(new Config(moduleId, 
-                            "takeDummyImages", "no"));
-                }
                 
+                if (slideImagerDialog.dummyImageCount.getValue() != null) {
+                    configs.add(new Config(moduleId, 
+                            "dummyImageCount", 
+                            slideImagerDialog.dummyImageCount.getValue().toString()));
+                }
+
                 if (((Double)slideImagerDialog.minAutoFocus.getValue()).doubleValue() != 0.0) {
                     configs.add(new Config(moduleId, "minAutoFocus", slideImagerDialog.minAutoFocus.getValue().toString()));
                 }
@@ -470,16 +466,12 @@ public class SlideImager implements Module, ImageLogger {
                     Config posListModuleId = conf.get("posListModuleId");
                     slideImagerDialog.moduleId.setSelectedItem(posListModuleId.getValue());
                 }
-
-                if (conf.containsKey("takeDummyImages") && conf.get("takeDummyImages").getValue().equals("yes")) {
-                    slideImagerDialog.takeDummyImagesYes.setSelected(true);
-                    slideImagerDialog.takeDummyImagesNo.setSelected(false);
-                }
-                else {
-                    slideImagerDialog.takeDummyImagesYes.setSelected(false);
-                    slideImagerDialog.takeDummyImagesNo.setSelected(true);
-                }
                 
+                if (conf.containsKey("dummyImageCount")) {
+                    Config dummyImageCount = conf.get("dummyImageCount");
+                    slideImagerDialog.dummyImageCount.setValue(new Integer(dummyImageCount.getValue()));
+                }
+
                 if (conf.containsKey("minAutoFocus")) {
                     slideImagerDialog.minAutoFocus.setValue(new Double(conf.get("minAutoFocus").getValue()));
                 }

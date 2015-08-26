@@ -26,21 +26,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javax.swing.JRadioButton;
-import javax.swing.ButtonGroup;
-
 import static org.bdgp.OpenHiCAMM.Util.where;
+import javax.swing.JSpinner;
 
 @SuppressWarnings("serial")
 public class SlideImagerDialog extends JPanel {
 	JTextField acqSettingsText;
 	JTextField posListText;
 	JComboBox<String> moduleId;
-	private final ButtonGroup takeDummyImages = new ButtonGroup();
-	JRadioButton takeDummyImagesYes;
-	JRadioButton takeDummyImagesNo;
     DoubleSpinner minAutoFocus;
     DoubleSpinner maxAutoFocus;
+    JSpinner dummyImageCount;
 	
 	public SlideImagerDialog(final AcqControlDlg acqControlDlg, final WorkflowRunner workflowRunner) {
 		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][][][]"));
@@ -123,17 +119,8 @@ public class SlideImagerDialog extends JPanel {
         moduleId.setEnabled(true);
         this.add(moduleId, "cell 0 6,growx");
         
-        JLabel lblTakeSeveralDummy = new JLabel("Take several dummy images to adjust camera?");
+        JLabel lblTakeSeveralDummy = new JLabel("How many dummy adjustment images to take?");
         add(lblTakeSeveralDummy, "flowx,cell 0 7");
-        
-        takeDummyImagesYes = new JRadioButton("Yes");
-        takeDummyImages.add(takeDummyImagesYes);
-        takeDummyImagesYes.setSelected(true);
-        add(takeDummyImagesYes, "cell 0 7");
-        
-        takeDummyImagesNo = new JRadioButton("No");
-        takeDummyImages.add(takeDummyImagesNo);
-        add(takeDummyImagesNo, "cell 0 7");
         
         JLabel lblSetMinimumAutofocus = new JLabel("Set Minimum AutoFocus Z axis value:");
         add(lblSetMinimumAutofocus, "flowx,cell 0 8");
@@ -172,6 +159,10 @@ public class SlideImagerDialog extends JPanel {
             }
         });
         add(maxGetFromStage, "cell 0 9");
+        
+        dummyImageCount = new JSpinner();
+        add(dummyImageCount, "cell 0 7");
+        dummyImageCount.setValue(new Integer(0));
 	}
 
 }
