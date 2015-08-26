@@ -121,6 +121,11 @@ public class ROIFinder implements Module, ImageLogger {
 			double x_stage = MDUtils.getXPositionUm(taggedImage.tags);
 			double y_stage = MDUtils.getYPositionUm(taggedImage.tags);
 			
+			// Delete any old ROI records
+            Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
+			int deleted = roiDao.delete(where("imageId", imageId));
+			logger.info(String.format("Deleted %d old ROI records.", deleted));
+			
 			// Fill in list of ROIs
 			logger.info(String.format("Running process() to get list of ROIs"));
 			List<ROI> rois = new ArrayList<ROI>();
