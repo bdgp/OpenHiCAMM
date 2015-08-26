@@ -433,8 +433,8 @@ public class WorkflowRunner {
     /**
      * Display a summary of all the task statuses
      */
-    private void logTaskSummary() {
-        List<WorkflowModule> modules = this.workflow.select(where("parentId",null));
+    private void logTaskSummary(String startModuleId) {
+        List<WorkflowModule> modules = this.workflow.select(where("id",startModuleId));
         this.logger.info("");
         this.logger.info("Task Status Summary:");
         this.logger.info("====================");
@@ -598,7 +598,7 @@ public class WorkflowRunner {
                     Status status = coalesceStatuses(statuses);
 
                     // Display a summary of all the task statuses
-                    logTaskSummary();
+                    logTaskSummary(startModuleId);
 
                     // Display the elapsed time
                     long elapsedTime = System.currentTimeMillis() - startTime;
