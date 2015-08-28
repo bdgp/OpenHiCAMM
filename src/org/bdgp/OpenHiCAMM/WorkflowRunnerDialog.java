@@ -82,12 +82,12 @@ public class WorkflowRunnerDialog extends JDialog {
 
         // logging output
         final int MAX_LENGTH = 100;
-        final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ");
+        final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss.SSSZ");
         workflowRunner.addLogHandler(new Handler() {
             @Override public void publish(final LogRecord record) {
                 SwingUtilities.invokeLater(new Runnable() {
                    @Override public void run() {
-                        text.append(String.format("[%s %s %s] %s%n", 
+                        text.append(String.format("[%s:%s:%s] %s%n", 
                             record.getLoggerName(),
                             dateFormat.format(new Date(record.getMillis())), 
                             record.getLevel(), 
