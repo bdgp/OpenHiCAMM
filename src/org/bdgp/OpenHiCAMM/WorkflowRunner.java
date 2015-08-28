@@ -81,6 +81,7 @@ public class WorkflowRunner {
     
     private boolean isStopped;
     private Logger logger;
+    private int logLabelLength = 14;
     
     private String instancePath;
     private String instanceDbName;
@@ -149,6 +150,14 @@ public class WorkflowRunner {
         // instantiate the workflow module object instances
         this.moduleInstances = new HashMap<String,Module>();
         this.loadModuleInstances();
+        
+        // set the logLabelLength
+        this.logLabelLength = 14;
+        for (WorkflowModule w : workflow.select()) {
+            if (this.logLabelLength < w.getId().length()+7) {
+                this.logLabelLength = w.getId().length()+7;
+            }
+        }
 
         // move default moduleconfig into the instance moduleconfig
         for (WorkflowModule w : workflow.select()) {
@@ -268,8 +277,10 @@ public class WorkflowRunner {
     }
 
     public Logger makeLogger(String label) {
+        // Right-justify the label
+        String justifiedLabel = String.format(String.format("%%%ds", this.logLabelLength), label);
     	// initialize the workflow logger
-        Logger logger = Logger.create(null, label, logLevel);
+        Logger logger = Logger.create(null, justifiedLabel, logLevel);
         for (Handler handler : this.logHandlers) {
             logger.addHandler(handler);
         }
