@@ -8,10 +8,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 import java.util.prefs.Preferences;
@@ -279,7 +279,7 @@ public class SlideImager implements Module, ImageLogger {
             List<TaskDispatch> tds = td != null? 
                     taskDispatchDao.select(where("parentTaskId", td.getParentTaskId())) :
                     null;
-            final Map<String,Task> tasks = new TreeMap<String,Task>();
+            final Map<String,Task> tasks = new LinkedHashMap<String,Task>();
             if (tds != null) {
                 Collections.sort(tds, new Comparator<TaskDispatch>() {
                     @Override public int compare(TaskDispatch a, TaskDispatch b) {
@@ -398,6 +398,7 @@ public class SlideImager implements Module, ImageLogger {
                              logger.warning("Aborting the acquisition...");
                              //this.engine.abortRequest();
                              this.engine.stop(true);
+                             return Status.ERROR;
                          }
                      }
                 }
