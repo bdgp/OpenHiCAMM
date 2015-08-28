@@ -386,9 +386,7 @@ public class SlideImager implements Module, ImageLogger {
                                 }
                             }}).start();
                     }
-                    @Override public void imagingFinished(String path) { 
-                        logger.info(String.format("Finished image acquisition."));
-                    }
+                    @Override public void imagingFinished(String path) { }
                 });
 
                 // wait until the current acquisition finishes
