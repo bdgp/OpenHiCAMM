@@ -129,7 +129,7 @@ public class SlideImager implements Module, ImageLogger {
             }
             // log the position list to the console
             try {
-				logger.info(String.format("%s: Read position list from module %s:%n%s", 
+				logger.fine(String.format("%s: Read position list from module %s:%n%s", 
 						this.moduleId, conf.get("posListModuleId"), positionList.serialize()));
 			} 
             catch (MMSerializationException e) {throw new RuntimeException(e);}
@@ -696,7 +696,7 @@ public class SlideImager implements Module, ImageLogger {
                 } 
                 catch (MMException e) {throw new RuntimeException(e);}
                 
-            	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Read position list from file %s", 
+            	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Read position list from file %s", 
             			this.moduleId, Util.escape(posListConf.getValue())));
 
                 // store the loaded position list in the DB
