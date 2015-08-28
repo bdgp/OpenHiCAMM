@@ -76,40 +76,41 @@ public class ROIFinder implements Module, ImageLogger {
 
     @Override
     public Status run(Task task, Map<String,Config> config, final Logger logger) {
-    	logger.info(String.format("Running task: %s", task));
+    	logger.fine(String.format("Running task: %s", task));
     	for (Config c : config.values()) {
-            logger.info(String.format("Using config: %s", c));
+            logger.fine(String.format("Using config: %s", c));
     	}
 
         // Get the Image record
     	Config imageIdConf = config.get("imageId");
     	if (imageIdConf == null) throw new RuntimeException("No imageId task configuration was set by the slide imager!");
         Integer imageId = new Integer(imageIdConf.getValue());
-        logger.info(String.format("Using image ID: %d", imageId));
 
         Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
         final Image image = imageDao.selectOneOrDie(where("id",imageId));
-        logger.info(String.format("Using image: %s", image));
+        
+        String label = image.getLabel();
+        logger.fine(String.format("%s: Using image: %s", label, image));
+        logger.fine(String.format("%s: Using image ID: %d", label, imageId));
         
         Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
         Slide slide = slideDao.selectOneOrDie(where("id",image.getSlideId()));
-        logger.info(String.format("Using slide: %s", slide));
+        logger.fine(String.format("%s: Using slide: %s", label, slide));
         
         TaggedImage taggedImage = getTaggedImage(image, logger);
-        logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
 
     	try {
 			double pixelSizeUm = new Double(config.get("pixelSizeUm").getValue());
-			logger.info(String.format("Using pixelSizeUm: %f", pixelSizeUm));
+			logger.fine(String.format("%s: Using pixelSizeUm: %f", label, pixelSizeUm));
 			
 			double hiResPixelSizeUm = new Double(config.get("hiResPixelSizeUm").getValue());
-			logger.info(String.format("Using hiResPixelSizeUm: %f", hiResPixelSizeUm));
+			logger.fine(String.format("%s: Using hiResPixelSizeUm: %f", label, hiResPixelSizeUm));
 
 			double minRoiArea = new Double(config.get("minRoiArea").getValue());
-			logger.info(String.format("Using minRoiArea: %f", minRoiArea));
+			logger.fine(String.format("%s: Using minRoiArea: %f", label, minRoiArea));
 
 			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
-			logger.info(String.format("Using positionIndex: %d", positionIndex));
+			logger.fine(String.format("%s: Using positionIndex: %d", label, positionIndex));
 
 			int imageWidth = MDUtils.getWidth(taggedImage.tags);
 			int imageHeight = MDUtils.getHeight(taggedImage.tags);
@@ -124,10 +125,10 @@ public class ROIFinder implements Module, ImageLogger {
 			// Delete any old ROI records
             Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
 			int deleted = roiDao.delete(where("imageId", imageId));
-			logger.info(String.format("Deleted %d old ROI records.", deleted));
+			logger.fine(String.format("%s: Deleted %d old ROI records.", label, deleted));
 			
 			// Fill in list of ROIs
-			logger.info(String.format("Running process() to get list of ROIs"));
+			logger.fine(String.format("%s: Running process() to get list of ROIs", label));
 			List<ROI> rois = new ArrayList<ROI>();
 			try {
                 rois = process(image, taggedImage, logger, new ImageLog.NullImageLogRunner(), minRoiArea);
@@ -168,13 +169,19 @@ public class ROIFinder implements Module, ImageLogger {
                         msp.setDefaultXYStage("XYStage");
                         posList.addPosition(msp);
                         roiMap.put(msp, roi);
-                        logger.info(String.format("Storing StagePosition(numAxes: %d, stageName: %s, x=%.2f, y=%.2f, tileX=%d, tileY=%d)",
-                                sp.numAxes, Util.escape(sp.stageName), sp.x, sp.y, tileX, tileY));
+                        logger.fine(String.format("%s: Storing StagePosition(numAxes: %d, stageName: %s, x=%.2f, y=%.2f, tileX=%d, tileY=%d)",
+                                label, sp.numAxes, Util.escape(sp.stageName), sp.x, sp.y, tileX, tileY));
                     }
 			    }
 			}
-			try { logger.info(String.format("Produced position list of ROIs:%n%s", posList.serialize())); } 
-			catch (MMSerializationException e) {throw new RuntimeException(e);}
+			if (posList.getNumberOfPositions() > 0) {
+			    logger.info(String.format("%s: Produced position list of %d ROIs", label, posList.getNumberOfPositions())); 
+                try { logger.fine(String.format("%s: Position List:%n%s", label, posList.serialize())); } 
+                catch (MMSerializationException e) {throw new RuntimeException(e);}
+			}
+			else {
+			    logger.info(String.format("%s: ROIFinder did not produce any positions for this image", label));
+			}
 
 			Dao<SlidePosList> slidePosListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
             Dao<SlidePos> slidePosDao = workflowRunner.getInstanceDb().table(SlidePos.class);
@@ -191,7 +198,7 @@ public class ROIFinder implements Module, ImageLogger {
 			// Create/Update SlidePosList and SlidePos DB records
 			SlidePosList slidePosList = new SlidePosList(this.moduleId, slide.getId(), task.getId(), posList);
 			slidePosListDao.insert(slidePosList);
-			logger.info(String.format("Created new SlidePosList: %s", slidePosList));
+			logger.fine(String.format("%s: Created new SlidePosList: %s", label, slidePosList));
 
 			MultiStagePosition[] msps = posList.getPositions();
 			for (int i=0; i<msps.length; ++i) {
@@ -201,7 +208,7 @@ public class ROIFinder implements Module, ImageLogger {
 
 				SlidePos slidePos = new SlidePos(slidePosList.getId(), i, roi.getId());
 				slidePosDao.insert(slidePos);
-                logger.info(String.format("Created new SlidePos record for position %d: %s", i, slidePos));
+                logger.fine(String.format("%s: Created new SlidePos record for position %d: %s", label, i, slidePos));
 			}
 			return Status.SUCCESS;
 		} 
@@ -209,22 +216,24 @@ public class ROIFinder implements Module, ImageLogger {
     }
     
     public TaggedImage getTaggedImage(Image image, Logger logger) {
+        String label = image.getLabel();
+
         // Initialize the acquisition
         Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
         Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
-        logger.info(String.format("Using acquisition: %s", acquisition));
+        logger.fine(String.format("%s: Using acquisition: %s", label, acquisition));
         MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
 
         // Get the image cache object
         ImageCache imageCache = mmacquisition.getImageCache();
         if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
-        logger.info(String.format("ImageCache has following images: %s", imageCache.imageKeys()));
-        logger.info(String.format("Attempting to grab image %s from imageCache...", image));
+        logger.fine(String.format("%s: ImageCache has following images: %s", label, imageCache.imageKeys()));
+        logger.fine(String.format("%s: Attempting to grab image %s from imageCache", label, image));
         // Get the tagged image from the image cache
         TaggedImage taggedImage = image.getImage(imageCache);
         if (taggedImage == null) throw new RuntimeException(String.format("Acqusition %s, Image %s is not in the image cache!",
                 acquisition, image));
-        logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
+        logger.fine(String.format("%s: Got taggedImage from ImageCache: %s", label, taggedImage));
 
         return taggedImage;
     }
@@ -237,6 +246,8 @@ public class ROIFinder implements Module, ImageLogger {
         //   Map.Entry<String, String> entry = it.next();
         //   logger.info(String.format("Menu Entry: %s -> %s", entry.getKey(), entry.getValue()));
         // }
+        
+        String label = image.getLabel();
     	
     	List<ROI> rois = new ArrayList<ROI>();
         ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
@@ -244,6 +255,7 @@ public class ROIFinder implements Module, ImageLogger {
         //imp.show();
         
         // Convert to gray
+        logger.info(String.format("%s: Convert to gray", label));
         IJ.run(imp, "8-bit", "");
         imageLog.addImage(imp, "Convert to gray");
         
@@ -254,7 +266,7 @@ public class ROIFinder implements Module, ImageLogger {
         // Resize to 1/4
         int w=imp.getWidth();
         int h=imp.getHeight();
-        logger.info(String.format("Image dimensions: (%d,%d)", w, h));
+        logger.info(String.format("%s: Image dimensions: (%d,%d)", label, w, h));
 
 //        double scale = 0.25;
         double scale = 1.0;
@@ -264,7 +276,7 @@ public class ROIFinder implements Module, ImageLogger {
 
         String scaleOp = String.format("x=%f y=%f width=%d height=%d interpolation=Bicubic average", 
         		scale, scale, (int)ws, (int)hs);
-        logger.info(String.format("Scaling: %s", scaleOp));
+        logger.info(String.format("%s: Scaling: %s", label, scaleOp));
         IJ.run(imp, "Scale...", scaleOp);
         imageLog.addImage(imp, "Scaling: scaleOp");
 
@@ -272,44 +284,46 @@ public class ROIFinder implements Module, ImageLogger {
         double crop = 2.0;
         double rw=(w/crop)-(ws/crop);
         double rh=(h/crop)-(hs/crop);
-        logger.info(String.format("Cropping: %d, %d, %d, %d", (int)rw, (int)rh, (int)ws, (int)hs));
+        logger.info(String.format("%s: Cropping: %d, %d, %d, %d", label, (int)rw, (int)rh, (int)ws, (int)hs));
         imp.setRoi((int)rw,(int)rh,(int)ws,(int)hs);
         IJ.run(imp, "Crop", "");
         imageLog.addImage(imp, String.format("Cropping: %d, %d, %d, %d", (int)rw, (int)rh, (int)ws, (int)hs));
 
         // Binarize
-        logger.info(String.format("Binarizing"));
+        logger.info(String.format("%s: Binarizing", label));
         IJ.run(imp, "Auto Threshold", "method=Huang white"); // array out of bounds exception
         imageLog.addImage(imp, "Binarizing");
 
         // Morphological operations: close gaps, fill holes
-        logger.info(String.format("Closing gaps"));
+        logger.info(String.format("%s: Closing gaps", label));
         IJ.run(imp, "Close-", "");
         imageLog.addImage(imp, "Closing gaps");
-        logger.info(String.format("Filling holes"));
+
+        logger.info(String.format("%s: Filling holes", label));
         IJ.run(imp, "Fill Holes", "");
         imageLog.addImage(imp, "Filling holes");
 
         // Set the measurements
+        logger.info(String.format("%s: Set the measurements", label));
         IJ.run(imp, "Set Measurements...", "area mean min bounding redirect=None decimal=3");
         imageLog.addImage(imp, "Set measurements");
 
         // Detect the objects
-        logger.info(String.format("Analyzing particles"));
+        logger.info(String.format("%s: Analyzing particles", label));
         IJ.run(imp, "Analyze Particles...", "exclude clear in_situ");
         imageLog.addImage(imp, "Analyzing particles");
        
         Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
         // Get the objects and iterate through them
         ResultsTable rt = Analyzer.getResultsTable();
-        logger.info(String.format("ResultsTable Column Headings: %s", rt.getColumnHeadings()));
+        logger.fine(String.format("ResultsTable Column Headings: %s", rt.getColumnHeadings()));
         for (int i=0; i < rt.getCounter(); i++) {
             double area = rt.getValue("Area", i) / (scale*scale); // area of the object
             double bx = rt.getValue("BX", i) / scale; // x of bounding box
             double by = rt.getValue("BY", i) / scale; // y of bounding box
             double width = rt.getValue("Width", i) / scale; // width of bounding box
             double height = rt.getValue("Height", i) / scale; // height of bounding box
-            logger.info(String.format(
+            logger.finest(String.format(
             		"Found object: area=%.2f, bx=%.2f, by=%.2f, width=%.2f, height=%.2f",
             		area, bx, by, width, height));
 
@@ -319,7 +333,7 @@ public class ROIFinder implements Module, ImageLogger {
             // ROI: upper left corner = bx/by with width/height
             if (area >= minRoiArea && bx > 1 && by > 1 && bx+width < w && by+height < h) {
                 ROI roi = new ROI(image.getId(), (int)(bx*scale), (int)(by*scale), (int)(bx+width), (int)(by+height));
-                logger.info(String.format("Created new ROI record: %s", roi));
+                logger.info(String.format("%s: Created new ROI record: %s", label, roi));
                 rois.add(roi);
                 roiDao.insert(roi);
                 
@@ -330,10 +344,10 @@ public class ROIFinder implements Module, ImageLogger {
             }
             else {
             	if (area < minRoiArea) {
-            		logger.info(String.format("Skipping, area %.2f is less than %.2f", area, minRoiArea));
+            		logger.finest(String.format("Skipping, area %.2f is less than %.2f", area, minRoiArea));
             	}
             	if (!(bx > 1 && by > 1 && bx+width < w && by+height < h)) {
-            		logger.info(String.format("Skipping, ROI hits edge"));
+            		logger.finest(String.format("Skipping, ROI hits edge"));
             	}
             }
         }
@@ -422,17 +436,17 @@ public class ROIFinder implements Module, ImageLogger {
         List<Task> tasks = new ArrayList<Task>();
         if (module.getParentId() != null) {
             for (Task parentTask : parentTasks) {
-            	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: attaching to parent Task: %s",
+            	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: attaching to parent Task: %s",
             			this.moduleId, parentTask));
                 Task task = new Task(moduleId, Status.NEW);
                 workflowRunner.getTaskStatus().insert(task);
                 tasks.add(task);
-            	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created new task record: %s",
+            	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created new task record: %s",
             			this.moduleId, task));
                 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
                 workflowRunner.getTaskDispatch().insert(dispatch);
-            	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Created new task dispatch record: %s",
+            	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created new task dispatch record: %s",
             			this.moduleId, dispatch));
             }
         }
