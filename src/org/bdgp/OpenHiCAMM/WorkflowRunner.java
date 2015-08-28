@@ -129,6 +129,7 @@ public class WorkflowRunner {
         this.notifiedTasks = new HashSet<Task>();
         // init the logger
         this.logHandlers = new ArrayList<Handler>();
+        this.logLevel = Level.CONFIG;
         this.initLogger();
         
         // set the number of cores to use in the thread pool
@@ -365,7 +366,7 @@ public class WorkflowRunner {
             modules = childModules;
         }
         // draw the workflow module graph
-        this.logger.info(String.format("PATH=%s", System.getenv("PATH")));
+        this.logger.fine(String.format("PATH=%s", System.getenv("PATH")));
         try { this.logger.info(String.format("Workflow Graph:%n%s", graph.graph())); }
         catch (IOException e) {
             this.logger.warning(String.format("Could not draw workflow graph: %s", e));
@@ -510,14 +511,14 @@ public class WorkflowRunner {
                         while (tasks.size() > 0) {
                             List<TaskDispatch> dispatch = new ArrayList<TaskDispatch>();
                             for (Task task : tasks) {
+                                task.setDispatchUUID(null);
                                 if (task.getStatus() == Status.ERROR || 
                                     task.getStatus() == Status.DEFER || 
                                     task.getStatus() == Status.IN_PROGRESS) 
                                 {
-                                    task.setDispatchUUID(null);
                                     task.setStatus(Task.Status.NEW);
-                                    WorkflowRunner.this.taskStatus.update(task, "id");
                                 }
+                                WorkflowRunner.this.taskStatus.update(task, "id");
                                 dispatch.addAll(WorkflowRunner.this.taskDispatch.select(where("parentTaskId", task.getId())));
                             }
                             tasks.clear();
@@ -608,7 +609,7 @@ public class WorkflowRunner {
                     long minutes = (long)Math.floor(elapsedTime / (1000 * 60)) - (hours * 60);
                     double seconds = (elapsedTime / 1000.0) - (hours * 60 * 60) - (minutes * 60);
                     WorkflowRunner.this.logger.info(String.format(
-                            "%nTime elapsed: %d hours, %d minutes, %.1f seconds", 
+                            "Time elapsed: %d hours, %d minutes, %.1f seconds", 
                             hours, minutes, seconds));
                     return status;
             	}
@@ -637,7 +638,7 @@ public class WorkflowRunner {
             final Task task, 
             final Map<String,Config> inheritedTaskConfig) 
     {
-    	this.logger.info(String.format("%s: running task %s", task.getName(), task));
+    	this.logger.fine(String.format("%s: running task %s", task.getName(), task));
 
         final WorkflowModule module = this.workflow.selectOneOrDie(
                 where("id",task.getModuleId()));
@@ -653,18 +654,18 @@ public class WorkflowRunner {
         List<ModuleConfig> moduleConfigs = moduleConfig.select(where("id",task.getModuleId()));
         for (ModuleConfig moduleConfig : moduleConfigs) {
             configs.add(moduleConfig);
-            this.logger.info(String.format("%s: using module config: %s", task.getName(), moduleConfig));
+            this.logger.fine(String.format("%s: using module config: %s", task.getName(), moduleConfig));
         }
         if (inheritedTaskConfig != null) {
             for (Map.Entry<String,Config> entry : inheritedTaskConfig.entrySet()) {
                 configs.add(entry.getValue());
-                this.logger.info(String.format("%s: using inherited task config: %s", task.getName(), entry.getValue()));
+                this.logger.fine(String.format("%s: using inherited task config: %s", task.getName(), entry.getValue()));
             }
         }
         List<TaskConfig> taskConfigs = taskConfig.select(where("id",task.getId()));
         for (TaskConfig tc : taskConfigs) {
         	configs.add(tc);
-            this.logger.info(String.format("%s: using task config: %s", task.getName(), tc));
+            this.logger.fine(String.format("%s: using task config: %s", task.getName(), tc));
         }
         final Map<String,Config> config = Config.merge(configs);
         
@@ -675,7 +676,7 @@ public class WorkflowRunner {
                 Status status = task.getStatus();
             	
             	if (WorkflowRunner.this.isStopped == true) return status;
-                WorkflowRunner.this.logger.info(String.format(
+                WorkflowRunner.this.logger.fine(String.format(
                         "%s: Previous status was: %s", task.getName(), status));
 
             	if (status == Status.NEW || status == Status.IN_PROGRESS) {
@@ -694,10 +695,10 @@ public class WorkflowRunner {
                         status = Status.ERROR;
                     }
                     finally {
-                        WorkflowRunner.this.logger.info(String.format("%s: Calling cleanup", task.getName()));
+                        WorkflowRunner.this.logger.fine(String.format("%s: Calling cleanup", task.getName()));
                         taskModule.cleanup(task); 
                     }
-                    WorkflowRunner.this.logger.info(String.format("%s: Finished running task", task.getName()));
+                    WorkflowRunner.this.logger.fine(String.format("%s: Finished running task", task.getName()));
                     WorkflowRunner.this.logger.info(String.format("%s: Setting task status to %s", task.getName(), status));
                     task.setStatus(status);
             	}
@@ -757,22 +758,22 @@ public class WorkflowRunner {
 
                 if (status == Status.SUCCESS && !pool.isShutdown()) {
                     // get the child tasks to be dispatched by this task using the dispatch UUID
-                    WorkflowRunner.this.logger.info(String.format("dispatchUUID=%s", dispatchUUID));
+                    WorkflowRunner.this.logger.fine(String.format("dispatchUUID=%s", dispatchUUID));
                     List<Task> childTasks = taskStatus.select(where("dispatchUUID", dispatchUUID));
                     // Sort tasks by task ID
                     Collections.sort(childTasks, new Comparator<Task>() {
                         @Override public int compare(Task a, Task b) {
                             return a.getId()-b.getId();
                         }});
-                    WorkflowRunner.this.logger.info(String.format("Found %d tasks with dispatchUUID=%s", 
+                    WorkflowRunner.this.logger.fine(String.format("Found %d tasks with dispatchUUID=%s", 
                             childTasks.size(), dispatchUUID));
 
                     // enqueue the child tasks
                     for (Task childTask : childTasks) {
-                        WorkflowRunner.this.logger.info(String.format("%s: Dispatching child task: %s", 
+                        WorkflowRunner.this.logger.fine(String.format("%s: Dispatching child task: %s", 
                                 task.getName(), childTask.toString()));
                         Future<Status> future = run(childTask, config);
-                        WorkflowRunner.this.logger.info(String.format("%s: Returned from dispatch of child task: %s", 
+                        WorkflowRunner.this.logger.fine(String.format("%s: Returned from dispatch of child task: %s", 
                                 task.getName(), childTask.toString()));
 
                         // If a serial task fails, don't run the successive sibling tasks
@@ -809,7 +810,7 @@ public class WorkflowRunner {
                     }
                 }
 
-                WorkflowRunner.this.logger.info(String.format("%s: Returning status: %s", task.getName(), status));
+                WorkflowRunner.this.logger.fine(String.format("%s: Returning status: %s", task.getName(), status));
                 return status;
             }
         };
@@ -818,13 +819,13 @@ public class WorkflowRunner {
         // Serial tasks get run immediately
         if (taskModule.getTaskType() == Module.TaskType.SERIAL) {
             FutureTask<Status> futureTask = new FutureTask<Status>(callable);
-            this.logger.info(String.format("%s: Starting serial task", task.getName()));
+            this.logger.fine(String.format("%s: Starting serial task", task.getName()));
             futureTask.run();
             future = futureTask;
         }
         // Parallel tasks get put in the task pool
         else if (taskModule.getTaskType() == Module.TaskType.PARALLEL) {
-            this.logger.info(String.format("%s: Submitting parallel task", task.getName()));
+            this.logger.fine(String.format("%s: Submitting parallel task", task.getName()));
             future = pool.submit(callable);
         }
         else {
