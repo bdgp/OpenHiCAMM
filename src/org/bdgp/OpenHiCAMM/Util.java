@@ -82,17 +82,19 @@ public class Util {
     public static String join(List<Object> list) {
         return join("", list);
     }
-    public static String join(Object ... list) {
-        return join("", Arrays.asList(list));
+    public static String join(Object[] list) {
+        return join("", list);
     }
     public static String join(String delim, Object ... list) {
         return join(delim, Arrays.asList(list));
     }
     public static String join(String delim, List<Object> list) {
-        StringBuilder sb = new StringBuilder(list.size()>0? list.get(0).toString() : "");
-        for (int i = 1; i < list.size(); i++) {
-            sb.append(delim);
-            sb.append(list.get(i).toString());
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i) != null) {
+                if (sb.length() > 0) sb.append(delim);
+                sb.append(list.get(i).toString());
+            }
         }
         return sb.toString();
     }
