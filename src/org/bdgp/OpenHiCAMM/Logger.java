@@ -75,7 +75,7 @@ public class Logger extends java.util.logging.Logger {
 		    final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss.SSSZ");
 			setFormatter(new SimpleFormatter() {
 				public String format(LogRecord record) {
-					return String.format("[%s:%s:%s] %s%n", 
+					return String.format("[%s|%s|%s] %s%n", 
 							record.getLoggerName(),
 							dateFormat.format(new Date(record.getMillis())), 
 							record.getLevel(), 

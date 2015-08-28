@@ -87,7 +87,7 @@ public class WorkflowRunnerDialog extends JDialog {
             @Override public void publish(final LogRecord record) {
                 SwingUtilities.invokeLater(new Runnable() {
                    @Override public void run() {
-                        text.append(String.format("[%s:%s:%s] %s%n", 
+                        text.append(String.format("[%s|%s|%s] %s%n", 
                             record.getLoggerName(),
                             dateFormat.format(new Date(record.getMillis())), 
                             record.getLevel(), 
