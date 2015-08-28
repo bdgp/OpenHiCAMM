@@ -1,8 +1,14 @@
 package org.bdgp.OpenHiCAMM.DB;
 
-import org.bdgp.OpenHiCAMM.MMAcquisitionCache;
+import java.io.File;
+
+import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.Util;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.micromanager.MMStudio;
 import org.micromanager.acquisition.MMAcquisition;
+import org.micromanager.utils.MMScriptException;
 
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
@@ -12,26 +18,60 @@ import com.j256.ormlite.table.DatabaseTable;
 public class Acquisition {
     @DatabaseField(generatedId=true, canBeNull=false) private int id;
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) private String name;
+    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) private String prefix;
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) private String directory;
     
     public Acquisition() {}
-    public Acquisition (String name, String directory) {
+    public Acquisition (String name, String prefix, String directory) {
         this.name = name;
+        this.prefix = prefix;
         this.directory = directory;
     }
     public int getId() {return this.id;}
     public String getName() {return this.name;}
+    public String getPrefix() {return this.prefix;}
     public String getDirectory() { return this.directory; }
 
-    public MMAcquisition getAcquisition() {
-    	return MMAcquisitionCache.getAcquisition(name, directory, false, true, true);
+    public MMAcquisition getAcquisition(Dao<Acquisition> acquisitionDao) {
+        MMStudio mmstudio = MMStudio.getInstance();
+    	try {
+            MMAcquisition acquisition = mmstudio.getAcquisitionWithName(this.name);
+            JSONObject summaryMetadata = acquisition.getImageCache().getSummaryMetadata();
+            if (summaryMetadata.has("Directory") && 
+                summaryMetadata.get("Directory").toString().equals(this.directory) &&
+                summaryMetadata.has("Prefix") &&
+                summaryMetadata.get("Prefix").toString().equals(this.prefix))
+            {
+                return acquisition;
+            }
+        } 
+    	catch (JSONException e) {throw new RuntimeException(e);}
+    	catch (MMScriptException e) { 
+    	    // this means there was no acquisition loaded with this name, that's OK. Let's try to 
+    	    // open the acquisition next...
+    	} 
+
+        try {
+            this.name = mmstudio.openAcquisitionData(new File(this.directory, this.prefix).getPath(), false, false);
+            MMAcquisition acquisition = mmstudio.getAcquisitionWithName(this.name);
+            if (acquisitionDao != null) {
+                acquisitionDao.update(this, "prefix","directory");
+            }
+            return acquisition;
+        } 
+        catch (MMScriptException e1) {throw new RuntimeException(e1);}
     }
-    public MMAcquisition getAcquisition(boolean diskCached) {
-    	return MMAcquisitionCache.getAcquisition(name, directory, false, diskCached, true); 
+    
+    public MMAcquisition getAcquisition() {
+        return this.getAcquisition(null);
     }
     
     public String toString() {
-    	return String.format("%s(id=%d, name=%s, directory=%s)",
-    			this.getClass().getSimpleName(), this.id, Util.escape(this.name), Util.escape(this.directory));
+    	return String.format("%s(id=%d, name=%s, prefix=%s, directory=%s)",
+    			this.getClass().getSimpleName(), 
+    			this.id, 
+    			Util.escape(this.name), 
+    			Util.escape(this.prefix), 
+    			Util.escape(this.directory));
     }
 }

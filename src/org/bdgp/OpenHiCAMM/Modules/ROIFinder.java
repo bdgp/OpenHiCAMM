@@ -213,13 +213,17 @@ public class ROIFinder implements Module, ImageLogger {
         Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
         Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
         logger.info(String.format("Using acquisition: %s", acquisition));
-        MMAcquisition mmacquisition = acquisition.getAcquisition();
+        MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
 
         // Get the image cache object
         ImageCache imageCache = mmacquisition.getImageCache();
         if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+        logger.info(String.format("ImageCache has following images: %s", imageCache.imageKeys()));
+        logger.info(String.format("Attempting to grab image %s from imageCache...", image));
         // Get the tagged image from the image cache
         TaggedImage taggedImage = image.getImage(imageCache);
+        if (taggedImage == null) throw new RuntimeException(String.format("Acqusition %s, Image %s is not in the image cache!",
+                acquisition, image));
         logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
 
         return taggedImage;
@@ -464,7 +468,7 @@ public class ROIFinder implements Module, ImageLogger {
                     Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
                     Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
                     logger.info(String.format("Using acquisition: %s", acquisition));
-                    MMAcquisition mmacquisition = acquisition.getAcquisition();
+                    MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
 
                     // Get the image cache object
                     ImageCache imageCache = mmacquisition.getImageCache();
