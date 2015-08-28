@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -513,6 +514,7 @@ public class WorkflowRunner {
                                     task.getStatus() == Status.DEFER || 
                                     task.getStatus() == Status.IN_PROGRESS) 
                                 {
+                                    task.setDispatchUUID(null);
                                     task.setStatus(Task.Status.NEW);
                                     WorkflowRunner.this.taskStatus.update(task, "id");
                                 }
@@ -703,6 +705,7 @@ public class WorkflowRunner {
                 // notify any task listeners
                 notifyTaskListeners(task);
                 
+                String dispatchUUID = UUID.randomUUID().toString();
                 if (status == Status.SUCCESS) {
                     try {
                     	// We need to update the status of this task AND flag the unprocessed child tasks that 
@@ -713,7 +716,7 @@ public class WorkflowRunner {
                     	CompiledStatement compiledStatement = db.compileStatement(
                             "merge into TASK using (\n"+
                             "  select c.\"id\",\n"+
-                            "    p.\"id\",\n"+
+                            "    ?,\n"+
                             "    case when c.\"status\" in ('NEW','DEFER')\n"+
                             "    then cast('IN_PROGRESS' as longvarchar)\n"+
                             "    else c.\"status\" end\n"+
@@ -732,15 +735,16 @@ public class WorkflowRunner {
                             "    and p2.\"id\" is null\n"+
                             "    and p.\"id\"=?\n"+
                             "  union all\n"+
-                            "  select p.\"id\", p.\"parentTaskId\", cast('SUCCESS' as longvarchar)\n"+
+                            "  select p.\"id\", p.\"dispatchUUID\", cast('SUCCESS' as longvarchar)\n"+
                             "  from TASK p\n"+
                             "  where p.\"id\"=?) \n"+
-                            "  as t(taskId, parentTaskId, status) on TASK.\"id\"=t.taskId\n"+
-                            "  when matched then update set TASK.\"parentTaskId\"=t.parentTaskId, TASK.\"status\"=t.status",
+                            "  as t(id, dispatchUUID, status) on TASK.\"id\"=t.id\n"+
+                            "  when matched then update set TASK.\"dispatchUUID\"=t.dispatchUUID, TASK.\"status\"=t.status",
                             StatementType.UPDATE, new FieldType[0]);
-                    	compiledStatement.setObject(0, task.getId(), SqlType.INTEGER);
+                    	compiledStatement.setObject(0, dispatchUUID, SqlType.LONG_STRING);
                     	compiledStatement.setObject(1, task.getId(), SqlType.INTEGER);
                     	compiledStatement.setObject(2, task.getId(), SqlType.INTEGER);
+                    	compiledStatement.setObject(3, task.getId(), SqlType.INTEGER);
                     	compiledStatement.runUpdate();
                     }
                     catch (SecurityException e) { throw new RuntimeException(e); }
@@ -751,67 +755,56 @@ public class WorkflowRunner {
                 	taskStatus.update(task, "id");
                 }
 
-                // enqueue the child tasks if all parent tasks completed successfully
-                List<TaskDispatch> childTaskIds = taskDispatch.select(
-                        where("parentTaskId",task.getId()));
-                List<Future<Status>> childFutures = new ArrayList<Future<Status>>();
                 if (status == Status.SUCCESS && !pool.isShutdown()) {
-                    // Sort task dispatches by task ID
-                    Collections.sort(childTaskIds, new Comparator<TaskDispatch>() {
-                        @Override public int compare(TaskDispatch a, TaskDispatch b) {
-                            return a.getTaskId()-b.getTaskId();
+                    // get the child tasks to be dispatched by this task using the dispatch UUID
+                    WorkflowRunner.this.logger.info(String.format("dispatchUUID=%s", dispatchUUID));
+                    List<Task> childTasks = taskStatus.select(where("dispatchUUID", dispatchUUID));
+                    // Sort tasks by task ID
+                    Collections.sort(childTasks, new Comparator<Task>() {
+                        @Override public int compare(Task a, Task b) {
+                            return a.getId()-b.getId();
                         }});
-                                
-                    for (TaskDispatch childTaskId : childTaskIds) {
-                        Task childTask = taskStatus.selectOneOrDie(
-                                where("id",childTaskId.getTaskId()));
+                    WorkflowRunner.this.logger.info(String.format("Found %d tasks with dispatchUUID=%s", 
+                            childTasks.size(), dispatchUUID));
 
-                        if ((childTask.getStatus() == Status.IN_PROGRESS ||
-                             childTask.getStatus() == Status.SUCCESS) && 
-                            childTask.getParentTaskId() != null && 
-                            childTask.getParentTaskId().equals(task.getId())) 
-                        {
-                        	WorkflowRunner.this.logger.info(String.format("%s: Dispatching child task: %s", task.getName(), childTask));
-                        	Future<Status> future = run(childTask, config);
+                    // enqueue the child tasks
+                    for (Task childTask : childTasks) {
+                        WorkflowRunner.this.logger.info(String.format("%s: Dispatching child task: %s", 
+                                task.getName(), childTask.toString()));
+                        Future<Status> future = run(childTask, config);
+                        WorkflowRunner.this.logger.info(String.format("%s: Returned from dispatch of child task: %s", 
+                                task.getName(), childTask.toString()));
 
-                        	// If a serial task fails, don't run the successive sibling tasks
-                        	Module.TaskType childTaskType = WorkflowRunner.this.moduleInstances.get(childTask.getModuleId()).getTaskType();
-                            if (childTaskType == Module.TaskType.SERIAL && future.isCancelled()) {
+                        // If a serial task fails, don't run the successive sibling tasks
+                        Module.TaskType childTaskType = WorkflowRunner.this.moduleInstances.get(childTask.getModuleId()).getTaskType();
+                        if (childTaskType == Module.TaskType.SERIAL && future.isCancelled()) {
+                            WorkflowRunner.this.logger.severe(String.format(
+                                    "Child task %s was cancelled, not running successive sibling tasks",
+                                    childTask.getName()));
+                            // update the status of the cancelled task to ERROR
+                            childTask.setStatus(Status.ERROR);
+                            WorkflowRunner.this.getTaskStatus().update(childTask,"id");
+                            // notify task listeners
+                            notifyTaskListeners(childTask);
+                            break;
+                        }
+                        if (childTaskType == Module.TaskType.SERIAL && future.isDone()) {
+                            Status s = null;
+                            try { s = future.get(); } 
+                            catch (InterruptedException e) {
                                 WorkflowRunner.this.logger.severe(String.format(
-                                        "Child task %s was cancelled, not running successive sibling tasks",
+                                        "Child task %s was interrupted",
                                         childTask.getName()));
-                                // update the status of the cancelled task to ERROR
-                                childTask.setStatus(Status.ERROR);
-                                WorkflowRunner.this.getTaskStatus().update(childTask,"id");
-                                // notify task listeners
+                            } 
+                            catch (ExecutionException e) {throw new RuntimeException(e);}
+                            if (s != null && s != Task.Status.SUCCESS && s != Task.Status.DEFER) {
+                                WorkflowRunner.this.logger.severe(String.format(
+                                        "Child task %s returned status %s, not running successive sibling tasks",
+                                        childTask.getName(), s));
+                                // notify the task listeners
                                 notifyTaskListeners(childTask);
                                 break;
                             }
-                            if (childTaskType == Module.TaskType.SERIAL && future.isDone()) {
-                            	Status s = null;
-                                try { s = future.get(); } 
-                                catch (InterruptedException e) {
-                                	WorkflowRunner.this.logger.severe(String.format(
-                                			"Child task %s was interrupted",
-                                			childTask.getName()));
-                                } 
-                                catch (ExecutionException e) {throw new RuntimeException(e);}
-                                if (s != null && s != Task.Status.SUCCESS && s != Task.Status.DEFER) {
-                                	WorkflowRunner.this.logger.severe(String.format(
-                                			"Child task %s returned status %s, not running successive sibling tasks",
-                                			childTask.getName(), s));
-                                	// notify the task listeners
-                                	notifyTaskListeners(childTask);
-                                	break;
-                                }
-                            }
-
-                            // Otherwise, add the task to 
-                            childFutures.add(future);
-                        }
-                        else {
-                            // Make sure all tasks have been notified
-                            notifyTaskListeners(childTask);
                         }
                     }
                 }

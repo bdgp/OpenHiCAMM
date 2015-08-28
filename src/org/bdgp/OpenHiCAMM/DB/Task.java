@@ -18,9 +18,9 @@ public class Task {
        this.status = status;
     }
     public String toString() {
-    	return String.format("%s(id=%d, parentTaskId=%d, moduleId=%s, status=%s)", 
+    	return String.format("%s(id=%d, dispatchUUID=%s, moduleId=%s, status=%s)", 
     			this.getName(), 
-    			this.id, this.parentTaskId, Util.escape(moduleId), status);
+    			this.id, Util.escape(this.dispatchUUID), Util.escape(moduleId), status);
     }
     
     @DatabaseField(generatedId=true,canBeNull=false)
@@ -28,10 +28,9 @@ public class Task {
 
     // This field is used by the workflow runner task dispatching logic to determine
     // which parent task should dispatch a child task in cases where a child task 
-    // has multiple parent tasks. It is not the same as the TaskDispatch.parentTaskId, 
-    // which describes the task DAG.
-    @DatabaseField(canBeNull=true)
-    private Integer parentTaskId;
+    // has multiple parent tasks.
+    @DatabaseField(canBeNull=true,dataType=DataType.LONG_STRING)
+    private String dispatchUUID;
     
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING)
     private String moduleId;
@@ -44,8 +43,8 @@ public class Task {
     public int getId() {
         return id;
     }
-    public Integer getParentTaskId() { 
-    	return this.parentTaskId; 
+    public String getDispatchUUID() { 
+    	return this.dispatchUUID; 
     }
     public Status getStatus() {
         return status;
@@ -56,44 +55,41 @@ public class Task {
     public void setStatus(Status status) {
         this.status = status;
     }
+    public void setDispatchUUID(String dispatchUUID) {
+        this.dispatchUUID = dispatchUUID;
+    }
     public String getName() { 
         return String.format("%s.T%05d",this.moduleId,this.id); 
     }
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + id;
-		result = prime * result
-				+ ((moduleId == null) ? 0 : moduleId.hashCode());
-		result = prime * result
-				+ ((parentTaskId == null) ? 0 : parentTaskId.hashCode());
-		result = prime * result + ((status == null) ? 0 : status.hashCode());
-		return result;
-	}
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		Task other = (Task) obj;
-		if (id != other.id)
-			return false;
-		if (moduleId == null) {
-			if (other.moduleId != null)
-				return false;
-		} else if (!moduleId.equals(other.moduleId))
-			return false;
-		if (parentTaskId == null) {
-			if (other.parentTaskId != null)
-				return false;
-		} else if (!parentTaskId.equals(other.parentTaskId))
-			return false;
-		if (status != other.status)
-			return false;
-		return true;
-	}
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + id;
+        result = prime * result
+                + ((moduleId == null) ? 0 : moduleId.hashCode());
+        result = prime * result + ((status == null) ? 0 : status.hashCode());
+        return result;
+    }
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        Task other = (Task) obj;
+        if (id != other.id)
+            return false;
+        if (moduleId == null) {
+            if (other.moduleId != null)
+                return false;
+        } else if (!moduleId.equals(other.moduleId))
+            return false;
+        if (status != other.status)
+            return false;
+        return true;
+    }
 };
