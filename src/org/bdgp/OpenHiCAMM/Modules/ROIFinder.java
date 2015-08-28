@@ -187,7 +187,7 @@ public class ROIFinder implements Module, ImageLogger {
             Dao<SlidePos> slidePosDao = workflowRunner.getInstanceDb().table(SlidePos.class);
 
 			// First, delete any old slidepos and slideposlist records
-			logger.info(String.format("Deleting old position lists"));
+			logger.fine(String.format("Deleting old position lists"));
 			List<SlidePosList> oldSlidePosLists = slidePosListDao.select(
 					where("slideId",slide.getId()).and("moduleId",this.moduleId).and("taskId", task.getId()));
 			for (SlidePosList oldSlidePosList : oldSlidePosLists) {
@@ -255,7 +255,7 @@ public class ROIFinder implements Module, ImageLogger {
         //imp.show();
         
         // Convert to gray
-        logger.info(String.format("%s: Convert to gray", label));
+        logger.fine(String.format("%s: Convert to gray", label));
         IJ.run(imp, "8-bit", "");
         imageLog.addImage(imp, "Convert to gray");
         
@@ -266,7 +266,7 @@ public class ROIFinder implements Module, ImageLogger {
         // Resize to 1/4
         int w=imp.getWidth();
         int h=imp.getHeight();
-        logger.info(String.format("%s: Image dimensions: (%d,%d)", label, w, h));
+        logger.fine(String.format("%s: Image dimensions: (%d,%d)", label, w, h));
 
 //        double scale = 0.25;
         double scale = 1.0;
@@ -276,7 +276,7 @@ public class ROIFinder implements Module, ImageLogger {
 
         String scaleOp = String.format("x=%f y=%f width=%d height=%d interpolation=Bicubic average", 
         		scale, scale, (int)ws, (int)hs);
-        logger.info(String.format("%s: Scaling: %s", label, scaleOp));
+        logger.fine(String.format("%s: Scaling: %s", label, scaleOp));
         IJ.run(imp, "Scale...", scaleOp);
         imageLog.addImage(imp, "Scaling: scaleOp");
 
@@ -284,32 +284,32 @@ public class ROIFinder implements Module, ImageLogger {
         double crop = 2.0;
         double rw=(w/crop)-(ws/crop);
         double rh=(h/crop)-(hs/crop);
-        logger.info(String.format("%s: Cropping: %d, %d, %d, %d", label, (int)rw, (int)rh, (int)ws, (int)hs));
+        logger.fine(String.format("%s: Cropping: %d, %d, %d, %d", label, (int)rw, (int)rh, (int)ws, (int)hs));
         imp.setRoi((int)rw,(int)rh,(int)ws,(int)hs);
         IJ.run(imp, "Crop", "");
         imageLog.addImage(imp, String.format("Cropping: %d, %d, %d, %d", (int)rw, (int)rh, (int)ws, (int)hs));
 
         // Binarize
-        logger.info(String.format("%s: Binarizing", label));
+        logger.fine(String.format("%s: Binarizing", label));
         IJ.run(imp, "Auto Threshold", "method=Huang white"); // array out of bounds exception
         imageLog.addImage(imp, "Binarizing");
 
         // Morphological operations: close gaps, fill holes
-        logger.info(String.format("%s: Closing gaps", label));
+        logger.fine(String.format("%s: Closing gaps", label));
         IJ.run(imp, "Close-", "");
         imageLog.addImage(imp, "Closing gaps");
 
-        logger.info(String.format("%s: Filling holes", label));
+        logger.fine(String.format("%s: Filling holes", label));
         IJ.run(imp, "Fill Holes", "");
         imageLog.addImage(imp, "Filling holes");
 
         // Set the measurements
-        logger.info(String.format("%s: Set the measurements", label));
+        logger.fine(String.format("%s: Set the measurements", label));
         IJ.run(imp, "Set Measurements...", "area mean min bounding redirect=None decimal=3");
         imageLog.addImage(imp, "Set measurements");
 
         // Detect the objects
-        logger.info(String.format("%s: Analyzing particles", label));
+        logger.fine(String.format("%s: Analyzing particles", label));
         IJ.run(imp, "Analyze Particles...", "exclude clear in_situ");
         imageLog.addImage(imp, "Analyzing particles");
        
@@ -335,7 +335,8 @@ public class ROIFinder implements Module, ImageLogger {
                 ROI roi = new ROI(image.getId(), (int)(bx*scale), (int)(by*scale), (int)(bx+width), (int)(by+height));
                 rois.add(roi);
                 roiDao.insert(roi);
-                logger.info(String.format("%s: Created new ROI record: %s", label, roi));
+                logger.info(String.format("%s: Created new ROI record with width=%.2f, height=%.2f, area=%.2f: %s", 
+                        label, width, height, area, roi));
                 
                 // Draw the ROI rectangle
                 imp.setRoi(roi.getX1(), roi.getY1(), roi.getX2()-roi.getX1()+1, roi.getY2()-roi.getY1()+1);
