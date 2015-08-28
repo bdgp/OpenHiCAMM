@@ -174,7 +174,7 @@ public class WorkflowRunnerDialog extends JDialog {
         if (this.seen.size() > 0) {
             long elapsedTime = System.currentTimeMillis() - this.startTime;
             int tasksLeft = this.maxTasks - this.seen.size();
-            long eta = elapsedTime + (int)Math.floor((double)tasksLeft * ((double)elapsedTime / (double)this.seen.size()));
+            long eta = (long)Math.floor((double)tasksLeft * ((double)elapsedTime / (double)this.seen.size()));
             long hours = (long)Math.floor(eta / (1000 * 60 * 60));
             long minutes = (long)Math.floor(eta / (1000 * 60)) - (hours * 60);
             double seconds = (eta / 1000.0) - (hours * 60 * 60) - (minutes * 60);
