@@ -416,6 +416,7 @@ public class SlideImager implements Module, ImageLogger {
                     } 
                     catch (InterruptedException e) { 
                         logger.warning("Thread was interrupted while waiting for the Image Cache to finish");
+                        return Status.ERROR;
                     }
                 }
                 if (!imageCache.isFinished()) throw new RuntimeException("ImageCache is not finished!");
