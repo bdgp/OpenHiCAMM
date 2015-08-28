@@ -23,6 +23,9 @@ import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.TaskListener;
 
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.awt.event.ActionEvent;
 import java.awt.Font;
 
@@ -36,7 +39,7 @@ public class WorkflowRunnerDialog extends JDialog {
     JButton btnStop;
     JButton btnClose;
     
-    public WorkflowRunnerDialog(WorkflowDialog workflowDialog, final WorkflowRunner workflowRunner) 
+    public WorkflowRunnerDialog(final WorkflowDialog workflowDialog, final WorkflowRunner workflowRunner) 
     {
         super(workflowDialog, "Workflow Runner", Dialog.ModalityType.DOCUMENT_MODAL);
     	final WorkflowRunnerDialog self = this;
@@ -104,8 +107,14 @@ public class WorkflowRunnerDialog extends JDialog {
         btnClose = new JButton("Close");
         btnClose.addActionListener(new ActionListener() {
         	public void actionPerformed(ActionEvent e) {
+        		workflowDialog.refresh();
         		self.dispose();
         	}
+        });
+        this.addWindowListener(new WindowAdapter() {
+            @Override public void windowClosing(WindowEvent e) {
+        		workflowDialog.refresh();
+            }
         });
         btnClose.setEnabled(false);
         getContentPane().add(btnClose, "cell 1 2");
