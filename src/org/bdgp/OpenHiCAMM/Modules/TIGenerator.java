@@ -30,7 +30,7 @@ public class TIGenerator implements Module {
 
     @Override
     public Status run(Task task, Map<String,Config> config, Logger logger) {
-    	logger.info(String.format("Running task %s: %s", task.getName(), task));
+    	logger.fine(String.format("Running task %s: %s", task.getName(), task));
     	logger.info(String.format("This is a *stub* module. Sleeping..."));
         Util.sleep();
         return Status.SUCCESS;
@@ -71,12 +71,12 @@ public class TIGenerator implements Module {
             Task task = new Task(moduleId, Status.NEW);
             workflow.getTaskStatus().insert(task);
             tasks.add(task);
-            workflow.getLogger().info(String.format("%s: createTaskRecords: Created new task record: %s", this.moduleId, task));
+            workflow.getLogger().fine(String.format("%s: createTaskRecords: Created new task record: %s", this.moduleId, task));
             
             if (parentTask != null) {
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
                 workflow.getTaskDispatch().insert(dispatch);
-                workflow.getLogger().info(String.format("%s: createTaskRecords: Created new task dispatch record: %s", 
+                workflow.getLogger().fine(String.format("%s: createTaskRecords: Created new task dispatch record: %s", 
                 		this.moduleId, dispatch));
             }
         }
