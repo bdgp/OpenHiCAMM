@@ -28,7 +28,6 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -276,18 +275,12 @@ public class WorkflowDialog extends JDialog {
                 designer.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 designer.pack();
                 designer.setVisible(true);
-                designer.addWindowListener(new WindowListener() {
-                    @Override public void windowOpened(WindowEvent e) { }
-                    @Override public void windowClosing(WindowEvent e) { }
+                designer.addWindowListener(new WindowAdapter() {
                     @Override public void windowClosed(WindowEvent e) { 
                     	initWorkflowRunner(true);
                     	WorkflowDialog.this.workflowRunner.deleteTaskRecords();
                         refresh();
                     }
-                    @Override public void windowIconified(WindowEvent e) { }
-                    @Override public void windowDeiconified(WindowEvent e) { }
-                    @Override public void windowActivated(WindowEvent e) { }
-                    @Override public void windowDeactivated(WindowEvent e) { }
                 });
                 refresh();
             }});
@@ -399,12 +392,9 @@ public class WorkflowDialog extends JDialog {
         if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getInstance().getId()) || force) {
             workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, Level.INFO, mmslide);
 
-        SwingUtilities.invokeLater(new Runnable() {
-           @Override public void run() {
-                workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
-                workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-                workflowRunnerDialog.pack();
-           }});
+            workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
+            workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            workflowRunnerDialog.pack();
         }
     }
 
@@ -412,12 +402,12 @@ public class WorkflowDialog extends JDialog {
      * Start the workflow runner and open the Workflow Runner dialog.
      * Resume mode does not delete and re-create the Task/TaskConfig records before starting.
      */
-    public void start(boolean resume) {
+    public void start(final boolean resume) {
         // Make sure the workflow runner is initialized
         initWorkflowRunner(false);
         this.workflowRunner.setMaxThreads((Integer)numThreads.getValue());
         // Get the selected start module
-        String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
+        final String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
         
         if (!resume) {
             List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
@@ -438,18 +428,19 @@ public class WorkflowDialog extends JDialog {
         refresh();
 
         // Make the workflow runner dialog visible
+        // init the workflow runner dialog
+        if (workflowRunnerDialog == null) {
+            workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
+            workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            workflowRunnerDialog.pack();
+        } 
+        else {
+            workflowRunnerDialog.reset();
+        }
         SwingUtilities.invokeLater(new Runnable() {
-           @Override public void run() {
-                // init the workflow runner dialog
-                if (workflowRunnerDialog == null) {
-                    workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
-                    workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-                    workflowRunnerDialog.pack();
-                }
-                workflowRunnerDialog.reset();
+            @Override public void run() {
                 workflowRunnerDialog.setVisible(true);
-            }
-        });
+            }});
 
         // Start the workflow runner
         workflowRunner.run(startModuleId, null, resume);
