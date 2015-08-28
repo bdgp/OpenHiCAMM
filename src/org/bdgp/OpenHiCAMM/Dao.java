@@ -299,8 +299,14 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     	    }
 	        
     	    if (this.queryForFieldValuesArgs(query).size() == 0) {
-    	        int rows = this.create(value);
-    	        return new Dao.CreateOrUpdateStatus(true, false, rows);
+    	        // try an insert, if that fails, try an update
+    	        try {
+                    int rows = this.create(value);
+                    return new Dao.CreateOrUpdateStatus(true, false, rows);
+    	        } catch (SQLException e) {
+                    int rows = this.update(value, where);
+                    return new Dao.CreateOrUpdateStatus(false, true, rows);
+    	        }
     	    }
     	    else {
     	        int rows = this.update(value, where);
