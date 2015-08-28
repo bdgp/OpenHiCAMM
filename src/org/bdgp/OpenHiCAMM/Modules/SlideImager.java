@@ -141,7 +141,7 @@ public class SlideImager implements Module, ImageLogger {
         // otherwise, load a position list from a file
         else if (conf.containsKey("posListFile")) {
             Config posList = conf.get("posListFile");
-            logger.info(String.format("%s: Loading position list from file: %s", this.moduleId, Util.escape(posList.getValue())));
+            logger.fine(String.format("%s: Loading position list from file: %s", this.moduleId, Util.escape(posList.getValue())));
             File posListFile = new File(posList.getValue());
             if (!posListFile.exists()) {
                 throw new RuntimeException("Cannot find position list file "+posListFile.getPath());
@@ -162,7 +162,7 @@ public class SlideImager implements Module, ImageLogger {
         // Load the settings and position list from the settings files
         if (conf.containsKey("acqSettingsFile")) {
             Config acqSettings = conf.get("acqSettingsFile");
-            logger.info(String.format("%s: Loading acquisition settings from file: %s", this.moduleId, Util.escape(acqSettings.getValue())));
+            logger.fine(String.format("%s: Loading acquisition settings from file: %s", this.moduleId, Util.escape(acqSettings.getValue())));
             File acqSettingsFile = new File(acqSettings.getValue());
             if (!acqSettingsFile.exists()) {
                 throw new RuntimeException("Cannot find acquisition settings file "+acqSettingsFile.getPath());
@@ -609,7 +609,7 @@ public class SlideImager implements Module, ImageLogger {
         	if (parentTask != null) {
                 for (TaskConfig c : taskConfigDao.select(where("id",new Integer(parentTask.getId()).toString()))) {
                     parentTaskConf.put(c.getKey(), c);
-                    workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Using task config: %s", 
+                    workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Using task config: %s", 
                             this.moduleId, c));
                 }
         	}
@@ -627,7 +627,7 @@ public class SlideImager implements Module, ImageLogger {
         	Slide slide;
             if (parentTaskConf.containsKey("slideId")) {
             	slide = slideDao.selectOneOrDie(where("id",new Integer(parentTaskConf.get("slideId").getValue())));
-            	workflowRunner.getLogger().info(String.format("%s: createTaskRecords: Inherited slideId %s", this.moduleId, parentTaskConf.get("slideId")));
+            	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Inherited slideId %s", this.moduleId, parentTaskConf.get("slideId")));
             }
             // if posListModuleId is set, use the most recent slide
             else if (conf.containsKey("posListModuleId")) {
@@ -726,7 +726,7 @@ public class SlideImager implements Module, ImageLogger {
                     this.moduleId, verboseSummary.summary));
         
             int totalImages = verboseSummary.channels * verboseSummary.slices * verboseSummary.frames * verboseSummary.positions;
-            workflowRunner.getLogger().info(String.format("%s: getTotalImages: Will create %d images", 
+            workflowRunner.getLogger().fine(String.format("%s: getTotalImages: Will create %d images", 
                     this.moduleId, totalImages));
 
             // Create the task records
