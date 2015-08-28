@@ -1,6 +1,7 @@
 package org.bdgp.OpenHiCAMM.DB;
 
 import org.micromanager.api.ImageCache;
+import org.micromanager.utils.MDUtils;
 
 import mmcorej.TaggedImage;
 
@@ -47,6 +48,10 @@ public class Image {
     
     public TaggedImage getImage(ImageCache imageCache) {
     	return imageCache.getImage(this.channel, this.slice, this.frame, this.position);
+    }
+    
+    public String getLabel() {
+        return MDUtils.generateLabel(this.channel, this.slice, this.frame, this.position);
     }
     
     public String toString() {
