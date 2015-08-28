@@ -36,10 +36,9 @@ public class Logger extends java.util.logging.Logger {
         this.setLevel(loglevel);
         
         // close handlers on exit
-        final Logger thisLogger = this;
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
-                for (Handler h : thisLogger.getHandlers()) {
+                for (Handler h : Logger.this.getHandlers()) {
                     h.close();
                 }
             }
