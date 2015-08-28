@@ -541,6 +541,7 @@ public class WorkflowRunner {
                     for (TaskListener listener : taskListeners) {
                         int taskCount = getTaskCount(startModuleId);
                         listener.taskCount(taskCount);
+                        listener.startTime(startTime);
                         //listener.debug(String.format("Set task count: %d", taskCount));
                     }
 
@@ -608,9 +609,12 @@ public class WorkflowRunner {
                     long hours = (long)Math.floor(elapsedTime / (1000 * 60 * 60));
                     long minutes = (long)Math.floor(elapsedTime / (1000 * 60)) - (hours * 60);
                     double seconds = (elapsedTime / 1000.0) - (hours * 60 * 60) - (minutes * 60);
+                    String timeElapsed = Util.join(", ", 
+                            hours > 0? String.format("%d hours", hours) : null,
+                            minutes > 0? String.format("%d minutes", minutes) : null,
+                            String.format("%.1f seconds", seconds));
                     WorkflowRunner.this.logger.info(String.format(
-                            "Time elapsed: %d hours, %d minutes, %.1f seconds", 
-                            hours, minutes, seconds));
+                            "Time elapsed: %s", timeElapsed));
                     return status;
             	}
             	catch (Throwable e) {

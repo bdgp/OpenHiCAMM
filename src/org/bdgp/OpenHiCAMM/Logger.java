@@ -2,6 +2,7 @@ package org.bdgp.OpenHiCAMM;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.logging.FileHandler;
@@ -71,11 +72,12 @@ public class Logger extends java.util.logging.Logger {
     		setFormatter();
 		}
 		public void setFormatter() {
+		    final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ");
 			setFormatter(new SimpleFormatter() {
 				public String format(LogRecord record) {
-					return String.format("[%s:%s:%s] %s%n", 
+					return String.format("[%s %s %s] %s%n", 
 							record.getLoggerName(),
-							new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S").format(new Date(record.getMillis())), 
+							dateFormat.format(new Date(record.getMillis())), 
 							record.getLevel(), 
 							record.getMessage());
 				}
