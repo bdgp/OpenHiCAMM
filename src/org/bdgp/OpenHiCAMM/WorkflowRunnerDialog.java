@@ -101,7 +101,9 @@ public class WorkflowRunnerDialog extends JDialog {
                                         String.format(" (%.2f%%)", 
                                                 ((double)seen.size() / (double)WorkflowRunnerDialog.this.maxTasks) * 100.0) : 
                                         "",
-                                WorkflowRunnerDialog.this.startTime != null && WorkflowRunnerDialog.this.seen.size() > 0?
+                                WorkflowRunnerDialog.this.startTime != null && 
+                                WorkflowRunnerDialog.this.seen.size() > 0 && 
+                                WorkflowRunnerDialog.this.seen.size() < WorkflowRunnerDialog.this.maxTasks?
                                         String.format(" (ETA: %s)", WorkflowRunnerDialog.this.getETA()) : ""));
                     }
                 });
