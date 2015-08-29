@@ -540,7 +540,6 @@ public class WorkflowRunner {
                     }
                     else {
                         // delete and re-create the task records
-                        //WorkflowRunner.this.deleteTaskRecords();
                         WorkflowRunner.this.deleteTaskRecords(startModuleId);
                         WorkflowRunner.this.createTaskRecords(startModuleId);
                     }
@@ -558,6 +557,8 @@ public class WorkflowRunner {
 
                     // Log some information on this workflow
                     WorkflowRunner.this.logWorkflowInfo(startModuleId);
+                    if (resume) logger.info("Scanning for previous tasks...");
+
                     // start the first task(s)
                     List<Task> start = taskStatus.select(where("moduleId",startModuleId));
                     List<Future<Status>> futures = new ArrayList<Future<Status>>();
