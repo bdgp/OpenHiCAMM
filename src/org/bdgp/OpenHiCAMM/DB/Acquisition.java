@@ -52,7 +52,10 @@ public class Acquisition {
     	} 
 
         try {
-            this.name = mmstudio.openAcquisitionData(new File(this.directory, this.prefix).getPath(), false, false);
+            File acquisitionPath = new File(this.directory, this.prefix);
+            if (!acquisitionPath.exists()) throw new RuntimeException(String.format(
+                    "Acquisition path %s does not exist!", acquisitionPath.getPath()));
+            this.name = mmstudio.openAcquisitionData(acquisitionPath.getPath(), false, false);
             MMAcquisition acquisition = mmstudio.getAcquisitionWithName(this.name);
             if (acquisitionDao != null) {
                 acquisitionDao.update(this, "prefix","directory");
