@@ -235,11 +235,11 @@ public class WorkflowDesignerDialog extends JDialog {
     	    Matcher m = Pattern.compile("([^.]+)$").matcher(moduleName);
     	    if (m.find() && m.groupCount() > 0) {
     	        String name = m.group(1);
-    	        int ext = 0;
-    	        while (moduleIdExists(name+(ext>0 ? "-"+ext : ""))) {
+    	        int ext = 1;
+    	        while (moduleIdExists(name+(ext>1 ? ext : ""))) {
     	            ++ext;
     	        }
-    	        name = name+(ext>0 ? "-"+ext : "");
+    	        name = name+(ext>1 ? ext : "");
     	        return name;
     	    }
 	    }
