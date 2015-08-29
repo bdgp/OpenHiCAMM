@@ -164,13 +164,14 @@ public class ROIFinder implements Module, ImageLogger {
                         sp.stageName = "XYStage";
                         sp.x = x_stage-((tileX-(double)imageWidth/2.0)*pixelSizeUm);
                         sp.y = y_stage-((tileY-(double)imageHeight/2.0)*pixelSizeUm);
-                        msp.setLabel(String.format("%s: %s", positionName, roi.toString()));
+                        String mspLabel = String.format("%s: %s", positionName, roi.toString());
+                        msp.setLabel(mspLabel);
                         msp.add(sp);
                         msp.setDefaultXYStage("XYStage");
                         posList.addPosition(msp);
                         roiMap.put(msp, roi);
-                        logger.fine(String.format("%s: Storing StagePosition(numAxes: %d, stageName: %s, x=%.2f, y=%.2f, tileX=%d, tileY=%d)",
-                                label, sp.numAxes, Util.escape(sp.stageName), sp.x, sp.y, tileX, tileY));
+                        logger.info(String.format("%s: Storing StagePosition(label=%s, numAxes: %d, stageName: %s, x=%.2f, y=%.2f, tileX=%d, tileY=%d)",
+                                label, Util.escape(mspLabel), sp.numAxes, Util.escape(sp.stageName), sp.x, sp.y, tileX, tileY));
                     }
 			    }
 			}
