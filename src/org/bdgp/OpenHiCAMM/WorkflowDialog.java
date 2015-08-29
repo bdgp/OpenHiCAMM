@@ -17,6 +17,7 @@ import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.WorkflowInstance;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
+import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 
 import net.miginfocom.swing.MigLayout;
@@ -364,8 +365,16 @@ public class WorkflowDialog extends JDialog {
                     btnCreateNewInstance.setEnabled(true);
 
                     if (startModuleId != null && workflowRunner != null) {
+                        // If there are any tasks with status not equal to SUCCESS or FAIL, then enable
+                        // the resume button.
+                        btnResume.setEnabled(false);
                         List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
-                        btnResume.setEnabled(tasks.size() > 0);
+                        for (Task t : tasks) {
+                            if (t.getStatus() != Status.SUCCESS && t.getStatus() != Status.FAIL) {
+                                btnResume.setEnabled(true);
+                                break;
+                            }
+                        }
                     }
                     else {
                         btnResume.setEnabled(false);
