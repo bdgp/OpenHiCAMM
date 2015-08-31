@@ -346,9 +346,14 @@ public class SlideImager implements Module, ImageLogger {
                                 // Log how many images have been acquired so far
                                 Set<String> taggedImages = new HashSet<String>(acqImageCache.imageKeys());
                                 String label = MDUtils.getLabel(taggedImage.tags);
+                                String positionName = null;
+                                try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
+                                catch (JSONException e) {}
                                 taggedImages.add(label);
-                                logger.info(String.format("Acquired image: %s (%d/%d images)", 
-                                        MDUtils.getLabel(taggedImage.tags),
+                                logger.info(String.format("Acquired image: %s [%d/%d images]", 
+                                        positionName == null? 
+                                            label : 
+                                            String.format("%s (%s)", positionName, label),
                                         taggedImages.size(),
                                         totalImages));
 
