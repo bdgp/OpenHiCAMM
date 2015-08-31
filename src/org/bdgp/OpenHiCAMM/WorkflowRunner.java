@@ -89,6 +89,8 @@ public class WorkflowRunner {
     private Set<Task> notifiedTasks;
     private Logger.LogFileHandler logFileHandler;
     private boolean resume;
+    private Long startTime;
+    private String startModuleId;
     
     public boolean isResume() {
         return resume;
@@ -146,6 +148,8 @@ public class WorkflowRunner {
         this.taskListeners = new ArrayList<TaskListener>();
         this.mmslide = mmslide;
         this.isStopped = true;
+        this.startTime = null;
+        this.startModuleId = null;
         
         // instantiate the workflow module object instances
         this.moduleInstances = new HashMap<String,Module>();
@@ -503,6 +507,7 @@ public class WorkflowRunner {
             final boolean resume) 
     {
         this.resume = resume;
+        this.startModuleId = startModuleId;
         this.pool = Executors.newFixedThreadPool(this.maxThreads+1);
         this.notifiedTasks.clear();
         Future<Status> future = pool.submit(new Callable<Status>() {
@@ -513,7 +518,7 @@ public class WorkflowRunner {
                     ij.macro.Interpreter.batchMode = true;
 
                     WorkflowRunner.this.isStopped = false;
-                    long startTime = System.currentTimeMillis();
+                    WorkflowRunner.this.startTime = System.currentTimeMillis();
 
                     if (WorkflowRunner.this.resume) {
                         // set all the tasks with status ERROR or DEFER to status NEW, since
@@ -615,18 +620,9 @@ public class WorkflowRunner {
 
                     // Display a summary of all the task statuses
                     logTaskSummary(startModuleId);
+                    
+                    logElapsedTime(startTime);
 
-                    // Display the elapsed time
-                    long elapsedTime = System.currentTimeMillis() - startTime;
-                    long hours = (long)Math.floor(elapsedTime / (1000 * 60 * 60));
-                    long minutes = (long)Math.floor(elapsedTime / (1000 * 60)) - (hours * 60);
-                    double seconds = (elapsedTime / 1000.0) - (hours * 60 * 60) - (minutes * 60);
-                    String timeElapsed = Util.join(", ", 
-                            hours > 0? String.format("%d hours", hours) : null,
-                            minutes > 0? String.format("%d minutes", minutes) : null,
-                            String.format("%.1f seconds", seconds));
-                    WorkflowRunner.this.logger.info(String.format(
-                            "Time elapsed: %s", timeElapsed));
                     return status;
             	}
             	catch (Throwable e) {
@@ -643,6 +639,20 @@ public class WorkflowRunner {
             }
         });
         return future;
+    }
+    
+    // Display the elapsed time
+    public void logElapsedTime(long startTime) {
+        long elapsedTime = System.currentTimeMillis() - startTime;
+        long hours = (long)Math.floor(elapsedTime / (1000 * 60 * 60));
+        long minutes = (long)Math.floor(elapsedTime / (1000 * 60)) - (hours * 60);
+        double seconds = (elapsedTime / 1000.0) - (hours * 60 * 60) - (minutes * 60);
+        String timeElapsed = Util.join(", ", 
+                hours > 0? String.format("%d hours", hours) : null,
+                minutes > 0? String.format("%d minutes", minutes) : null,
+                String.format("%.1f seconds", seconds));
+        WorkflowRunner.this.logger.info(String.format(
+                "Time elapsed: %s", timeElapsed));
     }
     
     /**
@@ -903,6 +913,11 @@ public class WorkflowRunner {
             listener.stopped();
         }
         List<Runnable> runnables = pool.shutdownNow();
+
+        // Log a summary
+        logTaskSummary(this.startModuleId);
+        logElapsedTime(this.startTime);
+
         return runnables;
     }
     
