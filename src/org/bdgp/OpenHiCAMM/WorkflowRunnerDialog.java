@@ -90,7 +90,7 @@ public class WorkflowRunnerDialog extends JDialog {
                         text.append(String.format("[%s|%s|%s] %s%n", 
                             record.getLoggerName(),
                             dateFormat.format(new Date(record.getMillis())), 
-                            record.getLevel(), 
+                            String.format("%-7s", record.getLevel()), 
                             record.getMessage()));
                         text.setCaretPosition(text.getDocument().getLength());
                         progressBar.setString(String.format("%s%s%s",

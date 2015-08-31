@@ -78,7 +78,7 @@ public class Logger extends java.util.logging.Logger {
 							record.getLoggerName(),
 							dateFormat.format(new Date(record.getMillis())), 
 							record.getLevel(), 
-							record.getMessage());
+							String.format("%-7s", record.getMessage()));
 				}
 			});
 		}
