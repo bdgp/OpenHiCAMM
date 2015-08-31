@@ -85,11 +85,19 @@ public class ROIFinder implements Module, ImageLogger {
     	Config imageIdConf = config.get("imageId");
     	if (imageIdConf == null) throw new RuntimeException("No imageId task configuration was set by the slide imager!");
         Integer imageId = new Integer(imageIdConf.getValue());
-
         Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
         final Image image = imageDao.selectOneOrDie(where("id",imageId));
+
+        // get the tagged image
+        TaggedImage taggedImage = getTaggedImage(image, logger);
+
+        // get the image label and position name
+        String positionName = null;
+        try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
+        catch (JSONException e) {throw new RuntimeException(e);} 
+        String imageLabel = image.getLabel();
+        String label = String.format("%s (%s)", positionName, imageLabel); 
         
-        String label = image.getLabel();
         logger.fine(String.format("%s: Using image: %s", label, image));
         logger.fine(String.format("%s: Using image ID: %d", label, imageId));
         
@@ -97,9 +105,8 @@ public class ROIFinder implements Module, ImageLogger {
         Slide slide = slideDao.selectOneOrDie(where("id",image.getSlideId()));
         logger.fine(String.format("%s: Using slide: %s", label, slide));
         
-        TaggedImage taggedImage = getTaggedImage(image, logger);
-
     	try {
+
 			double pixelSizeUm = new Double(config.get("pixelSizeUm").getValue());
 			logger.fine(String.format("%s: Using pixelSizeUm: %f", label, pixelSizeUm));
 			
@@ -114,7 +121,6 @@ public class ROIFinder implements Module, ImageLogger {
 
 			int imageWidth = MDUtils.getWidth(taggedImage.tags);
 			int imageHeight = MDUtils.getHeight(taggedImage.tags);
-			String positionName = MDUtils.getPositionName(taggedImage.tags);
 			
             long cameraWidth = this.script.getMMCore().getImageWidth();
             long cameraHeight = this.script.getMMCore().getImageHeight();
@@ -240,15 +246,12 @@ public class ROIFinder implements Module, ImageLogger {
     }
     
     public List<ROI> process(Image image, TaggedImage taggedImage, Logger logger, ImageLogRunner imageLog, double minRoiArea) {
-    	// Display all the IJ menu entries
-        // @SuppressWarnings("unchecked")
-		// Iterator<Map.Entry<String, String>> it = ij.Menus.getCommands().entrySet().iterator();
-        // while (it.hasNext()) {
-        //   Map.Entry<String, String> entry = it.next();
-        //   logger.info(String.format("Menu Entry: %s -> %s", entry.getKey(), entry.getValue()));
-        // }
-        
-        String label = image.getLabel();
+        // get the image label
+        String positionName = null;
+        try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
+        catch (JSONException e) {throw new RuntimeException(e);} 
+        String imageLabel = image.getLabel();
+        String label = String.format("%s (%s)", positionName, imageLabel); 
     	
     	List<ROI> rois = new ArrayList<ROI>();
         ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
