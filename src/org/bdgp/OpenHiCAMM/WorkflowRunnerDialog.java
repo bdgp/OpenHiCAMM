@@ -40,6 +40,7 @@ public class WorkflowRunnerDialog extends JDialog {
     Set<Task> seen;
     JButton btnStop;
     JButton btnClose;
+    String lastMessage;
     
     public WorkflowRunnerDialog(final WorkflowDialog workflowDialog, final WorkflowRunner workflowRunner) 
     {
@@ -81,8 +82,8 @@ public class WorkflowRunnerDialog extends JDialog {
         progressBar.setIndeterminate(false);
 
         // logging output
-        final int MAX_LENGTH = 100;
         final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss.SSSZ");
+        lastMessage = "";
         workflowRunner.addLogHandler(new Handler() {
             @Override public void publish(final LogRecord record) {
                 SwingUtilities.invokeLater(new Runnable() {
@@ -93,18 +94,8 @@ public class WorkflowRunnerDialog extends JDialog {
                             String.format("%-7s", record.getLevel()), 
                             record.getMessage()));
                         text.setCaretPosition(text.getDocument().getLength());
-                        progressBar.setString(String.format("%s%s%s",
-                                record.getMessage().length() < MAX_LENGTH? 
-                                        record.getMessage() : 
-                                        record.getMessage().substring(0, MAX_LENGTH)+"...",
-                                WorkflowRunnerDialog.this.maxTasks != null? 
-                                        String.format(" (%.2f%%)", 
-                                                ((double)seen.size() / (double)WorkflowRunnerDialog.this.maxTasks) * 100.0) : 
-                                        "",
-                                WorkflowRunnerDialog.this.startTime != null && 
-                                WorkflowRunnerDialog.this.seen.size() > 0 && 
-                                WorkflowRunnerDialog.this.seen.size() < WorkflowRunnerDialog.this.maxTasks?
-                                        String.format(" (ETA: %s)", WorkflowRunnerDialog.this.getETA()) : ""));
+                        setProgressBarText(record.getMessage());
+                        lastMessage = record.getMessage();
                     }
                 });
             }
@@ -132,6 +123,7 @@ public class WorkflowRunnerDialog extends JDialog {
                         if (!seen.contains(task)) {
                             seen.add(task);
                             progressBar.setValue(seen.size());
+                            setProgressBarText(lastMessage);
                             if (WorkflowRunnerDialog.this.maxTasks != null && 
                                 seen.size() == WorkflowRunnerDialog.this.maxTasks) 
                             {
@@ -197,5 +189,21 @@ public class WorkflowRunnerDialog extends JDialog {
                 btnStop.setEnabled(true);
                 btnClose.setEnabled(false);
             }});
+    }
+    
+    final int MAX_LENGTH = 100;
+    public void setProgressBarText(String message) {
+        progressBar.setString(String.format("%s%s%s",
+                message.length() < MAX_LENGTH? 
+                        message : 
+                        message.substring(0, MAX_LENGTH)+"...",
+                WorkflowRunnerDialog.this.maxTasks != null? 
+                        String.format(" (%.2f%%)", 
+                                ((double)seen.size() / (double)WorkflowRunnerDialog.this.maxTasks) * 100.0) : 
+                        "",
+                WorkflowRunnerDialog.this.startTime != null && 
+                WorkflowRunnerDialog.this.seen.size() > 0 && 
+                WorkflowRunnerDialog.this.seen.size() < WorkflowRunnerDialog.this.maxTasks?
+                        String.format(" (ETA: %s)", WorkflowRunnerDialog.this.getETA()) : ""));
     }
 }
