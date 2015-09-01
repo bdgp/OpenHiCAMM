@@ -22,12 +22,12 @@ import org.hsqldb.Server;
 import org.hsqldb.persist.HsqlProperties;
 import org.hsqldb.server.ServerAcl.AclFormatException;
 
-import com.j256.ormlite.jdbc.JdbcPooledConnectionSource;
+import com.j256.ormlite.jdbc.JdbcConnectionSource;
 import com.j256.ormlite.table.DatabaseTableConfig;
 
 import static org.bdgp.OpenHiCAMM.Util.map;
 
-public class Connection extends JdbcPooledConnectionSource {
+public class Connection extends JdbcConnectionSource {
     private static Map<String,String> serverDefaults = map("server.port","9001");
     private static SecureRandom random = new SecureRandom();
     private static Server server;
@@ -73,7 +73,7 @@ public class Connection extends JdbcPooledConnectionSource {
                 lock.close();
                 
                 // write the user/password to the login file
-                String user = "mmslide";
+                String user = "openhicamm";
                 String pw = new BigInteger(130, random).toString(32);
                 if (loginfile.exists()) {
                     // read the login information from the login file
@@ -159,10 +159,10 @@ public class Connection extends JdbcPooledConnectionSource {
             p.setProperty("server.port", map(serverDefaults).get("server.port"));
             p.setProperty("server.no_system_exit","true");
             p.setProperty("hsqldb.default_table_type","cached");
-            p.setProperty("hsqldb.applog","1");
+            p.setProperty("hsqldb.applog","3");
             p.setProperty("hsqldb.sqllog","3");
             // writer server output to a log file
-            Logger logger = Logger.create(new File(logDir, WorkflowRunner.LOG_FILE).getPath(), 
+            Logger logger = Logger.create(new File(logDir, "db.log").getPath(), 
             "HSQLDB", Level.INFO);
             // instantiate a new database server
             server = new Server();
