@@ -22,7 +22,7 @@ public class ROIFinderDialog extends JPanel {
 	DoubleSpinner hiResPixelSizeUm;
 
 	public static final double DEFAULT_PIXEL_SIZE_UM = 0.48;
-	public static final double DEFAULT_HIRES_PIXEL_SIZE_UM = 0.124;
+	public static final double DEFAULT_HIRES_PIXEL_SIZE_UM = 0.1253;
 	public static final double DEFAULT_MIN_ROI_AREA = 300000.0;
 	private JLabel lblMinRoiArea;
 	private JLabel lblHiresPixelSize;
