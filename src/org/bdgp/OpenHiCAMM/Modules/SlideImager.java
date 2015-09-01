@@ -349,21 +349,13 @@ public class SlideImager implements Module, ImageLogger {
                         try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
                         catch (JSONException e) {}
 
-                        String filename = null;
-                        try { filename = new File( new File(rootDir), new File(prefix, 
-                                MDUtils.getFileName(taggedImage.tags)).getPath()).getPath(); } 
-                        catch (JSONException e) {}
-
                         taggedImages.add(label);
-                        logger.info(String.format("Acquired image: %s [%d/%d images]%s", 
+                        logger.info(String.format("Acquired image: %s [%d/%d images]", 
                                 positionName != null?
                                     String.format("%s (%s)", positionName, label) :
                                     label,
                                 taggedImages.size(),
-                                totalImages,
-                                filename != null? 
-                                    String.format(" (filename: %s)", Util.escape(filename)) : 
-                                    ""));
+                                totalImages));
 
                         int[] indices = MDUtils.getIndices(label);
                         if (indices.length < 4) throw new RuntimeException(String.format(
