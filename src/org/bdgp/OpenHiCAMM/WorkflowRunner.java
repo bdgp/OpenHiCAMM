@@ -53,7 +53,7 @@ public class WorkflowRunner {
      * Default file names for the metadata files.
      */
     public static final String WORKFLOW_DB = "workflow.db";
-    public static final String LOG_FILE = "log.txt";
+    public static final String LOG_FILE = "workflow.log";
     
     private Connection workflowDb;
     private Connection instanceDb;
@@ -767,7 +767,7 @@ public class WorkflowRunner {
                             "  where p.\"id\"=?) \n"+
                             "  as t(id, dispatchUUID, status) on TASK.\"id\"=t.id\n"+
                             "  when matched then update set TASK.\"dispatchUUID\"=t.dispatchUUID, TASK.\"status\"=t.status",
-                            StatementType.UPDATE, new FieldType[0]);
+                            StatementType.UPDATE, new FieldType[0], DatabaseConnection.DEFAULT_RESULT_FLAGS);
                     	compiledStatement.setObject(0, dispatchUUID, SqlType.LONG_STRING);
                     	compiledStatement.setObject(1, task.getId(), SqlType.INTEGER);
                     	compiledStatement.setObject(2, task.getId(), SqlType.INTEGER);
