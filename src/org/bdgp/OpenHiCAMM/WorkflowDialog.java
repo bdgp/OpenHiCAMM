@@ -195,6 +195,7 @@ public class WorkflowDialog extends JDialog {
                     configurations, 
                     workflowRunner.getInstanceDb().table(ModuleConfig.class),
                     workflowRunner.getWorkflowDb().table(ModuleConfig.class));
+                config.storeConfiguration();
                 if (config.validateConfiguration()) {
                 	start(false);
                 }
@@ -225,6 +226,7 @@ public class WorkflowDialog extends JDialog {
                     configurations, 
                     workflowRunner.getInstanceDb().table(ModuleConfig.class),
                     workflowRunner.getWorkflowDb().table(ModuleConfig.class));
+                config.storeConfiguration();
                 if (config.validateConfiguration()) {
                 	start(true);
                 }
