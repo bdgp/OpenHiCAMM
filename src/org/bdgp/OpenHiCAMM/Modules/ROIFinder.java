@@ -149,27 +149,28 @@ public class ROIFinder implements Module, ImageLogger {
 			for (ROI roi : rois) {
 			    // We need to potentially create a grid of Stage positions in order to capture all of the 
 			    // ROI.
-			    long roiWidth = roi.getX2()-roi.getX1()+1;
-			    long roiHeight = roi.getY2()-roi.getY1()+1;
-			    long tileWidth = (long)Math.floor(((double)cameraWidth * hiResPixelSizeUm) / pixelSizeUm);
-			    long tileHeight = (long)Math.floor(((double)cameraHeight * hiResPixelSizeUm) / pixelSizeUm);
-			    long tileXCount = (long)Math.ceil((double)roiWidth / (double)tileWidth);
-			    long tileYCount = (long)Math.ceil((double)roiHeight / (double)tileHeight);
-			    long tileSetWidth = tileXCount * tileWidth;
-			    long tileSetHeight = tileYCount * tileHeight;
-			    long tileXOffset = (long)Math.floor((roi.getX1() + ((double)roiWidth / 2.0)) - ((double)tileSetWidth / 2.0) + ((double)tileWidth / 2.0));
-			    long tileYOffset = (long)Math.floor((roi.getY1() + ((double)roiHeight / 2.0)) - ((double)tileSetHeight / 2.0) + ((double)tileHeight / 2.0));
+			    int roiWidth = roi.getX2()-roi.getX1()+1;
+			    int roiHeight = roi.getY2()-roi.getY1()+1;
+			    int tileWidth = (int)Math.floor(((double)cameraWidth * hiResPixelSizeUm) / pixelSizeUm);
+			    int tileHeight = (int)Math.floor(((double)cameraHeight * hiResPixelSizeUm) / pixelSizeUm);
+			    int tileXCount = (int)Math.ceil((double)roiWidth / (double)tileWidth);
+			    int tileYCount = (int)Math.ceil((double)roiHeight / (double)tileHeight);
+			    int tileSetWidth = tileXCount * tileWidth;
+			    int tileSetHeight = tileYCount * tileHeight;
+			    int tileXOffset = (int)Math.floor((roi.getX1() + ((double)roiWidth / 2.0)) - ((double)tileSetWidth / 2.0) + ((double)tileWidth / 2.0));
+			    int tileYOffset = (int)Math.floor((roi.getY1() + ((double)roiHeight / 2.0)) - ((double)tileSetHeight / 2.0) + ((double)tileHeight / 2.0));
 
 			    for (int x=0; x < tileXCount; ++x) {
                     for (int y=0; y < tileYCount; ++y) {
-                        long tileX = (x*tileWidth) + tileXOffset;
-                        long tileY = (y*tileHeight) + tileYOffset;
+                        int tileX = (x*tileWidth) + tileXOffset;
+                        int tileY = (y*tileHeight) + tileYOffset;
                         MultiStagePosition msp = new MultiStagePosition();
                         StagePosition sp = new StagePosition();
                         sp.numAxes = 2;
                         sp.stageName = "XYStage";
                         sp.x = x_stage-((tileX-(double)imageWidth/2.0)*pixelSizeUm);
                         sp.y = y_stage-((tileY-(double)imageHeight/2.0)*pixelSizeUm);
+                        msp.setGridCoordinates(tileY, tileX);
                         String mspLabel = String.format("%s: %s", positionName, roi.toString());
                         msp.setLabel(mspLabel);
                         msp.add(sp);
