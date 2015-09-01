@@ -102,7 +102,6 @@ public class SlideImager implements Module, ImageLogger {
         // first try to load a position list from the posListId conf
         // otherwise, try loading from the posListModuleId conf
     	PositionList positionList;
-    	// TODO: Figure out how to resume position lists by removing already acquired positions
         if (conf.containsKey("posListModuleId")) {
             // get a sorted list of all the SlidePosList records for the posListModuleId module
             Config posListModuleId = conf.get("posListModuleId");
