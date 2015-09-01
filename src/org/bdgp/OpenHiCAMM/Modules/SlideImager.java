@@ -102,6 +102,7 @@ public class SlideImager implements Module, ImageLogger {
         // first try to load a position list from the posListId conf
         // otherwise, try loading from the posListModuleId conf
     	PositionList positionList;
+    	// TODO: Figure out how to resume position lists by removing already acquired positions
         if (conf.containsKey("posListModuleId")) {
             // get a sorted list of all the SlidePosList records for the posListModuleId module
             Config posListModuleId = conf.get("posListModuleId");
@@ -213,7 +214,7 @@ public class SlideImager implements Module, ImageLogger {
             final Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
 
             // Set rootDir and acqName
-            String rootDir = new File(
+            final String rootDir = new File(
                     workflowRunner.getWorkflowDir(), 
                     workflowRunner.getInstance().getStorageLocation()).getPath();
             String acqName = "images";
@@ -323,7 +324,7 @@ public class SlideImager implements Module, ImageLogger {
 
                 // get the prefix name and log it
                 JSONObject summaryMetadata = this.engine.getSummaryMetadata();
-                String prefix;
+                final String prefix;
                 try { prefix = summaryMetadata.getString("Prefix"); } 
                 catch (JSONException e) { throw new RuntimeException(e); }
                 logger.info(String.format("Acquisition was saved to root directory %s, prefix %s", 
@@ -340,56 +341,65 @@ public class SlideImager implements Module, ImageLogger {
                 final ImageCache acqImageCache = this.engine.getImageCache();
                 acqImageCache.addImageCacheListener(new ImageCacheListener() {
                     @Override public void imageReceived(final TaggedImage taggedImage) {
-                        // run the logic in a separate thread to avoid blocking the UI thread.
-                        new Thread(new Runnable() {
-                            @Override public void run() {
-                                // Log how many images have been acquired so far
-                                Set<String> taggedImages = new HashSet<String>(acqImageCache.imageKeys());
-                                String label = MDUtils.getLabel(taggedImage.tags);
-                                String positionName = null;
-                                try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
-                                catch (JSONException e) {}
-                                taggedImages.add(label);
-                                logger.info(String.format("Acquired image: %s [%d/%d images]", 
-                                        positionName == null? 
-                                            label : 
-                                            String.format("%s (%s)", positionName, label),
-                                        taggedImages.size(),
-                                        totalImages));
+                        // Log how many images have been acquired so far
+                        Set<String> taggedImages = new HashSet<String>(acqImageCache.imageKeys());
+                        String label = MDUtils.getLabel(taggedImage.tags);
 
-                                int[] indices = MDUtils.getIndices(label);
-                                if (indices.length < 4) throw new RuntimeException(String.format(
-                                        "Bad image label from MDUtils.getIndices(): %s", label));
-                                // Don't eagerly dispatch the acquisition thread. This thread must not be set to success
-                                // until the acquisition has finished, so the downstream processing for this task 
-                                // must wait until the acquisition has finished.
-                                if (!(indices[0] == 0 && indices[1] == 0 && indices[2] == 0 && indices[3] == 0)) {
-                                    // Write the image record and kick off downstream processing.
-                                    // create the image record
-                                    Image image = new Image(slideId, acquisition, indices[0], indices[1], indices[2], indices[3]);
-                                    imageDao.insertOrUpdate(image,"acquisitionId","channel","slice","frame","position");
-                                    logger.fine(String.format("Inserted/Updated image: %s", image));
-                                    imageDao.reload(image, "acquisitionId","channel","slice","frame","position");
+                        String positionName = null;
+                        try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
+                        catch (JSONException e) {}
 
-                                    // Get the task record that should be eagerly dispatched.
-                                    Task dispatchTask = tasks.get(label);
-                                    if (dispatchTask == null) throw new RuntimeException(String.format(
-                                            "No SlideImager task was created for image with label %s!", label));
+                        String filename = null;
+                        try { filename = new File( new File(rootDir), new File(prefix, 
+                                MDUtils.getFileName(taggedImage.tags)).getPath()).getPath(); } 
+                        catch (JSONException e) {}
 
-                                    // Store the Image ID as a Task Config variable
-                                    TaskConfig imageId = new TaskConfig(
-                                            new Integer(dispatchTask.getId()).toString(),
-                                            "imageId",
-                                            new Integer(image.getId()).toString());
-                                    taskConfigDao.insertOrUpdate(imageId,"id","key");
-                                    conf.put("imageId", imageId);
-                                    logger.fine(String.format("Inserted/Updated imageId config: %s", imageId));
-                                    
-                                    // eagerly run the Slide Imager task in order to dispatch downstream processing
-                                    logger.fine(String.format("Eagerly dispatching sibling task: %s", dispatchTask));
+                        taggedImages.add(label);
+                        logger.info(String.format("Acquired image: %s [%d/%d images]%s", 
+                                positionName != null?
+                                    String.format("%s (%s)", positionName, label) :
+                                    label,
+                                taggedImages.size(),
+                                totalImages,
+                                filename != null? 
+                                    String.format(" (filename: %s)", Util.escape(filename)) : 
+                                    ""));
+
+                        int[] indices = MDUtils.getIndices(label);
+                        if (indices.length < 4) throw new RuntimeException(String.format(
+                                "Bad image label from MDUtils.getIndices(): %s", label));
+                        // Don't eagerly dispatch the acquisition thread. This thread must not be set to success
+                        // until the acquisition has finished, so the downstream processing for this task 
+                        // must wait until the acquisition has finished.
+                        if (!(indices[0] == 0 && indices[1] == 0 && indices[2] == 0 && indices[3] == 0)) {
+                            // Write the image record and kick off downstream processing.
+                            // create the image record
+                            Image image = new Image(slideId, acquisition, indices[0], indices[1], indices[2], indices[3]);
+                            imageDao.insertOrUpdate(image,"acquisitionId","channel","slice","frame","position");
+                            logger.fine(String.format("Inserted/Updated image: %s", image));
+                            imageDao.reload(image, "acquisitionId","channel","slice","frame","position");
+
+                            // Get the task record that should be eagerly dispatched.
+                            final Task dispatchTask = tasks.get(label);
+                            if (dispatchTask == null) throw new RuntimeException(String.format(
+                                    "No SlideImager task was created for image with label %s!", label));
+
+                            // Store the Image ID as a Task Config variable
+                            TaskConfig imageId = new TaskConfig(
+                                    new Integer(dispatchTask.getId()).toString(),
+                                    "imageId",
+                                    new Integer(image.getId()).toString());
+                            taskConfigDao.insertOrUpdate(imageId,"id","key");
+                            conf.put("imageId", imageId);
+                            logger.fine(String.format("Inserted/Updated imageId config: %s", imageId));
+                            
+                            // eagerly run the Slide Imager task in order to dispatch downstream processing
+                            logger.fine(String.format("Eagerly dispatching sibling task: %s", dispatchTask));
+                            new Thread(new Runnable() {
+                                @Override public void run() {
                                     SlideImager.this.workflowRunner.run(dispatchTask, conf);
-                                }
-                            }}).start();
+                                }}).start();
+                        }
                     }
                     @Override public void imagingFinished(String path) { }
                 });
