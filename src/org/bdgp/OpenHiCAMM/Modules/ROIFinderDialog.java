@@ -5,6 +5,7 @@ import javax.swing.JPanel;
 import org.bdgp.OpenHiCAMM.DoubleSpinner;
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
 import org.bdgp.OpenHiCAMM.Logger;
+import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.Image;
 
 import mmcorej.TaggedImage;
@@ -13,6 +14,8 @@ import net.miginfocom.swing.MigLayout;
 import javax.swing.JLabel;
 import javax.swing.JButton;
 import java.awt.event.ActionListener;
+import java.util.HashMap;
+import java.util.Map;
 import java.awt.event.ActionEvent;
 
 @SuppressWarnings("serial")
@@ -64,7 +67,10 @@ public class ROIFinderDialog extends JPanel {
                 ImageLogRunner imageLogRunner = new ImageLogRunner("Test");
                 Logger logger = Logger.create(null, "ROIFinder Test", null);
                 Image image = new Image();
-                roiFinder.process(image, taggedImage, logger, imageLogRunner, (Double)minRoiArea.getValue());
+                Map<String,Config> config = new HashMap<String,Config>();
+                config.put("minRoiArea", new Config(roiFinder.moduleId, 
+                        "minRoiArea", new Double((Double)minRoiArea.getValue()).toString()));
+                roiFinder.process(image, taggedImage, logger, imageLogRunner, config);
                 imageLogRunner.display();
             }
         });
