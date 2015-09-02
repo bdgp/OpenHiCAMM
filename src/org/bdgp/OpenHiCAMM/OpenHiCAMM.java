@@ -13,8 +13,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
+import org.bdgp.OpenHiCAMM.Modules.BDGPROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.ImageStitcher;
-import org.bdgp.OpenHiCAMM.Modules.ROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.SlideImager;
 import org.bdgp.OpenHiCAMM.Modules.TIGenerator;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
@@ -150,7 +150,7 @@ public class OpenHiCAMM implements MMPlugin {
             // Add all the builtin modules to the modules list first
             moduleNames = new ArrayList<String>();
             moduleNames.add(SlideImager.class.getName());
-            moduleNames.add(ROIFinder.class.getName());
+            moduleNames.add(BDGPROIFinder.class.getName());
             moduleNames.add(TIGenerator.class.getName());
             moduleNames.add(ImageStitcher.class.getName());
             
