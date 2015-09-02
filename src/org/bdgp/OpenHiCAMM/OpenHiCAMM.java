@@ -4,6 +4,7 @@ import java.awt.Dimension;
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -157,10 +158,12 @@ public class OpenHiCAMM implements MMPlugin {
             File pluginRootDir = new File(System.getProperty("org.bdgp.mmslide.module.path", MMSLIDEMODULESDIR));
             List<Class<?>> classes = JavaUtils.findAndLoadClasses(pluginRootDir, 0);
             for (Class<?> clazz : classes) { 
-                for (Class<?> iface : clazz.getInterfaces()) {
-                    if (iface == Module.class) {
-                        moduleNames.add(clazz.getName());
-                        break;
+                if (!Modifier.isAbstract(clazz.getModifiers())) {
+                    for (Class<?> iface : clazz.getInterfaces()) {
+                        if (iface == Module.class) {
+                            moduleNames.add(clazz.getName());
+                            break;
+                        }
                     }
                 }
             }
