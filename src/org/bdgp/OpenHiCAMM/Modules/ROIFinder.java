@@ -170,8 +170,8 @@ public class ROIFinder implements Module, ImageLogger {
                         sp.stageName = "XYStage";
                         sp.x = x_stage-((tileX-(double)imageWidth/2.0)*pixelSizeUm);
                         sp.y = y_stage-((tileY-(double)imageHeight/2.0)*pixelSizeUm);
-                        msp.setGridCoordinates(tileY, tileX);
-                        String mspLabel = String.format("%s: ROI=%d, tileX=%d, tileY=%d", label, roi.getId(), tileX, tileY);
+                        msp.setGridCoordinates(y, x);
+                        String mspLabel = String.format("%s: ROI=%d, tileX=%d, tileY=%d", label, roi.getId(), x, y);
                         msp.setLabel(mspLabel);
                         msp.add(sp);
                         msp.setDefaultXYStage("XYStage");
