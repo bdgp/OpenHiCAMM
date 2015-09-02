@@ -44,7 +44,9 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
         String label = String.format("%s (%s)", positionName, imageLabel); 
 
         // get the minRoiArea config value
-        double minRoiArea = new Double(config.get("minRoiArea").getValue());
+        Config minRoiAreaConf = config.get("minRoiArea");
+        if (minRoiAreaConf == null) throw new RuntimeException("minRoiArea config value is missing!");
+        double minRoiArea = new Double(minRoiAreaConf.getValue());
         logger.fine(String.format("%s: Using minRoiArea: %f", label, minRoiArea));
         
         List<ROI> rois = new ArrayList<ROI>();
