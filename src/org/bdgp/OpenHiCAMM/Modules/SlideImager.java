@@ -201,7 +201,7 @@ public class SlideImager implements Module, ImageLogger {
             }
             
             // load the position list and acquistion settings
-            PositionList posList = this.loadPositionList(conf, logger);
+            final PositionList posList = this.loadPositionList(conf, logger);
 
             final VerboseSummary verboseSummary = getVerboseSummary();
             logger.info(String.format("Verbose summary:%n%s%n", verboseSummary.summary));
@@ -356,7 +356,7 @@ public class SlideImager implements Module, ImageLogger {
                             String positionName = null;
                             try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
                             catch (JSONException e) {}
-
+                            
                             taggedImages.add(label);
                             logger.info(String.format("Acquired image: %s [%d/%d images]", 
                                     positionName != null?
@@ -388,6 +388,23 @@ public class SlideImager implements Module, ImageLogger {
                                 conf.put("imageId", imageId);
                                 logger.fine(String.format("Inserted/Updated imageId config: %s", imageId));
                                 
+                                // Transfer MultiStagePosition property values to the task's configuration
+                                for (MultiStagePosition msp: posList.getPositions()) {
+                                    if (msp.getLabel().equals(positionName)) {
+                                        for (String propName : msp.getPropertyNames()) {
+                                            String property = msp.getProperty(propName);
+                                            
+                                            // Store the Image ID as a Task Config variable
+                                            TaskConfig prop = new TaskConfig(
+                                                    new Integer(dispatchTask.getId()).toString(), propName, property);
+                                            taskConfigDao.insertOrUpdate(prop,"id","key");
+                                            conf.put(property, prop);
+                                            logger.fine(String.format("Inserted/Updated MultiStagePosition config: %s", prop));
+                                        }
+                                        break;
+                                    }
+                                }
+
                                 // eagerly run the Slide Imager task in order to dispatch downstream processing
                                 logger.fine(String.format("Eagerly dispatching sibling task: %s", dispatchTask));
                                 new Thread(new Runnable() {
@@ -457,11 +474,15 @@ public class SlideImager implements Module, ImageLogger {
                 // task completes.
                 for (String label : taggedImages) {
                     // make sure none of the taggedImage.pix values are null
-                    { int[] idx = MDUtils.getIndices(label);
-                        TaggedImage taggedImage = imageCache.getImage(idx[0], idx[1], idx[2], idx[3]);
-                        if (taggedImage.pix == null) throw new RuntimeException(String.format(
-                                "%s: taggedImage.pix is null!", label));
-                    }
+                    int[] idx = MDUtils.getIndices(label);
+                    TaggedImage taggedImage = imageCache.getImage(idx[0], idx[1], idx[2], idx[3]);
+                    if (taggedImage.pix == null) throw new RuntimeException(String.format(
+                            "%s: taggedImage.pix is null!", label));
+
+                    // get the positionName
+                    String positionName;
+                    try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
+                    catch (JSONException e) {throw new RuntimeException(e);}
 
                     Task t = tasks.get(label);
                     if (t == null) throw new RuntimeException(String.format(
@@ -477,6 +498,23 @@ public class SlideImager implements Module, ImageLogger {
                     imageDao.insertOrUpdate(image,"acquisitionId","channel","slice","frame","position");
                     logger.fine(String.format("Inserted image: %s", image));
                     imageDao.reload(image, "acquisitionId","channel","slice","frame","position");
+                    
+                    // Transfer MultiStagePosition property values to the task's configuration
+                    for (MultiStagePosition msp: posList.getPositions()) {
+                        if (msp.getLabel().equals(positionName)) {
+                            for (String propName : msp.getPropertyNames()) {
+                                String property = msp.getProperty(propName);
+                                
+                                // Store the Image ID as a Task Config variable
+                                TaskConfig prop = new TaskConfig(
+                                        new Integer(t.getId()).toString(), propName, property);
+                                taskConfigDao.insertOrUpdate(prop,"id","key");
+                                conf.put(property, prop);
+                                logger.fine(String.format("Inserted/Updated MultiStagePosition config: %s", prop));
+                            }
+                            break;
+                        }
+                    }
 
                     // Store the Image ID as a Task Config variable
                     TaskConfig imageId = new TaskConfig(
