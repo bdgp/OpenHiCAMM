@@ -806,6 +806,22 @@ public class SlideImager implements Module, ImageLogger {
                             taskConfigDao.insert(positionName);
                             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created task config: %s", 
                                     this.moduleId, positionName));
+                            
+                            // Store the MSP value as a JSON string
+                            try {
+                                PositionList mspPosList = new PositionList();
+                                mspPosList.addPosition(msp);
+                                String mspJson = new JSONObject(mspPosList.serialize()).
+                                        getJSONArray("POSITIONS").getJSONObject(0).toString();
+                                TaskConfig mspConf = new TaskConfig(
+                                        new Integer(task.getId()).toString(), "MSP", mspJson);
+                                taskConfigDao.insert(mspConf);
+                                conf.put("MSP", mspConf);
+                                workflowRunner.getLogger().fine(String.format(
+                                        "Inserted MultiStagePosition config: %s", mspJson));
+                            } 
+                            catch (MMSerializationException e) {throw new RuntimeException(e);} 
+                            catch (JSONException e) {throw new RuntimeException(e);}
 
                             // Transfer MultiStagePosition property values to the task's configuration
                             for (String propName : msp.getPropertyNames()) {
