@@ -16,7 +16,6 @@ import javax.swing.SwingUtilities;
 import org.bdgp.OpenHiCAMM.Modules.BDGPROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.ImageStitcher;
 import org.bdgp.OpenHiCAMM.Modules.SlideImager;
-import org.bdgp.OpenHiCAMM.Modules.TIGenerator;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.micromanager.MMStudio;
 import org.micromanager.api.MMPlugin;
@@ -151,7 +150,6 @@ public class OpenHiCAMM implements MMPlugin {
             moduleNames = new ArrayList<String>();
             moduleNames.add(SlideImager.class.getName());
             moduleNames.add(BDGPROIFinder.class.getName());
-            moduleNames.add(TIGenerator.class.getName());
             moduleNames.add(ImageStitcher.class.getName());
             
             // Look in the mmslidemodules/ directory for any additional workflow modules.
