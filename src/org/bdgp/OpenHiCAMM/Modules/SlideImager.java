@@ -372,6 +372,16 @@ public class SlideImager implements Module, ImageLogger {
                             // until the acquisition has finished, so the downstream processing for this task 
                             // must wait until the acquisition has finished.
                             if (!(indices[0] == 0 && indices[1] == 0 && indices[2] == 0 && indices[3] == 0)) {
+                                // Make sure the position name of this image's metadata matches what we expected
+                                // from the Task configuration.
+                                TaskConfig positionNameConf = taskConfigDao.selectOneOrDie(
+                                        where("id", new Integer(dispatchTask.getId()).toString()).and("key", "positionName"));
+                                if (!positionName.equals(positionNameConf.getValue())) {
+                                    throw new RuntimeException(String.format(
+                                            "Position name mismatch! TaskConfig=%s, MDUtils.getPositionName=%s",
+                                            positionNameConf, positionName));
+                                }
+
                                 // Write the image record and kick off downstream processing.
                                 // create the image record
                                 Image image = new Image(slideId, acquisition, indices[0], indices[1], indices[2], indices[3]);
@@ -388,23 +398,6 @@ public class SlideImager implements Module, ImageLogger {
                                 conf.put("imageId", imageId);
                                 logger.fine(String.format("Inserted/Updated imageId config: %s", imageId));
                                 
-                                // Transfer MultiStagePosition property values to the task's configuration
-                                for (MultiStagePosition msp: posList.getPositions()) {
-                                    if (msp.getLabel().equals(positionName)) {
-                                        for (String propName : msp.getPropertyNames()) {
-                                            String property = msp.getProperty(propName);
-                                            
-                                            // Store the Image ID as a Task Config variable
-                                            TaskConfig prop = new TaskConfig(
-                                                    new Integer(dispatchTask.getId()).toString(), propName, property);
-                                            taskConfigDao.insertOrUpdate(prop,"id","key");
-                                            conf.put(property, prop);
-                                            logger.fine(String.format("Inserted/Updated MultiStagePosition config: %s", prop));
-                                        }
-                                        break;
-                                    }
-                                }
-
                                 // eagerly run the Slide Imager task in order to dispatch downstream processing
                                 logger.fine(String.format("Eagerly dispatching sibling task: %s", dispatchTask));
                                 new Thread(new Runnable() {
@@ -488,6 +481,16 @@ public class SlideImager implements Module, ImageLogger {
                     if (t == null) throw new RuntimeException(String.format(
                             "Could not get task record for image with label %s!", label));
 
+                    // Make sure the position name of this image's metadata matches what we expected
+                    // from the Task configuration.
+                    TaskConfig positionNameConf = taskConfigDao.selectOneOrDie(
+                            where("id", new Integer(t.getId()).toString()).and("key", "positionName"));
+                    if (!positionName.equals(positionNameConf.getValue())) {
+                        throw new RuntimeException(String.format(
+                                "Position name mismatch! TaskConfig=%s, MDUtils.getPositionName=%s",
+                                positionNameConf, positionName));
+                    }
+
                     // Insert/Update image DB record
                     int[] taggedImageKeys = MDUtils.getIndices(label);
                     Image image = new Image(slideId, acquisition, 
@@ -499,23 +502,6 @@ public class SlideImager implements Module, ImageLogger {
                     logger.fine(String.format("Inserted image: %s", image));
                     imageDao.reload(image, "acquisitionId","channel","slice","frame","position");
                     
-                    // Transfer MultiStagePosition property values to the task's configuration
-                    for (MultiStagePosition msp: posList.getPositions()) {
-                        if (msp.getLabel().equals(positionName)) {
-                            for (String propName : msp.getPropertyNames()) {
-                                String property = msp.getProperty(propName);
-                                
-                                // Store the Image ID as a Task Config variable
-                                TaskConfig prop = new TaskConfig(
-                                        new Integer(t.getId()).toString(), propName, property);
-                                taskConfigDao.insertOrUpdate(prop,"id","key");
-                                conf.put(property, prop);
-                                logger.fine(String.format("Inserted/Updated MultiStagePosition config: %s", prop));
-                            }
-                            break;
-                        }
-                    }
-
                     // Store the Image ID as a Task Config variable
                     TaskConfig imageId = new TaskConfig(
                             new Integer(t.getId()).toString(),
@@ -780,7 +766,7 @@ public class SlideImager implements Module, ImageLogger {
             }
 
             // Load the position list and set the acquisition settings
-            loadPositionList(conf, workflowRunner.getLogger());
+            PositionList positionList = loadPositionList(conf, workflowRunner.getLogger());
             // get the total images
             VerboseSummary verboseSummary = getVerboseSummary();
             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Verbose summary:%n%s%n", 
@@ -802,7 +788,7 @@ public class SlideImager implements Module, ImageLogger {
                             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created task record: %s", 
                                     this.moduleId, task));
                             
-                            // Create taskConfig record to link task to position index in Position List
+                            // Create taskConfig record for the image label
                             TaskConfig imageLabel = new TaskConfig(
                                     new Integer(task.getId()).toString(), 
                                     "imageLabel", 
@@ -810,6 +796,27 @@ public class SlideImager implements Module, ImageLogger {
                             taskConfigDao.insert(imageLabel);
                             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created task config: %s", 
                                     this.moduleId, imageLabel));
+
+                            // Create taskConfig record for the MSP label (positionName)
+                            MultiStagePosition msp = positionList.getPosition(p);
+                            TaskConfig positionName = new TaskConfig(
+                                    new Integer(task.getId()).toString(), 
+                                    "positionName", 
+                                    msp.getLabel());
+                            taskConfigDao.insert(positionName);
+                            workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created task config: %s", 
+                                    this.moduleId, positionName));
+
+                            // Transfer MultiStagePosition property values to the task's configuration
+                            for (String propName : msp.getPropertyNames()) {
+                                String property = msp.getProperty(propName);
+                                TaskConfig prop = new TaskConfig(
+                                        new Integer(task.getId()).toString(), propName, property);
+                                taskConfigDao.insert(prop);
+                                conf.put(property, prop);
+                                workflowRunner.getLogger().fine(String.format(
+                                        "Inserted MultiStagePosition config: %s", prop));
+                            }
 
                             // create taskConfig record for the slide ID
                             TaskConfig slideId = new TaskConfig(
