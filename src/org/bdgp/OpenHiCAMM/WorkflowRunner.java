@@ -737,8 +737,12 @@ public class WorkflowRunner {
                     try {
                     	// We need to update the status of this task AND flag the unprocessed child tasks that 
                     	// will be ready to run. Both of these actions must be done in a single atomic DB
-                    	// operation to avoid race conditions. As far as I can tell, the HSQLDB merge statement
-                    	// is atomic, so hopefully this works.
+                    	// operation to avoid race conditions. 
+                        // According to this thread from the HSQLDB maiiling list, HSQLDB dev Fred Toussi
+                        // says merge should work atomically, since the default concurrency model for HSQLDB
+                        // is 2PL:
+                        // http://sourceforge.net/p/hsqldb/discussion/73674/thread/d81672a3/
+                        // That's the only information on the atomicity of merge in HSQLDB I could find.
                         DatabaseConnection db = taskStatus.getConnectionSource().getReadWriteConnection();
                     	CompiledStatement compiledStatement = db.compileStatement(
                             "merge into TASK using (\n"+
