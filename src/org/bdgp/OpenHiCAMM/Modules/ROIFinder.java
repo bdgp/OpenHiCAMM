@@ -161,6 +161,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
                         sp.x = x_stage-((tileX-(double)imageWidth/2.0)*pixelSizeUm);
                         sp.y = y_stage-((tileY-(double)imageHeight/2.0)*pixelSizeUm);
                         String mspLabel = String.format("%s: ROI=%d, tileX=%d, tileY=%d", label, roi.getId(), x, y);
+                        msp.setProperty("stitchGroup", "ROI"+roi.getId());
                         msp.setProperty("ROI", new Integer(roi.getId()).toString());
                         msp.setProperty("tileX", new Integer(x).toString());
                         msp.setProperty("tileY", new Integer(y).toString());
