@@ -79,8 +79,8 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     private int skipCounter = -1;
     public static final int MAX_SKIP = 20;
     
-    private Double minAutoFocus;
-    private Double maxAutoFocus;
+    Double minAutoFocus;
+    Double maxAutoFocus;
 
     public BDGPAutoFocus() {
     	super();
