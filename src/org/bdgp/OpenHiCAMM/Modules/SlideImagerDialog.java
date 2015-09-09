@@ -31,7 +31,8 @@ import javax.swing.JSpinner;
 
 @SuppressWarnings("serial")
 public class SlideImagerDialog extends JPanel {
-	JTextField acqSettingsText;
+	private static final int DEFAULT_DUMMY_IMAGE_COUNT = 3;
+    JTextField acqSettingsText;
 	JTextField posListText;
 	JComboBox<String> moduleId;
     DoubleSpinner minAutoFocus;
@@ -162,7 +163,7 @@ public class SlideImagerDialog extends JPanel {
         
         dummyImageCount = new JSpinner();
         add(dummyImageCount, "cell 0 7");
-        dummyImageCount.setValue(new Integer(0));
+        dummyImageCount.setValue(new Integer(DEFAULT_DUMMY_IMAGE_COUNT));
 	}
 
 }
