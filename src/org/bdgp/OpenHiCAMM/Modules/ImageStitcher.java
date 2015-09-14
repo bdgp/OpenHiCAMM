@@ -2,14 +2,11 @@ package org.bdgp.OpenHiCAMM.Modules;
 
 import java.awt.Component;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.swing.JPanel;
 
@@ -32,11 +29,12 @@ import org.json.JSONException;
 import org.micromanager.acquisition.MMAcquisition;
 import org.micromanager.api.ImageCache;
 import org.micromanager.utils.ImageUtils;
-import org.micromanager.utils.MDUtils;
-import org.micromanager.utils.MMScriptException;
 
 import ij.IJ;
 import ij.ImagePlus;
+import ij.WindowManager;
+import ij.gui.ImageWindow;
+import ij.io.FileSaver;
 import ij.process.ImageProcessor;
 import mmcorej.TaggedImage;
 
@@ -50,7 +48,6 @@ public class ImageStitcher implements Module {
     private static final String REGISTRATION_CHANNEL_IMAGE_2 = "Average all channels";
     private static final double OVERLAP_WIDTH = 0.25;
     private static final double OVERLAP_HEIGHT = 0.25;
-    private static final String TEMP_FILE_PREFIX = ".ImageStitcher.temp.";
     private static final String STITCHED_IMAGE_DIRECTORY_PREFIX = "stitched";
 
     WorkflowRunner workflowRunner;
@@ -73,11 +70,13 @@ public class ImageStitcher implements Module {
             this.taskConfig = taskConfig;
             this.tileX = tileX;
             this.tileY = tileY;
+            this.image = image;
         }
     }
 
     @Override
     public Status run(Task task, Map<String,Config> config, Logger logger) {
+    	Dao<TaskConfig> taskConfigDao = this.workflowRunner.getTaskConfig();
     	logger.fine(String.format("Running task %s: %s", task.getName(), task));
     	
     	// get the stitch group name
@@ -87,17 +86,17 @@ public class ImageStitcher implements Module {
     	String stitchGroup = stitchGroupConf.getValue();
     	logger.fine(String.format("Stitching group: %s", stitchGroup));
     	
-    	// get the position index
-    	Config positionIndexConf = config.get("positionIndex");
-    	if (positionIndexConf == null) throw new RuntimeException(String.format(
-    	        "%s: positionIndex config not found!", task.getName()));
-    	Integer positionIndex = new Integer(stitchGroupConf.getValue());
-    	logger.fine(String.format("Stitching position index: %s", positionIndex));
+    	// get the stitched folder
+    	Config stitchedFolderConf = config.get("stitchedFolder");
+    	if (stitchedFolderConf == null) throw new RuntimeException(String.format(
+    	        "%s: stitchedFolder config not found!", task.getName()));
+    	String stitchedFolder = stitchedFolderConf.getValue();
+    	logger.fine(String.format("Stitched folder: %s", stitchedFolder));
     	
+    	// get the list of stitch task IDs
     	Config stitchTaskIdsConf = config.get("stitchTaskIds");
     	if (stitchTaskIdsConf == null) throw new RuntimeException(String.format(
     	        "%s: stitchTaskIds config not found!", task.getName()));
-    	
     	// get the list of stitch task IDs from the JSON array
     	List<Integer> stitchTaskIds = new ArrayList<Integer>();
     	try {
@@ -138,8 +137,8 @@ public class ImageStitcher implements Module {
             TaskConfig tileYConf = taskConfig.get("tileY");
             if (tileYConf == null) throw new RuntimeException(String.format("Task %s: tileY is null!", stitchTask));
             Integer tileY = new Integer(tileYConf.getValue());
-            if (gridWidth == null || gridWidth < tileX) gridWidth = tileX;
-            if (gridHeight == null || gridHeight < tileY) gridHeight = tileX;
+            if (gridWidth == null || gridWidth < tileX+1) gridWidth = tileX+1;
+            if (gridHeight == null || gridHeight < tileY+1) gridHeight = tileY+1;
 
             // get the image ID
             TaskConfig imageId = taskConfig.get("imageId");
@@ -162,33 +161,40 @@ public class ImageStitcher implements Module {
                     acquisition, image));
             // convert the tagged image into an ImagePlus object
             ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
-            ImagePlus imp = new ImagePlus(image.toString(), processor);
+            ImagePlus imp = new ImagePlus(image.getName(), processor);
 
             // create the TaskTile object
             TaskTile taskTile = new TaskTile(task, taskConfig, tileX, tileY, imp);
             taskTiles.add(taskTile);
         }
-        TaskTile[][] taskGrid = new TaskTile[gridWidth][gridHeight];
+        TaskTile[][] taskGrid = new TaskTile[gridHeight][gridWidth];
         for (TaskTile taskTile : taskTiles) {
             taskGrid[taskTile.tileY][taskTile.tileX] = taskTile;
         }
         
         // Create a fake acquisition directory to store the stitched images
         List<File> tempImages = new ArrayList<File>();
-        String rootDir = new File(
-                this.workflowRunner.getWorkflowDir(), 
-                this.workflowRunner.getInstance().getStorageLocation()).getPath();
         try {
-            MMAcquisition stitchedAcquisition = new MMAcquisition(STITCHED_IMAGE_DIRECTORY_PREFIX, rootDir, false, true, false);
-            stitchedAcquisition.initialize();
+            // stitch the images into a single tagged image
+            ImagePlus stitchedImage = stitchGrid(taskGrid, stitchedFolder, tempImages);
 
-            ImagePlus stitchedImage = stitchGrid(taskGrid, stitchedAcquisition.getImageCache().getDiskLocation(), tempImages);
-            TaggedImage taggedImage = ImageUtils.makeTaggedImage(stitchedImage.getProcessor());
-            MDUtils.setPositionName(taggedImage.tags, stitchGroup);
-            stitchedAcquisition.insertImage(taggedImage, frame, channel, slice, positionIndex);
+            // save the stitched image to the stitched folder using the stitch group as the 
+            // file name.
+            FileSaver fileSaver = new FileSaver(stitchedImage);
+            String imageFile = new File(stitchedFolder, String.format("%s.tif", stitchGroup)).getPath();
+            fileSaver.saveAsTiff(imageFile);
+            
+            // close the stitched image
+            stitchedImage.changes = false;
+            ImageWindow stitchedImageWindow = stitchedImage.getWindow();
+            if (stitchedImageWindow != null) stitchedImageWindow.close();
+            stitchedImage.close();
+            
+            // write a task configuration for the stitched image location
+            TaskConfig imageFileConf = new TaskConfig(new Integer(task.getId()).toString(), 
+                    "stitchedImageFile", imageFile);
+            taskConfigDao.insertOrUpdate(imageFileConf, "id", "key");
         } 
-        catch (MMScriptException e) {throw new RuntimeException(e);} 
-        catch (JSONException e) {throw new RuntimeException(e);}
         finally {
             // delete the intermediate temporary image files
             for (File tempImage : tempImages) {
@@ -217,12 +223,12 @@ public class ImageStitcher implements Module {
                 grid2 = new TaskTile[taskGrid.length][taskGrid[0].length-splitPoint];
                 for (int r=0; r<taskGrid.length; ++r) {
                     for (int c=splitPoint; c<taskGrid[0].length; ++c) {
-                        grid1[r][c-splitPoint] = taskGrid[r][c];
+                        grid2[r][c-splitPoint] = taskGrid[r][c];
                     }
                 }
                 image1 = stitchGrid(grid1, stitchedImageDirectory, tempImages);
                 image2 = stitchGrid(grid2, stitchedImageDirectory, tempImages);
-                return stitchImages(image1, image2, false, stitchedImageDirectory, tempImages);
+                return stitchImages(image1, image2, false);
             }
             // horizontal split
             else {
@@ -236,23 +242,23 @@ public class ImageStitcher implements Module {
                 grid2 = new TaskTile[taskGrid.length-splitPoint][taskGrid[0].length];
                 for (int r=splitPoint; r<taskGrid.length; ++r) {
                     for (int c=0; c<taskGrid[0].length; ++c) {
-                        grid1[r-splitPoint][c] = taskGrid[r][c];
+                        grid2[r-splitPoint][c] = taskGrid[r][c];
                     }
                 }
                 image1 = stitchGrid(grid1, stitchedImageDirectory, tempImages);
                 image2 = stitchGrid(grid2, stitchedImageDirectory, tempImages);
-                return stitchImages(image1, image2, true, stitchedImageDirectory, tempImages);
+                return stitchImages(image1, image2, true);
             }
         }
         else if (taskGrid.length > 1) {
             image1 = taskGrid[0][0].image;
             image2 = taskGrid[1][0].image;
-            return stitchImages(image1, image2, true, stitchedImageDirectory, tempImages);
+            return stitchImages(image1, image2, true);
         }
         else  if (taskGrid.length > 0 && taskGrid[0].length > 1) {
             image1 = taskGrid[0][0].image;
             image2 = taskGrid[0][1].image;
-            return stitchImages(image1, image2, false, stitchedImageDirectory, tempImages);
+            return stitchImages(image1, image2, false);
         }
         else if (taskGrid.length == 1 && taskGrid[0].length == 1) {
             return taskGrid[0][0].image;
@@ -265,9 +271,7 @@ public class ImageStitcher implements Module {
     public ImagePlus stitchImages(
             ImagePlus image1, 
             ImagePlus image2, 
-            boolean isVerticallyAligned, 
-            String stitchedImageDirectory, 
-            List<File> tempImages) 
+            boolean isVerticallyAligned) 
     {
         String fusion_method = FUSION_METHOD;
         int check_peaks = CHECK_PEAKS;
@@ -278,21 +282,18 @@ public class ImageStitcher implements Module {
         double y = isVerticallyAligned? image1.getHeight() * (1.0 - overlapHeight) : 0.0;
         String registration_channel_image_1 = REGISTRATION_CHANNEL_IMAGE_1;
         String registration_channel_image_2 = REGISTRATION_CHANNEL_IMAGE_2;
+        
+        // open the input images
+        image1.show();
+        image2.show();
 
-        // Store the fused image to a temporary file
-        File fused_image;
-        try { fused_image = File.createTempFile(TEMP_FILE_PREFIX, ".tif", new File(stitchedImageDirectory)); } 
-        catch (IOException e) {throw new RuntimeException(e);}
-        tempImages.add(fused_image);
-        fused_image.deleteOnExit();
-
-        File first_image = new File(image1.getFileInfo().directory, image1.getFileInfo().fileName);
-        File second_image = new File(image2.getFileInfo().directory, image2.getFileInfo().fileName);
+        // run the pairwise stitching plugin
+        String fusedImageTitle = String.format("%s<->%s", image1.getTitle(), image2.getTitle());
         String params = Util.join(" ", 
-                String.format("first_image=%s", Util.macroEscape(first_image)),
-                String.format("second_image=%s", Util.macroEscape(second_image)),
+                String.format("first_image=%s", Util.macroEscape(image1.getTitle())),
+                String.format("second_image=%s", Util.macroEscape(image2.getTitle())),
                 String.format("fusion_method=%s", Util.macroEscape(fusion_method)),
-                String.format("fused_image=%s", Util.escape(fused_image)),
+                String.format("fused_image=%s", Util.macroEscape(fusedImageTitle)),
                 String.format("check_peaks=%d", check_peaks),
                 compute_overlap? "compute_overlap" : null,
                 String.format("x=%.4f", x),
@@ -301,16 +302,21 @@ public class ImageStitcher implements Module {
                 String.format("registration_channel_image_2=%s", Util.macroEscape(registration_channel_image_2)));
         IJ.run(image1, "Pairwise stitching", params);
         
-        // Load the image file into an ImagePlus object and return it
-        ImagePlus fusedImage = new ImagePlus(fused_image.getPath());
+        // close the input images
+        image1.changes = false;
+        ImageWindow image1Window = image1.getWindow();
+        if (image1Window != null) image1Window.close();
+        image1.close();
+
+        image2.changes = false;
+        ImageWindow image2Window = image2.getWindow();
+        if (image2Window != null) image2Window.close();
+        image2.close();
         
-        // delete the temp images once they're no longer used.
-        if (image1.getFileInfo().fileName.startsWith(TEMP_FILE_PREFIX)) {
-            first_image.delete();
-        }
-        if (image2.getFileInfo().fileName.startsWith(TEMP_FILE_PREFIX)) {
-            second_image.delete();
-        }
+        // return the fused image
+        ImagePlus fusedImage = WindowManager.getImage(fusedImageTitle);
+        if (fusedImage == null) throw new RuntimeException(String.format(
+                "Pairwise Stitching: could not find fused image with title: %s", fusedImageTitle));
         return fusedImage;
     }
     
@@ -367,7 +373,9 @@ public class ImageStitcher implements Module {
             }
         }
 
-        int positionIndex = 0;
+        // create a folder to store the stitched images
+        File stitchedFolder = createStitchedImageFolder();
+
         List<Task> tasks = new ArrayList<Task>();
         for (Map.Entry<String, List<Task>> entry : stitchGroups.entrySet()) {
             String stitchGroup = entry.getKey();
@@ -378,19 +386,17 @@ public class ImageStitcher implements Module {
             taskDao.insert(task);
             tasks.add(task);
             
+            // add the stitchedFolder task config
+            TaskConfig stitchedFolderConf = new TaskConfig(
+                    new Integer(task.getId()).toString(), 
+                    "stitchedFolder", stitchedFolder.toString());
+            taskConfigDao.insert(stitchedFolderConf);
+
             // add the stitchGroup task config
             TaskConfig stitchGroupConf = new TaskConfig(
                     new Integer(task.getId()).toString(), 
                     "stitchGroup", stitchGroup);
             taskConfigDao.insert(stitchGroupConf);
-
-            // add a configuration for the positionIndex of the stitch group in the 
-            // acquisition folder we will be creating.
-            TaskConfig positionIndexConf = new TaskConfig(
-                    new Integer(task.getId()).toString(), 
-                    "positionIndex", new Integer(positionIndex).toString());
-            taskConfigDao.insert(positionIndexConf);
-            ++positionIndex;
 
             // add the stitchTaskIds task config, a JSONArray of stitch task IDs.
             JSONArray stitchTaskIds = new JSONArray();
@@ -408,7 +414,21 @@ public class ImageStitcher implements Module {
                 taskDispatchDao.insert(td);
             }
         }
+        
         return tasks;
+    }
+    
+    private File createStitchedImageFolder() {
+        String rootDir = new File(
+                this.workflowRunner.getWorkflowDir(), 
+                this.workflowRunner.getInstance().getStorageLocation()).getPath();
+        int count = 1;
+        File stitchedFolder = new File(rootDir, String.format("%s_%d", STITCHED_IMAGE_DIRECTORY_PREFIX, count));
+        while (!stitchedFolder.mkdirs()) {
+            ++count;
+            stitchedFolder = new File(rootDir, String.format("%s_%d", STITCHED_IMAGE_DIRECTORY_PREFIX, count));
+        }
+        return stitchedFolder;
     }
 
 	@Override
