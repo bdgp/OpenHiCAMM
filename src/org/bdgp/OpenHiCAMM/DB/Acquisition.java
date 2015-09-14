@@ -33,36 +33,60 @@ public class Acquisition {
     public String getDirectory() { return this.directory; }
 
     public MMAcquisition getAcquisition(Dao<Acquisition> acquisitionDao) {
-        MMStudio mmstudio = MMStudio.getInstance();
-    	try {
-            MMAcquisition acquisition = mmstudio.getAcquisitionWithName(this.name);
-            JSONObject summaryMetadata = acquisition.getImageCache().getSummaryMetadata();
-            if (summaryMetadata.has("Directory") && 
-                summaryMetadata.get("Directory").toString().equals(this.directory) &&
-                summaryMetadata.has("Prefix") &&
-                summaryMetadata.get("Prefix").toString().equals(this.prefix))
-            {
-                return acquisition;
-            }
-        } 
-    	catch (JSONException e) {throw new RuntimeException(e);}
-    	catch (MMScriptException e) { 
-    	    // this means there was no acquisition loaded with this name, that's OK. Let's try to 
-    	    // open the acquisition next...
-    	} 
+        return this.getAcquisition(acquisitionDao, true);
+    }
 
-        try {
-            File acquisitionPath = new File(this.directory, this.prefix);
-            if (!acquisitionPath.exists()) throw new RuntimeException(String.format(
-                    "Acquisition path %s does not exist!", acquisitionPath.getPath()));
-            this.name = mmstudio.openAcquisitionData(acquisitionPath.getPath(), false, false);
-            MMAcquisition acquisition = mmstudio.getAcquisitionWithName(this.name);
-            if (acquisitionDao != null) {
-                acquisitionDao.update(this, "prefix","directory");
-            }
-            return acquisition;
-        } 
-        catch (MMScriptException e1) {throw new RuntimeException(e1);}
+    public MMAcquisition getAcquisition(Dao<Acquisition> acquisitionDao, boolean existing) {
+        if (existing) {
+            MMStudio mmstudio = MMStudio.getInstance();
+            try {
+                MMAcquisition acquisition = mmstudio.getAcquisitionWithName(this.name);
+                JSONObject summaryMetadata = acquisition.getImageCache().getSummaryMetadata();
+                if (summaryMetadata != null &&
+                    summaryMetadata.has("Directory") && 
+                    summaryMetadata.get("Directory").toString().equals(this.directory) &&
+                    summaryMetadata.has("Prefix") &&
+                    summaryMetadata.get("Prefix").toString().equals(this.prefix))
+                {
+                    return acquisition;
+                }
+            } 
+            catch (JSONException e) {throw new RuntimeException(e);}
+            catch (MMScriptException e) { 
+                // this means there was no acquisition loaded with this name, that's OK. Let's try to 
+                // open the acquisition next...
+            } 
+
+            try {
+                File acquisitionPath = new File(this.directory, this.prefix);
+                if (!acquisitionPath.exists()) throw new RuntimeException(String.format(
+                        "Acquisition path %s does not exist!", acquisitionPath.getPath()));
+                this.name = mmstudio.openAcquisitionData(acquisitionPath.getPath(), false, false);
+                MMAcquisition acquisition = mmstudio.getAcquisitionWithName(this.name);
+                if (acquisitionDao != null) {
+                    acquisitionDao.update(this, "id");
+                }
+                return acquisition;
+            } 
+            catch (MMScriptException e1) {throw new RuntimeException(e1);}
+        }
+        else {
+            try { 
+                MMAcquisition acquisition = new MMAcquisition(this.name, this.directory, false, true, false); 
+                acquisition.initialize();
+                // update the prefix metadata
+                JSONObject summaryMetadata = acquisition.getSummaryMetadata();
+                if (summaryMetadata != null && summaryMetadata.has("Prefix")) {
+                    this.prefix = summaryMetadata.get("Prefix").toString();
+                    if (acquisitionDao != null) {
+                        acquisitionDao.update(this, "id");
+                    }
+                }
+                return acquisition;
+            } 
+            catch (JSONException e) {throw new RuntimeException(e);}
+            catch (MMScriptException e) {throw new RuntimeException(e);}
+        }
     }
     
     public MMAcquisition getAcquisition() {
