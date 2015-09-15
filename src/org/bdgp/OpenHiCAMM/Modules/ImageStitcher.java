@@ -7,10 +7,14 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.FutureTask;
 
 import javax.swing.JPanel;
 
 import org.bdgp.OpenHiCAMM.Dao;
+import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
+import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
 import org.bdgp.OpenHiCAMM.Logger;
 import org.bdgp.OpenHiCAMM.Util;
 import org.bdgp.OpenHiCAMM.ValidationError;
@@ -23,6 +27,7 @@ import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.TaskConfig;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -33,14 +38,13 @@ import org.micromanager.utils.ImageUtils;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.WindowManager;
-import ij.gui.ImageWindow;
 import ij.io.FileSaver;
 import ij.process.ImageProcessor;
 import mmcorej.TaggedImage;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public class ImageStitcher implements Module {
+public class ImageStitcher implements Module, ImageLogger {
     private static final String FUSION_METHOD = "Linear Blending";
     private static final int CHECK_PEAKS = 5;
     private static final boolean COMPUTE_OVERLAP = true;
@@ -85,13 +89,38 @@ public class ImageStitcher implements Module {
     	        "%s: stitchGroup config not found!", task.getName()));
     	String stitchGroup = stitchGroupConf.getValue();
     	logger.fine(String.format("Stitching group: %s", stitchGroup));
-    	
+
+    	// Run the stitching processing to produce a stitched image.
+    	ImagePlus stitchedImage = process(task, config, logger);
+
     	// get the stitched folder
     	Config stitchedFolderConf = config.get("stitchedFolder");
     	if (stitchedFolderConf == null) throw new RuntimeException(String.format(
     	        "%s: stitchedFolder config not found!", task.getName()));
     	String stitchedFolder = stitchedFolderConf.getValue();
     	logger.fine(String.format("Stitched folder: %s", stitchedFolder));
+    	
+        // save the stitched image to the stitched folder using the stitch group as the 
+        // file name.
+        FileSaver fileSaver = new FileSaver(stitchedImage);
+        String imageFile = new File(stitchedFolder, String.format("%s.tif", stitchGroup)).getPath();
+        fileSaver.saveAsTiff(imageFile);
+        
+        // write a task configuration for the stitched image location
+        TaskConfig imageFileConf = new TaskConfig(new Integer(task.getId()).toString(), 
+                "stitchedImageFile", imageFile);
+        taskConfigDao.insertOrUpdate(imageFileConf, "id", "key");
+    	
+        return Status.SUCCESS;
+    }
+    
+    public ImagePlus process(Task task, Map<String,Config> config, Logger logger) {
+    	// get the stitch group name
+    	Config stitchGroupConf = config.get("stitchGroup");
+    	if (stitchGroupConf == null) throw new RuntimeException(String.format(
+    	        "%s: stitchGroup config not found!", task.getName()));
+    	String stitchGroup = stitchGroupConf.getValue();
+    	logger.fine(String.format("Stitching group: %s", stitchGroup));
     	
     	// get the list of stitch task IDs
     	Config stitchTaskIdsConf = config.get("stitchTaskIds");
@@ -172,40 +201,18 @@ public class ImageStitcher implements Module {
             taskGrid[taskTile.tileY][taskTile.tileX] = taskTile;
         }
         
-        // Create a fake acquisition directory to store the stitched images
-        List<File> tempImages = new ArrayList<File>();
-        try {
-            // stitch the images into a single tagged image
-            ImagePlus stitchedImage = stitchGrid(taskGrid, stitchedFolder, tempImages);
+        // stitch the images into a single tagged image
+        ImagePlus stitchedImage = stitchGrid(taskGrid);
+        //stitchedImage.setTitle(stitchGroup);
 
-            // save the stitched image to the stitched folder using the stitch group as the 
-            // file name.
-            FileSaver fileSaver = new FileSaver(stitchedImage);
-            String imageFile = new File(stitchedFolder, String.format("%s.tif", stitchGroup)).getPath();
-            fileSaver.saveAsTiff(imageFile);
-            
-            // close the stitched image
-            stitchedImage.changes = false;
-            ImageWindow stitchedImageWindow = stitchedImage.getWindow();
-            if (stitchedImageWindow != null) stitchedImageWindow.close();
-            stitchedImage.close();
-            
-            // write a task configuration for the stitched image location
-            TaskConfig imageFileConf = new TaskConfig(new Integer(task.getId()).toString(), 
-                    "stitchedImageFile", imageFile);
-            taskConfigDao.insertOrUpdate(imageFileConf, "id", "key");
-        } 
-        finally {
-            // delete the intermediate temporary image files
-            for (File tempImage : tempImages) {
-                tempImage.delete();
-            }
-        }
-    	
-        return Status.SUCCESS;
+        // If a window is open, close it.
+        stitchedImage.changes = false;
+        stitchedImage.close();
+
+        return stitchedImage;
     }
     
-    public ImagePlus stitchGrid(TaskTile[][] taskGrid, String stitchedImageDirectory, List<File> tempImages) {
+    public ImagePlus stitchGrid(TaskTile[][] taskGrid) {
         ImagePlus image1;
         ImagePlus image2;
         if (taskGrid.length > 1 || (taskGrid.length > 0 && taskGrid[0].length > 1)) {
@@ -226,8 +233,8 @@ public class ImageStitcher implements Module {
                         grid2[r][c-splitPoint] = taskGrid[r][c];
                     }
                 }
-                image1 = stitchGrid(grid1, stitchedImageDirectory, tempImages);
-                image2 = stitchGrid(grid2, stitchedImageDirectory, tempImages);
+                image1 = stitchGrid(grid1);
+                image2 = stitchGrid(grid2);
                 return stitchImages(image1, image2, false);
             }
             // horizontal split
@@ -245,8 +252,8 @@ public class ImageStitcher implements Module {
                         grid2[r-splitPoint][c] = taskGrid[r][c];
                     }
                 }
-                image1 = stitchGrid(grid1, stitchedImageDirectory, tempImages);
-                image2 = stitchGrid(grid2, stitchedImageDirectory, tempImages);
+                image1 = stitchGrid(grid1);
+                image2 = stitchGrid(grid2);
                 return stitchImages(image1, image2, true);
             }
         }
@@ -304,13 +311,8 @@ public class ImageStitcher implements Module {
         
         // close the input images
         image1.changes = false;
-        ImageWindow image1Window = image1.getWindow();
-        if (image1Window != null) image1Window.close();
         image1.close();
-
         image2.changes = false;
-        ImageWindow image2Window = image2.getWindow();
-        if (image2Window != null) image2Window.close();
         image2.close();
         
         // get the fused image
@@ -328,13 +330,13 @@ public class ImageStitcher implements Module {
 
             // close the separate-channel fused image
             fusedImage.changes = false;
-            ImageWindow fusedImageWindow = fusedImage.getWindow();
-            if (fusedImageWindow != null) fusedImageWindow.close();
             fusedImage.close();
 
             // return the RGB image
             return rgbImage;
         }
+        // try to free up some memory...
+        System.gc();
         return fusedImage;
     }
     
@@ -458,4 +460,22 @@ public class ImageStitcher implements Module {
 
     @Override
     public void runIntialize() { }
+
+    @Override
+    public List<ImageLogRecord> logImages(final Task task, final Map<String,Config> config, final Logger logger) {
+        List<ImageLogRecord> imageLogRecords = new ArrayList<ImageLogRecord>();
+
+        // Add an image logger instance to the workflow runner for this module
+        imageLogRecords.add(new ImageLogRecord(task.getName(), task.getName(),
+                new FutureTask<ImageLogRunner>(new Callable<ImageLogRunner>() {
+            @Override public ImageLogRunner call() throws Exception {
+                ImageLogRunner imageLogRunner = new ImageLogRunner(task.getName());
+                ImagePlus stitchedImage = ImageStitcher.this.process(task, config, logger);
+                imageLogRunner.addImage(stitchedImage, stitchedImage.getTitle());
+                return imageLogRunner;
+            }
+        })));
+        return imageLogRecords;
+    }
+
 }
