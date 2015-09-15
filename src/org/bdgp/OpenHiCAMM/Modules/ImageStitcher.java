@@ -313,10 +313,28 @@ public class ImageStitcher implements Module {
         if (image2Window != null) image2Window.close();
         image2.close();
         
-        // return the fused image
+        // get the fused image
         ImagePlus fusedImage = WindowManager.getImage(fusedImageTitle);
         if (fusedImage == null) throw new RuntimeException(String.format(
                 "Pairwise Stitching: could not find fused image with title: %s", fusedImageTitle));
+        
+        // convert stack to RGB
+        if (fusedImage.getNChannels() == 3) {
+            IJ.run(fusedImage, "Stack to RGB", "");
+            String rgbImageTitle = String.format("%s (RGB)", fusedImage.getTitle());
+            ImagePlus rgbImage = WindowManager.getImage(rgbImageTitle);
+            if (rgbImage == null) throw new RuntimeException(String.format(
+                    "Pairwise Stitching: could not find RGB image with title: %s", rgbImageTitle));
+
+            // close the separate-channel fused image
+            fusedImage.changes = false;
+            ImageWindow fusedImageWindow = fusedImage.getWindow();
+            if (fusedImageWindow != null) fusedImageWindow.close();
+            fusedImage.close();
+
+            // return the RGB image
+            return rgbImage;
+        }
         return fusedImage;
     }
     
