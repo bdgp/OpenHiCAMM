@@ -20,6 +20,7 @@ import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 
+import ij.Prefs;
 import net.miginfocom.swing.MigLayout;
 
 import java.awt.Frame;
@@ -210,7 +211,7 @@ public class WorkflowDialog extends JDialog {
         SpinnerNumberModel numThreadsModel = new SpinnerNumberModel();
         numThreadsModel.setMinimum(1);
         numThreads.setModel(numThreadsModel);
-        numThreads.setValue(Runtime.getRuntime().availableProcessors());
+        numThreads.setValue(Prefs.getThreads());
         getContentPane().add(numThreads, "cell 1 4,alignx right");
 
         startButton.setEnabled(false);
