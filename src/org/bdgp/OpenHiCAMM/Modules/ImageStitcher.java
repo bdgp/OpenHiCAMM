@@ -13,6 +13,7 @@ import java.util.concurrent.FutureTask;
 import javax.swing.JPanel;
 
 import org.bdgp.OpenHiCAMM.Dao;
+import org.bdgp.OpenHiCAMM.ImageLog;
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
 import org.bdgp.OpenHiCAMM.Logger;
@@ -91,7 +92,7 @@ public class ImageStitcher implements Module, ImageLogger {
     	logger.fine(String.format("Stitching group: %s", stitchGroup));
 
     	// Run the stitching processing to produce a stitched image.
-    	ImagePlus stitchedImage = process(task, config, logger);
+    	ImagePlus stitchedImage = process(task, config, logger, new ImageLog.NullImageLogRunner());
 
     	// get the stitched folder
     	Config stitchedFolderConf = config.get("stitchedFolder");
@@ -114,7 +115,7 @@ public class ImageStitcher implements Module, ImageLogger {
         return Status.SUCCESS;
     }
     
-    public ImagePlus process(Task task, Map<String,Config> config, Logger logger) {
+    public ImagePlus process(Task task, Map<String,Config> config, Logger logger, ImageLogRunner imageLogRunner) {
     	// get the stitch group name
     	Config stitchGroupConf = config.get("stitchGroup");
     	if (stitchGroupConf == null) throw new RuntimeException(String.format(
@@ -191,6 +192,7 @@ public class ImageStitcher implements Module, ImageLogger {
             // convert the tagged image into an ImagePlus object
             ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
             ImagePlus imp = new ImagePlus(image.getName(), processor);
+            imageLogRunner.addImage(imp, imp.getTitle());
 
             // create the TaskTile object
             TaskTile taskTile = new TaskTile(task, taskConfig, tileX, tileY, imp);
@@ -203,7 +205,7 @@ public class ImageStitcher implements Module, ImageLogger {
         
         // stitch the images into a single tagged image
         ImagePlus stitchedImage = stitchGrid(taskGrid);
-        //stitchedImage.setTitle(stitchGroup);
+        imageLogRunner.addImage(stitchedImage, stitchedImage.getTitle());
 
         // If a window is open, close it.
         stitchedImage.changes = false;
@@ -470,8 +472,7 @@ public class ImageStitcher implements Module, ImageLogger {
                 new FutureTask<ImageLogRunner>(new Callable<ImageLogRunner>() {
             @Override public ImageLogRunner call() throws Exception {
                 ImageLogRunner imageLogRunner = new ImageLogRunner(task.getName());
-                ImagePlus stitchedImage = ImageStitcher.this.process(task, config, logger);
-                imageLogRunner.addImage(stitchedImage, stitchedImage.getTitle());
+                ImageStitcher.this.process(task, config, logger, imageLogRunner);
                 return imageLogRunner;
             }
         })));
