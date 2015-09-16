@@ -18,6 +18,7 @@ import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.WorkflowInstance;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
+import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 
 import ij.Prefs;
@@ -372,10 +373,19 @@ public class WorkflowDialog extends JDialog {
                         // the resume button.
                         btnResume.setEnabled(false);
                         List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
-                        for (Task t : tasks) {
-                            if (t.getStatus() != Status.SUCCESS && t.getStatus() != Status.FAIL) {
-                                btnResume.setEnabled(true);
-                                break;
+                        CHECK_TASK_STATUSES:
+                        while (tasks.size() > 0) {
+                            List<TaskDispatch> tds = new ArrayList<TaskDispatch>();
+                            for (Task t : tasks) {
+                                if (t.getStatus() != Status.SUCCESS && t.getStatus() != Status.FAIL) {
+                                    btnResume.setEnabled(true);
+                                    break CHECK_TASK_STATUSES;
+                                }
+                                tds.addAll(workflowRunner.getTaskDispatch().select(where("parentTaskId",t.getId())));
+                            }
+                            tasks.clear();
+                            for (TaskDispatch td : tds) {
+                                tasks.addAll(workflowRunner.getTaskStatus().select(where("id", td.getTaskId())));
                             }
                         }
                     }
