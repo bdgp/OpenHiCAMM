@@ -85,12 +85,19 @@ public class Util {
         return join("", list);
     }
     public static String join(Object[] list) {
-        return join("", list);
+        return join("", Arrays.asList(list));
     }
-    public static String join(String delim, Object ... list) {
-        return join(delim, Arrays.asList(list));
+    public static String join(String delim, Object elem1, Object elem2, Object ... elems) {
+        List<Object> list = new ArrayList<Object>();
+        list.add(elem1);
+        list.add(elem2);
+        list.addAll(Arrays.asList(elems));
+        return join(delim, list);
     }
-    public static String join(String delim, List<Object> list) {
+    public static String join(String delim, Object[] list) {
+        return join("", Arrays.asList(list));
+    }
+    public static String join(String delim, List<?> list) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i) != null) {
