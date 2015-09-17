@@ -40,6 +40,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.WindowManager;
 import ij.io.FileSaver;
+import ij.macro.Interpreter;
 import ij.process.ImageProcessor;
 import mmcorej.TaggedImage;
 
@@ -78,6 +79,17 @@ public class ImageStitcher implements Module, ImageLogger {
             this.image = image;
         }
     }
+    
+    private void showImageTable(String message, Logger logger) {
+        List<String> imageTitles = new ArrayList<String>();
+        for (int id : Interpreter.getBatchModeImageIDs()) {
+            ImagePlus image = Interpreter.getBatchModeImage(id);
+            if (image != null) imageTitles.add(Util.escape(image.getTitle()));
+        }
+        String imageTitleList = Util.join(", ", imageTitles);
+        logger.fine(String.format(
+                "%s: Image Table (%d count): [%s]", message, imageTitles.size(), imageTitleList));
+    }
 
     @Override
     public Status run(Task task, Map<String,Config> config, Logger logger) {
@@ -92,7 +104,9 @@ public class ImageStitcher implements Module, ImageLogger {
     	logger.fine(String.format("Stitching group: %s", stitchGroup));
 
     	// Run the stitching processing to produce a stitched image.
+    	this.showImageTable("Before process()", logger);
     	ImagePlus stitchedImage = process(task, config, logger, new ImageLog.NullImageLogRunner());
+    	this.showImageTable("After process()", logger);
 
     	// get the stitched folder
     	Config stitchedFolderConf = config.get("stitchedFolder");
@@ -204,7 +218,7 @@ public class ImageStitcher implements Module, ImageLogger {
         }
         
         // stitch the images into a single tagged image
-        ImagePlus stitchedImage = stitchGrid(taskGrid);
+        ImagePlus stitchedImage = stitchGrid(taskGrid, logger);
         imageLogRunner.addImage(stitchedImage, stitchedImage.getTitle());
 
         // If a window is open, close it.
@@ -214,7 +228,7 @@ public class ImageStitcher implements Module, ImageLogger {
         return stitchedImage;
     }
     
-    public ImagePlus stitchGrid(TaskTile[][] taskGrid) {
+    public ImagePlus stitchGrid(TaskTile[][] taskGrid, Logger logger) {
         ImagePlus image1;
         ImagePlus image2;
         if (taskGrid.length > 1 || (taskGrid.length > 0 && taskGrid[0].length > 1)) {
@@ -235,9 +249,9 @@ public class ImageStitcher implements Module, ImageLogger {
                         grid2[r][c-splitPoint] = taskGrid[r][c];
                     }
                 }
-                image1 = stitchGrid(grid1);
-                image2 = stitchGrid(grid2);
-                return stitchImages(image1, image2, false);
+                image1 = stitchGrid(grid1, logger);
+                image2 = stitchGrid(grid2, logger);
+                return stitchImages(image1, image2, false, logger);
             }
             // horizontal split
             else {
@@ -254,20 +268,20 @@ public class ImageStitcher implements Module, ImageLogger {
                         grid2[r-splitPoint][c] = taskGrid[r][c];
                     }
                 }
-                image1 = stitchGrid(grid1);
-                image2 = stitchGrid(grid2);
-                return stitchImages(image1, image2, true);
+                image1 = stitchGrid(grid1, logger);
+                image2 = stitchGrid(grid2, logger);
+                return stitchImages(image1, image2, true, logger);
             }
         }
         else if (taskGrid.length > 1) {
             image1 = taskGrid[0][0].image;
             image2 = taskGrid[1][0].image;
-            return stitchImages(image1, image2, true);
+            return stitchImages(image1, image2, true, logger);
         }
         else  if (taskGrid.length > 0 && taskGrid[0].length > 1) {
             image1 = taskGrid[0][0].image;
             image2 = taskGrid[0][1].image;
-            return stitchImages(image1, image2, false);
+            return stitchImages(image1, image2, false, logger);
         }
         else if (taskGrid.length == 1 && taskGrid[0].length == 1) {
             return taskGrid[0][0].image;
@@ -280,7 +294,8 @@ public class ImageStitcher implements Module, ImageLogger {
     public ImagePlus stitchImages(
             ImagePlus image1, 
             ImagePlus image2, 
-            boolean isVerticallyAligned) 
+            boolean isVerticallyAligned,
+            Logger logger) 
     {
         String fusion_method = FUSION_METHOD;
         int check_peaks = CHECK_PEAKS;
@@ -293,8 +308,10 @@ public class ImageStitcher implements Module, ImageLogger {
         String registration_channel_image_2 = REGISTRATION_CHANNEL_IMAGE_2;
         
         // open the input images
+        this.showImageTable("Before show()", logger);
         image1.show();
         image2.show();
+        this.showImageTable("After show()", logger);
 
         // run the pairwise stitching plugin
         String fusedImageTitle = String.format("%s<->%s", image1.getTitle(), image2.getTitle());
@@ -311,11 +328,22 @@ public class ImageStitcher implements Module, ImageLogger {
                 String.format("registration_channel_image_2=%s", Util.macroEscape(registration_channel_image_2)));
         IJ.run(image1, "Pairwise stitching", params);
         
-        // close the input images
-        image1.changes = false;
-        image1.close();
-        image2.changes = false;
-        image2.close();
+        // Close the input images.
+        // The pairwise stitching module modifies then input images in-place, so
+        // closing them won't remove them from the image table. We have to find
+        // the modified images with the same title, and close those instead.
+        this.showImageTable("Before close()", logger);
+        ImagePlus modifiedImage1 = WindowManager.getImage(image1.getTitle());
+        if (modifiedImage1 == null) throw new RuntimeException(String.format(
+                "Pairwise Stitching: could not find modified input image 1 with title: %s", image1.getTitle()));
+        modifiedImage1.changes = false;
+        modifiedImage1.close();
+        ImagePlus modifiedImage2 = WindowManager.getImage(image2.getTitle());
+        if (modifiedImage2 == null) throw new RuntimeException(String.format(
+                "Pairwise Stitching: could not find modified input image 2 with title: %s", image2.getTitle()));
+        modifiedImage2.changes = false;
+        modifiedImage2.close();
+        this.showImageTable("After close()", logger);
         
         // get the fused image
         ImagePlus fusedImage = WindowManager.getImage(fusedImageTitle);
@@ -335,10 +363,14 @@ public class ImageStitcher implements Module, ImageLogger {
             fusedImage.close();
 
             // return the RGB image
+            rgbImage.changes = false;
+            rgbImage.close();
             return rgbImage;
         }
-        // try to free up some memory...
-        System.gc();
+
+        // close the separate-channel fused image
+        fusedImage.changes = false;
+        fusedImage.close();
         return fusedImage;
     }
     
