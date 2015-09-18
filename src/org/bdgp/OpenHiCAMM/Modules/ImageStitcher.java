@@ -90,8 +90,10 @@ public class ImageStitcher implements Module, ImageLogger {
             if (image != null) imageTitles.add(Util.escape(image.getTitle()));
         }
         String imageTitleList = Util.join(", ", imageTitles);
-        logger.info(String.format(
-                "%s: Image Table (%d count): [%s]", message, imageTitles.size(), imageTitleList));
+        if (DEBUG_MODE) {
+            logger.info(String.format(
+                    "%s: Image Table (%d count): [%s]", message, imageTitles.size(), imageTitleList));
+        }
     }
 
     @Override
