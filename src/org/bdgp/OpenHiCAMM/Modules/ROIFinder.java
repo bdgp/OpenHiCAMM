@@ -99,7 +99,6 @@ public abstract class ROIFinder implements Module, ImageLogger {
         logger.fine(String.format("%s: Using slide: %s", label, slide));
         
     	try {
-
 			double pixelSizeUm = new Double(config.get("pixelSizeUm").getValue());
 			logger.fine(String.format("%s: Using pixelSizeUm: %f", label, pixelSizeUm));
 			
@@ -108,6 +107,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
 			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
 			logger.fine(String.format("%s: Using positionIndex: %d", label, positionIndex));
+
+			double overlapPct = new Double(config.get("overlapPct").getValue());
+			logger.fine(String.format("%s: Using percentage overlap: %f", label, overlapPct));
 
 			int imageWidth = MDUtils.getWidth(taggedImage.tags);
 			int imageHeight = MDUtils.getHeight(taggedImage.tags);
@@ -141,19 +143,32 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			    // ROI.
 			    int roiWidth = roi.getX2()-roi.getX1()+1;
 			    int roiHeight = roi.getY2()-roi.getY1()+1;
+
 			    int tileWidth = (int)Math.floor(((double)cameraWidth * hiResPixelSizeUm) / pixelSizeUm);
 			    int tileHeight = (int)Math.floor(((double)cameraHeight * hiResPixelSizeUm) / pixelSizeUm);
-			    int tileXCount = (int)Math.ceil((double)roiWidth / (double)tileWidth);
-			    int tileYCount = (int)Math.ceil((double)roiHeight / (double)tileHeight);
-			    int tileSetWidth = tileXCount * tileWidth;
-			    int tileSetHeight = tileYCount * tileHeight;
-			    int tileXOffset = (int)Math.floor((roi.getX1() + ((double)roiWidth / 2.0)) - ((double)tileSetWidth / 2.0) + ((double)tileWidth / 2.0));
-			    int tileYOffset = (int)Math.floor((roi.getY1() + ((double)roiHeight / 2.0)) - ((double)tileSetHeight / 2.0) + ((double)tileHeight / 2.0));
+
+			    int tileXOverlap = (int)Math.floor((overlapPct / 100.0) * tileWidth);
+			    int tileYOverlap = (int)Math.floor((overlapPct / 100.0) * tileHeight);
+
+			    int tileXCount = (int)Math.ceil((double)(roiWidth - tileXOverlap) / (double)(tileWidth - tileXOverlap));
+			    int tileYCount = (int)Math.ceil((double)(roiHeight - tileYOverlap) / (double)(tileHeight - tileYOverlap));
+
+			    int tileSetWidth = (tileXCount * (tileWidth - tileXOverlap)) + tileXOverlap;
+			    int tileSetHeight = (tileYCount * (tileHeight - tileYOverlap)) + tileYOverlap;
+
+			    int tileXOffset = (int)Math.floor(
+			            (roi.getX1() + ((double)roiWidth / 2.0)) 
+			            - ((double)tileSetWidth / 2.0) 
+			            + ((double)tileWidth / 2.0));
+			    int tileYOffset = (int)Math.floor(
+			            (roi.getY1() + ((double)roiHeight / 2.0)) 
+			            - ((double)tileSetHeight / 2.0) 
+			            + ((double)tileHeight / 2.0));
 
 			    for (int x=0; x < tileXCount; ++x) {
                     for (int y=0; y < tileYCount; ++y) {
-                        int tileX = (x*tileWidth) + tileXOffset;
-                        int tileY = (y*tileHeight) + tileYOffset;
+                        int tileX = (x*(tileWidth - tileXOverlap)) + tileXOffset;
+                        int tileY = (y*(tileHeight - tileYOverlap)) + tileYOffset;
                         MultiStagePosition msp = new MultiStagePosition();
                         StagePosition sp = new StagePosition();
                         sp.numAxes = 2;
@@ -288,6 +303,10 @@ public abstract class ROIFinder implements Module, ImageLogger {
             	if (minRoiArea != null) {
             	    configs.add(new Config(ROIFinder.this.moduleId, "minRoiArea", minRoiArea.toString()));
             	}
+            	Double overlapPct = (Double)dialog.overlapPct.getValue();
+            	if (overlapPct != null) {
+            	    configs.add(new Config(ROIFinder.this.moduleId, "overlapPct", overlapPct.toString()));
+            	}
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -305,6 +324,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
             	}
             	if (confs.containsKey("minRoiArea")) {
             	    dialog.minRoiArea.setValue(new Double(confs.get("minRoiArea").getValue()));
+            	}
+            	if (confs.containsKey("overlapPct")) {
+            	    dialog.overlapPct.setValue(new Double(confs.get("overlapPct").getValue()));
             	}
                 return dialog;
             }
@@ -325,6 +347,11 @@ public abstract class ROIFinder implements Module, ImageLogger {
             	Double minRoiArea = (Double)dialog.minRoiArea.getValue();
             	if (minRoiArea == null || minRoiArea == 0.0) {
             	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for Min ROI Area"));
+            	}
+            	Double overlapPct = (Double)dialog.overlapPct.getValue();
+            	if (overlapPct == null || overlapPct < 0.0 || overlapPct > 100.0) {
+            	    errors.add(new ValidationError(ROIFinder.this.moduleId, 
+            	            "Please enter a value between 0 and 100 for Tile Percent Overlap"));
             	}
                 return errors.toArray(new ValidationError[0]);
             }

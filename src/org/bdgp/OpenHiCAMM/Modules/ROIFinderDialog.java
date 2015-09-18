@@ -27,12 +27,16 @@ public class ROIFinderDialog extends JPanel {
 	public static final double DEFAULT_PIXEL_SIZE_UM = 0.48;
 	public static final double DEFAULT_HIRES_PIXEL_SIZE_UM = 0.1253;
 	public static final double DEFAULT_MIN_ROI_AREA = 300000.0;
+	public static final double DEFAULT_OVERLAP_PCT = 25.0;
+
 	private JLabel lblMinRoiArea;
 	private JLabel lblHiresPixelSize;
 	private JButton btnRoiTest;
+	private JLabel overlapPctLabel;
+	DoubleSpinner overlapPct;
 
 	public ROIFinderDialog(final ROIFinder roiFinder) {
-		this.setLayout(new MigLayout("", "[][grow]", "[][][][]"));
+		this.setLayout(new MigLayout("", "[][grow]", "[][][][][]"));
         
         lblMinRoiArea = new JLabel("Min ROI Area");
         add(lblMinRoiArea, "cell 0 0");
@@ -74,7 +78,14 @@ public class ROIFinderDialog extends JPanel {
                 imageLogRunner.display();
             }
         });
-        add(btnRoiTest, "cell 0 3");
+        
+        overlapPctLabel = new JLabel("Tile Overlap Percentage:");
+        add(overlapPctLabel, "cell 0 3");
+        
+        overlapPct = new DoubleSpinner();
+        overlapPct.setValue(new Double(DEFAULT_OVERLAP_PCT));
+        add(overlapPct, "cell 1 3");
+        add(btnRoiTest, "cell 0 4");
 	}
 	
 }
