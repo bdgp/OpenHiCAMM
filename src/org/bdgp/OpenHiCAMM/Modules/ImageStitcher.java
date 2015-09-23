@@ -37,6 +37,7 @@ import org.json.JSONException;
 import org.micromanager.acquisition.MMAcquisition;
 import org.micromanager.api.ImageCache;
 import org.micromanager.utils.ImageUtils;
+import org.micromanager.utils.MDUtils;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -463,6 +464,16 @@ public class ImageStitcher implements Module, ImageLogger {
         for (Task parentTask : parentTasks) {
             TaskConfig stitchGroup = taskConfigDao.selectOne(where("id", parentTask.getId()).and("key", "stitchGroup"));
             if (stitchGroup != null) {
+                // get the stitch group label: "stitch_group.channel_slice_frame"
+                TaskConfig imageLabel = taskConfigDao.selectOneOrDie(where("id", parentTask.getId()).and("key", "imageLabel"));
+                int[] indices = MDUtils.getIndices(imageLabel.getValue());
+                if (indices == null || indices.length < 4) throw new RuntimeException(String.format(
+                        "invalid indices in image label: %s", Util.escape(indices)));
+                int channel = indices[0];
+                int slice = indices[1];
+                int frame = indices[2];
+                String stitchGroupLabel = String.format("%s.%d_%d_%d", stitchGroup.getValue(), channel, slice, frame);
+
                 // make sure tileX and tileY are set
                 TaskConfig tileX = taskConfigDao.selectOne(where("id", parentTask.getId()).and("key", "tileX"));
                 TaskConfig tileY = taskConfigDao.selectOne(where("id", parentTask.getId()).and("key", "tileY"));
@@ -470,10 +481,10 @@ public class ImageStitcher implements Module, ImageLogger {
                     throw new RuntimeException(String.format("tileX and tileY not defined for task: %s", parentTask));
                 }
                 // add the task to the stitch group
-                if (!stitchGroups.containsKey(stitchGroup.getValue())) {
-                    stitchGroups.put(stitchGroup.getValue(), new ArrayList<Task>());
+                if (!stitchGroups.containsKey(stitchGroupLabel)) {
+                    stitchGroups.put(stitchGroupLabel, new ArrayList<Task>());
                 }
-                stitchGroups.get(stitchGroup.getValue()).add(parentTask);
+                stitchGroups.get(stitchGroupLabel).add(parentTask);
             }
         }
 
