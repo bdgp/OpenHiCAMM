@@ -69,6 +69,8 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 public class SlideImager implements Module, ImageLogger {
 	private static final long DUMMY_SLEEP = 500;
 
+    private static final boolean SANITY_CHECK = false;
+
 	WorkflowRunner workflowRunner;
     String moduleId;
     AcqControlDlg acqControlDlg;
@@ -470,28 +472,33 @@ public class SlideImager implements Module, ImageLogger {
                     if (idx == null || idx.length < 4) throw new RuntimeException(String.format(
                             "Bad image label from MDUtils.getIndices(): %s", label));
 
-                    TaggedImage taggedImage = imageCache.getImage(idx[0], idx[1], idx[2], idx[3]);
-                    if (taggedImage.pix == null) throw new RuntimeException(String.format(
-                            "%s: taggedImage.pix is null!", label));
-
-                    // get the positionName
-                    String positionName;
-                    try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
-                    catch (JSONException e) {throw new RuntimeException(e);}
-
                     Task t = tasks.get(label);
                     if (t == null) throw new RuntimeException(String.format(
                             "Could not get task record for image with label %s!", label));
 
-                    // Make sure the position name of this image's metadata matches what we expected
-                    // from the Task configuration.
-                    TaskConfig positionNameConf = taskConfigDao.selectOneOrDie(
-                            where("id", new Integer(t.getId()).toString()).and("key", "positionName"));
-                    if (!positionName.equals(positionNameConf.getValue())) {
-                        throw new RuntimeException(String.format(
-                                "Position name mismatch! TaskConfig=%s, MDUtils.getPositionName=%s",
-                                positionNameConf, positionName));
+                    // The following sanity checks are very time-consuming and don't seem
+                    // to be necessary, so I've disabled them by default using the SANITY_CHECK flag.
+                    if (SANITY_CHECK) {
+                        TaggedImage taggedImage = imageCache.getImage(idx[0], idx[1], idx[2], idx[3]);
+                        if (taggedImage.pix == null) throw new RuntimeException(String.format(
+                                "%s: taggedImage.pix is null!", label));
+
+                        // get the positionName
+                        String positionName;
+                        try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
+                        catch (JSONException e) {throw new RuntimeException(e);}
+
+                        // Make sure the position name of this image's metadata matches what we expected
+                        // from the Task configuration.
+                        TaskConfig positionNameConf = taskConfigDao.selectOneOrDie(
+                                where("id", new Integer(t.getId()).toString()).and("key", "positionName"));
+                        if (!positionName.equals(positionNameConf.getValue())) {
+                            throw new RuntimeException(String.format(
+                                    "Position name mismatch! TaskConfig=%s, MDUtils.getPositionName=%s",
+                                    positionNameConf, positionName));
+                        }
                     }
+
 
                     // Insert/Update image DB record
                     Image image = new Image(slideId, acquisition, idx[0], idx[1], idx[2], idx[3]);
