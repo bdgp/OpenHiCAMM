@@ -3,7 +3,6 @@ package org.bdgp.OpenHiCAMM.Modules;
 import java.awt.Component;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -190,8 +189,8 @@ public class SlideImager implements Module, ImageLogger {
     	String imageLabel = imageLabelConf.getValue();
         logger.fine(String.format("Using imageLabel: %s", imageLabel));
         int[] indices = MDUtils.getIndices(imageLabel);
-        if (indices.length < 4) throw new RuntimeException(String.format("Invalid indices parsed from imageLabel %s: %s", 
-                imageLabel, Arrays.toString(indices)));
+        if (indices == null || indices.length < 4) throw new RuntimeException(String.format(
+                "Invalid indices parsed from imageLabel %s", imageLabel));
         
         // If this is the acqusition task 0_0_0_0, start the acquisition engine
         if (indices[0] == 0 && indices[1] == 0 && indices[2] == 0 && indices[3] == 0) {
@@ -366,7 +365,7 @@ public class SlideImager implements Module, ImageLogger {
                                     totalImages));
 
                             int[] indices = MDUtils.getIndices(label);
-                            if (indices.length < 4) throw new RuntimeException(String.format(
+                            if (indices == null || indices.length < 4) throw new RuntimeException(String.format(
                                     "Bad image label from MDUtils.getIndices(): %s", label));
                             // Don't eagerly dispatch the acquisition thread. This thread must not be set to success
                             // until the acquisition has finished, so the downstream processing for this task 
@@ -468,6 +467,9 @@ public class SlideImager implements Module, ImageLogger {
                 for (String label : taggedImages) {
                     // make sure none of the taggedImage.pix values are null
                     int[] idx = MDUtils.getIndices(label);
+                    if (idx == null || idx.length < 4) throw new RuntimeException(String.format(
+                            "Bad image label from MDUtils.getIndices(): %s", label));
+
                     TaggedImage taggedImage = imageCache.getImage(idx[0], idx[1], idx[2], idx[3]);
                     if (taggedImage.pix == null) throw new RuntimeException(String.format(
                             "%s: taggedImage.pix is null!", label));
@@ -492,12 +494,7 @@ public class SlideImager implements Module, ImageLogger {
                     }
 
                     // Insert/Update image DB record
-                    int[] taggedImageKeys = MDUtils.getIndices(label);
-                    Image image = new Image(slideId, acquisition, 
-                            taggedImageKeys[0],
-                            taggedImageKeys[1],
-                            taggedImageKeys[2],
-                            taggedImageKeys[3]);
+                    Image image = new Image(slideId, acquisition, idx[0], idx[1], idx[2], idx[3]);
                     imageDao.insertOrUpdate(image,"acquisitionId","channel","slice","frame","position");
                     logger.fine(String.format("Inserted image: %s", image));
                     imageDao.reload(image, "acquisitionId","channel","slice","frame","position");
