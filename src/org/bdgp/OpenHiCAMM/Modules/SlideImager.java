@@ -981,5 +981,51 @@ public class SlideImager implements Module, ImageLogger {
     }
 
     @Override
-    public void runIntialize() { }
+    public void runIntialize() { 
+        // We need to reset the status of all the SlideImager tasks to the status of the acquisition task.
+        // First, make a map of parent Task ID -> acquisition task Status
+        List<Task> tasks = this.workflowRunner.getTaskStatus().select(where("moduleId", this.moduleId));
+        Map<Integer,Status> parentTaskIdStatus = new HashMap<Integer,Status>();
+        for (Task task : tasks) {
+            TaskConfig imageLabel = this.workflowRunner.getTaskConfig().selectOne(
+                    where("id", new Integer(task.getId()).toString()).and("key", "imageLabel"));
+            if (imageLabel != null) {
+                int[] indices = MDUtils.getIndices(imageLabel.getValue());
+                if (indices == null || indices.length < 4) throw new RuntimeException(String.format(
+                        "Bad image label from MDUtils.getIndices(): %s", imageLabel.getValue()));
+                if (indices[0] == 0 && indices[1] == 0 && indices[2] == 0 && indices[3] == 0) {
+                    // This is the acquisition task.
+                    List<TaskDispatch> tds = this.workflowRunner.getTaskDispatch().select(where("taskId", task.getId()));
+                    if (tds.size() > 0) {
+                        for (TaskDispatch td : tds) {
+                            parentTaskIdStatus.put(td.getParentTaskId(), task.getStatus());
+                        }
+                    }
+                    else {
+                        parentTaskIdStatus.put(null, task.getStatus());
+                    }
+                }
+            }
+        }
+        // Now, iterate through each group of tasks with the same parent task ID, and 
+        // set the status of all the tasks in each group to the status of the acquisition task.
+        for (Map.Entry<Integer,Status> entry : parentTaskIdStatus.entrySet()) {
+            Integer parentTaskId = entry.getKey();
+            Status status = entry.getValue();
+            if (parentTaskId != null) {
+                List<TaskDispatch> tds = this.workflowRunner.getTaskDispatch().select(where("parentTaskId", parentTaskId));
+                for (TaskDispatch td : tds) {
+                    Task task = this.workflowRunner.getTaskStatus().selectOneOrDie(where("id", td.getTaskId()));
+                    task.setStatus(status);
+                    this.workflowRunner.getTaskStatus().update(task, "id");
+                }
+            }
+            else {
+                for (Task task : tasks) {
+                    task.setStatus(status);
+                    this.workflowRunner.getTaskStatus().update(task, "id");
+                }
+            }
+        }
+    }
 }
