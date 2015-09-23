@@ -159,6 +159,7 @@ public class Connection extends JdbcConnectionSource {
             p.setProperty("server.port", map(serverDefaults).get("server.port"));
             p.setProperty("server.no_system_exit","true");
             p.setProperty("hsqldb.default_table_type","cached");
+            p.setProperty("hsqldb.script_format","3");
             p.setProperty("hsqldb.applog","3");
             p.setProperty("hsqldb.sqllog","3");
             // writer server output to a log file
