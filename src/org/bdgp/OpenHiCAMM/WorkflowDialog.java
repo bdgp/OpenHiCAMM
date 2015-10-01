@@ -71,6 +71,7 @@ public class WorkflowDialog extends JDialog {
     JSpinner numThreads;
     private JLabel lblNumberOfThreads;
     private boolean active = true;
+    private JButton btnViewReport;
 
     public WorkflowDialog(Frame parentFrame, OpenHiCAMM mmslide) {
         super(parentFrame, "OpenHiCAMM");
@@ -84,7 +85,7 @@ public class WorkflowDialog extends JDialog {
             	if (!active) return;
             	refresh();
             }});
-        getContentPane().setLayout(new MigLayout("", "[][483.00,grow]", "[][][][][][][]"));
+        getContentPane().setLayout(new MigLayout("", "[][787.00,grow]", "[][][][][][][]"));
         
         JLabel lblChooseWorkflowDirectory = new JLabel("Workflow Directory");
         getContentPane().add(lblChooseWorkflowDirectory, "cell 0 0,alignx trailing");
@@ -255,7 +256,7 @@ public class WorkflowDialog extends JDialog {
                 refresh();
             }
         });
-        getContentPane().add(btnShowImageLog, "cell 1 6,alignx right");
+        getContentPane().add(btnShowImageLog, "flowx,cell 1 6,alignx right");
 
         btnShowDatabaseManager = new JButton("Show Database Manager");
         btnShowDatabaseManager.setEnabled(true);
@@ -270,6 +271,13 @@ public class WorkflowDialog extends JDialog {
             }
         });
         getContentPane().add(btnShowDatabaseManager, "cell 1 6,alignx right");
+        
+        btnViewReport = new JButton("View Report");
+        btnViewReport.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        	}
+        });
+        getContentPane().add(btnViewReport, "cell 1 6");
         
         editWorkflowButton.addActionListener(new ActionListener() {
             @Override
