@@ -96,16 +96,8 @@
                   <artifactId>ormlite-jdbc</artifactId>
                 </artifactItem>
                 <artifactItem>
-                  <groupId>com.j256.ormlite</groupId>
-                  <artifactId>ormlite-jdbc</artifactId>
-                </artifactItem>
-                <artifactItem>
                   <groupId>com.miglayout</groupId>
                   <artifactId>miglayout</artifactId>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>com.j2html</groupId>
-                  <artifactId>j2html</artifactId>
                 </artifactItem>
               </artifactItems>
               <outputDirectory>${fiji.dir}/jars</outputDirectory>
@@ -207,11 +199,6 @@
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>17.0</version>
-    </dependency>
-    <dependency>
-        <groupId>com.j2html</groupId>
-        <artifactId>j2html</artifactId>
-        <version>0.5.0</version>
     </dependency>
   </dependencies>
 </project>
