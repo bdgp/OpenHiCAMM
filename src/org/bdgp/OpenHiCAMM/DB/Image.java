@@ -1,12 +1,20 @@
 package org.bdgp.OpenHiCAMM.DB;
 
+import org.bdgp.OpenHiCAMM.Dao;
+import org.micromanager.acquisition.MMAcquisition;
 import org.micromanager.api.ImageCache;
+import org.micromanager.utils.ImageUtils;
 import org.micromanager.utils.MDUtils;
 
 import mmcorej.TaggedImage;
 
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
+
+import ij.ImagePlus;
+import ij.process.ImageProcessor;
+
+import static org.bdgp.OpenHiCAMM.Util.where;
 
 @DatabaseTable
 public class Image {
@@ -48,6 +56,28 @@ public class Image {
     
     public TaggedImage getImage(ImageCache imageCache) {
     	return imageCache.getImage(this.channel, this.slice, this.frame, this.position);
+    }
+
+    public TaggedImage getTaggedImage(Dao<Acquisition> acqDao) {
+        // Initialize the acquisition
+        Acquisition acquisition = acqDao.selectOneOrDie(where("id",this.getAcquisitionId()));
+        MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
+
+        // Get the image cache object
+        ImageCache imageCache = mmacquisition.getImageCache();
+        if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+        // Get the tagged image from the image cache
+        TaggedImage taggedImage = this.getImage(imageCache);
+        if (taggedImage == null) throw new RuntimeException(String.format("Acqusition %s, Image %s is not in the image cache!",
+                acquisition, this));
+        return taggedImage;
+    }
+    
+    public ImagePlus getImagePlus(Dao<Acquisition> acqDao) {
+        TaggedImage taggedImage = this.getTaggedImage(acqDao);
+        ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
+        ImagePlus imp = new ImagePlus(this.toString(), processor);
+        return imp;
     }
     
     public String getLabel() {
