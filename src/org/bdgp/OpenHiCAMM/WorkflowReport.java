@@ -22,18 +22,19 @@ import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.TaskConfig;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.SlideImager;
+import org.bdgp.OpenHiCAMM.Modules.SlideImagerDialog;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
+import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMSerializationException;
 
 import com.sun.org.apache.xml.internal.security.utils.Base64;
 
 import ij.ImagePlus;
 import ij.gui.NewImage;
-import ij.gui.Roi;
 import ij.process.Blitter;
 import ij.process.ImageProcessor;
 import javafx.application.Platform;
@@ -55,8 +56,6 @@ public class WorkflowReport extends JFrame {
 
 	// TODO: convert to configurable values
     public static final int SLIDE_PREVIEW_WIDTH = 1280; 
-    public static final boolean INVERT_X = true; 
-    public static final boolean INVERT_Y = true; 
 
 	public WorkflowReport(WorkflowRunner workflowRunner) {
 		this.workflowRunner = workflowRunner;
@@ -107,16 +106,12 @@ public class WorkflowReport extends JFrame {
 		}).toString();
 	}
 
-    Double minX = null;
-    Double minY = null;
-    Double maxX = null;
-    Double maxY = null;
-    Double maxOverlapUmX = null;
-    Double maxOverlapUmY = null;
-    Double maxOverlapPixelsX = null;
-    Double maxOverlapPixelsY = null;
-    Integer maxGridCol = null;
-    Integer maxGridRow = null;
+    Double minX;
+    Double minY;
+    Double maxX;
+    Double maxY;
+    Integer imageWidth;
+    Integer imageHeight;
 
 	private void runReport(String startModuleId) {
 	    WorkflowModule startModule = this.workflowRunner.getWorkflow().selectOneOrDie(where("id", startModuleId));
@@ -196,17 +191,26 @@ public class WorkflowReport extends JFrame {
             slideId = "slide";
 	    }
 
+        Dao<Image> imageDao = this.workflowRunner.getInstanceDb().table(Image.class);
+        Dao<Acquisition> acqDao = this.workflowRunner.getInstanceDb().table(Acquisition.class);
+
+        // get the pixel size of this slide imager config
+        Config pixelSizeConf = this.workflowRunner.getModuleConfig().selectOne(where("id", startModuleId).and("key","pixelSize"));
+        Double pixelSize = pixelSizeConf != null? new Double(pixelSizeConf.getValue()) : SlideImagerDialog.DEFAULT_PIXEL_SIZE_UM;
+
+        // get invertXAxis and invertYAxis conf values
+        Config invertXAxisConf = this.workflowRunner.getModuleConfig().selectOne(where("id", startModuleId).and("key","invertXAxis"));
+        boolean invertXAxis = invertXAxisConf == null || invertXAxisConf.equals("yes");
+        Config invertYAxisConf = this.workflowRunner.getModuleConfig().selectOne(where("id", startModuleId).and("key","invertYAxis"));
+        boolean invertYAxis = invertYAxisConf == null || invertYAxisConf.equals("yes");
+
         // compute the width and height of the imaging grid in pixels from the position list
         minX = null;
         minY = null;
         maxX = null;
         maxY = null;
-        maxOverlapUmX = null;
-        maxOverlapUmY = null;
-        maxOverlapPixelsX = null;
-        maxOverlapPixelsY = null;
-        maxGridCol = null;
-        maxGridRow = null;
+        imageWidth = null;
+        imageHeight = null;
         List<Task> imageTasks = this.workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
         for (Task task : imageTasks) {
         	MultiStagePosition msp = getMsp(task);
@@ -215,44 +219,24 @@ public class WorkflowReport extends JFrame {
             if (maxX == null || msp.getX() > maxX) maxX = msp.getX();
             if (minY == null || msp.getY() < minY) minY = msp.getY();
             if (maxY == null || msp.getY() > maxY) maxY = msp.getY();
-            if (maxGridCol == null || msp.getGridColumn()+1 > maxGridCol) maxGridCol = msp.getGridColumn()+1;
-            if (maxGridRow == null || msp.getGridRow()+1 > maxGridRow) maxGridRow = msp.getGridRow()+1;
-            if (msp.getProperty("OverlapUmX") != null && 
-                    (maxOverlapUmX == null || new Double(msp.getProperty("OverlapUmX")) > maxOverlapUmX)) 
-            {
-                maxOverlapUmX = new Double(msp.getProperty("OverlapUmX"));
-            }
-            if (msp.getProperty("OverlapUmY") != null && 
-                    (maxOverlapUmY == null || new Double(msp.getProperty("OverlapUmY")) > maxOverlapUmY)) 
-            {
-                maxOverlapUmY = new Double(msp.getProperty("OverlapUmY"));
-            }
-            if (msp.getProperty("OverlapPixelsX") != null && 
-                    (maxOverlapPixelsX == null || new Double(msp.getProperty("OverlapPixelsX")) > maxOverlapPixelsX)) 
-            {
-                maxOverlapPixelsX = new Double(msp.getProperty("OverlapPixelsX"));
-            }
-            if (msp.getProperty("OverlapPixelsY") != null && 
-                    (maxOverlapPixelsY == null || new Double(msp.getProperty("OverlapPixelsY")) > maxOverlapPixelsY)) 
-            {
-                maxOverlapPixelsY = new Double(msp.getProperty("OverlapPixelsY"));
+            if (imageWidth == null || imageHeight == null) {
+                Config imageIdConf = this.workflowRunner.getTaskConfig().selectOne(
+                        where("id", new Integer(task.getId()).toString()).and("key", "imageId"));
+                if (imageIdConf != null) {
+                    Image image = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf.getValue())));
+                    ImagePlus imp = image.getImagePlus(acqDao);
+                    imageWidth = imp.getWidth();
+                    imageHeight = imp.getHeight();
+                }
             }
         }
-        double cellWidthUm = ((maxX - minX) + (maxOverlapUmX * (maxGridCol-1))) / (maxGridCol-1);
-        double cellHeightUm = ((maxY - minY) + (maxOverlapUmY * (maxGridRow-1))) / (maxGridRow-1);
-        double gridWidthUm = (maxX - minX) + cellWidthUm;
-        double gridHeightUm =  (maxY - minY) + cellHeightUm;
-        double pixelSizeX = maxOverlapUmX / maxOverlapPixelsX;
-        double pixelSizeY = maxOverlapUmY / maxOverlapPixelsY;
-        int gridWidthPx = (int)Math.floor(gridWidthUm / pixelSizeX);
-        int gridHeightPx = (int)Math.floor(gridHeightUm / pixelSizeY);
+        int slideWidthPx = (int)Math.floor(((maxX - minX) / pixelSize) + imageWidth);
+        int slideHeightPx = (int)Math.floor(((maxY - minY) / pixelSize) + imageHeight);
         
         // this is the scale factor for creating the thumbnail images
-        double scaleFactor = SLIDE_PREVIEW_WIDTH / gridWidthPx;
-        int slidePreviewHeight = (int)Math.floor(scaleFactor * gridHeightPx);
+        double scaleFactor = SLIDE_PREVIEW_WIDTH / slideWidthPx;
+        int slidePreviewHeight = (int)Math.floor(scaleFactor * slideHeightPx);
         
-        Dao<Image> imageDao = this.workflowRunner.getInstanceDb().table(Image.class);
-        Dao<Acquisition> acqDao = this.workflowRunner.getInstanceDb().table(Acquisition.class);
         Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
         ImagePlus slideThumb = NewImage.createRGBImage("slideThumb", SLIDE_PREVIEW_WIDTH, slidePreviewHeight, 1, NewImage.FILL_WHITE);
         ImageProcessor slideThumbIp = slideThumb.getProcessor();
@@ -272,10 +256,10 @@ public class WorkflowReport extends JFrame {
                             (int)Math.floor(ip.getWidth() * scaleFactor), 
                             (int)Math.floor(ip.getHeight() * scaleFactor)));
                     
-                    int xloc1 = (int)Math.floor(((msp.getX() - minX) / pixelSizeX) - (imp.getWidth() / 2.0));
-                    int xloc = INVERT_X? gridWidthPx - (xloc1 + imp.getWidth()) : xloc1;
-                    int yloc1 = (int)Math.floor(((msp.getY() - minY) / pixelSizeY) - (imp.getHeight() / 2.0));
-                    int yloc = INVERT_Y? yloc = gridHeightPx - (yloc1 + imp.getHeight()) : yloc1;
+                    int xloc1 = (int)Math.floor(((msp.getX() - minX) / pixelSize) - (imp.getWidth() / 2.0));
+                    int xloc = invertXAxis? slideWidthPx - (xloc1 + imp.getWidth()) : xloc1;
+                    int yloc1 = (int)Math.floor(((msp.getY() - minY) / pixelSize) - (imp.getHeight() / 2.0));
+                    int yloc = invertYAxis? yloc = slideHeightPx - (yloc1 + imp.getHeight()) : yloc1;
                     slideThumbIp.copyBits(ip, xloc, yloc, Blitter.COPY);
                     slideThumbIp.setColor(new Color(0, 0, 0));
                     slideThumbIp.drawRect(xloc, yloc, ip.getWidth(), ip.getHeight());
@@ -311,6 +295,16 @@ public class WorkflowReport extends JFrame {
         		width->slideThumb.getWidth(),
         		height->slideThumb.getHeight(),
         		usemap->String.format("#map-%s", slideId));
+        
+        Map<Task,Integer> taskPosition = new HashMap<Task,Integer>();
+        for (Task task : imageTasks) {
+            Config imageLabelConf = this.workflowRunner.getTaskConfig().selectOneOrDie(
+                    where("id", task.getId()).and("key", "imageLabel"));
+            int[] indices = MDUtils.getIndices(imageLabelConf.getValue());
+        	taskPosition.put(task, indices[3]);
+        }
+        
+        
 	}
 	
 	public void showImage(int imageId) {
