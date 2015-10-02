@@ -76,6 +76,10 @@ public class Tag {
             for (int i=0; i<this.attrs.size(); ++i) {
                 try { 
                     String attr = this.attrs.get(i).getClass().getDeclaredMethod("attr", String.class).getParameters()[0].getName();
+                    attr = attr.replaceFirst("^_", "");
+                    attr = attr.replaceFirst("_$", "");
+                    attr = attr.replaceAll("_", "-");
+                    attr = attr.toLowerCase();
                     attrs.append(String.format("%s=\"%s\"", escape(attr), escape(this.attrs.get(i).attr(attr))));
                     if (i < this.attrs.size()-1) attrs.append(" ");
                 } 
@@ -158,6 +162,9 @@ public class Tag {
 	    catch (IOException e) {throw new RuntimeException(e);}
 	    finally {
             Tag.writeBuffer.get().setLength(0);
+            Tag.writer.set(null);
+            Tag.indent.set(null);
+            Tag.currentIndent.set(null);
 	    }
 	}
 	public void print() {
