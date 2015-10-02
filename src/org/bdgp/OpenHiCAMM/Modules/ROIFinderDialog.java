@@ -20,23 +20,22 @@ import java.awt.event.ActionEvent;
 
 @SuppressWarnings("serial")
 public class ROIFinderDialog extends JPanel {
-	DoubleSpinner pixelSizeUm;
 	DoubleSpinner minRoiArea;
-	DoubleSpinner hiResPixelSizeUm;
 
-	public static final double DEFAULT_PIXEL_SIZE_UM = 0.48;
-	public static final double DEFAULT_HIRES_PIXEL_SIZE_UM = 0.1253;
 	public static final double DEFAULT_MIN_ROI_AREA = 300000.0;
 	public static final double DEFAULT_OVERLAP_PCT = 25.0;
+	public static final double DEFAULT_HIRES_PIXEL_SIZE_UM = 0.1253;
 
 	private JLabel lblMinRoiArea;
-	private JLabel lblHiresPixelSize;
 	private JButton btnRoiTest;
 	private JLabel overlapPctLabel;
+	private JLabel lblHiresPixelSize;
+
 	DoubleSpinner overlapPct;
+	DoubleSpinner hiResPixelSize;
 
 	public ROIFinderDialog(final ROIFinder roiFinder) {
-		this.setLayout(new MigLayout("", "[][grow]", "[][][][][]"));
+		this.setLayout(new MigLayout("", "[][grow]", "[][][][]"));
         
         lblMinRoiArea = new JLabel("Min ROI Area");
         add(lblMinRoiArea, "cell 0 0");
@@ -44,20 +43,6 @@ public class ROIFinderDialog extends JPanel {
         minRoiArea = new DoubleSpinner();
         minRoiArea.setValue(new Double(DEFAULT_MIN_ROI_AREA));
         add(minRoiArea, "cell 1 0");
-        
-        JLabel lblPixelSizeum = new JLabel("Pixel Size (um)");
-        add(lblPixelSizeum, "cell 0 1");
-
-        pixelSizeUm = new DoubleSpinner();
-        pixelSizeUm.setValue(new Double(DEFAULT_PIXEL_SIZE_UM));
-        add(pixelSizeUm, "cell 1 1");
-        
-        lblHiresPixelSize = new JLabel("HiRes Pixel Size (um)");
-        add(lblHiresPixelSize, "cell 0 2");
-        
-        hiResPixelSizeUm = new DoubleSpinner();
-        hiResPixelSizeUm.setValue(new Double(DEFAULT_HIRES_PIXEL_SIZE_UM));
-        add(hiResPixelSizeUm, "cell 1 2");
         
         btnRoiTest = new JButton("ROI Test");
         btnRoiTest.addActionListener(new ActionListener() {
@@ -80,12 +65,19 @@ public class ROIFinderDialog extends JPanel {
         });
         
         overlapPctLabel = new JLabel("Tile Overlap Percentage:");
-        add(overlapPctLabel, "cell 0 3");
+        add(overlapPctLabel, "cell 0 1");
         
         overlapPct = new DoubleSpinner();
         overlapPct.setValue(new Double(DEFAULT_OVERLAP_PCT));
-        add(overlapPct, "cell 1 3");
-        add(btnRoiTest, "cell 0 4");
+        add(overlapPct, "cell 1 1");
+        
+        lblHiresPixelSize = new JLabel("HIRes Pixel Size: ");
+        add(lblHiresPixelSize, "cell 0 2");
+        
+        hiResPixelSize = new DoubleSpinner();
+        hiResPixelSize.setValue(DEFAULT_HIRES_PIXEL_SIZE_UM);
+        add(hiResPixelSize, "cell 1 2");
+        add(btnRoiTest, "cell 0 3");
 	}
 	
 }

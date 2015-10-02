@@ -28,6 +28,8 @@ import java.util.List;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 import javax.swing.JSpinner;
+import javax.swing.JRadioButton;
+import javax.swing.ButtonGroup;
 
 @SuppressWarnings("serial")
 public class SlideImagerDialog extends JPanel {
@@ -37,10 +39,20 @@ public class SlideImagerDialog extends JPanel {
 	JComboBox<String> moduleId;
     DoubleSpinner minAutoFocus;
     DoubleSpinner maxAutoFocus;
+    DoubleSpinner pixelSize;
     JSpinner dummyImageCount;
+    
+    JRadioButton invertXAxisYes;
+    JRadioButton invertXAxisNo;
+    JRadioButton invertYAxisYes;
+    JRadioButton invertYAxisNo;
+
+	public static final double DEFAULT_PIXEL_SIZE_UM = 0.48;
+	private final ButtonGroup invertXAxisGroup = new ButtonGroup();
+	private final ButtonGroup invertYAxisGroup = new ButtonGroup();
 	
 	public SlideImagerDialog(final AcqControlDlg acqControlDlg, final WorkflowRunner workflowRunner) {
-		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][][][]"));
+		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][][][][][][]"));
 		
 		JButton btnShowAcquisitionDialog = new JButton("Show Acquisition Dialog");
 		if (acqControlDlg == null) {
@@ -164,6 +176,37 @@ public class SlideImagerDialog extends JPanel {
         dummyImageCount = new JSpinner();
         add(dummyImageCount, "cell 0 7");
         dummyImageCount.setValue(new Integer(DEFAULT_DUMMY_IMAGE_COUNT));
+        
+        JLabel lblPixelSize = new JLabel("Pixel Size: ");
+        add(lblPixelSize, "flowx,cell 0 10");
+        
+        pixelSize = new DoubleSpinner();
+        pixelSize.setValue(DEFAULT_PIXEL_SIZE_UM);
+        add(pixelSize, "cell 0 10");
+        
+        JLabel lblInvertXAxis = new JLabel("Invert X axis? ");
+        add(lblInvertXAxis, "flowx,cell 0 11");
+        
+        invertXAxisYes = new JRadioButton("Yes");
+        invertXAxisGroup.add(invertXAxisYes);
+        invertXAxisYes.setSelected(true);
+        add(invertXAxisYes, "cell 0 11");
+        
+        invertXAxisNo = new JRadioButton("No");
+        invertXAxisGroup.add(invertXAxisNo);
+        add(invertXAxisNo, "cell 0 11");
+        
+        JLabel lblInvertYAxis = new JLabel("Invert Y axis? ");
+        add(lblInvertYAxis, "flowx,cell 0 12");
+        
+        invertYAxisYes = new JRadioButton("Yes");
+        invertYAxisGroup.add(invertYAxisYes);
+        invertYAxisYes.setSelected(true);
+        add(invertYAxisYes, "cell 0 12");
+        
+        invertYAxisNo = new JRadioButton("No");
+        invertYAxisGroup.add(invertYAxisNo);
+        add(invertYAxisNo, "cell 0 12");
 	}
 
 }

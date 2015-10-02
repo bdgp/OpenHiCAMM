@@ -99,17 +99,23 @@ public abstract class ROIFinder implements Module, ImageLogger {
         logger.fine(String.format("%s: Using slide: %s", label, slide));
         
     	try {
-			double pixelSizeUm = new Double(config.get("pixelSizeUm").getValue());
-			logger.fine(String.format("%s: Using pixelSizeUm: %f", label, pixelSizeUm));
+			double pixelSize = new Double(config.get("pixelSize").getValue());
+			logger.fine(String.format("%s: Using pixelSize: %f", label, pixelSize));
 			
-			double hiResPixelSizeUm = new Double(config.get("hiResPixelSizeUm").getValue());
-			logger.fine(String.format("%s: Using hiResPixelSizeUm: %f", label, hiResPixelSizeUm));
+			double hiResPixelSize = new Double(config.get("hiResPixelSize").getValue());
+			logger.fine(String.format("%s: Using hiResPixelSize: %f", label, hiResPixelSize));
 
 			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
 			logger.fine(String.format("%s: Using positionIndex: %d", label, positionIndex));
 
 			double overlapPct = new Double(config.get("overlapPct").getValue());
 			logger.fine(String.format("%s: Using percentage overlap: %f", label, overlapPct));
+
+            // get invertXAxis and invertYAxis conf values
+            Config invertXAxisConf = config.get("invertXAxis");
+            boolean invertXAxis = invertXAxisConf == null || invertXAxisConf.equals("yes");
+            Config invertYAxisConf = config.get("invertYAxis");
+            boolean invertYAxis = invertYAxisConf == null || invertYAxisConf.equals("yes");
 
 			int imageWidth = MDUtils.getWidth(taggedImage.tags);
 			int imageHeight = MDUtils.getHeight(taggedImage.tags);
@@ -144,8 +150,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			    int roiWidth = roi.getX2()-roi.getX1()+1;
 			    int roiHeight = roi.getY2()-roi.getY1()+1;
 
-			    int tileWidth = (int)Math.floor(((double)cameraWidth * hiResPixelSizeUm) / pixelSizeUm);
-			    int tileHeight = (int)Math.floor(((double)cameraHeight * hiResPixelSizeUm) / pixelSizeUm);
+			    int tileWidth = (int)Math.floor(((double)cameraWidth * hiResPixelSize) / pixelSize);
+			    int tileHeight = (int)Math.floor(((double)cameraHeight * hiResPixelSize) / pixelSize);
 
 			    int tileXOverlap = (int)Math.floor((overlapPct / 100.0) * tileWidth);
 			    int tileYOverlap = (int)Math.floor((overlapPct / 100.0) * tileHeight);
@@ -173,8 +179,13 @@ public abstract class ROIFinder implements Module, ImageLogger {
                         StagePosition sp = new StagePosition();
                         sp.numAxes = 2;
                         sp.stageName = "XYStage";
-                        sp.x = x_stage-((tileX-(double)imageWidth/2.0)*pixelSizeUm);
-                        sp.y = y_stage-((tileY-(double)imageHeight/2.0)*pixelSizeUm);
+                        if (invertXAxis) {}
+                        sp.x = invertXAxis? 
+                        		x_stage-((tileX-(double)imageWidth/2.0)*pixelSize) :
+                        		x_stage+((tileX-(double)imageWidth/2.0)*pixelSize);
+                        sp.y = invertYAxis? 
+                        		y_stage-((tileY-(double)imageHeight/2.0)*pixelSize) :
+                        		y_stage+((tileY-(double)imageHeight/2.0)*pixelSize);
                         String mspLabel = String.format("%s: ROI=%d, tileX=%d, tileY=%d", label, roi.getId(), x, y);
                         msp.setProperty("stitchGroup", "ROI"+roi.getId());
                         msp.setProperty("ROI", new Integer(roi.getId()).toString());
@@ -289,14 +300,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
             public Config[] retrieve() {
             	List<Config> configs = new ArrayList<Config>();
 
-            	Double pixelSizeUm = (Double)dialog.pixelSizeUm.getValue();
-            	if (pixelSizeUm != null) {
-            	    configs.add(new Config(ROIFinder.this.moduleId, "pixelSizeUm", pixelSizeUm.toString()));
-            	}
-
-            	Double hiResPixelSizeUm = (Double)dialog.hiResPixelSizeUm.getValue();
-            	if (hiResPixelSizeUm != null) {
-            	    configs.add(new Config(ROIFinder.this.moduleId, "hiResPixelSizeUm", hiResPixelSizeUm.toString()));
+            	Double hiResPixelSize = (Double)dialog.hiResPixelSize.getValue();
+            	if (hiResPixelSize != null) {
+            	    configs.add(new Config(ROIFinder.this.moduleId, "hiResPixelSize", hiResPixelSize.toString()));
             	}
 
             	Double minRoiArea = (Double)dialog.minRoiArea.getValue();
@@ -316,11 +322,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
             		confs.put(c.getKey(), c);
             	}
 
-            	if (confs.containsKey("pixelSizeUm")) {
-            	    dialog.pixelSizeUm.setValue(new Double(confs.get("pixelSizeUm").getValue()));
-            	}
             	if (confs.containsKey("hiResPixelSizeUm")) {
-            	    dialog.hiResPixelSizeUm.setValue(new Double(confs.get("hiResPixelSizeUm").getValue()));
+            	    dialog.hiResPixelSize.setValue(new Double(confs.get("hiResPixelSize").getValue()));
             	}
             	if (confs.containsKey("minRoiArea")) {
             	    dialog.minRoiArea.setValue(new Double(confs.get("minRoiArea").getValue()));
@@ -334,13 +337,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
             public ValidationError[] validate() {
             	List<ValidationError> errors = new ArrayList<ValidationError>();
 
-            	Double pixelSizeUm = (Double)dialog.pixelSizeUm.getValue();
-            	if (pixelSizeUm == null || pixelSizeUm == 0.0) {
-            	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for pixelSizeUm"));
-            	}
-
-            	Double hiResPixelSizeUm = (Double)dialog.hiResPixelSizeUm.getValue();
-            	if (hiResPixelSizeUm == null || hiResPixelSizeUm == 0.0) {
+            	Double hiResPixelSize = (Double)dialog.hiResPixelSize.getValue();
+            	if (hiResPixelSize == null || hiResPixelSize == 0.0) {
             	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for hiResPixelSizeUm"));
             	}
 

@@ -569,6 +569,23 @@ public class SlideImager implements Module, ImageLogger {
                 if (((Double)slideImagerDialog.maxAutoFocus.getValue()).doubleValue() != 0.0) {
                     configs.add(new Config(moduleId, "maxAutoFocus", slideImagerDialog.maxAutoFocus.getValue().toString()));
                 }
+                if (((Double)slideImagerDialog.pixelSize.getValue()).doubleValue() != 0.0) {
+                    configs.add(new Config(moduleId, "pixelSize", slideImagerDialog.pixelSize.getValue().toString()));
+                }
+
+                if (slideImagerDialog.invertXAxisYes.isSelected()) {
+                	configs.add(new Config(moduleId, "invertXAxis", "yes"));
+                }
+                else if (slideImagerDialog.invertXAxisNo.isSelected()) {
+                	configs.add(new Config(moduleId, "invertXAxis", "no"));
+                }
+                
+                if (slideImagerDialog.invertYAxisYes.isSelected()) {
+                	configs.add(new Config(moduleId, "invertYAxis", "yes"));
+                }
+                else if (slideImagerDialog.invertYAxisNo.isSelected()) {
+                	configs.add(new Config(moduleId, "invertYAxis", "no"));
+                }
 
                 return configs.toArray(new Config[0]);
             }
@@ -602,6 +619,31 @@ public class SlideImager implements Module, ImageLogger {
                 if (conf.containsKey("maxAutoFocus")) {
                     slideImagerDialog.maxAutoFocus.setValue(new Double(conf.get("maxAutoFocus").getValue()));
                 }
+                if (conf.containsKey("pixelSize")) {
+                    slideImagerDialog.pixelSize.setValue(new Double(conf.get("pixelSize").getValue()));
+                }
+                
+                if (conf.containsKey("invertXAxis")) {
+                	if (conf.get("invertXAxis").equals("yes")) {
+                		slideImagerDialog.invertXAxisYes.setSelected(true);
+                		slideImagerDialog.invertXAxisNo.setSelected(false);
+                	}
+                	else if (conf.get("invertXAxis").equals("no")) {
+                		slideImagerDialog.invertXAxisYes.setSelected(false);
+                		slideImagerDialog.invertXAxisNo.setSelected(true);
+                	}
+                }
+
+                if (conf.containsKey("invertYAxis")) {
+                	if (conf.get("invertYAxis").equals("yes")) {
+                		slideImagerDialog.invertYAxisYes.setSelected(true);
+                		slideImagerDialog.invertYAxisNo.setSelected(false);
+                	}
+                	else if (conf.get("invertYAxis").equals("no")) {
+                		slideImagerDialog.invertYAxisYes.setSelected(false);
+                		slideImagerDialog.invertYAxisNo.setSelected(true);
+                	}
+                }
 
                 return slideImagerDialog;
             }
@@ -623,6 +665,10 @@ public class SlideImager implements Module, ImageLogger {
                 {
                     errors.add(new ValidationError(moduleId, 
                             "You must enter one of either a position list file, or a position list name."));
+                }
+                if ((Double)slideImagerDialog.pixelSize.getValue() <= 0.0) {
+                    errors.add(new ValidationError(moduleId, 
+                            "Pixel size must be greater than zero."));
                 }
 
                 return errors.toArray(new ValidationError[0]);
