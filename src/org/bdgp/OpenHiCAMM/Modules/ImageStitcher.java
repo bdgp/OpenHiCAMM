@@ -25,6 +25,7 @@ import org.bdgp.OpenHiCAMM.WorkflowRunner;
 import org.bdgp.OpenHiCAMM.DB.Acquisition;
 import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.Image;
+import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.TaskConfig;
@@ -67,6 +68,11 @@ public class ImageStitcher implements Module, ImageLogger {
     public void initialize(WorkflowRunner workflowRunner, String moduleId) {
         this.workflowRunner = workflowRunner;
         this.moduleId = moduleId;
+
+        // set initial configs
+        workflowRunner.getModuleConfig().insertOrUpdate(
+                new ModuleConfig(this.moduleId, "canStitchImages", "yes"), 
+                "id", "key");
     }
     
     public static class TaskTile {
