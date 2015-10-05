@@ -275,6 +275,11 @@ public class WorkflowDialog extends JDialog {
         btnViewReport = new JButton("View Report");
         btnViewReport.addActionListener(new ActionListener() {
         	public void actionPerformed(ActionEvent e) {
+            	if (!active) return;
+        	    if (WorkflowDialog.this.workflowRunner != null) {
+                    WorkflowReport workflowReport = new WorkflowReport(WorkflowDialog.this.workflowRunner);
+                    workflowReport.setVisible(true);
+        	    }
         	}
         });
         getContentPane().add(btnViewReport, "cell 1 6");
@@ -370,6 +375,7 @@ public class WorkflowDialog extends JDialog {
                 if (workflowInstances.size() > 0) {
                     initWorkflowRunner(false);
                 }
+                btnViewReport.setEnabled(this.workflowRunner != null);
                     
                 if (startModules.size() > 0) {
                     btnConfigure.setEnabled(true);
