@@ -1,5 +1,6 @@
 package org.bdgp.OpenHiCAMM;
 
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -140,4 +141,74 @@ public class Util {
         }
     }
 
+    /**
+     * Escape a java-style string. Adapted from Apache Commons.
+     * @param input string
+     * @return escaped string
+     */
+    public static String escapeJavaStyleString(String str) {
+        StringWriter out = new StringWriter();
+        if (str == null) {
+            return out.toString();
+        }
+        int sz;
+        sz = str.length();
+        for (int i = 0; i < sz; i++) {
+            char ch = str.charAt(i);
+
+            // handle unicode
+            if (ch > 0xfff) {
+                out.write("\\u" + Integer.toHexString(ch).toUpperCase());
+            } else if (ch > 0xff) {
+                out.write("\\u0" + Integer.toHexString(ch).toUpperCase());
+            } else if (ch > 0x7f) {
+                out.write("\\u00" + Integer.toHexString(ch).toUpperCase());
+            } else if (ch < 32) {
+                switch (ch) {
+                case '\b' :
+                    out.write('\\');
+                    out.write('b');
+                    break;
+                case '\n' :
+                    out.write('\\');
+                    out.write('n');
+                    break;
+                case '\t' :
+                    out.write('\\');
+                    out.write('t');
+                    break;
+                case '\f' :
+                    out.write('\\');
+                    out.write('f');
+                    break;
+                case '\r' :
+                    out.write('\\');
+                    out.write('r');
+                    break;
+                default :
+                    if (ch > 0xf) {
+                        out.write("\\u00" + Integer.toHexString(ch).toUpperCase());
+                    } else {
+                        out.write("\\u000" + Integer.toHexString(ch).toUpperCase());
+                    }
+                    break;
+                }
+            } else {
+                switch (ch) {
+                case '"' :
+                    out.write('\\');
+                    out.write('"');
+                    break;
+                case '\\' :
+                    out.write('\\');
+                    out.write('\\');
+                    break;
+                default :
+                    out.write(ch);
+                    break;
+                }
+            }
+        }
+        return out.toString();
+    }
 }
