@@ -2,6 +2,7 @@ package org.bdgp.OpenHiCAMM;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -470,12 +471,11 @@ public class WorkflowReport extends JFrame {
                                                     }
                                                 }
                                                 for (Task stitcherTask : stitcherTasks) {
-                                                    Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
-                                                            where("id", new Integer(stitcherTask.getId()).toString()).and("key", "imageId"));
-                                                    if (imageIdConf2 != null) {
+                                                    Config stitchedImageFile = this.workflowRunner.getTaskConfig().selectOne(
+                                                            where("id", new Integer(stitcherTask.getId()).toString()).and("key", "stitchedImageFile"));
+                                                    if (stitchedImageFile != null && new File(stitchedImageFile.getValue()).exists()) {
                                                         // Get a thumbnail of the image
-                                                        Image image2 = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf2.getValue())));
-                                                        ImagePlus imp = image2.getImagePlus(acqDao);
+                                                        ImagePlus imp = new ImagePlus(stitchedImageFile.getValue());
                                                         ImageProcessor ip = imp.getProcessor();
                                                         ip.setInterpolate(true);
                                                         imp.setProcessor(imp.getTitle(), ip.resize(
@@ -489,8 +489,9 @@ public class WorkflowReport extends JFrame {
                                                         Img(src->String.format("data:image/jpeg;base64,%s", Base64.encode(baos2.toByteArray())),
                                                                 width->imp.getWidth(),
                                                                 height->imp.getHeight(),
-                                                                title->image2.getName(),
-                                                                onClick->String.format("workflowReport.showImage(%d)", image2.getId()));
+                                                                title->stitchedImageFile.getValue(),
+                                                                onClick->String.format("workflowReport.showImageFile(%s)", 
+                                                                        Util.escapeJavaStyleString(stitchedImageFile.getValue())));
                                                     }
                                                 }
                                             });
@@ -506,11 +507,15 @@ public class WorkflowReport extends JFrame {
 	}
 	
 	public void showImage(int imageId) {
-        // Get a thumbnail of the image
         Dao<Image> imageDao = this.workflowRunner.getInstanceDb().table(Image.class);
         Dao<Acquisition> acqDao = this.workflowRunner.getInstanceDb().table(Acquisition.class);
         Image image = imageDao.selectOneOrDie(where("id", imageId));
         ImagePlus imp = image.getImagePlus(acqDao);
+        imp.show();
+	}
+
+	public void showImageFile(String imagePath) {
+        ImagePlus imp = new ImagePlus(imagePath);
         imp.show();
 	}
 	
