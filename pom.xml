@@ -146,9 +146,9 @@
   </repositories>
   <dependencies>
     <dependency>
-      <groupId>gov.nih.imagej</groupId>
-      <artifactId>imagej</artifactId>
-      <version>1.47</version>
+      <groupId>net.imagej</groupId>
+      <artifactId>ij</artifactId>
+      <version>1.50b</version>
     </dependency>
     <dependency>
       <groupId>MicroManager</groupId>
