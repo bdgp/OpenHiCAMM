@@ -77,8 +77,10 @@ public class Tag {
 		this.attr(attrs);
 		
 		// if there is a last tag, write it, then set the lastTag to this tag.
-		writeLastTag();
-        Tag.lastTag.set(this);
+		if (parentTag != null) {
+            writeLastTag();
+            Tag.lastTag.set(this);
+		}
 	}
 	
 	private static void writeLastTag() {
@@ -86,6 +88,7 @@ public class Tag {
 		if (lastTag != null) {
             lastTag.write();
 		}
+        Tag.lastTag.remove();
 	}
 	
 	public Tag attr(String key, Object value) {
@@ -167,6 +170,7 @@ public class Tag {
                         Tag.parentTag.set(this);
                         Tag.lastTag.set(null);
                         block.block();
+                        writeLastTag();
                     }
                     finally {
                         Tag.parentTag.set(parentTag);
