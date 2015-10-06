@@ -91,6 +91,11 @@ public class SlideImager implements Module, ImageLogger {
             this.engine = MMStudio.getInstance().getAcquisitionEngine();
             this.acqControlDlg = new AcqControlDlg(this.engine, prefs, this.script, options);
         }
+
+        // set initial configs
+        workflowRunner.getModuleConfig().insertOrUpdate(
+                new ModuleConfig(this.moduleId, "canImageSlides", "yes"), 
+                "id", "key");
     }
     
     /**
