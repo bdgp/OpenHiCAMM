@@ -322,7 +322,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
             		confs.put(c.getKey(), c);
             	}
 
-            	if (confs.containsKey("hiResPixelSizeUm")) {
+            	if (confs.containsKey("hiResPixelSize")) {
             	    dialog.hiResPixelSize.setValue(new Double(confs.get("hiResPixelSize").getValue()));
             	}
             	if (confs.containsKey("minRoiArea")) {
@@ -339,7 +339,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
             	Double hiResPixelSize = (Double)dialog.hiResPixelSize.getValue();
             	if (hiResPixelSize == null || hiResPixelSize == 0.0) {
-            	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for hiResPixelSizeUm"));
+            	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for hiResPixelSize"));
             	}
 
             	Double minRoiArea = (Double)dialog.minRoiArea.getValue();
