@@ -283,6 +283,7 @@ public class WorkflowDialog extends JDialog {
         	}
         });
         getContentPane().add(btnViewReport, "cell 1 6");
+        btnViewReport.setEnabled(false);
         
         editWorkflowButton.addActionListener(new ActionListener() {
             @Override
