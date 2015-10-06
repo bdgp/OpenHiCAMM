@@ -116,23 +116,23 @@ public class Tag {
 	}
 	
 	public Tag text(String text) {
-	    this.blocks.add(()->Tags.text(text));
+	    this.blocks.add(()->T.text(text));
 	    return this;
 	}
 	public Tag raw(String text) {
-	    this.blocks.add(()->Tags.raw(text));
+	    this.blocks.add(()->T.raw(text));
 	    return this;
 	}
 	public Tag comment(String text) {
-	    this.blocks.add(()->Tags.comment(text));
+	    this.blocks.add(()->T.comment(text));
 	    return this;
 	}
 	public Tag doctype() {
-	    this.blocks.add(()->Tags.doctype());
+	    this.blocks.add(()->T.doctype());
 	    return this;
 	}
 	public Tag doctype(String type) {
-	    this.blocks.add(()->Tags.doctype(type));
+	    this.blocks.add(()->T.doctype(type));
 	    return this;
 	}
 
@@ -238,7 +238,7 @@ public class Tag {
 	    return stringWriter.toString();
 	}
 
-	public static class Tags {
+	public static class T {
         public static void text(String text) {
             writeLastTag();
             Tag parentTag = Tag.parentTag.get();
