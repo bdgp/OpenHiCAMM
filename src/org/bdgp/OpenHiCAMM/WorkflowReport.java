@@ -52,10 +52,10 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
-import jdk.nashorn.api.scripting.JSObject;
+import netscape.javascript.JSObject;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
-import static org.bdgp.OpenHiCAMM.Tag.*;
+import static org.bdgp.OpenHiCAMM.Tag.Tags.*;
 
 @SuppressWarnings("serial")
 public class WorkflowReport extends JFrame {
@@ -103,9 +103,17 @@ public class WorkflowReport extends JFrame {
 	    // This is the starting SlideImager module.
 		return Html().with(()->{
 			Body().with(()->{
-                List<WorkflowModule> slideImagers = this.workflowRunner.getWorkflow().select(where("moduleName", SlideImager.class.getName()));
-                for (WorkflowModule slideImager : slideImagers) {
-                    if (!workflowRunner.getTaskConfig().select(where("moduleId", slideImager.getId()).and("key", "posListFile")).isEmpty()) {
+                for (Config canImageSlides : this.workflowRunner.getModuleConfig().select(
+                        where("key","canImageSlides").
+                        and("value", "yes"))) 
+                {
+                    WorkflowModule slideImager = this.workflowRunner.getWorkflow().selectOneOrDie(
+                            where("id", canImageSlides.getId()));
+
+                    if (workflowRunner.getModuleConfig().selectOne(
+                            where("id", slideImager.getId()).
+                            and("key", "posListModuleId")) == null) 
+                    {
                         runReport(slideImager.getId());
                     }
                 }
@@ -117,30 +125,42 @@ public class WorkflowReport extends JFrame {
 	    WorkflowModule startModule = this.workflowRunner.getWorkflow().selectOneOrDie(where("id", startModuleId));
 
 	    // get the loader module
-	    // get the ROIFinder module(s)
 	    WorkflowModule loaderModule = null;
-	    List<WorkflowModule> roiFinderModules = new ArrayList<WorkflowModule>();
 	    if (startModule.getParentId() != null) {
-	        WorkflowModule wm = this.workflowRunner.getWorkflow().selectOneOrDie(where("id", startModule.getParentId()));
+	        WorkflowModule wm = this.workflowRunner.getWorkflow().selectOneOrDie(
+	                where("id", startModule.getParentId()));
 	        if (this.workflowRunner.getModuleConfig().selectOne(
 	                where("id", wm.getId()).and("key", "canLoadSlides").and("value", "yes")) != null) 
 	        {
 	            loaderModule = wm;
 	        }
-	        if (this.workflowRunner.getModuleConfig().selectOne(
-	                where("id", wm.getId()).and("key", "canProduceROIs").and("value", "yes")) != null) 
-	        {
-	            roiFinderModules.add(wm);
-	        }
+	    }
+
+	    // get the ROIFinder module(s)
+	    List<WorkflowModule> roiFinderModules = new ArrayList<WorkflowModule>();
+	    for (WorkflowModule wm : this.workflowRunner.getWorkflow().select(where("parentId", startModuleId))) {
+            if (this.workflowRunner.getModuleConfig().selectOne(
+                    where("id", wm.getId()).
+                    and("key", "canProduceROIs").
+                    and("value", "yes")) != null) 
+            {
+                roiFinderModules.add(wm);
+            }
 	    }
 
 	    // get the associated hi res ROI slide imager modules for each ROI finder module
 	    Map<WorkflowModule,List<WorkflowModule>> roiImagers = new HashMap<WorkflowModule,List<WorkflowModule>>();
 	    for (WorkflowModule roiFinderModule : roiFinderModules) {
-            List<WorkflowModule> slideImagers = this.workflowRunner.getWorkflow().select(where("moduleName", SlideImager.class.getName()));
-            for (WorkflowModule slideImager : slideImagers) {
+            for (Config canImageSlides : this.workflowRunner.getModuleConfig().select(
+                    where("key","canImageSlides").
+                    and("value", "yes"))) 
+            {
+                WorkflowModule slideImager = this.workflowRunner.getWorkflow().selectOneOrDie(
+                        where("id", canImageSlides.getId()));
                 if (!workflowRunner.getTaskConfig().select(
-                        where("moduleId", slideImager.getId()).and("key", "posListModuleId").and("value", roiFinderModule.getId())).isEmpty()) 
+                        where("moduleId", slideImager.getId()).
+                        and("key", "posListModuleId").
+                        and("value", roiFinderModule.getId())).isEmpty()) 
                 {
                     if (!roiImagers.containsKey(roiFinderModule)) {
                         roiImagers.put(roiFinderModule, new ArrayList<WorkflowModule>());
@@ -172,7 +192,7 @@ public class WorkflowReport extends JFrame {
 	    		slideId = "slide";
 	    	}
 
-            H1().with(()->text(
+            H1().text(
             		String.format("SlideImager %s%s", 
             				startModuleId, 
             				loaderConfig.containsKey("slideId")? 
@@ -183,10 +203,10 @@ public class WorkflowReport extends JFrame {
             												p.getPoolId(), p.getCartridgePosition(), p.getSlidePosition())).
             										collect(Collectors.joining("; ")) 
             										: "") 
-            						: "")));
+            						: ""));
 	    }
 	    else {
-            H1().with(()->text(String.format("SlideImager %s", startModuleId)));
+            H1().text(String.format("SlideImager %s", startModuleId));
             slide = null;
             slideId = "slide";
 	    }
@@ -344,7 +364,7 @@ public class WorkflowReport extends JFrame {
                 List<ROI> rois = roiDao.select(where("imageId", image.getId())); 
                 Collections.sort(rois, (a,b)->a.getId()-b.getId());
                 for (ROI roi : rois) {
-                    H2().with(()->text(String.format("Image %s, ROI %s", image, roi)));
+                    H2().text(String.format("Image %s, ROI %s", image, roi));
                     
                     // go through each attached SlideImager and look for MSP's with an ROI property
                     // that matches this ROI's ID.
@@ -399,9 +419,9 @@ public class WorkflowReport extends JFrame {
                                 
                                 Table().with(()->{
                                     Thead().with(()->{
-                                        Th().with(()->{
-                                            Td().with(()->text("Tiled ROI Images"));
-                                            Td().with(()->text("Stitched ROI Image"));
+                                        Tr().with(()->{
+                                            Th().text("Tiled ROI Images");
+                                            Th().text("Stitched ROI Image");
                                         });
                                     });
                                     Tbody().with(()->{
