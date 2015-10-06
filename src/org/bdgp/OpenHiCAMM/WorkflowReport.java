@@ -240,8 +240,8 @@ public class WorkflowReport extends JFrame {
         }
         Double minX = minX_;
         Double minY = minY_;
-        int slideWidthPx = (int)Math.floor(((maxX - minX_) / pixelSize) + imageWidth);
-        int slideHeightPx = (int)Math.floor(((maxY - minY_) / pixelSize) + imageHeight);
+        int slideWidthPx = (int)Math.floor(((maxX - minX) / pixelSize) + imageWidth);
+        int slideHeightPx = (int)Math.floor(((maxY - minY) / pixelSize) + imageHeight);
         
         // this is the scale factor for creating the thumbnail images
         double scaleFactor = SLIDE_PREVIEW_WIDTH / slideWidthPx;
