@@ -2,6 +2,7 @@ package org.bdgp.OpenHiCAMM;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.io.Writer;
@@ -10,8 +11,11 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A lightweight HTML templating DSL using Java 8 lambdas.
@@ -19,13 +23,14 @@ import java.util.Set;
  */
 public class Tag {
 	private String tagName;
-	private List<Attr> attrs;
+	private Map<String,String> attrs;
 	private List<Block> blocks;
-	
-    private static ThreadLocal<Writer> writer = new ThreadLocal<Writer>();
-	private static ThreadLocal<StringBuffer> writeBuffer = new ThreadLocal<StringBuffer>();
-	private static ThreadLocal<String> indent = new ThreadLocal<String>();
-	private static ThreadLocal<String> currentIndent = new ThreadLocal<String>();
+	private Writer writer;
+	private String indent;
+	private String currentIndent;
+
+	private static ThreadLocal<Tag> lastTag = new ThreadLocal<Tag>();
+	private static ThreadLocal<Tag> parentTag = new ThreadLocal<Tag>();
 	
 	public static Set<String> selfClosingTags = new HashSet<String>();
 	static {
@@ -49,91 +54,137 @@ public class Tag {
         doctypes.put("ce", "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"ce-html-1.0-transitional.dtd\">");
 	}
 
+	@FunctionalInterface
 	public static interface Attr {
 		public Object attr(String key);
 	}
+	@FunctionalInterface
 	public static interface Block {
 		public void block();
 	}
 	
 	public Tag(String tagName, Attr... attrs) {
 		this.tagName = tagName;
-		this.attrs = Arrays.asList(attrs);
+		this.attrs = new LinkedHashMap<String,String>();
 		this.blocks = new ArrayList<Block>();
 
-		try { this.write(); } 
-		catch (IOException e) {throw new RuntimeException(e);}
+	    Tag parentTag = Tag.parentTag.get();
+        this.indent = parentTag != null? parentTag.indent : null;
+        this.currentIndent = parentTag != null? 
+                String.format("%s%s", parentTag.currentIndent, this.indent != null? this.indent : "") : null;
+        this.writer = parentTag != null && parentTag.writer != null? parentTag.writer : null;
+
+		this.attr(attrs);
+		
+		// if there is a last tag, write it, then set the lastTag to this tag.
+		writeLastTag();
+        Tag.lastTag.set(this);
 	}
 	
-	private void write() throws IOException {
-        Writer writer = Tag.writer.get();
-        if (writer != null) {
-            StringBuffer sb = Tag.writeBuffer.get();
-            writer.write(sb.toString());
-            sb.setLength(0);
-
-            StringBuilder attrs = new StringBuilder();
-            for (int i=0; i<this.attrs.size(); ++i) {
-                try { 
-                    String attr = this.attrs.get(i).getClass().getDeclaredMethod("attr", String.class).getParameters()[0].getName();
-                    attr = attr.replaceFirst("^_", "");
-                    attr = attr.replaceFirst("_$", "");
-                    attr = attr.replaceAll("_", "-");
-                    attr = attr.toLowerCase();
-                    attrs.append(String.format("%s=\"%s\"", escape(attr), escape(this.attrs.get(i).attr(attr))));
-                    if (i < this.attrs.size()-1) attrs.append(" ");
-                } 
-                catch (NoSuchMethodException | SecurityException e) {throw new RuntimeException(e);}
-            }
-
-            writer.write(String.format("%s<%s%s", 
-                    currentIndent.get() != null? currentIndent.get() : "", 
-                    escape(this.tagName), 
-                    attrs)); 
-
-            if (Tag.selfClosingTags.contains(this.tagName)) {
-                sb.append(String.format(" />%s", indent.get() != null? String.format("%n") : ""));
-            }
-            else {
-                sb.append(String.format("></%s>%s", escape(this.tagName), indent.get() != null? String.format("%n") : ""));
-            }
-        }
+	private static void writeLastTag() {
+		Tag lastTag = Tag.lastTag.get();
+		if (lastTag != null) {
+            lastTag.write();
+		}
 	}
 	
-	private void writeBlock(Block block) throws IOException {
-        Writer writer = Tag.writer.get();
-        if (this.blocks.size() > 0 && writer != null) {
-            StringBuffer sb = Tag.writeBuffer.get();
-            sb.setLength(0);
-            writer.write(String.format(">%s", indent.get() != null? String.format("%n") : ""));
-
-            String currentIndent = Tag.currentIndent.get();
-            String indent = Tag.indent.get();
-            if (indent != null) Tag.currentIndent.set(String.format("%s%s", Tag.currentIndent.get(), Tag.indent.get()));
+	public Tag attr(String key, Object value) {
+	    this.attrs.put(key, value.toString());
+	    return this;
+	}
+	
+	public Tag attr(Attr... attrs) {
+		for (Attr attr : attrs) {
             try {
-                block.block();
-                Tag.writer.get().write(Tag.writeBuffer.get().toString());
-            }
-            finally {
-                Tag.writeBuffer.get().setLength(0);
-                Tag.currentIndent.set(currentIndent);
-            }
-
-            writer.write(String.format("%s</%s>%s", 
-                    currentIndent != null? currentIndent : "", 
-                    tagName, 
-                    indent != null? String.format("%n") : "")); 
-        }
+                String key = attr.getClass().getDeclaredMethod("attr", String.class).getParameters()[0].getName();
+                key = key.replaceFirst("^_", "");
+                key = key.replaceFirst("_$", "");
+                key = key.replaceAll("_", "-");
+                key = key.toLowerCase();
+                this.attrs.put(key, attr.attr(key).toString());
+            } catch (NoSuchMethodException | SecurityException e) { throw new RuntimeException(e); }
+		}
+	    return this;
 	}
 	
 	public Tag with(Block block) {
 	    this.blocks.add(block);
-
-	    try { this.writeBlock(block); } 
-	    catch (IOException e) {throw new RuntimeException(e);}
 	    return this;
 	}
+	
+	public Tag pass() {
+	    this.writer = nullWriter;
+	    return this;
+	}
+	
+	public Tag indent(String indent) {
+	    this.indent = indent;
+	    Tag parentTag = Tag.parentTag.get();
+        this.currentIndent = parentTag != null && this.indent != null? 
+                String.format("%s%s", parentTag.currentIndent, this.indent) : null;
+	    return this;
+	}
+	public Tag indent(boolean indented) {
+	    return indent(indented? "  " : null);
+	}
+	public Tag indent(int indented) {
+	    return indent(indented > 0? Stream.generate(()->" ").limit(indented).collect(Collectors.joining()) : null);
+	}
 
+	public Tag currentIndent(String currentIndent) {
+	    this.currentIndent = currentIndent;
+	    return this;
+	}
+	
+	public Tag writer(Writer writer) {
+	    this.writer = writer;
+	    return this;
+	}
+	
+	public Tag write() {
+        Tag lastTag = Tag.lastTag.get();
+	    Tag parentTag = Tag.parentTag.get();
+        try {
+            if (writer != null) {
+                writer.write(String.format("%s<%s", 
+                        currentIndent != null? currentIndent : "", 
+                        escape(this.tagName))); 
+
+                for (Map.Entry<String,String> entry : this.attrs.entrySet()) {
+                    writer.write(String.format(" %s=\"%s\"", escape(entry.getKey()), escape(entry.getValue())));
+                }
+            }
+
+            if (writer != null && Tag.selfClosingTags.contains(this.tagName.toLowerCase()) && this.blocks.isEmpty()) {
+                writer.write(String.format(" />%s", indent != null? String.format("%n") : ""));
+            }
+            else {
+                if (writer != null) {
+                    writer.write(String.format(">%s", indent != null? String.format("%n") : ""));
+                }
+                for (Block block : this.blocks) {
+                    try {
+                        Tag.parentTag.set(this);
+                        Tag.lastTag.set(null);
+                        block.block();
+                    }
+                    finally {
+                        Tag.parentTag.set(parentTag);
+                        Tag.lastTag.set(lastTag);
+                    }
+                }
+                if (writer != null) {
+                    writer.write(String.format("%s</%s>%s", 
+                            currentIndent != null? currentIndent : "",
+                            escape(this.tagName), 
+                            indent != null? String.format("%n") : ""));
+                }
+            }
+        }
+        catch (IOException e) { throw new RuntimeException(e); }
+        return this;
+	}
+	
 	public static String escape(Object obj) {
 	    String str = obj.toString();
 	    str = str.replaceAll("\"", "&quot;");
@@ -144,105 +195,52 @@ public class Tag {
 	}
 
 	public void write(Writer writer) {
-	    this.write(writer,"  ");
+	    this.writer = writer;
+	    this.write();
 	}
-	public void write(Writer writer, String indent) {
-	    Tag.writeBuffer.set(new StringBuffer());
-	    Tag.writer.set(writer);
-	    Tag.indent.set(indent);
-	    Tag.currentIndent.set(indent != null? "" : null);
-	    
-	    try {
-            this.write();
-            for (Block block : this.blocks) {
-                this.writeBlock(block);  
-            }
-            Tag.writer.get().write(Tag.writeBuffer.get().toString());
-        } 
-	    catch (IOException e) {throw new RuntimeException(e);}
-	    finally {
-            Tag.writeBuffer.get().setLength(0);
-            Tag.writer.set(null);
-            Tag.indent.set(null);
-            Tag.currentIndent.set(null);
-	    }
-	}
+
 	public void print() {
-	    this.write(new BufferedWriter(new OutputStreamWriter(System.out)));
+	    Writer writer = new BufferedWriter(new OutputStreamWriter(System.out)); 
+	    this.write(writer);
 	}
-	public void print(String indent) {
-	    this.write(new BufferedWriter(new OutputStreamWriter(System.out)), indent);
-	}
+
 	public String toString() {
 	    StringWriter stringWriter = new StringWriter();
 	    this.write(stringWriter);
 	    return stringWriter.toString();
 	}
-	public String toString(String indent) {
-	    StringWriter stringWriter = new StringWriter();
-	    this.write(stringWriter, indent);
-	    return stringWriter.toString();
-	}
 
 	public static void text(String text) {
-	    if (Tag.writer.get() != null) {
-            Writer writer = Tag.writer.get();
-            StringBuffer sb = Tag.writeBuffer.get();
-	        try { 
-                writer.write(sb.toString());
-                sb.setLength(0);
-	            Tag.writer.get().write(escape(text)); 
-            } 
-	        catch (IOException e) {throw new RuntimeException(e);}
-	        finally {
-                sb.setLength(0);
-	        }
+		writeLastTag();
+	    Tag parentTag = Tag.parentTag.get();
+	    if (parentTag != null && parentTag.writer != null) {
+            try { parentTag.writer.write(escape(text)); } 
+            catch (IOException e) {throw new RuntimeException(e);}
 	    }
 	}
 	public static void raw(String text) {
-	    if (Tag.writer.get() != null) {
-            Writer writer = Tag.writer.get();
-            StringBuffer sb = Tag.writeBuffer.get();
-	        try { 
-                writer.write(sb.toString());
-                sb.setLength(0);
-	            Tag.writer.get().write(text);
-            } 
-	        catch (IOException e) {throw new RuntimeException(e);}
-	        finally {
-                sb.setLength(0);
-	        }
+		writeLastTag();
+	    Tag parentTag = Tag.parentTag.get();
+	    if (parentTag != null && parentTag.writer != null) {
+            try { parentTag.writer.write(text); } 
+            catch (IOException e) {throw new RuntimeException(e);}
 	    }
 	}
 	public static void comment(String text) {
-	    if (Tag.writer.get() != null) {
-            Writer writer = Tag.writer.get();
-            StringBuffer sb = Tag.writeBuffer.get();
-	        try { 
-                writer.write(sb.toString());
-                sb.setLength(0);
-	            Tag.writer.get().write(String.format("<!--%s-->", escape(text)));
-            } 
+		writeLastTag();
+	    Tag parentTag = Tag.parentTag.get();
+	    if (parentTag != null && parentTag.writer != null) {
+	        try { parentTag.writer.write(String.format("<!--%s-->", escape(text))); } 
 	        catch (IOException e) {throw new RuntimeException(e);}
-	        finally {
-                sb.setLength(0);
-	        }
 	    }
 	}
 	public static void doctype() { doctype("5"); }
 	public static void doctype(String type) {
-	    if (Tag.writer.get() != null) {
-            Writer writer = Tag.writer.get();
-            StringBuffer sb = Tag.writeBuffer.get();
-	        try { 
-                writer.write(sb.toString());
-                sb.setLength(0);
-	            Tag.writer.get().write(doctypes.get(type));
-            } 
+		writeLastTag();
+	    Tag parentTag = Tag.parentTag.get();
+	    if (parentTag != null && parentTag.writer != null) {
+	        try { parentTag.writer.write(doctypes.get(type)); } 
 	        catch (IOException e) {throw new RuntimeException(e);}
-	        finally {
-                sb.setLength(0);
-	        }
 	    }
 	}
 
@@ -355,4 +353,8 @@ public class Tag {
     public static Tag Var(Attr... attrs) {return new Tag("var", attrs);}
     public static Tag Video(Attr... attrs) {return new Tag("video", attrs);}
     public static Tag Wbr(Attr... attrs) {return new Tag("wbr", attrs);}
+
+	public static Writer nullWriter = new OutputStreamWriter(new OutputStream() {
+	    @Override public void write(int b) throws IOException { }
+	});
 }
