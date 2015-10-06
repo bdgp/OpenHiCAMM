@@ -100,6 +100,7 @@ public class Tag {
 		for (Attr attr : attrs) {
             try {
                 String key = attr.getClass().getDeclaredMethod("attr", String.class).getParameters()[0].getName();
+                key = key.toLowerCase();
                 this.attrs.put(key, attr.attr(key).toString());
             } catch (NoSuchMethodException | SecurityException e) { throw new RuntimeException(e); }
 		}
