@@ -478,9 +478,12 @@ public class WorkflowReport extends JFrame {
                                                         ImagePlus imp = new ImagePlus(stitchedImageFile.getValue());
                                                         ImageProcessor ip = imp.getProcessor();
                                                         ip.setInterpolate(true);
+
+                                                        double stitchScaleFactor = ROI_GRID_PREVIEW_WIDTH / imp.getWidth();
+                                                        int stitchPreviewHeight = (int)Math.floor(imp.getHeight() * stitchScaleFactor);
                                                         imp.setProcessor(imp.getTitle(), ip.resize(
                                                                 ROI_GRID_PREVIEW_WIDTH, 
-                                                                gridPreviewHeight));
+                                                                stitchPreviewHeight));
                                                         
                                                         // write the stitched thumbnail as an embedded HTML image.
                                                         ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
