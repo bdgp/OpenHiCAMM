@@ -63,7 +63,7 @@ public class Tag {
 		public void block();
 	}
 	
-	public Tag(String tagName, Attr... attrs) {
+	public Tag(String tagName, Object... texts) {
 		this.tagName = tagName;
 		this.attrs = new LinkedHashMap<String,String>();
 		this.blocks = new ArrayList<Block>();
@@ -77,7 +77,9 @@ public class Tag {
                 null;
         this.writer = parentTag != null && parentTag.writer != null? parentTag.writer : null;
 
-		this.attr(attrs);
+        for (Object text : texts) {
+            this.blocks.add(()->T.text(text.toString()));
+        }
 		
 		// if there is a last tag, write it, then set the lastTag to this tag.
 		if (parentTag != null) {
@@ -99,32 +101,21 @@ public class Tag {
 	    return this;
 	}
 	
-	public Tag attr(Attr... attrs) {
-		for (Attr attr : attrs) {
-            try {
-                String key = attr.getClass().getDeclaredMethod("attr", String.class).getParameters()[0].getName();
-                key = key.toLowerCase();
-                this.attrs.put(key, attr.attr(key).toString());
-            } catch (NoSuchMethodException | SecurityException e) { throw new RuntimeException(e); }
-		}
-	    return this;
-	}
-	
 	public Tag with(Block block) {
 	    this.blocks.add(block);
 	    return this;
 	}
 	
-	public Tag text(String text) {
-	    this.blocks.add(()->T.text(text));
+	public Tag text(Object text) {
+	    this.blocks.add(()->T.text(text.toString()));
 	    return this;
 	}
-	public Tag raw(String text) {
-	    this.blocks.add(()->T.raw(text));
+	public Tag raw(Object text) {
+	    this.blocks.add(()->T.raw(text.toString()));
 	    return this;
 	}
-	public Tag comment(String text) {
-	    this.blocks.add(()->T.comment(text));
+	public Tag comment(Object text) {
+	    this.blocks.add(()->T.comment(text.toString()));
 	    return this;
 	}
 	public Tag doctype() {
@@ -153,6 +144,9 @@ public class Tag {
 	}
 	public Tag indent(boolean indented) {
 	    return indent(indented? "  " : null);
+	}
+	public Tag indent() {
+	    return indent(true);
 	}
 	public Tag indent(int indented) {
 	    return indent(indented > 0? Stream.generate(()->" ").limit(indented).collect(Collectors.joining()) : null);
@@ -215,10 +209,10 @@ public class Tag {
 	
 	public static String escape(Object obj) {
 	    String str = obj.toString();
+	    str = str.replaceAll("&", "&amp;");
 	    str = str.replaceAll("\"", "&quot;");
 	    str = str.replaceAll(">", "&gt;");
 	    str = str.replaceAll("<", "&lt;");
-	    str = str.replaceAll("&", "&amp;");
 	    return str;
 	}
 
@@ -243,7 +237,11 @@ public class Tag {
             writeLastTag();
             Tag parentTag = Tag.parentTag.get();
             if (parentTag != null && parentTag.writer != null) {
-                try { parentTag.writer.write(escape(text)); } 
+                String indent = parentTag.currentIndent != null && parentTag.indent != null? 
+                        String.format("%s%s", parentTag.currentIndent, parentTag.indent) : "";
+                String newline = parentTag.currentIndent != null && parentTag.indent != null? 
+                        String.format("%n") : "";
+                try { parentTag.writer.write(String.format("%s%s%s", indent, escape(text), newline)); } 
                 catch (IOException e) {throw new RuntimeException(e);}
             }
         }
@@ -259,7 +257,11 @@ public class Tag {
             writeLastTag();
             Tag parentTag = Tag.parentTag.get();
             if (parentTag != null && parentTag.writer != null) {
-                try { parentTag.writer.write(String.format("<!--%s-->", escape(text))); } 
+                String indent = parentTag.currentIndent != null && parentTag.indent != null? 
+                        String.format("%s%s", parentTag.currentIndent, parentTag.indent) : "";
+                String newline = parentTag.currentIndent != null && parentTag.indent != null? 
+                        String.format("%n") : "";
+                try { parentTag.writer.write(String.format("%s<!--%s-->%s", indent, escape(text), newline)); } 
                 catch (IOException e) {throw new RuntimeException(e);}
             }
         }
@@ -268,120 +270,124 @@ public class Tag {
             writeLastTag();
             Tag parentTag = Tag.parentTag.get();
             if (parentTag != null && parentTag.writer != null) {
-                try { parentTag.writer.write(doctypes.get(type)); } 
+                String indent = parentTag.currentIndent != null && parentTag.indent != null? 
+                        String.format("%s%s", parentTag.currentIndent, parentTag.indent) : "";
+                String newline = parentTag.currentIndent != null && parentTag.indent != null? 
+                        String.format("%n") : "";
+                try { parentTag.writer.write(String.format("%s%s%s", indent, doctypes.get(type), newline)); } 
                 catch (IOException e) {throw new RuntimeException(e);}
             }
         }
 
-        public static Tag tag(String tagName, Attr... args) {return new Tag(tagName, args);}
-        public static Tag A(Attr... attrs) {return new Tag("a", attrs);}
-        public static Tag Abbr(Attr... attrs) {return new Tag("abbr", attrs);}
-        public static Tag Address(Attr... attrs) {return new Tag("address", attrs);}
-        public static Tag Area(Attr... attrs) {return new Tag("area", attrs);}
-        public static Tag Article(Attr... attrs) {return new Tag("article", attrs);}
-        public static Tag Aside(Attr... attrs) {return new Tag("aside", attrs);}
-        public static Tag Audio(Attr... attrs) {return new Tag("audio", attrs);}
-        public static Tag B(Attr... attrs) {return new Tag("b", attrs);}
-        public static Tag Base(Attr... attrs) {return new Tag("base", attrs);}
-        public static Tag Bdi(Attr... attrs) {return new Tag("bdi", attrs);}
-        public static Tag Bdo(Attr... attrs) {return new Tag("bdo", attrs);}
-        public static Tag Blockquote(Attr... attrs) {return new Tag("blockquote", attrs);}
-        public static Tag Body(Attr... attrs) {return new Tag("body", attrs);}
-        public static Tag Br(Attr... attrs) {return new Tag("br", attrs);}
-        public static Tag Button(Attr... attrs) {return new Tag("button", attrs);}
-        public static Tag Canvas(Attr... attrs) {return new Tag("canvas", attrs);}
-        public static Tag Caption(Attr... attrs) {return new Tag("caption", attrs);}
-        public static Tag Cite(Attr... attrs) {return new Tag("cite", attrs);}
-        public static Tag Code(Attr... attrs) {return new Tag("code", attrs);}
-        public static Tag Col(Attr... attrs) {return new Tag("col", attrs);}
-        public static Tag Colgroup(Attr... attrs) {return new Tag("colgroup", attrs);}
-        public static Tag Command(Attr... attrs) {return new Tag("command", attrs);}
-        public static Tag Datalist(Attr... attrs) {return new Tag("datalist", attrs);}
-        public static Tag Dd(Attr... attrs) {return new Tag("dd", attrs);}
-        public static Tag Del(Attr... attrs) {return new Tag("del", attrs);}
-        public static Tag Details(Attr... attrs) {return new Tag("details", attrs);}
-        public static Tag Dfn(Attr... attrs) {return new Tag("dfn", attrs);}
-        public static Tag Div(Attr... attrs) {return new Tag("div", attrs);}
-        public static Tag Dl(Attr... attrs) {return new Tag("dl", attrs);}
-        public static Tag Dt(Attr... attrs) {return new Tag("dt", attrs);}
-        public static Tag Em(Attr... attrs) {return new Tag("em", attrs);}
-        public static Tag Embed(Attr... attrs) {return new Tag("embed", attrs);}
-        public static Tag Fieldset(Attr... attrs) {return new Tag("fieldset", attrs);}
-        public static Tag Figcaption(Attr... attrs) {return new Tag("figcaption", attrs);}
-        public static Tag Figure(Attr... attrs) {return new Tag("figure", attrs);}
-        public static Tag Footer(Attr... attrs) {return new Tag("footer", attrs);}
-        public static Tag Form(Attr... attrs) {return new Tag("form", attrs);}
-        public static Tag H1(Attr... attrs) {return new Tag("h1", attrs);}
-        public static Tag H2(Attr... attrs) {return new Tag("h2", attrs);}
-        public static Tag H3(Attr... attrs) {return new Tag("h3", attrs);}
-        public static Tag H4(Attr... attrs) {return new Tag("h4", attrs);}
-        public static Tag H5(Attr... attrs) {return new Tag("h5", attrs);}
-        public static Tag H6(Attr... attrs) {return new Tag("h6", attrs);}
-        public static Tag Head(Attr... attrs) {return new Tag("head", attrs);}
-        public static Tag Header(Attr... attrs) {return new Tag("header", attrs);}
-        public static Tag Hgroup(Attr... attrs) {return new Tag("hgroup", attrs);}
-        public static Tag Hr(Attr... attrs) {return new Tag("hr", attrs);}
-        public static Tag Html(Attr... attrs) {return new Tag("html", attrs);}
-        public static Tag I(Attr... attrs) {return new Tag("i", attrs);}
-        public static Tag Iframe(Attr... attrs) {return new Tag("iframe", attrs);}
-        public static Tag Img(Attr... attrs) {return new Tag("img", attrs);}
-        public static Tag Input(Attr... attrs) {return new Tag("input", attrs);}
-        public static Tag Ins(Attr... attrs) {return new Tag("ins", attrs);}
-        public static Tag Kbd(Attr... attrs) {return new Tag("kbd", attrs);}
-        public static Tag Keygen(Attr... attrs) {return new Tag("keygen", attrs);}
-        public static Tag Label(Attr... attrs) {return new Tag("label", attrs);}
-        public static Tag Legend(Attr... attrs) {return new Tag("legend", attrs);}
-        public static Tag Li(Attr... attrs) {return new Tag("li", attrs);}
-        public static Tag Link(Attr... attrs) {return new Tag("link", attrs);}
-        public static Tag Map(Attr... attrs) {return new Tag("map", attrs);}
-        public static Tag Mark(Attr... attrs) {return new Tag("mark", attrs);}
-        public static Tag Menu(Attr... attrs) {return new Tag("menu", attrs);}
-        public static Tag Meta(Attr... attrs) {return new Tag("meta", attrs);}
-        public static Tag Meter(Attr... attrs) {return new Tag("meter", attrs);}
-        public static Tag Nav(Attr... attrs) {return new Tag("nav", attrs);}
-        public static Tag Noscript(Attr... attrs) {return new Tag("noscript", attrs);}
-        public static Tag Object(Attr... attrs) {return new Tag("object", attrs);}
-        public static Tag Ol(Attr... attrs) {return new Tag("ol", attrs);}
-        public static Tag Optgroup(Attr... attrs) {return new Tag("optgroup", attrs);}
-        public static Tag Option(Attr... attrs) {return new Tag("option", attrs);}
-        public static Tag Output(Attr... attrs) {return new Tag("output", attrs);}
-        public static Tag P(Attr... attrs) {return new Tag("p", attrs);}
-        public static Tag Param(Attr... attrs) {return new Tag("param", attrs);}
-        public static Tag Pre(Attr... attrs) {return new Tag("pre", attrs);}
-        public static Tag Progress(Attr... attrs) {return new Tag("progress", attrs);}
-        public static Tag Q(Attr... attrs) {return new Tag("q", attrs);}
-        public static Tag Rp(Attr... attrs) {return new Tag("rp", attrs);}
-        public static Tag Rt(Attr... attrs) {return new Tag("rt", attrs);}
-        public static Tag Ruby(Attr... attrs) {return new Tag("ruby", attrs);}
-        public static Tag S(Attr... attrs) {return new Tag("s", attrs);}
-        public static Tag Samp(Attr... attrs) {return new Tag("samp", attrs);}
-        public static Tag Script(Attr... attrs) {return new Tag("script", attrs);}
-        public static Tag Section(Attr... attrs) {return new Tag("section", attrs);}
-        public static Tag Select(Attr... attrs) {return new Tag("select", attrs);}
-        public static Tag Small(Attr... attrs) {return new Tag("small", attrs);}
-        public static Tag Source(Attr... attrs) {return new Tag("source", attrs);}
-        public static Tag Span(Attr... attrs) {return new Tag("span", attrs);}
-        public static Tag Strong(Attr... attrs) {return new Tag("strong", attrs);}
-        public static Tag Style(Attr... attrs) {return new Tag("style", attrs);}
-        public static Tag Sub(Attr... attrs) {return new Tag("sub", attrs);}
-        public static Tag Summary(Attr... attrs) {return new Tag("summary", attrs);}
-        public static Tag Sup(Attr... attrs) {return new Tag("sup", attrs);}
-        public static Tag Table(Attr... attrs) {return new Tag("table", attrs);}
-        public static Tag Tbody(Attr... attrs) {return new Tag("tbody", attrs);}
-        public static Tag Td(Attr... attrs) {return new Tag("td", attrs);}
-        public static Tag Textarea(Attr... attrs) {return new Tag("textarea", attrs);}
-        public static Tag Tfoot(Attr... attrs) {return new Tag("tfoot", attrs);}
-        public static Tag Th(Attr... attrs) {return new Tag("th", attrs);}
-        public static Tag Thead(Attr... attrs) {return new Tag("thead", attrs);}
-        public static Tag Time(Attr... attrs) {return new Tag("time", attrs);}
-        public static Tag Title(Attr... attrs) {return new Tag("title", attrs);}
-        public static Tag Tr(Attr... attrs) {return new Tag("tr", attrs);}
-        public static Tag Track(Attr... attrs) {return new Tag("track", attrs);}
-        public static Tag U(Attr... attrs) {return new Tag("u", attrs);}
-        public static Tag Ul(Attr... attrs) {return new Tag("ul", attrs);}
-        public static Tag Var(Attr... attrs) {return new Tag("var", attrs);}
-        public static Tag Video(Attr... attrs) {return new Tag("video", attrs);}
-        public static Tag Wbr(Attr... attrs) {return new Tag("wbr", attrs);}
+        public static Tag tag(String tagName, Object... texts) {return new Tag(tagName, texts);}
+        public static Tag A(Object... texts) {return new Tag("a", texts);}
+        public static Tag Abbr(Object... texts) {return new Tag("abbr", texts);}
+        public static Tag Address(Object... texts) {return new Tag("address", texts);}
+        public static Tag Area(Object... texts) {return new Tag("area", texts);}
+        public static Tag Article(Object... texts) {return new Tag("article", texts);}
+        public static Tag Aside(Object... texts) {return new Tag("aside", texts);}
+        public static Tag Audio(Object... texts) {return new Tag("audio", texts);}
+        public static Tag B(Object... texts) {return new Tag("b", texts);}
+        public static Tag Base(Object... texts) {return new Tag("base", texts);}
+        public static Tag Bdi(Object... texts) {return new Tag("bdi", texts);}
+        public static Tag Bdo(Object... texts) {return new Tag("bdo", texts);}
+        public static Tag Blockquote(Object... texts) {return new Tag("blockquote", texts);}
+        public static Tag Body(Object... texts) {return new Tag("body", texts);}
+        public static Tag Br(Object... texts) {return new Tag("br", texts);}
+        public static Tag Button(Object... texts) {return new Tag("button", texts);}
+        public static Tag Canvas(Object... texts) {return new Tag("canvas", texts);}
+        public static Tag Caption(Object... texts) {return new Tag("caption", texts);}
+        public static Tag Cite(Object... texts) {return new Tag("cite", texts);}
+        public static Tag Code(Object... texts) {return new Tag("code", texts);}
+        public static Tag Col(Object... texts) {return new Tag("col", texts);}
+        public static Tag Colgroup(Object... texts) {return new Tag("colgroup", texts);}
+        public static Tag Command(Object... texts) {return new Tag("command", texts);}
+        public static Tag Datalist(Object... texts) {return new Tag("datalist", texts);}
+        public static Tag Dd(Object... texts) {return new Tag("dd", texts);}
+        public static Tag Del(Object... texts) {return new Tag("del", texts);}
+        public static Tag Details(Object... texts) {return new Tag("details", texts);}
+        public static Tag Dfn(Object... texts) {return new Tag("dfn", texts);}
+        public static Tag Div(Object... texts) {return new Tag("div", texts);}
+        public static Tag Dl(Object... texts) {return new Tag("dl", texts);}
+        public static Tag Dt(Object... texts) {return new Tag("dt", texts);}
+        public static Tag Em(Object... texts) {return new Tag("em", texts);}
+        public static Tag Embed(Object... texts) {return new Tag("embed", texts);}
+        public static Tag Fieldset(Object... texts) {return new Tag("fieldset", texts);}
+        public static Tag Figcaption(Object... texts) {return new Tag("figcaption", texts);}
+        public static Tag Figure(Object... texts) {return new Tag("figure", texts);}
+        public static Tag Footer(Object... texts) {return new Tag("footer", texts);}
+        public static Tag Form(Object... texts) {return new Tag("form", texts);}
+        public static Tag H1(Object... texts) {return new Tag("h1", texts);}
+        public static Tag H2(Object... texts) {return new Tag("h2", texts);}
+        public static Tag H3(Object... texts) {return new Tag("h3", texts);}
+        public static Tag H4(Object... texts) {return new Tag("h4", texts);}
+        public static Tag H5(Object... texts) {return new Tag("h5", texts);}
+        public static Tag H6(Object... texts) {return new Tag("h6", texts);}
+        public static Tag Head(Object... texts) {return new Tag("head", texts);}
+        public static Tag Header(Object... texts) {return new Tag("header", texts);}
+        public static Tag Hgroup(Object... texts) {return new Tag("hgroup", texts);}
+        public static Tag Hr(Object... texts) {return new Tag("hr", texts);}
+        public static Tag Html(Object... texts) {return new Tag("html", texts);}
+        public static Tag I(Object... texts) {return new Tag("i", texts);}
+        public static Tag Iframe(Object... texts) {return new Tag("iframe", texts);}
+        public static Tag Img(Object... texts) {return new Tag("img", texts);}
+        public static Tag Input(Object... texts) {return new Tag("input", texts);}
+        public static Tag Ins(Object... texts) {return new Tag("ins", texts);}
+        public static Tag Kbd(Object... texts) {return new Tag("kbd", texts);}
+        public static Tag Keygen(Object... texts) {return new Tag("keygen", texts);}
+        public static Tag Label(Object... texts) {return new Tag("label", texts);}
+        public static Tag Legend(Object... texts) {return new Tag("legend", texts);}
+        public static Tag Li(Object... texts) {return new Tag("li", texts);}
+        public static Tag Link(Object... texts) {return new Tag("link", texts);}
+        public static Tag Map(Object... texts) {return new Tag("map", texts);}
+        public static Tag Mark(Object... texts) {return new Tag("mark", texts);}
+        public static Tag Menu(Object... texts) {return new Tag("menu", texts);}
+        public static Tag Meta(Object... texts) {return new Tag("meta", texts);}
+        public static Tag Meter(Object... texts) {return new Tag("meter", texts);}
+        public static Tag Nav(Object... texts) {return new Tag("nav", texts);}
+        public static Tag Noscript(Object... texts) {return new Tag("noscript", texts);}
+        public static Tag Object(Object... texts) {return new Tag("object", texts);}
+        public static Tag Ol(Object... texts) {return new Tag("ol", texts);}
+        public static Tag Optgroup(Object... texts) {return new Tag("optgroup", texts);}
+        public static Tag Option(Object... texts) {return new Tag("option", texts);}
+        public static Tag Output(Object... texts) {return new Tag("output", texts);}
+        public static Tag P(Object... texts) {return new Tag("p", texts);}
+        public static Tag Param(Object... texts) {return new Tag("param", texts);}
+        public static Tag Pre(Object... texts) {return new Tag("pre", texts);}
+        public static Tag Progress(Object... texts) {return new Tag("progress", texts);}
+        public static Tag Q(Object... texts) {return new Tag("q", texts);}
+        public static Tag Rp(Object... texts) {return new Tag("rp", texts);}
+        public static Tag Rt(Object... texts) {return new Tag("rt", texts);}
+        public static Tag Ruby(Object... texts) {return new Tag("ruby", texts);}
+        public static Tag S(Object... texts) {return new Tag("s", texts);}
+        public static Tag Samp(Object... texts) {return new Tag("samp", texts);}
+        public static Tag Script(Object... texts) {return new Tag("script", texts);}
+        public static Tag Section(Object... texts) {return new Tag("section", texts);}
+        public static Tag Select(Object... texts) {return new Tag("select", texts);}
+        public static Tag Small(Object... texts) {return new Tag("small", texts);}
+        public static Tag Source(Object... texts) {return new Tag("source", texts);}
+        public static Tag Span(Object... texts) {return new Tag("span", texts);}
+        public static Tag Strong(Object... texts) {return new Tag("strong", texts);}
+        public static Tag Style(Object... texts) {return new Tag("style", texts);}
+        public static Tag Sub(Object... texts) {return new Tag("sub", texts);}
+        public static Tag Summary(Object... texts) {return new Tag("summary", texts);}
+        public static Tag Sup(Object... texts) {return new Tag("sup", texts);}
+        public static Tag Table(Object... texts) {return new Tag("table", texts);}
+        public static Tag Tbody(Object... texts) {return new Tag("tbody", texts);}
+        public static Tag Td(Object... texts) {return new Tag("td", texts);}
+        public static Tag Textarea(Object... texts) {return new Tag("textarea", texts);}
+        public static Tag Tfoot(Object... texts) {return new Tag("tfoot", texts);}
+        public static Tag Th(Object... texts) {return new Tag("th", texts);}
+        public static Tag Thead(Object... texts) {return new Tag("thead", texts);}
+        public static Tag Time(Object... texts) {return new Tag("time", texts);}
+        public static Tag Title(Object... texts) {return new Tag("title", texts);}
+        public static Tag Tr(Object... texts) {return new Tag("tr", texts);}
+        public static Tag Track(Object... texts) {return new Tag("track", texts);}
+        public static Tag U(Object... texts) {return new Tag("u", texts);}
+        public static Tag Ul(Object... texts) {return new Tag("ul", texts);}
+        public static Tag Var(Object... texts) {return new Tag("var", texts);}
+        public static Tag Video(Object... texts) {return new Tag("video", texts);}
+        public static Tag Wbr(Object... texts) {return new Tag("wbr", texts);}
 	}
 
 	public static Writer nullWriter = new OutputStreamWriter(new OutputStream() {
