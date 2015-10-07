@@ -35,6 +35,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
+import org.micromanager.utils.ImageLabelComparator;
 import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMSerializationException;
 
@@ -220,15 +221,12 @@ public class WorkflowReport extends JFrame {
 
         // sort imageTasks by image position
         List<Task> imageTasks = this.workflowRunner.getTaskStatus().select(where("moduleId", startModule.getId()));
-        Map<Integer,Task> imageTaskPosIdx = new TreeMap<Integer,Task>();
+        Map<String,Task> imageTaskPosIdx = new TreeMap<String,Task>(new ImageLabelComparator());
         for (Task imageTask : imageTasks) {
             Config imageLabelConf = this.workflowRunner.getTaskConfig().selectOne(
                     where("id", imageTask.getId()).and("key", "imageLabel"));
             if (imageLabelConf != null) {
-                int[] indices = MDUtils.getIndices(imageLabelConf.getValue());
-                if (indices != null && indices.length >= 4) {
-                    imageTaskPosIdx.put(indices[3], imageTask);
-                }
+                imageTaskPosIdx.put(imageLabelConf.getValue(), imageTask);
             }
         }
         imageTasks.clear();
@@ -255,8 +253,7 @@ public class WorkflowReport extends JFrame {
                 }
             }
         }
-        Double minX = minX_;
-        Double minY = minY_;
+        Double minX = minX_, minY = minY_;
         int slideWidthPx = (int)Math.floor(((maxX - minX) / pixelSize) + (double)imageWidth);
         int slideHeightPx = (int)Math.floor(((maxY - minY) / pixelSize) + (double)imageHeight);
         
@@ -278,25 +275,29 @@ public class WorkflowReport extends JFrame {
                     // Get a thumbnail of the image
                     Image image = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf.getValue())));
                     ImagePlus imp = image.getImagePlus(acqDao);
+                    int width = imp.getWidth(), height = imp.getHeight();
                     ImageProcessor ip = imp.getProcessor();
                     ip.setInterpolate(true);
                     imp.setProcessor(imp.getTitle(), ip.resize(
-                            (int)Math.floor(ip.getWidth() * scaleFactor), 
-                            (int)Math.floor(ip.getHeight() * scaleFactor)));
+                            (int)Math.floor(imp.getWidth() * scaleFactor), 
+                            (int)Math.floor(imp.getHeight() * scaleFactor)));
                     
-                    int xloc1 = (int)Math.floor(((msp.getX() - minX) / pixelSize) - ((double)imp.getWidth() / 2.0));
-                    int xloc = invertXAxis? slideWidthPx - (xloc1 + imp.getWidth()) : xloc1;
-                    int yloc1 = (int)Math.floor(((msp.getY() - minY) / pixelSize) - ((double)imp.getHeight() / 2.0));
-                    int yloc = invertYAxis? yloc = slideHeightPx - (yloc1 + imp.getHeight()) : yloc1;
-                    slideThumbIp.copyBits(ip, xloc, yloc, Blitter.COPY);
-                    Roi imageRoi = new Roi(xloc, yloc, ip.getWidth(), ip.getHeight()); 
+                    int xloc = (int)Math.floor(((msp.getX() - minX) / pixelSize));
+                    int xlocInvert = invertXAxis? slideWidthPx - (xloc + width) : xloc;
+                    int xlocScale = (int)Math.floor(xlocInvert * scaleFactor);
+                    int yloc = (int)Math.floor(((msp.getY() - minY) / pixelSize));
+                    int ylocInvert = invertYAxis? slideHeightPx - (yloc + height) : yloc;
+                    int ylocScale = (int)Math.floor(ylocInvert * scaleFactor);
+
+                    slideThumbIp.copyBits(ip, xlocScale, ylocScale, Blitter.COPY);
+                    Roi imageRoi = new Roi(xlocScale, ylocScale, imp.getWidth(), imp.getHeight()); 
                     imageRoi.setName(image.getName());
                     imageRoi.setProperty("id", new Integer(image.getId()).toString());
                     imageRois.add(imageRoi);
                     
                     for (ROI roi : roiDao.select(where("imageId", image.getId()))) {
-                    	int roiX = (int)Math.floor(xloc + (roi.getX1() * scaleFactor));
-                    	int roiY = (int)Math.floor(yloc + (roi.getY1() * scaleFactor));
+                    	int roiX = (int)Math.floor(xlocScale + (roi.getX1() * scaleFactor));
+                    	int roiY = (int)Math.floor(ylocScale + (roi.getY1() * scaleFactor));
                     	int roiWidth = (int)Math.floor((roi.getX2()-roi.getX1()+1) * scaleFactor);
                         int roiHeight = (int)Math.floor((roi.getY2()-roi.getY1()+1) * scaleFactor);
                         Roi r = new Roi(roiX, roiY, roiWidth, roiHeight);
@@ -376,7 +377,7 @@ public class WorkflowReport extends JFrame {
                             // also get the image width and height of the acqusition.
                             Double minX2_=null, minY2_=null, maxX2=null, maxY2=null;
                             Integer imageWidth2 = null, imageHeight2 = null;
-                            Map<String,List<Task>> imagerTasks = new TreeMap<String,List<Task>>();
+                            Map<String,List<Task>> imagerTasks = new TreeMap<String,List<Task>>(new ImageLabelComparator());
                             for (Task imagerTask : this.workflowRunner.getTaskStatus().select(where("moduleId", imager.getId()))) {
                                 MultiStagePosition msp = getMsp(imagerTask);
                                 if (msp.hasProperty("ROI") && msp.getProperty("ROI").equals(new Integer(roi.getId()).toString())) 
@@ -455,31 +456,35 @@ public class WorkflowReport extends JFrame {
                                                                 // Get a thumbnail of the image
                                                                 Image image2 = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf2.getValue())));
                                                                 ImagePlus imp = image2.getImagePlus(acqDao);
+                                                                int width = imp.getWidth(), height = imp.getHeight();
                                                                 ImageProcessor ip = imp.getProcessor();
                                                                 ip.setInterpolate(true);
                                                                 imp.setProcessor(imp.getTitle(), ip.resize(
-                                                                        (int)Math.floor(ip.getWidth() * gridScaleFactor), 
-                                                                        (int)Math.floor(ip.getHeight() * gridScaleFactor)));
+                                                                        (int)Math.floor(imp.getWidth() * gridScaleFactor), 
+                                                                        (int)Math.floor(imp.getHeight() * gridScaleFactor)));
 
-                                                                int xloc1 = (int)Math.floor(((msp.getX() - minX2) / hiResPixelSize) - ((double)imp.getWidth() / 2.0));
-                                                                int xloc = invertXAxis? gridWidthPx - (xloc1 + imp.getWidth()) : xloc1;
-                                                                int yloc1 = (int)Math.floor(((msp.getY() - minY2) / hiResPixelSize) - ((double)imp.getHeight() / 2.0));
-                                                                int yloc = invertYAxis? yloc = gridHeightPx - (yloc1 + imp.getHeight()) : yloc1;
-                                                                roiGridThumbIp.copyBits(ip, xloc, yloc, Blitter.COPY);
+                                                                int xloc = (int)Math.floor((msp.getX() - minX2) / hiResPixelSize);
+                                                                int xlocInvert = invertXAxis? gridWidthPx - (xloc + width) : xloc;
+                                                                int xlocScale = (int)Math.floor(xlocInvert * gridScaleFactor);
+                                                                int yloc = (int)Math.floor((msp.getY() - minY2) / hiResPixelSize);
+                                                                int ylocInvert = invertYAxis? gridHeightPx - (yloc + height) : yloc;
+                                                                int ylocScale = (int)Math.floor(ylocInvert * gridScaleFactor);
+
+                                                                roiGridThumbIp.copyBits(ip, xlocScale, ylocScale, Blitter.COPY);
 
                                                                 // make the tile image clickable
                                                                 Area(shape->"rect", 
                                                                         coords->String.format("%d,%d,%d,%d", 
-                                                                                xloc, 
-                                                                                yloc,
-                                                                                xloc+ip.getWidth(),
-                                                                                yloc+ip.getHeight()),
+                                                                                xlocScale, 
+                                                                                ylocScale,
+                                                                                xlocScale+imp.getWidth(),
+                                                                                ylocScale+imp.getHeight()),
                                                                         title->image.getName(),
                                                                         onClick->String.format("workflowReport.showImage(%d)", image.getId()));
 
                                                                 // draw a black rectangle around the image
                                                                 roiGridThumbIp.setColor(new Color(0, 0, 0));
-                                                                roiGridThumbIp.drawRect(xloc, yloc, ip.getWidth(), ip.getHeight());
+                                                                roiGridThumbIp.drawRect(xlocScale, ylocScale, imp.getWidth(), imp.getHeight());
                                                             }
                                                         }
                                                     });
