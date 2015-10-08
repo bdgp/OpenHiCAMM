@@ -162,6 +162,13 @@ public class WorkflowReport {
         // Find SlideImager modules where there is no associated posListModuleId module config
         // This is the starting SlideImager module.
         return Html().with(()->{
+            Head().with(()->{
+                Link().attr("rel", "stylesheet").
+                    attr("href", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css");
+                Link().attr("rel", "stylesheet").
+                    attr("href", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css");
+                Script().attr("src", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js");
+            });
             Body().with(()->{
                 for (Config canImageSlides : this.workflowRunner.getModuleConfig().select(
                         where("key","canImageSlides").
@@ -174,7 +181,7 @@ public class WorkflowReport {
                             where("id", slideImager.getId()).
                             and("key", "posListModuleId")) == null) 
                     {
-                        // get the loader module
+                       // get the loader module
                         if (slideImager.getParentId() != null) {
                             WorkflowModule loaderModule = this.workflowRunner.getWorkflow().selectOneOrDie(
                                     where("id", slideImager.getParentId()));
@@ -529,7 +536,8 @@ public class WorkflowReport {
                                 log("roiGridThumb: width=%d, height=%d", roiGridThumb.getWidth(), roiGridThumb.getHeight());
                                 ImageProcessor roiGridThumbIp = roiGridThumb.getProcessor();
                                 
-                                Table().with(()->{
+                                Table().attr("class","table table-bordered table-hover table-striped").
+                                    with(()->{
                                     Thead().with(()->{
                                         Tr().with(()->{
                                             Th().text("Channel, Slice, Frame");
