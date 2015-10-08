@@ -51,7 +51,6 @@ import ij.ImagePlus;
 import ij.gui.NewImage;
 import ij.gui.Roi;
 import ij.process.Blitter;
-import ij.process.ImageProcessor;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.fxml.FXML;
@@ -161,7 +160,7 @@ public class WorkflowReport {
 
         // Find SlideImager modules where there is no associated posListModuleId module config
         // This is the starting SlideImager module.
-        return Html().with(()->{
+        return Html().indent().with(()->{
             Head().with(()->{
                 Link().attr("rel", "stylesheet").
                     attr("href", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css");
@@ -201,8 +200,6 @@ public class WorkflowReport {
                                         for (PoolSlide ps : pss) {
                                             log("Calling runReport(startModule=%s, poolSlide=%s)", slideImager, ps);
                                             runReport(slideImager, ps);
-                                            // TODO: remove
-                                            break;
                                         }
                                         return;
                                     }
@@ -214,7 +211,7 @@ public class WorkflowReport {
                     }
                 }
             });
-        }).indent().toString();
+        }).toString();
     }
 
     private void runReport(WorkflowModule startModule, PoolSlide poolSlide) {
@@ -348,11 +345,9 @@ public class WorkflowReport {
         log("slidePreviewHeight = %d", slidePreviewHeight);
         
         ImagePlus slideThumb = NewImage.createRGBImage("slideThumb", SLIDE_PREVIEW_WIDTH, slidePreviewHeight, 1, NewImage.FILL_WHITE);
-        ImageProcessor slideThumbIp = slideThumb.getProcessor();
         Map<Integer,Roi> imageRois = new LinkedHashMap<Integer,Roi>();
         List<Roi> roiRois = new ArrayList<Roi>();
         Map().attr("name",String.format("map-%s-%s", startModule.getId(), slideId)).with(()->{
-            IMAGE_TASKS:
             for (Task task : imageTasks) {
                 Config imageIdConf = this.workflowRunner.getTaskConfig().selectOne(
                         where("id", new Integer(task.getId()).toString()).and("key", "imageId"));
@@ -365,9 +360,8 @@ public class WorkflowReport {
                     ImagePlus imp = image.getImagePlus(acqDao);
                     int width = imp.getWidth(), height = imp.getHeight();
                     log("Image width: %d, height: %d", width, height);
-                    ImageProcessor ip = imp.getProcessor();
-                    ip.setInterpolate(true);
-                    imp.setProcessor(imp.getTitle(), ip.resize(
+                    imp.getProcessor().setInterpolate(true);
+                    imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
                             (int)Math.floor(imp.getWidth() * scaleFactor), 
                             (int)Math.floor(imp.getHeight() * scaleFactor)));
                     log("Resized image width: %d, height: %d", imp.getWidth(), imp.getHeight());
@@ -381,7 +375,7 @@ public class WorkflowReport {
                     int ylocScale = (int)Math.floor(ylocInvert * scaleFactor);
                     log("yloc = %d, ylocInvert = %d, ylocScale = %d", yloc, ylocInvert, ylocScale);
 
-                    slideThumbIp.copyBits(ip, xlocScale, ylocScale, Blitter.COPY);
+                    slideThumb.getProcessor().copyBits(imp.getProcessor(), xlocScale, ylocScale, Blitter.COPY);
                     Roi imageRoi = new Roi(xlocScale, ylocScale, imp.getWidth(), imp.getHeight()); 
                     imageRoi.setName(image.getName());
                     imageRoi.setProperty("id", new Integer(image.getId()).toString());
@@ -398,8 +392,6 @@ public class WorkflowReport {
                         r.setProperty("id", new Integer(roi.getId()).toString());
                         roiRois.add(r);
                         log("roiRoi = %s", r);
-                        // TODO: remove
-                        break IMAGE_TASKS;
                     }
                 }
             }
@@ -427,14 +419,14 @@ public class WorkflowReport {
                        attr("onclick", String.format("workflowReport.showImage(%d)", new Integer(roi.getProperty("id"))));
             }
             // now draw the image ROIs in black
-            slideThumbIp.setColor(new Color(0, 0, 0));
+            slideThumb.getProcessor().setColor(new Color(0, 0, 0));
             for (Roi imageRoi : imageRois.values()) {
-                slideThumbIp.draw(imageRoi);
+                slideThumb.getProcessor().draw(imageRoi);
             }
             // now draw the ROI rois in red
-            slideThumbIp.setColor(new Color(255, 0, 0));
+            slideThumb.getProcessor().setColor(new Color(255, 0, 0));
             for (Roi roiRoi : roiRois) {
-                slideThumbIp.draw(roiRoi);
+                slideThumb.getProcessor().draw(roiRoi);
             }
         });
 
@@ -445,7 +437,8 @@ public class WorkflowReport {
         Img().attr("src", String.format("data:image/jpg;base64,%s", Base64.encode(baos.toByteArray()))).
                 attr("width", slideThumb.getWidth()).
                 attr("height", slideThumb.getHeight()).
-                attr("usemap", String.format("#map-%s-%s", startModule.getId(), slideId));
+                attr("usemap", String.format("#map-%s-%s", startModule.getId(), slideId)).
+                attr("style", "border: 2px solid black");
         
         // now render the individual ROI sections
         for (Task task : imageTasks) {
@@ -462,8 +455,9 @@ public class WorkflowReport {
                 for (ROI roi : rois) {
                     log("Working on ROI: %s", roi);
                     Hr();
-                    A().attr("name", String.format("area-ROI-%s", roi.getId()));
-                    H2().text(String.format("Image %s, ROI %s", image, roi));
+                    A().attr("name", String.format("area-ROI-%s", roi.getId())).with(()->{
+                        H2().text(String.format("Image %s, ROI %s", image, roi));
+                    });
                     
                     // go through each attached SlideImager and look for MSP's with an ROI property
                     // that matches this ROI's ID.
@@ -534,7 +528,6 @@ public class WorkflowReport {
                                         1, 
                                         NewImage.FILL_WHITE);
                                 log("roiGridThumb: width=%d, height=%d", roiGridThumb.getWidth(), roiGridThumb.getHeight());
-                                ImageProcessor roiGridThumbIp = roiGridThumb.getProcessor();
                                 
                                 Table().attr("class","table table-bordered table-hover table-striped").
                                     with(()->{
@@ -567,9 +560,8 @@ public class WorkflowReport {
                                                                 ImagePlus imp = image2.getImagePlus(acqDao);
                                                                 int width = imp.getWidth(), height = imp.getHeight();
                                                                 log("imp: width=%d, height=%d", width, height);
-                                                                ImageProcessor ip = imp.getProcessor();
-                                                                ip.setInterpolate(true);
-                                                                imp.setProcessor(imp.getTitle(), ip.resize(
+                                                                imp.getProcessor().setInterpolate(true);
+                                                                imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
                                                                         (int)Math.floor(imp.getWidth() * gridScaleFactor), 
                                                                         (int)Math.floor(imp.getHeight() * gridScaleFactor)));
                                                                 log("imp: resized width=%d, height=%d", imp.getWidth(), imp.getHeight());
@@ -583,7 +575,7 @@ public class WorkflowReport {
                                                                 int ylocScale = (int)Math.floor(ylocInvert * gridScaleFactor);
                                                                 log("yloc=%d, ylocInvert=%d, ylocScale=%d", yloc, ylocInvert, ylocScale);
 
-                                                                roiGridThumbIp.copyBits(ip, xlocScale, ylocScale, Blitter.COPY);
+                                                                roiGridThumb.getProcessor().copyBits(imp.getProcessor(), xlocScale, ylocScale, Blitter.COPY);
 
                                                                 // make the tile image clickable
                                                                 Area().attr("shape", "rect"). 
@@ -596,8 +588,8 @@ public class WorkflowReport {
                                                                         attr("onclick", String.format("workflowReport.showImage(%d)", image2.getId()));
 
                                                                 // draw a black rectangle around the image
-                                                                roiGridThumbIp.setColor(new Color(0, 0, 0));
-                                                                roiGridThumbIp.drawRect(xlocScale, ylocScale, imp.getWidth(), imp.getHeight());
+                                                                roiGridThumb.getProcessor().setColor(new Color(0, 0, 0));
+                                                                roiGridThumb.getProcessor().drawRect(xlocScale, ylocScale, imp.getWidth(), imp.getHeight());
                                                             }
                                                         }
                                                     });
@@ -637,14 +629,13 @@ public class WorkflowReport {
                                                             // Get a thumbnail of the image
                                                             ImagePlus imp = new ImagePlus(stitchedImageFile.getValue());
                                                             log("stitchedImage width = %d, height = %d", imp.getWidth(), imp.getHeight());
-                                                            ImageProcessor ip = imp.getProcessor();
-                                                            ip.setInterpolate(true);
+                                                            imp.getProcessor().setInterpolate(true);
 
                                                             double stitchScaleFactor = (double)ROI_GRID_PREVIEW_WIDTH / (double)imp.getWidth();
                                                             log("stitchScaleFactor = %f", stitchScaleFactor);
                                                             int stitchPreviewHeight = (int)Math.floor(imp.getHeight() * stitchScaleFactor);
                                                             log("stitchPreviewHeight = %d", stitchPreviewHeight);
-                                                            imp.setProcessor(imp.getTitle(), ip.resize(
+                                                            imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
                                                                     ROI_GRID_PREVIEW_WIDTH, 
                                                                     stitchPreviewHeight));
                                                             log("resized stitched image width=%d, height=%d", imp.getWidth(), imp.getHeight());
