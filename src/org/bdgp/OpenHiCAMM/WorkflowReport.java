@@ -54,7 +54,9 @@ import ij.process.Blitter;
 import ij.process.ImageProcessor;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
-import javafx.scene.Group;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
@@ -66,59 +68,79 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 import static org.bdgp.OpenHiCAMM.Tag.T.*;
 
 @SuppressWarnings("serial")
-public class WorkflowReport extends JFrame {
-	WorkflowRunner workflowRunner;
-
+public class WorkflowReport {
     public static final int SLIDE_PREVIEW_WIDTH = 1280; 
     public static final int ROI_GRID_PREVIEW_WIDTH = 512; 
     public static final boolean DEBUG=true;
     
+    private WorkflowRunner workflowRunner;
+    @FXML private VBox vbox;
+    @FXML private ScrollPane scrollPane;
+    @FXML private WebView webView;
+    
+    public WorkflowReport() {}
+
     public static void log(String message, Object... args) {
         if (DEBUG) {
             IJ.log(String.format("[WorkflowReport] %s", String.format(message, args)));
         }
     }
+    
+    public static class Frame extends JFrame {
+        public Frame(WorkflowRunner workflowRunner) {
+            JFXPanel fxPanel = new JFXPanel();
+            this.add(fxPanel);
+            this.setSize(1280, 1024);
+            this.setVisible(true);
+            this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-	public WorkflowReport(WorkflowRunner workflowRunner) {
-		this.workflowRunner = workflowRunner;
+            Platform.runLater(()->{
+                // log JavaFX exceptions
+                Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+                    StringWriter sw = new StringWriter();
+                    throwable.printStackTrace(new PrintWriter(sw));
+                    log("Caught exception while running workflow: %s", sw.toString());
+                });
 
-		JFXPanel fxPanel = new JFXPanel();
-        this.add(fxPanel);
-        this.setSize(1280, 1024);
-        this.setVisible(true);
-        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                try {
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/WorkflowReport.fxml"));
+                    Parent root = loader.load();
+                    WorkflowReport controller = loader.<WorkflowReport>getController();
+                    controller.runReport(workflowRunner);
+                    Scene scene = new Scene(root);
+                    fxPanel.setScene(scene);
+                } 
+                catch (Exception e) {
+                    StringWriter sw = new StringWriter();
+                    e.printStackTrace(new PrintWriter(sw));
+                    log("Caught exception while running workflow: %s", sw.toString());
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+    }
 
-        Platform.runLater(()->{
-            initFX(fxPanel);
-        });
-	}
-	
-	public void initFX(JFXPanel fxPanel) {
-        Scene scene = new Scene(new Group());
-        VBox root = new VBox();     
-        WebView browser = new WebView();
-        WebEngine webEngine = browser.getEngine();
+    public void runReport(WorkflowRunner workflowRunner) {
+        this.workflowRunner = workflowRunner;
+        
+        WebEngine webEngine = webView.getEngine();
         JSObject jsobj = (JSObject) webEngine.executeScript("window");
         jsobj.setMember("workflowReport", this);
-
-        ScrollPane scrollPane = new ScrollPane();
-        scrollPane.setContent(browser);
-        root.getChildren().addAll(scrollPane);
-        scene.setRoot(root);
-        fxPanel.setScene(scene);
 
         new Thread(()->{
             try{
                 String html = runReport();
-
                 log("html = %n%s", html);
 
-                try {
-                    PrintWriter htmlOut = new PrintWriter("workflowReport.html");
-                    htmlOut.print(html);
-                    htmlOut.close();
+                if (DEBUG) {
+                    try {
+                        File reportFile = new File(System.getProperty("user.home"), "workflowReport.html");
+                        PrintWriter htmlOut = new PrintWriter(reportFile.getPath());
+                        htmlOut.print(html);
+                        htmlOut.close();
+                    }
+                    catch (FileNotFoundException e) { throw new RuntimeException(e); }
                 }
-                catch (FileNotFoundException e) { throw new RuntimeException(e); }
 
                 Platform.runLater(()->{
                     webEngine.loadContent(html);
@@ -131,16 +153,16 @@ public class WorkflowReport extends JFrame {
                 throw e;
             }
         }).start();
-	}
-	
-	public String runReport() {
+    }
+
+    public String runReport() {
         Dao<Pool> poolDao = this.workflowRunner.getInstanceDb().table(Pool.class);
         Dao<PoolSlide> psDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);
 
-	    // Find SlideImager modules where there is no associated posListModuleId module config
-	    // This is the starting SlideImager module.
-		return Html().with(()->{
-			Body().with(()->{
+        // Find SlideImager modules where there is no associated posListModuleId module config
+        // This is the starting SlideImager module.
+        return Html().with(()->{
+            Body().with(()->{
                 for (Config canImageSlides : this.workflowRunner.getModuleConfig().select(
                         where("key","canImageSlides").
                         and("value", "yes"))) 
@@ -184,11 +206,11 @@ public class WorkflowReport extends JFrame {
                         runReport(slideImager, null);
                     }
                 }
-			});
-		}).indent().toString();
-	}
+            });
+        }).indent().toString();
+    }
 
-	private void runReport(WorkflowModule startModule, PoolSlide poolSlide) {
+    private void runReport(WorkflowModule startModule, PoolSlide poolSlide) {
         log("Called runReport(startModule=%s, poolSlide=%s)", startModule, poolSlide);
 
         Dao<Slide> slideDao = this.workflowRunner.getInstanceDb().table(Slide.class);
@@ -196,9 +218,9 @@ public class WorkflowReport extends JFrame {
         Dao<Acquisition> acqDao = this.workflowRunner.getInstanceDb().table(Acquisition.class);
         Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
         
-	    // get the ROIFinder module(s)
-	    List<WorkflowModule> roiFinderModules = new ArrayList<WorkflowModule>();
-	    for (WorkflowModule wm : this.workflowRunner.getWorkflow().select(where("parentId", startModule.getId()))) {
+        // get the ROIFinder module(s)
+        List<WorkflowModule> roiFinderModules = new ArrayList<WorkflowModule>();
+        for (WorkflowModule wm : this.workflowRunner.getWorkflow().select(where("parentId", startModule.getId()))) {
             if (this.workflowRunner.getModuleConfig().selectOne(
                     where("id", wm.getId()).
                     and("key", "canProduceROIs").
@@ -206,12 +228,12 @@ public class WorkflowReport extends JFrame {
             {
                 roiFinderModules.add(wm);
             }
-	    }
-	    log("roiFinderModules = %s", roiFinderModules);
+        }
+        log("roiFinderModules = %s", roiFinderModules);
 
-	    // get the associated hi res ROI slide imager modules for each ROI finder module
-	    Map<WorkflowModule,List<WorkflowModule>> roiImagers = new HashMap<WorkflowModule,List<WorkflowModule>>();
-	    for (WorkflowModule roiFinderModule : roiFinderModules) {
+        // get the associated hi res ROI slide imager modules for each ROI finder module
+        Map<WorkflowModule,List<WorkflowModule>> roiImagers = new HashMap<WorkflowModule,List<WorkflowModule>>();
+        for (WorkflowModule roiFinderModule : roiFinderModules) {
             for (Config canImageSlides : this.workflowRunner.getModuleConfig().select(
                     where("key","canImageSlides").
                     and("value", "yes"))) 
@@ -229,16 +251,16 @@ public class WorkflowReport extends JFrame {
                     roiImagers.get(roiFinderModule).add(slideImager);
                 }
             }
-	    }
-	    log("roiImagers = %s", roiImagers);
-	    
-	    // display the title
+        }
+        log("roiImagers = %s", roiImagers);
+        
+        // display the title
         Slide slide;
         String slideId;
-	    if (poolSlide != null) {
-	        slide = slideDao.selectOneOrDie(where("id", poolSlide.getSlideId()));
-	        slideId = slide.getName();
-	        String title = String.format("SlideImager %s, Slide %s, Pool %d, Cartridge %d, Slide Position %d", 
+        if (poolSlide != null) {
+            slide = slideDao.selectOneOrDie(where("id", poolSlide.getSlideId()));
+            slideId = slide.getName();
+            String title = String.format("SlideImager %s, Slide %s, Pool %d, Cartridge %d, Slide Position %d", 
                     startModule.getId(), 
                     slide.getName(), 
                     poolSlide.getPoolId(), 
@@ -246,14 +268,14 @@ public class WorkflowReport extends JFrame {
                     poolSlide.getSlidePosition());
             H1().text(title);
             log("title = %s", title);
-	    }
-	    else {
+        }
+        else {
             slide = null;
             slideId = "slide";
             String title = String.format("SlideImager %s", startModule.getId());
             H1().text(title);
             log("title = %s", title);
-	    }
+        }
 
         // get the pixel size of this slide imager config
         Config pixelSizeConf = this.workflowRunner.getModuleConfig().selectOne(where("id", startModule.getId()).and("key","pixelSize"));
@@ -287,7 +309,7 @@ public class WorkflowReport extends JFrame {
         Double minX_ = null, minY_ = null, maxX = null, maxY = null; 
         Integer imageWidth = null, imageHeight = null;
         for (Task task : imageTasks) {
-        	MultiStagePosition msp = getMsp(task);
+            MultiStagePosition msp = getMsp(task);
 
             if (minX_ == null || msp.getX() < minX_) minX_ = msp.getX();
             if (maxX == null || msp.getX() > maxX) maxX = msp.getX();
@@ -360,9 +382,9 @@ public class WorkflowReport extends JFrame {
                     log("imageRoi = %s", imageRoi);
                     
                     for (ROI roi : roiDao.select(where("imageId", image.getId()))) {
-                    	int roiX = (int)Math.floor(xlocScale + (roi.getX1() * scaleFactor));
-                    	int roiY = (int)Math.floor(ylocScale + (roi.getY1() * scaleFactor));
-                    	int roiWidth = (int)Math.floor((roi.getX2()-roi.getX1()+1) * scaleFactor);
+                        int roiX = (int)Math.floor(xlocScale + (roi.getX1() * scaleFactor));
+                        int roiY = (int)Math.floor(ylocScale + (roi.getY1() * scaleFactor));
+                        int roiWidth = (int)Math.floor((roi.getX2()-roi.getX1()+1) * scaleFactor);
                         int roiHeight = (int)Math.floor((roi.getY2()-roi.getY1()+1) * scaleFactor);
                         Roi r = new Roi(roiX, roiY, roiWidth, roiHeight);
                         r.setName(roi.toString());
@@ -414,9 +436,9 @@ public class WorkflowReport extends JFrame {
         try { ImageIO.write(slideThumb.getBufferedImage(), "jpg", baos); } 
         catch (IOException e) {throw new RuntimeException(e);}
         Img().attr("src", String.format("data:image/jpg;base64,%s", Base64.encode(baos.toByteArray()))).
-        		attr("width", slideThumb.getWidth()).
-        		attr("height", slideThumb.getHeight()).
-        		attr("usemap", String.format("#map-%s-%s", startModule.getId(), slideId));
+                attr("width", slideThumb.getWidth()).
+                attr("height", slideThumb.getHeight()).
+                attr("usemap", String.format("#map-%s-%s", startModule.getId(), slideId));
         
         // now render the individual ROI sections
         for (Task task : imageTasks) {
@@ -642,24 +664,24 @@ public class WorkflowReport extends JFrame {
                 }
             }
         }
-	}
-	
-	public void showImage(int imageId) {
-	    log("called showImage(imageId=%d)", imageId);
+    }
+    
+    public void showImage(int imageId) {
+        log("called showImage(imageId=%d)", imageId);
         Dao<Image> imageDao = this.workflowRunner.getInstanceDb().table(Image.class);
         Dao<Acquisition> acqDao = this.workflowRunner.getInstanceDb().table(Acquisition.class);
         Image image = imageDao.selectOneOrDie(where("id", imageId));
         ImagePlus imp = image.getImagePlus(acqDao);
         imp.show();
-	}
+    }
 
-	public void showImageFile(String imagePath) {
-	    log("called showImageFile(imagePath=%s)", imagePath);
+    public void showImageFile(String imagePath) {
+        log("called showImageFile(imagePath=%s)", imagePath);
         ImagePlus imp = new ImagePlus(imagePath);
         imp.show();
-	}
-	
-	private MultiStagePosition getMsp(Task task) {
+    }
+    
+    private MultiStagePosition getMsp(Task task) {
         // get the MSP from the task config
         PositionList posList = new PositionList();
         try {
@@ -673,5 +695,5 @@ public class WorkflowReport extends JFrame {
         catch (JSONException | MMSerializationException e) {throw new RuntimeException(e);}
         MultiStagePosition msp = posList.getPosition(0);
         return msp;
-	}
+    }
 }

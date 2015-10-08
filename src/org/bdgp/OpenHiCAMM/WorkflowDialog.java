@@ -277,7 +277,7 @@ public class WorkflowDialog extends JDialog {
         	public void actionPerformed(ActionEvent e) {
             	if (!active) return;
         	    if (WorkflowDialog.this.workflowRunner != null) {
-                    WorkflowReport workflowReport = new WorkflowReport(WorkflowDialog.this.workflowRunner);
+                    WorkflowReport.Frame workflowReport = new WorkflowReport.Frame(WorkflowDialog.this.workflowRunner);
                     workflowReport.setVisible(true);
         	    }
         	}
