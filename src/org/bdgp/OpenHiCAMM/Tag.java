@@ -6,13 +6,11 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -24,13 +22,13 @@ import java.util.stream.Stream;
 public class Tag {
 	private String tagName;
 	private Map<String,String> attrs;
-	private List<Block> blocks;
-	private Writer writer;
+	private StringWriter blockWriter;
 	private String indent;
 	private String currentIndent;
 
 	private static ThreadLocal<Tag> lastTag = new ThreadLocal<Tag>();
 	private static ThreadLocal<Tag> parentTag = new ThreadLocal<Tag>();
+	private static ThreadLocal<Writer> writer = new ThreadLocal<Writer>();
 	
 	public static Set<String> selfClosingTags = new HashSet<String>();
 	static {
@@ -66,7 +64,7 @@ public class Tag {
 	public Tag(String tagName, Object... texts) {
 		this.tagName = tagName;
 		this.attrs = new LinkedHashMap<String,String>();
-		this.blocks = new ArrayList<Block>();
+		this.blockWriter = new StringWriter();
 
 	    Tag parentTag = Tag.parentTag.get();
         this.indent = parentTag != null? parentTag.indent : null;
@@ -75,10 +73,9 @@ public class Tag {
                     String.format("%s%s", parentTag.currentIndent, this.indent) : 
                     "" :
                 null;
-        this.writer = parentTag != null && parentTag.writer != null? parentTag.writer : null;
 
         for (Object text : texts) {
-            this.blocks.add(()->T.text(text.toString()));
+            this.with(()->T.text(text.toString()));
         }
 		
 		// if there is a last tag, write it, then set the lastTag to this tag.
@@ -102,33 +99,48 @@ public class Tag {
 	}
 	
 	public Tag with(Block block) {
-	    this.blocks.add(block);
+        Tag lastTag = Tag.lastTag.get();
+	    Tag parentTag = Tag.parentTag.get();
+	    Writer writer = Tag.writer.get();
+        try {
+            Tag.parentTag.set(this);
+            Tag.lastTag.set(null);
+            Tag.writer.set(this.blockWriter);
+
+            block.block();
+            writeLastTag();
+        }
+        finally {
+            Tag.parentTag.set(parentTag);
+            Tag.lastTag.set(lastTag);
+            Tag.writer.set(writer);
+        }
 	    return this;
 	}
 	
 	public Tag text(Object text) {
-	    this.blocks.add(()->T.text(text.toString()));
+	    this.with(()->T.text(text.toString()));
 	    return this;
 	}
 	public Tag raw(Object text) {
-	    this.blocks.add(()->T.raw(text.toString()));
+	    this.with(()->T.raw(text.toString()));
 	    return this;
 	}
 	public Tag comment(Object text) {
-	    this.blocks.add(()->T.comment(text.toString()));
+	    this.with(()->T.comment(text.toString()));
 	    return this;
 	}
 	public Tag doctype() {
-	    this.blocks.add(()->T.doctype());
+	    this.with(()->T.doctype());
 	    return this;
 	}
 	public Tag doctype(String type) {
-	    this.blocks.add(()->T.doctype(type));
+	    this.with(()->T.doctype(type));
 	    return this;
 	}
 
 	public Tag pass() {
-	    this.writer = nullWriter;
+	    Tag.writer.set(nullWriter);
 	    return this;
 	}
 	
@@ -158,13 +170,12 @@ public class Tag {
 	}
 	
 	public Tag writer(Writer writer) {
-	    this.writer = writer;
+	    Tag.writer.set(writer);
 	    return this;
 	}
 	
 	public Tag write() {
-        Tag lastTag = Tag.lastTag.get();
-	    Tag parentTag = Tag.parentTag.get();
+	    Writer writer = Tag.writer.get();
         try {
             if (writer != null) {
                 writer.write(String.format("%s<%s", 
@@ -176,25 +187,17 @@ public class Tag {
                 }
             }
 
-            if (writer != null && Tag.selfClosingTags.contains(this.tagName.toLowerCase()) && this.blocks.isEmpty()) {
+            if (writer != null && 
+                Tag.selfClosingTags.contains(this.tagName.toLowerCase()) && 
+                this.blockWriter.getBuffer().length() == 0) 
+            {
                 writer.write(String.format(" />%s", indent != null? String.format("%n") : ""));
             }
             else {
                 if (writer != null) {
                     writer.write(String.format(">%s", indent != null? String.format("%n") : ""));
                 }
-                for (Block block : this.blocks) {
-                    try {
-                        Tag.parentTag.set(this);
-                        Tag.lastTag.set(null);
-                        block.block();
-                        writeLastTag();
-                    }
-                    finally {
-                        Tag.parentTag.set(parentTag);
-                        Tag.lastTag.set(lastTag);
-                    }
-                }
+                writer.write(this.blockWriter.toString());
                 if (writer != null) {
                     writer.write(String.format("%s</%s>%s", 
                             currentIndent != null? currentIndent : "",
@@ -217,7 +220,7 @@ public class Tag {
 	}
 
 	public void write(Writer writer) {
-	    this.writer = writer;
+	    Tag.writer.set(writer);
 	    this.write();
 	}
 
@@ -236,32 +239,35 @@ public class Tag {
         public static void text(String text) {
             writeLastTag();
             Tag parentTag = Tag.parentTag.get();
-            if (parentTag != null && parentTag.writer != null) {
+            Writer writer = Tag.writer.get();
+            if (parentTag != null && writer != null) {
                 String indent = parentTag.currentIndent != null && parentTag.indent != null? 
                         String.format("%s%s", parentTag.currentIndent, parentTag.indent) : "";
                 String newline = parentTag.currentIndent != null && parentTag.indent != null? 
                         String.format("%n") : "";
-                try { parentTag.writer.write(String.format("%s%s%s", indent, escape(text), newline)); } 
+                try { writer.write(String.format("%s%s%s", indent, escape(text), newline)); } 
                 catch (IOException e) {throw new RuntimeException(e);}
             }
         }
         public static void raw(String text) {
             writeLastTag();
             Tag parentTag = Tag.parentTag.get();
-            if (parentTag != null && parentTag.writer != null) {
-                try { parentTag.writer.write(text); } 
+            Writer writer = Tag.writer.get();
+            if (parentTag != null && writer != null) {
+                try { writer.write(text); } 
                 catch (IOException e) {throw new RuntimeException(e);}
             }
         }
         public static void comment(String text) {
             writeLastTag();
             Tag parentTag = Tag.parentTag.get();
-            if (parentTag != null && parentTag.writer != null) {
+            Writer writer = Tag.writer.get();
+            if (parentTag != null && writer != null) {
                 String indent = parentTag.currentIndent != null && parentTag.indent != null? 
                         String.format("%s%s", parentTag.currentIndent, parentTag.indent) : "";
                 String newline = parentTag.currentIndent != null && parentTag.indent != null? 
                         String.format("%n") : "";
-                try { parentTag.writer.write(String.format("%s<!--%s-->%s", indent, escape(text), newline)); } 
+                try { writer.write(String.format("%s<!--%s-->%s", indent, escape(text), newline)); } 
                 catch (IOException e) {throw new RuntimeException(e);}
             }
         }
@@ -269,12 +275,13 @@ public class Tag {
         public static void doctype(String type) {
             writeLastTag();
             Tag parentTag = Tag.parentTag.get();
-            if (parentTag != null && parentTag.writer != null) {
+            Writer writer = Tag.writer.get();
+            if (parentTag != null && writer != null) {
                 String indent = parentTag.currentIndent != null && parentTag.indent != null? 
                         String.format("%s%s", parentTag.currentIndent, parentTag.indent) : "";
                 String newline = parentTag.currentIndent != null && parentTag.indent != null? 
                         String.format("%n") : "";
-                try { parentTag.writer.write(String.format("%s%s%s", indent, doctypes.get(type), newline)); } 
+                try { writer.write(String.format("%s%s%s", indent, doctypes.get(type), newline)); } 
                 catch (IOException e) {throw new RuntimeException(e);}
             }
         }
