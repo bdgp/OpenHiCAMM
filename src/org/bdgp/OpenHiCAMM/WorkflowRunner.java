@@ -6,9 +6,12 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -52,6 +55,7 @@ public class WorkflowRunner {
     /**
      * Default file names for the metadata files.
      */
+
     public static final String WORKFLOW_DB = "workflow.db";
     public static final String LOG_FILE = "workflow.log";
     
@@ -92,6 +96,8 @@ public class WorkflowRunner {
     private Long startTime;
     private String startModuleId;
     
+    public static final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd.HH'T'mm:ss.SSSZ");
+
     public boolean isResume() {
         return resume;
     }
@@ -547,6 +553,13 @@ public class WorkflowRunner {
                         // delete and re-create the task records
                         WorkflowRunner.this.deleteTaskRecords(startModuleId);
                         WorkflowRunner.this.createTaskRecords(startModuleId);
+                        
+                        String startTimestamp = dateFormat.format(new Date(WorkflowRunner.this.startTime)); 
+                        WorkflowRunner.this.getModuleConfig().insertOrUpdate(
+                                new ModuleConfig(startModuleId, "startTime", startTimestamp), "id","key");
+                        WorkflowRunner.this.getModuleConfig().delete(
+                                where("id", startModuleId).
+                                and("key", "endTime"));
                     }
 
                     // call the runInitialize module method
@@ -618,10 +631,15 @@ public class WorkflowRunner {
                     }
                     Status status = coalesceStatuses(statuses);
 
+                    long endTime = System.currentTimeMillis();
+                    String endTimestamp = dateFormat.format(new Date(WorkflowRunner.this.startTime)); 
+                    WorkflowRunner.this.getModuleConfig().insertOrUpdate(
+                            new ModuleConfig(startModuleId, "endTime", endTimestamp), "id","key");
+
                     // Display a summary of all the task statuses
                     logTaskSummary(startModuleId);
                     
-                    logElapsedTime(startTime);
+                    logElapsedTime(startTime, endTime);
 
                     return status;
             	}
@@ -642,8 +660,8 @@ public class WorkflowRunner {
     }
     
     // Display the elapsed time
-    public void logElapsedTime(long startTime) {
-        long elapsedTime = System.currentTimeMillis() - startTime;
+    public void logElapsedTime(long startTime, long endTime) {
+        long elapsedTime = endTime - startTime;
         long hours = (long)Math.floor(elapsedTime / (1000 * 60 * 60));
         long minutes = (long)Math.floor(elapsedTime / (1000 * 60)) - (hours * 60);
         double seconds = (elapsedTime / 1000.0) - (hours * 60 * 60) - (minutes * 60);
@@ -918,9 +936,15 @@ public class WorkflowRunner {
         }
         List<Runnable> runnables = pool.shutdownNow();
 
+        long endTime = System.currentTimeMillis();
+        String endTimestamp = dateFormat.format(new Date(WorkflowRunner.this.startTime)); 
+        WorkflowRunner.this.getModuleConfig().insertOrUpdate(
+                new ModuleConfig(startModuleId, "endTime", endTimestamp), "id","key");
+
         // Log a summary
         logTaskSummary(this.startModuleId);
-        logElapsedTime(this.startTime);
+
+        logElapsedTime(this.startTime, endTime);
 
         return runnables;
     }
