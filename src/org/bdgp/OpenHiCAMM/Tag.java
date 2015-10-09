@@ -176,8 +176,8 @@ public class Tag {
 	
 	public Tag write() {
 	    Writer writer = Tag.writer.get();
-        try {
-            if (writer != null) {
+        if (writer != null) {
+            try {
                 writer.write(String.format("%s<%s", 
                         currentIndent != null? currentIndent : "", 
                         escape(this.tagName))); 
@@ -185,28 +185,23 @@ public class Tag {
                 for (Map.Entry<String,String> entry : this.attrs.entrySet()) {
                     writer.write(String.format(" %s=\"%s\"", escape(entry.getKey()), escape(entry.getValue())));
                 }
-            }
 
-            if (writer != null && 
-                Tag.selfClosingTags.contains(this.tagName.toLowerCase()) && 
-                this.blockWriter.getBuffer().length() == 0) 
-            {
-                writer.write(String.format(" />%s", indent != null? String.format("%n") : ""));
-            }
-            else {
-                if (writer != null) {
-                    writer.write(String.format(">%s", indent != null? String.format("%n") : ""));
+                if (Tag.selfClosingTags.contains(this.tagName.toLowerCase()) && 
+                    this.blockWriter.getBuffer().length() == 0) 
+                {
+                    writer.write(String.format(" />%s", indent != null? String.format("%n") : ""));
                 }
-                writer.write(this.blockWriter.toString());
-                if (writer != null) {
+                else {
+                    writer.write(String.format(">%s", indent != null? String.format("%n") : ""));
+                    writer.write(this.blockWriter.toString());
                     writer.write(String.format("%s</%s>%s", 
                             currentIndent != null? currentIndent : "",
                             escape(this.tagName), 
                             indent != null? String.format("%n") : ""));
                 }
             }
+            catch (IOException e) { throw new RuntimeException(e); }
         }
-        catch (IOException e) { throw new RuntimeException(e); }
         return this;
 	}
 	
