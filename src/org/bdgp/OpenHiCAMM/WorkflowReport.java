@@ -59,7 +59,7 @@ public class WorkflowReport implements Report {
 
     private WorkflowRunner workflowRunner;
 
-    public static void log(String message, Object... args) {
+    public void log(String message, Object... args) {
         if (DEBUG) {
             IJ.log(String.format("[WorkflowReport] %s", String.format(message, args)));
         }
@@ -78,11 +78,27 @@ public class WorkflowReport implements Report {
         // This is the starting SlideImager module.
         return Html().indent().with(()->{
             Head().with(()->{
+                // use bootstrap with the default theme
                 Link().attr("rel", "stylesheet").
                     attr("href", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css");
                 Link().attr("rel", "stylesheet").
                     attr("href", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css");
+                // javascript hack to try to fix anchor links not working in WebView
+                Script().attr("src", "https://code.jquery.com/jquery-2.1.4.min.js");
                 Script().attr("src", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js");
+                Script("$(document).ready(function() {\n"+
+                       "    $('a[href*=#]:not([href=#]),area[href*=#]').click(function() {\n"+
+                       "        if (location.pathname.replace(/^\\//,'') == this.pathname.replace(/^\\//,'') && location.hostname == this.hostname) {\n"+
+                       "            var target = $(this.hash);\n"+
+                       "            target = target.length ? target : $('[name=' + this.hash.slice(1) +']');\n"+
+                       "            if (target.length) {\n"+
+                       "                $('html,body').animate({\n"+
+                       "                    scrollTop: target.offset().top\n"+
+                       "                }, 500);\n"+
+                       "                return false;\n"+
+                       "            }\n"+
+                       "         }\n"+
+                       "});\n");
             });
             Body().with(()->{
                 for (Config canImageSlides : this.workflowRunner.getModuleConfig().select(
