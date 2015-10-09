@@ -272,13 +272,13 @@ public class WorkflowDialog extends JDialog {
         });
         getContentPane().add(btnShowDatabaseManager, "cell 1 6,alignx right");
         
-        btnViewReport = new JButton("View Report");
+        btnViewReport = new JButton("View Reports");
         btnViewReport.addActionListener(new ActionListener() {
         	public void actionPerformed(ActionEvent e) {
             	if (!active) return;
         	    if (WorkflowDialog.this.workflowRunner != null) {
-                    WorkflowReport.Frame workflowReport = new WorkflowReport.Frame(WorkflowDialog.this.workflowRunner);
-                    workflowReport.setVisible(true);
+                    ReportDialog.Frame reportDialog = new ReportDialog.Frame(WorkflowDialog.this.workflowRunner);
+                    reportDialog.setVisible(true);
         	    }
         	}
         });

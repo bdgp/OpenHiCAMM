@@ -17,6 +17,7 @@ import org.bdgp.OpenHiCAMM.Modules.BDGPROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.ImageStitcher;
 import org.bdgp.OpenHiCAMM.Modules.SlideImager;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
 import org.micromanager.MMStudio;
 import org.micromanager.api.MMPlugin;
 import org.micromanager.api.ScriptInterface;
@@ -28,6 +29,7 @@ public class OpenHiCAMM implements MMPlugin {
 	private ScriptInterface app;
 	private WorkflowDialog dialog;
 	private static List<String> moduleNames = null;
+	private static List<String> reportNames = null;
 
 	/**
 	 *  The menu name is stored in a static string, so Micro-Manager
@@ -140,17 +142,17 @@ public class OpenHiCAMM implements MMPlugin {
 	public String getCopyright() {
 		return "Copyright (C) 2015 Lawrence Berkeley National Laboratory";
 	}
-
-	/**
-	 * @return The list of registered modules from the META-INF/modules.txt files.
-	 */
-	public static List<String> getModuleNames() {
-		if (moduleNames == null) {
+	
+	private static void loadModules() {
+		if (moduleNames == null || reportNames == null) {
             // Add all the builtin modules to the modules list first
             moduleNames = new ArrayList<String>();
             moduleNames.add(SlideImager.class.getName());
             moduleNames.add(BDGPROIFinder.class.getName());
             moduleNames.add(ImageStitcher.class.getName());
+            
+            reportNames = new ArrayList<String>();
+            reportNames.add(WorkflowReport.class.getName());
             
             // Look in the mmslidemodules/ directory for any additional workflow modules.
             File pluginRootDir = new File(System.getProperty("org.bdgp.mmslide.module.path", MMSLIDEMODULESDIR));
@@ -160,12 +162,29 @@ public class OpenHiCAMM implements MMPlugin {
                     for (Class<?> iface : clazz.getInterfaces()) {
                         if (iface == Module.class) {
                             moduleNames.add(clazz.getName());
-                            break;
+                        }
+                        if (iface == Report.class) {
+                            reportNames.add(clazz.getName());
                         }
                     }
                 }
             }
 		}
+	}
+	
+	/**
+	 * @return The list of registered modules
+	 */
+	public static List<String> getModuleNames() {
+	    loadModules();
         return moduleNames;
     }
+	
+	/**
+	 * @return The list of registered reports
+	 */
+	public static List<String> getReportNames() {
+	    loadModules();
+	    return reportNames;
+	}
 }

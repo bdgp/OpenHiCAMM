@@ -3,10 +3,7 @@ package org.bdgp.OpenHiCAMM;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -18,7 +15,6 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import javax.imageio.ImageIO;
-import javax.swing.JFrame;
 
 import org.bdgp.OpenHiCAMM.DB.Acquisition;
 import org.bdgp.OpenHiCAMM.DB.Config;
@@ -35,6 +31,7 @@ import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.Modules.ROIFinderDialog;
 import org.bdgp.OpenHiCAMM.Modules.SlideImagerDialog;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -51,33 +48,16 @@ import ij.ImagePlus;
 import ij.gui.NewImage;
 import ij.gui.Roi;
 import ij.process.Blitter;
-import javafx.application.Platform;
-import javafx.embed.swing.JFXPanel;
-import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.VBox;
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebView;
-import netscape.javascript.JSObject;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 import static org.bdgp.OpenHiCAMM.Tag.T.*;
 
-@SuppressWarnings("serial")
-public class WorkflowReport {
+public class WorkflowReport implements Report {
     public static final int SLIDE_PREVIEW_WIDTH = 1280; 
     public static final int ROI_GRID_PREVIEW_WIDTH = 512; 
     public static final boolean DEBUG=true;
-    
+
     private WorkflowRunner workflowRunner;
-    @FXML private VBox vbox;
-    @FXML private ScrollPane scrollPane;
-    @FXML private WebView webView;
-    
-    public WorkflowReport() {}
 
     public static void log(String message, Object... args) {
         if (DEBUG) {
@@ -85,75 +65,11 @@ public class WorkflowReport {
         }
     }
     
-    public static class Frame extends JFrame {
-        public Frame(WorkflowRunner workflowRunner) {
-            JFXPanel fxPanel = new JFXPanel();
-            this.add(fxPanel);
-            this.setSize(1280, 1024);
-            this.setVisible(true);
-            this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
-            Platform.runLater(()->{
-                // log JavaFX exceptions
-                Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
-                    StringWriter sw = new StringWriter();
-                    throwable.printStackTrace(new PrintWriter(sw));
-                    log("Caught exception while running workflow: %s", sw.toString());
-                });
-
-                try {
-                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/WorkflowReport.fxml"));
-                    Parent root = loader.load();
-                    WorkflowReport controller = loader.<WorkflowReport>getController();
-                    controller.runReport(workflowRunner);
-                    Scene scene = new Scene(root);
-                    fxPanel.setScene(scene);
-                } 
-                catch (Exception e) {
-                    StringWriter sw = new StringWriter();
-                    e.printStackTrace(new PrintWriter(sw));
-                    log("Caught exception while running workflow: %s", sw.toString());
-                    throw new RuntimeException(e);
-                }
-            });
-        }
-    }
-
-    public void runReport(WorkflowRunner workflowRunner) {
+    @Override public void initialize(WorkflowRunner workflowRunner) {
         this.workflowRunner = workflowRunner;
-        
-        WebEngine webEngine = webView.getEngine();
-        JSObject jsobj = (JSObject) webEngine.executeScript("window");
-        jsobj.setMember("workflowReport", this);
-
-        new Thread(()->{
-            try{
-                String html = runReport();
-                log("html = %n%s", html);
-
-                if (DEBUG) {
-                    try {
-                        File reportFile = new File(System.getProperty("user.home"), "workflowReport.html");
-                        PrintWriter htmlOut = new PrintWriter(reportFile.getPath());
-                        htmlOut.print(html);
-                        htmlOut.close();
-                    }
-                    catch (FileNotFoundException e) { throw new RuntimeException(e); }
-                }
-
-                Platform.runLater(()->{
-                    webEngine.loadContent(html);
-                });
-            } 
-            catch (Throwable e) {
-                StringWriter sw = new StringWriter();
-                e.printStackTrace(new PrintWriter(sw));
-                log("Caught exception while running workflow: %s", sw.toString());
-                throw e;
-            }
-        }).start();
     }
-
+    
+    @Override
     public String runReport() {
         Dao<Pool> poolDao = this.workflowRunner.getInstanceDb().table(Pool.class);
         Dao<PoolSlide> psDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);
@@ -416,7 +332,7 @@ public class WorkflowReport {
                                (int)Math.floor(roi.getXBase()+roi.getFloatWidth()), 
                                (int)Math.floor(roi.getYBase()+roi.getFloatHeight()))).
                        attr("title", roi.getName()).
-                       attr("onclick", String.format("workflowReport.showImage(%d)", new Integer(roi.getProperty("id"))));
+                       attr("onclick", String.format("report.showImage(%d)", new Integer(roi.getProperty("id"))));
             }
             // now draw the image ROIs in black
             slideThumb.getProcessor().setColor(new Color(0, 0, 0));
@@ -585,7 +501,7 @@ public class WorkflowReport {
                                                                                 xlocScale+imp.getWidth(),
                                                                                 ylocScale+imp.getHeight())).
                                                                         attr("title", image2.getName()).
-                                                                        attr("onclick", String.format("workflowReport.showImage(%d)", image2.getId()));
+                                                                        attr("onclick", String.format("report.showImage(%d)", image2.getId()));
 
                                                                 // draw a black rectangle around the image
                                                                 roiGridThumb.getProcessor().setColor(new Color(0, 0, 0));
@@ -648,7 +564,7 @@ public class WorkflowReport {
                                                                     attr("width", imp.getWidth()).
                                                                     attr("height", imp.getHeight()).
                                                                     attr("title", stitchedImageFile.getValue()).
-                                                                    attr("onclick", String.format("workflowReport.showImageFile(\"%s\")",  
+                                                                    attr("onclick", String.format("report.showImageFile(\"%s\")",  
                                                                             Util.escapeJavaStyleString(stitchedImageFile.getValue())));
                                                         }
                                                     }
