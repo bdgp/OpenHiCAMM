@@ -139,7 +139,7 @@ public class Tag {
 	    return this;
 	}
 
-	public Tag pass() {
+	public Tag hold() {
 	    Tag.writer.set(nullWriter);
 	    return this;
 	}
