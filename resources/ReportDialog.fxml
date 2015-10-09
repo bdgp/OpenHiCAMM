@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.web.*?>
+<?import java.lang.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox id="vbox" fx:id="vbox" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.bdgp.OpenHiCAMM.ReportDialog">
+   <children>
+      <WebView id="webView" fx:id="webView" prefHeight="1024.0" prefWidth="1280.0" VBox.vgrow="ALWAYS" />
+      <HBox fillHeight="false" maxHeight="-Infinity" prefHeight="25.0" prefWidth="200.0" VBox.vgrow="NEVER">
+         <children>
+            <ChoiceBox fx:id="selectReport" maxHeight="-Infinity" prefHeight="50.0" prefWidth="200.0" HBox.hgrow="NEVER" />
+            <Button fx:id="selectButton" mnemonicParsing="false" onAction="#selectButtonPressed" text="Select Report" HBox.hgrow="NEVER" />
+         </children>
+      </HBox>
+   </children>
+</VBox>
