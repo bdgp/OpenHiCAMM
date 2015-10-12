@@ -25,6 +25,7 @@ public class Tag {
 	private StringWriter blockWriter;
 	private String indent;
 	private String currentIndent;
+	private boolean autoWrite;
 
 	private static ThreadLocal<Tag> lastTag = new ThreadLocal<Tag>();
 	private static ThreadLocal<Tag> parentTag = new ThreadLocal<Tag>();
@@ -68,6 +69,7 @@ public class Tag {
 
 	    Tag parentTag = Tag.parentTag.get();
         this.indent = parentTag != null? parentTag.indent : null;
+        this.autoWrite = parentTag != null? parentTag.autoWrite : true;
         this.currentIndent = this.indent != null?
                 parentTag != null && parentTag.currentIndent != null?
                     String.format("%s%s", parentTag.currentIndent, this.indent) : 
@@ -87,7 +89,7 @@ public class Tag {
 	
 	private static void writeLastTag() {
 		Tag lastTag = Tag.lastTag.get();
-		if (lastTag != null) {
+		if (lastTag != null && lastTag.autoWrite) {
             lastTag.write();
 		}
         Tag.lastTag.remove();
@@ -138,12 +140,15 @@ public class Tag {
 	    this.with(()->T.doctype(type));
 	    return this;
 	}
-
-	public Tag hold() {
-	    Tag.writer.set(nullWriter);
+	
+	public Tag autoWrite(boolean autoWrite) {
+	    this.autoWrite = autoWrite;
 	    return this;
 	}
-	
+	public Tag autoWrite() {
+	    return this.autoWrite(true);
+	}
+
 	public Tag indent(String indent) {
 	    this.indent = indent;
 	    Tag parentTag = Tag.parentTag.get();
