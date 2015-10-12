@@ -4,9 +4,8 @@ import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,7 +42,7 @@ import org.micromanager.utils.ImageLabelComparator;
 import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMSerializationException;
 
-import com.sun.org.apache.xml.internal.security.utils.Base64;
+import com.google.common.io.Resources;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -93,8 +92,8 @@ public class WorkflowReport implements Report {
                 Script().attr("src", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js");
                 try {
                     // taken from https://github.com/kemayo/maphilight
-                    Script().raw(new String(Files.readAllBytes(Paths.get(getClass().getResource("/jquery.maphighlight.js").toURI()))));
-                    Script().raw(new String(Files.readAllBytes(Paths.get(getClass().getResource("/WorkflowReport.js").toURI()))));
+                    Script().raw(Resources.getResource("jquery.maphilight.js").toString());
+                    Script().raw(Resources.getResource("WorkflowReport.js").toString());
                 } 
                 catch (Exception e) {throw new RuntimeException(e);}
             });
@@ -378,7 +377,7 @@ public class WorkflowReport implements Report {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try { ImageIO.write(slideThumb.getBufferedImage(), "jpg", baos); } 
         catch (IOException e) {throw new RuntimeException(e);}
-        Img().attr("src", String.format("data:image/jpg;base64,%s", Base64.encode(baos.toByteArray()))).
+        Img().attr("src", String.format("data:image/jpg;base64,%s", Base64.getEncoder().encode(baos.toByteArray()))).
                 attr("width", slideThumb.getWidth()).
                 attr("height", slideThumb.getHeight()).
                 attr("usemap", String.format("#map-%s-%s", startModule.getId(), slideId)).
@@ -529,10 +528,10 @@ public class WorkflowReport implements Report {
                                                                 // make the tile image clickable
                                                                 Area().attr("shape", "rect"). 
                                                                         attr("coords", String.format("%d,%d,%d,%d", 
-                                                                                tileRoi.getXBase(), 
-                                                                                tileRoi.getYBase(),
-                                                                                tileRoi.getXBase()+tileRoi.getFloatWidth(),
-                                                                                tileRoi.getYBase()+tileRoi.getFloatHeight())).
+                                                                                (int)Math.floor(tileRoi.getXBase()), 
+                                                                                (int)Math.floor(tileRoi.getYBase()),
+                                                                                (int)Math.floor(tileRoi.getXBase()+tileRoi.getFloatWidth()),
+                                                                                (int)Math.floor(tileRoi.getYBase()+tileRoi.getFloatHeight()))).
                                                                         attr("title", image2.getName()).
                                                                         attr("onclick", String.format("report.showImage(%d)", image2.getId()));
 
@@ -546,7 +545,7 @@ public class WorkflowReport implements Report {
                                                     ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                                                     try { ImageIO.write(roiGridThumb.getBufferedImage(), "jpg", baos2); } 
                                                     catch (IOException e) {throw new RuntimeException(e);}
-                                                    Img().attr("src", String.format("data:image/jpg;base64,%s", Base64.encode(baos2.toByteArray()))).
+                                                    Img().attr("src", String.format("data:image/jpg;base64,%s", Base64.getEncoder().encode(baos2.toByteArray()))).
                                                             attr("width", roiGridThumb.getWidth()).
                                                             attr("height", roiGridThumb.getHeight()).
                                                             attr("usemap", String.format("#map-%s-ROI%d", imager.getId(), roi.getId()));
@@ -592,7 +591,7 @@ public class WorkflowReport implements Report {
                                                             ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                                                             try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                             catch (IOException e) {throw new RuntimeException(e);}
-                                                            Img().attr("src", String.format("data:image/jpg;base64,%s", Base64.encode(baos2.toByteArray()))).
+                                                            Img().attr("src", String.format("data:image/jpg;base64,%s", Base64.getEncoder().encode(baos2.toByteArray()))).
                                                                     attr("width", imp.getWidth()).
                                                                     attr("height", imp.getHeight()).
                                                                     attr("title", stitchedImageFile.getValue()).
