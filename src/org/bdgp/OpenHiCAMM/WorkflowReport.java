@@ -614,7 +614,7 @@ public class WorkflowReport implements Report {
     }
     
     public void showImage(int imageId) {
-        log("called showImage(imageId=%d)", imageId);
+        //log("called showImage(imageId=%d)", imageId);
         Dao<Image> imageDao = this.workflowRunner.getInstanceDb().table(Image.class);
         Dao<Acquisition> acqDao = this.workflowRunner.getInstanceDb().table(Acquisition.class);
         Image image = imageDao.selectOneOrDie(where("id", imageId));
@@ -623,7 +623,7 @@ public class WorkflowReport implements Report {
     }
 
     public void showImageFile(String imagePath) {
-        log("called showImageFile(imagePath=%s)", imagePath);
+        //log("called showImageFile(imagePath=%s)", imagePath);
         ImagePlus imp = new ImagePlus(imagePath);
         imp.show();
     }
