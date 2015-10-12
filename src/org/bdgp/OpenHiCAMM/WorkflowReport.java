@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -87,19 +89,14 @@ public class WorkflowReport implements Report {
                     attr("href", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css");
                 Link().attr("rel", "stylesheet").
                     attr("href", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css");
-                // javascript hack to try to fix anchor links not working in WebView
                 Script().attr("src", "https://code.jquery.com/jquery-2.1.4.min.js");
                 Script().attr("src", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js");
-                Script("$(document).ready(function() {\n"+
-                       "  $('a[href*=#],area[href*=#]').click(function(e) {\n"+
-                       "    var hash = this.href.substr(this.href.indexOf('#'));\n"+
-                       "    var target = $('[name=\\'' + hash.slice(1) +'\\']');\n"+
-                       "    if (target.length) {\n"+
-                       "      $('html,body').animate({scrollTop: target.offset().top }, 500);\n"+
-                       "      return false;\n"+
-                       "    }\n"+
-                       "  });\n"+
-                       "});\n");
+                try {
+                    // taken from https://github.com/kemayo/maphilight
+                    Script().raw(new String(Files.readAllBytes(Paths.get(getClass().getResource("/jquery.maphighlight.js").toURI()))));
+                    Script().raw(new String(Files.readAllBytes(Paths.get(getClass().getResource("/WorkflowReport.js").toURI()))));
+                } 
+                catch (Exception e) {throw new RuntimeException(e);}
             });
             Body().with(()->{
                 List<Runnable> runnables = new ArrayList<Runnable>();
@@ -323,13 +320,16 @@ public class WorkflowReport implements Report {
                     int ylocScale = (int)Math.floor(ylocInvert * scaleFactor);
                     log("yloc = %d, ylocInvert = %d, ylocScale = %d", yloc, ylocInvert, ylocScale);
 
+                    // draw the thumbnail image
                     slideThumb.getProcessor().copyBits(imp.getProcessor(), xlocScale, ylocScale, Blitter.COPY);
+
+                    // save the image ROI for the image map
                     Roi imageRoi = new Roi(xlocScale, ylocScale, imp.getWidth(), imp.getHeight()); 
                     imageRoi.setName(image.getName());
                     imageRoi.setProperty("id", new Integer(image.getId()).toString());
                     imageRois.put(image.getId(), imageRoi);
                     log("imageRoi = %s", imageRoi);
-                    
+
                     for (ROI roi : roiDao.select(where("imageId", image.getId()))) {
                         int roiX = (int)Math.floor(xlocScale + (roi.getX1() * scaleFactor));
                         int roiY = (int)Math.floor(ylocScale + (roi.getY1() * scaleFactor));
@@ -338,6 +338,8 @@ public class WorkflowReport implements Report {
                         Roi r = new Roi(roiX, roiY, roiWidth, roiHeight);
                         r.setName(roi.toString());
                         r.setProperty("id", new Integer(roi.getId()).toString());
+                        r.setStrokeColor(new Color(1f, 0f, 0f, 0.4f));
+                        r.setStrokeWidth(0.4);
                         roiRois.add(r);
                         log("roiRoi = %s", r);
                     }
@@ -366,13 +368,7 @@ public class WorkflowReport implements Report {
                        attr("title", roi.getName()).
                        attr("onclick", String.format("report.showImage(%d)", new Integer(roi.getProperty("id"))));
             }
-            // now draw the image ROIs in black
-            slideThumb.getProcessor().setColor(new Color(0, 0, 0));
-            for (Roi imageRoi : imageRois.values()) {
-                slideThumb.getProcessor().draw(imageRoi);
-            }
             // now draw the ROI rois in red
-            slideThumb.getProcessor().setColor(new Color(255, 0, 0));
             for (Roi roiRoi : roiRois) {
                 slideThumb.getProcessor().draw(roiRoi);
             }
@@ -386,7 +382,8 @@ public class WorkflowReport implements Report {
                 attr("width", slideThumb.getWidth()).
                 attr("height", slideThumb.getHeight()).
                 attr("usemap", String.format("#map-%s-%s", startModule.getId(), slideId)).
-                attr("style", "border: 2px solid black");
+                attr("class","map").
+                attr("style", "border: 1px solid black");
         
         // now render the individual ROI sections
         for (Task task : imageTasks) {
@@ -524,20 +521,23 @@ public class WorkflowReport implements Report {
                                                                 log("yloc=%d, ylocInvert=%d, ylocScale=%d", yloc, ylocInvert, ylocScale);
 
                                                                 roiGridThumb.getProcessor().copyBits(imp.getProcessor(), xlocScale, ylocScale, Blitter.COPY);
+                                                                
+                                                                Roi tileRoi = new Roi(xlocScale, ylocScale, imp.getWidth(), imp.getHeight());
+                                                                tileRoi.setStrokeColor(new Color(0f, 0f, 0f, 0.4f));
+                                                                tileRoi.setStrokeWidth(0.4);
 
                                                                 // make the tile image clickable
                                                                 Area().attr("shape", "rect"). 
                                                                         attr("coords", String.format("%d,%d,%d,%d", 
-                                                                                xlocScale, 
-                                                                                ylocScale,
-                                                                                xlocScale+imp.getWidth(),
-                                                                                ylocScale+imp.getHeight())).
+                                                                                tileRoi.getXBase(), 
+                                                                                tileRoi.getYBase(),
+                                                                                tileRoi.getXBase()+tileRoi.getFloatWidth(),
+                                                                                tileRoi.getYBase()+tileRoi.getFloatHeight())).
                                                                         attr("title", image2.getName()).
                                                                         attr("onclick", String.format("report.showImage(%d)", image2.getId()));
 
                                                                 // draw a black rectangle around the image
-                                                                roiGridThumb.getProcessor().setColor(new Color(0, 0, 0));
-                                                                roiGridThumb.getProcessor().drawRect(xlocScale, ylocScale, imp.getWidth(), imp.getHeight());
+                                                                roiGridThumb.getProcessor().draw(tileRoi);
                                                             }
                                                         }
                                                     });
