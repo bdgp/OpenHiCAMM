@@ -154,14 +154,14 @@ public class ReportDialog {
             throw new RuntimeException(e);
         }
     }
-
+    
     public static class Frame extends JFrame {
         public Frame(WorkflowRunner workflowRunner) {
             JFXPanel fxPanel = new JFXPanel();
             this.add(fxPanel);
             this.setSize(1280, 1024);
             this.setVisible(true);
-            this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            this.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 
             Platform.runLater(()->{
                 // log JavaFX exceptions

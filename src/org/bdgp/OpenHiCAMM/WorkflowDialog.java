@@ -69,9 +69,11 @@ public class WorkflowDialog extends JDialog {
     ImageLog imageLog;
     JButton btnResume;
     JSpinner numThreads;
-    private JLabel lblNumberOfThreads;
-    private boolean active = true;
-    private JButton btnViewReport;
+
+    JLabel lblNumberOfThreads;
+    boolean active = true;
+    JButton btnViewReport;
+    ReportDialog.Frame reportDialog;
 
     public WorkflowDialog(Frame parentFrame, OpenHiCAMM mmslide) {
         super(parentFrame, "OpenHiCAMM");
@@ -277,8 +279,10 @@ public class WorkflowDialog extends JDialog {
         	public void actionPerformed(ActionEvent e) {
             	if (!active) return;
         	    if (WorkflowDialog.this.workflowRunner != null) {
-                    ReportDialog.Frame reportDialog = new ReportDialog.Frame(WorkflowDialog.this.workflowRunner);
-                    reportDialog.setVisible(true);
+        	        synchronized (this) {
+                        if (reportDialog == null) reportDialog = new ReportDialog.Frame(WorkflowDialog.this.workflowRunner);
+                        reportDialog.setVisible(true);
+        	        }
         	    }
         	}
         });
