@@ -87,8 +87,8 @@ public class Image {
     public String toString() {
     	return String.format(
     			"%s(id=%d, slideId=%d, channel=%d, slice=%d, frame=%d, position=%d, acquisitionId=%d)",
-    			this.id,
     			this.getClass().getSimpleName(),
+    			this.id,
     			this.slideId,
     			this.channel, 
     			this.slice,
