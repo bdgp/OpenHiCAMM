@@ -28,6 +28,7 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.TextField;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
@@ -41,6 +42,7 @@ public class ReportDialog {
     @FXML private WebView webView;
     @FXML private ChoiceBox<String> selectReport;
     @FXML private Button selectButton;
+    @FXML private TextField evaluateJs;
     
     public static final boolean DEBUG=true;
 
@@ -72,6 +74,20 @@ public class ReportDialog {
                 runReport(report);
             } 
             catch (InstantiationException|IllegalAccessException|ClassNotFoundException e) {throw new RuntimeException(e);}
+        }
+    }
+
+
+    @FXML void evaluateJs(ActionEvent event) {
+        String text = evaluateJs.getText();
+
+        try {
+            log("JS result: %s", webView.getEngine().executeScript(text).toString());
+        } 
+        catch (Throwable e) {
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            log("Caught exception while running workflow: %s", sw.toString());
         }
     }
 
@@ -110,13 +126,20 @@ public class ReportDialog {
             String reportName = report.getClass().getSimpleName();
             File reportFile = new File(reportDir, String.format("%s.html", reportName));
 
+            if (reportFile.exists()) {
+                String html = new String(Files.readAllBytes(Paths.get(reportFile.getPath())));
+                Platform.runLater(()->{
+                    webEngine.loadContent(html);
+                });
+            }
+
             // if the report file's timestamp is older than the workflow run time,
             // it needs to be regenerated
             if (workflowRunTime == null || !reportFile.exists() || reportFile.lastModified() <= workflowRunTime) {
                 Alert alert = new Alert(AlertType.CONFIRMATION);
                 alert.setTitle(String.format("Report %s", reportName));
-                alert.setHeaderText(String.format("Report %s needs to be regenerated", reportName));
-                alert.setContentText("This could take some time. Proceed?");
+                alert.setHeaderText(String.format("Report %s is outdated.", reportName));
+                alert.setContentText("Regenerate the report? This could take some time.");
                 alert.getButtonTypes().clear();
                 alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
                 Optional<ButtonType> result = alert.showAndWait();
@@ -136,15 +159,7 @@ public class ReportDialog {
                             webEngine.loadContent(html);
                         });
                     }).start();
-                    return;
                 }
-            }
-
-            if (reportFile.exists()) {
-                String html = new String(Files.readAllBytes(Paths.get(reportFile.getPath())));
-                Platform.runLater(()->{
-                    webEngine.loadContent(html);
-                });
             }
         } 
         catch (Throwable e) {
@@ -179,7 +194,7 @@ public class ReportDialog {
                     Scene scene = new Scene(root);
                     fxPanel.setScene(scene);
                 } 
-                catch (Exception e) {
+                catch (Throwable e) {
                     StringWriter sw = new StringWriter();
                     e.printStackTrace(new PrintWriter(sw));
                     log("Caught exception while running workflow: %s", sw.toString());

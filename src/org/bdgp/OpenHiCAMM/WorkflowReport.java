@@ -59,6 +59,10 @@ public class WorkflowReport implements Report {
 
     private WorkflowRunner workflowRunner;
 
+    public void jsLog(String message) {
+        IJ.log(String.format("[WorkflowReport:js] %s", message));
+    }
+
     public void log(String message, Object... args) {
         if (DEBUG) {
             IJ.log(String.format("[WorkflowReport] %s", String.format(message, args)));
@@ -87,20 +91,18 @@ public class WorkflowReport implements Report {
                 Script().attr("src", "https://code.jquery.com/jquery-2.1.4.min.js");
                 Script().attr("src", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js");
                 Script("$(document).ready(function() {\n"+
-                       "    $('a[href*=#]:not([href=#]),area[href*=#]').click(function() {\n"+
-                       "        if (location.pathname.replace(/^\\//,'') == this.pathname.replace(/^\\//,'') && location.hostname == this.hostname) {\n"+
-                       "            var target = $(this.hash);\n"+
-                       "            target = target.length ? target : $('[name=' + this.hash.slice(1) +']');\n"+
-                       "            if (target.length) {\n"+
-                       "                $('html,body').animate({\n"+
-                       "                    scrollTop: target.offset().top\n"+
-                       "                }, 500);\n"+
-                       "                return false;\n"+
-                       "            }\n"+
-                       "         }\n"+
+                       "  $('a[href*=#],area[href*=#]').click(function(e) {\n"+
+                       "    var hash = this.href.substr(this.href.indexOf('#'));\n"+
+                       "    var target = $('[name=\\'' + hash.slice(1) +'\\']');\n"+
+                       "    if (target.length) {\n"+
+                       "      $('html,body').animate({scrollTop: target.offset().top }, 500);\n"+
+                       "      return false;\n"+
+                       "    }\n"+
+                       "  });\n"+
                        "});\n");
             });
             Body().with(()->{
+                List<Runnable> runnables = new ArrayList<Runnable>();
                 for (Config canImageSlides : this.workflowRunner.getModuleConfig().select(
                         where("key","canImageSlides").
                         and("value", "yes"))) 
@@ -130,17 +132,29 @@ public class WorkflowReport implements Report {
                                     List<PoolSlide> pss = psDao.select(where("poolId", pool.getId()));
                                     if (!pss.isEmpty()) {
                                         for (PoolSlide ps : pss) {
-                                            log("Calling runReport(startModule=%s, poolSlide=%s)", slideImager, ps);
-                                            runReport(slideImager, ps);
+                                            A(String.format("Module %s, Slide %s", slideImager, ps)).
+                                                attr("href", String.format("#report-%s-PS%s", slideImager.getId(), ps.getId()));
+                                            runnables.add(()->{
+                                                log("Calling runReport(startModule=%s, poolSlide=%s)", slideImager, ps);
+                                                runReport(slideImager, ps);
+                                            });
                                         }
-                                        return;
+                                        continue;
                                     }
                                 }
                             }
                         }
-                        log("Calling runReport(startModule=%s, poolSlide=null)", slideImager);
-                        runReport(slideImager, null);
+                        A(String.format("Module %s", slideImager)).
+                            attr("href", String.format("#report-%s", slideImager.getId()));
+                        runnables.add(()->{
+                            log("Calling runReport(startModule=%s, poolSlide=null)", slideImager);
+                            runReport(slideImager, null);
+                        });
                     }
+                }
+                Hr();
+                for (Runnable runnable : runnables) {
+                    runnable.run();
                 }
             });
         }).toString();
@@ -202,6 +216,7 @@ public class WorkflowReport implements Report {
                     poolSlide.getPoolId(), 
                     poolSlide.getCartridgePosition(), 
                     poolSlide.getSlidePosition());
+            A().attr("name", String.format("report-%s-PS%s", startModule.getId(), poolSlide.getId()));
             H1().text(title);
             log("title = %s", title);
         }
@@ -209,6 +224,7 @@ public class WorkflowReport implements Report {
             slide = null;
             slideId = "slide";
             String title = String.format("SlideImager %s", startModule.getId());
+            A().attr("name", String.format("report-%s", startModule.getId()));
             H1().text(title);
             log("title = %s", title);
         }

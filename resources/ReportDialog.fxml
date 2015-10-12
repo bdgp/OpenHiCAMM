@@ -13,6 +13,7 @@
          <children>
             <ChoiceBox fx:id="selectReport" maxHeight="-Infinity" prefHeight="50.0" prefWidth="600.0" HBox.hgrow="NEVER" />
             <Button fx:id="selectButton" mnemonicParsing="false" onAction="#selectButtonPressed" text="Select Report" HBox.hgrow="NEVER" />
+            <TextField fx:id="evaluateJs" onAction="#evaluateJs" prefColumnCount="45" style="visibility: false;" />
          </children>
       </HBox>
    </children>
