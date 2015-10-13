@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
@@ -42,6 +44,7 @@ import org.micromanager.utils.ImageLabelComparator;
 import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMSerializationException;
 
+import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 
 import ij.IJ;
@@ -92,8 +95,8 @@ public class WorkflowReport implements Report {
                 Script().attr("src", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js");
                 try {
                     // taken from https://github.com/kemayo/maphilight
-                    Script().raw(Resources.getResource("jquery.maphilight.js").toString());
-                    Script().raw(Resources.getResource("WorkflowReport.js").toString());
+                    Script().raw(Resources.toString(Resources.getResource("jquery.maphilight.js"), Charsets.UTF_8));
+                    Script().raw(Resources.toString(Resources.getResource("WorkflowReport.js"), Charsets.UTF_8));
                 } 
                 catch (Exception e) {throw new RuntimeException(e);}
             });
@@ -128,8 +131,10 @@ public class WorkflowReport implements Report {
                                     List<PoolSlide> pss = psDao.select(where("poolId", pool.getId()));
                                     if (!pss.isEmpty()) {
                                         for (PoolSlide ps : pss) {
-                                            A(String.format("Module %s, Slide %s", slideImager, ps)).
-                                                attr("href", String.format("#report-%s-PS%s", slideImager.getId(), ps.getId()));
+                                            P().with(()->{
+                                                A(String.format("Module %s, Slide %s", slideImager, ps)).
+                                                    attr("href", String.format("#report-%s-PS%s", slideImager.getId(), ps.getId()));
+                                            });
                                             runnables.add(()->{
                                                 log("Calling runReport(startModule=%s, poolSlide=%s)", slideImager, ps);
                                                 runReport(slideImager, ps);
@@ -140,8 +145,10 @@ public class WorkflowReport implements Report {
                                 }
                             }
                         }
-                        A(String.format("Module %s", slideImager)).
-                            attr("href", String.format("#report-%s", slideImager.getId()));
+                        P().with(()->{
+                            A(String.format("Module %s", slideImager)).
+                                attr("href", String.format("#report-%s", slideImager.getId()));
+                        });
                         runnables.add(()->{
                             log("Calling runReport(startModule=%s, poolSlide=null)", slideImager);
                             runReport(slideImager, null);
@@ -240,13 +247,18 @@ public class WorkflowReport implements Report {
         log("invertYAxis = %b", invertYAxis);
 
         // sort imageTasks by image position
-        List<Task> imageTasks = this.workflowRunner.getTaskStatus().select(where("moduleId", startModule.getId()));
+        List<Task> imageTasks = this.workflowRunner.getTaskStatus().select(
+                where("moduleId", startModule.getId()));
         Map<String,Task> imageTaskPosIdx = new TreeMap<String,Task>(new ImageLabelComparator());
         for (Task imageTask : imageTasks) {
-            Config imageLabelConf = this.workflowRunner.getTaskConfig().selectOne(
-                    where("id", imageTask.getId()).and("key", "imageLabel"));
-            if (imageLabelConf != null) {
-                imageTaskPosIdx.put(imageLabelConf.getValue(), imageTask);
+            Config slideIdConf = this.workflowRunner.getTaskConfig().selectOne(
+                    where("id", imageTask.getId()).and("key", "slideId"));
+            if (poolSlide == null || new Integer(slideIdConf.getValue()).equals(poolSlide.getSlideId())) {
+                Config imageLabelConf = this.workflowRunner.getTaskConfig().selectOne(
+                        where("id", imageTask.getId()).and("key", "imageLabel"));
+                if (imageLabelConf != null) {
+                    imageTaskPosIdx.put(imageLabelConf.getValue(), imageTask);
+                }
             }
         }
         imageTasks.clear();
@@ -269,9 +281,17 @@ public class WorkflowReport implements Report {
                 if (imageIdConf != null) {
                     Image image = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf.getValue())));
                     log("Getting image size for image %s", image);
-                    ImagePlus imp = image.getImagePlus(acqDao);
-                    imageWidth = imp.getWidth();
-                    imageHeight = imp.getHeight();
+                    ImagePlus imp = null;
+                    try { imp = image.getImagePlus(acqDao); }
+                    catch (Throwable e) {
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        log("Couldn't retrieve image %s from the image cache!%n%s", image, sw);
+                    }
+                    if (imp != null) {
+                        imageWidth = imp.getWidth();
+                        imageHeight = imp.getHeight();
+                    }
                 }
             }
         }
@@ -301,46 +321,54 @@ public class WorkflowReport implements Report {
                     // Get a thumbnail of the image
                     Image image = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf.getValue())));
                     log("Working on image; %s", image);
-                    ImagePlus imp = image.getImagePlus(acqDao);
-                    int width = imp.getWidth(), height = imp.getHeight();
-                    log("Image width: %d, height: %d", width, height);
-                    imp.getProcessor().setInterpolate(true);
-                    imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
-                            (int)Math.floor(imp.getWidth() * scaleFactor), 
-                            (int)Math.floor(imp.getHeight() * scaleFactor)));
-                    log("Resized image width: %d, height: %d", imp.getWidth(), imp.getHeight());
-                    
-                    int xloc = (int)Math.floor(((msp.getX() - minX) / pixelSize));
-                    int xlocInvert = invertXAxis? slideWidthPx - (xloc + width) : xloc;
-                    int xlocScale = (int)Math.floor(xlocInvert * scaleFactor);
-                    log("xloc = %d, xlocInvert = %d, xlocScale = %d", xloc, xlocInvert, xlocScale);
-                    int yloc = (int)Math.floor(((msp.getY() - minY) / pixelSize));
-                    int ylocInvert = invertYAxis? slideHeightPx - (yloc + height) : yloc;
-                    int ylocScale = (int)Math.floor(ylocInvert * scaleFactor);
-                    log("yloc = %d, ylocInvert = %d, ylocScale = %d", yloc, ylocInvert, ylocScale);
+                    ImagePlus imp = null;
+                    try { imp = image.getImagePlus(acqDao); }
+                    catch (Throwable e) {
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        log("Couldn't retrieve image %s from the image cache!%n%s", image, sw);
+                    }
+                    if (imp != null) {
+                        int width = imp.getWidth(), height = imp.getHeight();
+                        log("Image width: %d, height: %d", width, height);
+                        imp.getProcessor().setInterpolate(true);
+                        imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
+                                (int)Math.floor(imp.getWidth() * scaleFactor), 
+                                (int)Math.floor(imp.getHeight() * scaleFactor)));
+                        log("Resized image width: %d, height: %d", imp.getWidth(), imp.getHeight());
+                        
+                        int xloc = (int)Math.floor(((msp.getX() - minX) / pixelSize));
+                        int xlocInvert = invertXAxis? slideWidthPx - (xloc + width) : xloc;
+                        int xlocScale = (int)Math.floor(xlocInvert * scaleFactor);
+                        log("xloc = %d, xlocInvert = %d, xlocScale = %d", xloc, xlocInvert, xlocScale);
+                        int yloc = (int)Math.floor(((msp.getY() - minY) / pixelSize));
+                        int ylocInvert = invertYAxis? slideHeightPx - (yloc + height) : yloc;
+                        int ylocScale = (int)Math.floor(ylocInvert * scaleFactor);
+                        log("yloc = %d, ylocInvert = %d, ylocScale = %d", yloc, ylocInvert, ylocScale);
 
-                    // draw the thumbnail image
-                    slideThumb.getProcessor().copyBits(imp.getProcessor(), xlocScale, ylocScale, Blitter.COPY);
+                        // draw the thumbnail image
+                        slideThumb.getProcessor().copyBits(imp.getProcessor(), xlocScale, ylocScale, Blitter.COPY);
 
-                    // save the image ROI for the image map
-                    Roi imageRoi = new Roi(xlocScale, ylocScale, imp.getWidth(), imp.getHeight()); 
-                    imageRoi.setName(image.getName());
-                    imageRoi.setProperty("id", new Integer(image.getId()).toString());
-                    imageRois.put(image.getId(), imageRoi);
-                    log("imageRoi = %s", imageRoi);
+                        // save the image ROI for the image map
+                        Roi imageRoi = new Roi(xlocScale, ylocScale, imp.getWidth(), imp.getHeight()); 
+                        imageRoi.setName(image.getName());
+                        imageRoi.setProperty("id", new Integer(image.getId()).toString());
+                        imageRois.put(image.getId(), imageRoi);
+                        log("imageRoi = %s", imageRoi);
 
-                    for (ROI roi : roiDao.select(where("imageId", image.getId()))) {
-                        int roiX = (int)Math.floor(xlocScale + (roi.getX1() * scaleFactor));
-                        int roiY = (int)Math.floor(ylocScale + (roi.getY1() * scaleFactor));
-                        int roiWidth = (int)Math.floor((roi.getX2()-roi.getX1()+1) * scaleFactor);
-                        int roiHeight = (int)Math.floor((roi.getY2()-roi.getY1()+1) * scaleFactor);
-                        Roi r = new Roi(roiX, roiY, roiWidth, roiHeight);
-                        r.setName(roi.toString());
-                        r.setProperty("id", new Integer(roi.getId()).toString());
-                        r.setStrokeColor(new Color(1f, 0f, 0f, 0.4f));
-                        r.setStrokeWidth(0.4);
-                        roiRois.add(r);
-                        log("roiRoi = %s", r);
+                        for (ROI roi : roiDao.select(where("imageId", image.getId()))) {
+                            int roiX = (int)Math.floor(xlocScale + (roi.getX1() * scaleFactor));
+                            int roiY = (int)Math.floor(ylocScale + (roi.getY1() * scaleFactor));
+                            int roiWidth = (int)Math.floor((roi.getX2()-roi.getX1()+1) * scaleFactor);
+                            int roiHeight = (int)Math.floor((roi.getY2()-roi.getY1()+1) * scaleFactor);
+                            Roi r = new Roi(roiX, roiY, roiWidth, roiHeight);
+                            r.setName(roi.toString());
+                            r.setProperty("id", new Integer(roi.getId()).toString());
+                            r.setStrokeColor(new Color(1f, 0f, 0f, 0.4f));
+                            r.setStrokeWidth(0.4);
+                            roiRois.add(r);
+                            log("roiRoi = %s", r);
+                        }
                     }
                 }
             }
@@ -369,6 +397,7 @@ public class WorkflowReport implements Report {
             }
             // now draw the ROI rois in red
             for (Roi roiRoi : roiRois) {
+                slideThumb.getProcessor().setColor(roiRoi.getStrokeColor());
                 slideThumb.getProcessor().draw(roiRoi);
             }
         });
@@ -377,7 +406,8 @@ public class WorkflowReport implements Report {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try { ImageIO.write(slideThumb.getBufferedImage(), "jpg", baos); } 
         catch (IOException e) {throw new RuntimeException(e);}
-        Img().attr("src", String.format("data:image/jpg;base64,%s", Base64.getEncoder().encode(baos.toByteArray()))).
+        Img().attr("src", String.format("data:image/jpg;base64,%s", 
+                Base64.getMimeEncoder().encodeToString(baos.toByteArray()))).
                 attr("width", slideThumb.getWidth()).
                 attr("height", slideThumb.getHeight()).
                 attr("usemap", String.format("#map-%s-%s", startModule.getId(), slideId)).
@@ -444,9 +474,17 @@ public class WorkflowReport implements Report {
                                                 Image image2 = imageDao.selectOneOrDie(
                                                         where("id", new Integer(imageIdConf2.getValue())));
                                                 log("Getting image size for image %s", image2);
-                                                ImagePlus imp = image2.getImagePlus(acqDao);
-                                                imageWidth2 = imp.getWidth();
-                                                imageHeight2 = imp.getHeight();
+                                                ImagePlus imp = null;
+                                                try { imp = image2.getImagePlus(acqDao); }
+                                                catch (Throwable e) {
+                                                    StringWriter sw = new StringWriter();
+                                                    e.printStackTrace(new PrintWriter(sw));
+                                                    log("Couldn't retrieve image %s from the image cache!%n%s", image2, sw);
+                                                }
+                                                if (imp != null) {
+                                                    imageWidth2 = imp.getWidth();
+                                                    imageHeight2 = imp.getHeight();
+                                                }
                                             }
                                         }
                                     }
@@ -501,53 +539,57 @@ public class WorkflowReport implements Report {
 
                                                                 // Get a thumbnail of the image
                                                                 Image image2 = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf2.getValue())));
-                                                                ImagePlus imp = image2.getImagePlus(acqDao);
-                                                                int width = imp.getWidth(), height = imp.getHeight();
-                                                                log("imp: width=%d, height=%d", width, height);
-                                                                imp.getProcessor().setInterpolate(true);
-                                                                imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
-                                                                        (int)Math.floor(imp.getWidth() * gridScaleFactor), 
-                                                                        (int)Math.floor(imp.getHeight() * gridScaleFactor)));
-                                                                log("imp: resized width=%d, height=%d", imp.getWidth(), imp.getHeight());
+                                                                ImagePlus imp = null; 
+                                                                try { imp = image2.getImagePlus(acqDao); } 
+                                                                catch (Throwable e) {
+                                                                    StringWriter sw = new StringWriter();
+                                                                    e.printStackTrace(new PrintWriter(sw));
+                                                                    log("Couldn't retrieve image %s from the image cache!%n%s", image2, sw);
+                                                                }
+                                                                if (imp != null) {
+                                                                    int width = imp.getWidth(), height = imp.getHeight();
+                                                                    log("imp: width=%d, height=%d", width, height);
+                                                                    imp.getProcessor().setInterpolate(true);
+                                                                    imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
+                                                                            (int)Math.floor(imp.getWidth() * gridScaleFactor), 
+                                                                            (int)Math.floor(imp.getHeight() * gridScaleFactor)));
+                                                                    log("imp: resized width=%d, height=%d", imp.getWidth(), imp.getHeight());
 
-                                                                int xloc = (int)Math.floor((msp.getX() - minX2) / hiResPixelSize);
-                                                                int xlocInvert = invertXAxis? gridWidthPx - (xloc + width) : xloc;
-                                                                int xlocScale = (int)Math.floor(xlocInvert * gridScaleFactor);
-                                                                log("xloc=%d, xlocInvert=%d, xlocScale=%d", xloc, xlocInvert, xlocScale);
-                                                                int yloc = (int)Math.floor((msp.getY() - minY2) / hiResPixelSize);
-                                                                int ylocInvert = invertYAxis? gridHeightPx - (yloc + height) : yloc;
-                                                                int ylocScale = (int)Math.floor(ylocInvert * gridScaleFactor);
-                                                                log("yloc=%d, ylocInvert=%d, ylocScale=%d", yloc, ylocInvert, ylocScale);
+                                                                    int xloc = (int)Math.floor((msp.getX() - minX2) / hiResPixelSize);
+                                                                    int xlocInvert = invertXAxis? gridWidthPx - (xloc + width) : xloc;
+                                                                    int xlocScale = (int)Math.floor(xlocInvert * gridScaleFactor);
+                                                                    log("xloc=%d, xlocInvert=%d, xlocScale=%d", xloc, xlocInvert, xlocScale);
+                                                                    int yloc = (int)Math.floor((msp.getY() - minY2) / hiResPixelSize);
+                                                                    int ylocInvert = invertYAxis? gridHeightPx - (yloc + height) : yloc;
+                                                                    int ylocScale = (int)Math.floor(ylocInvert * gridScaleFactor);
+                                                                    log("yloc=%d, ylocInvert=%d, ylocScale=%d", yloc, ylocInvert, ylocScale);
 
-                                                                roiGridThumb.getProcessor().copyBits(imp.getProcessor(), xlocScale, ylocScale, Blitter.COPY);
-                                                                
-                                                                Roi tileRoi = new Roi(xlocScale, ylocScale, imp.getWidth(), imp.getHeight());
-                                                                tileRoi.setStrokeColor(new Color(0f, 0f, 0f, 0.4f));
-                                                                tileRoi.setStrokeWidth(0.4);
-
-                                                                // make the tile image clickable
-                                                                Area().attr("shape", "rect"). 
-                                                                        attr("coords", String.format("%d,%d,%d,%d", 
-                                                                                (int)Math.floor(tileRoi.getXBase()), 
-                                                                                (int)Math.floor(tileRoi.getYBase()),
-                                                                                (int)Math.floor(tileRoi.getXBase()+tileRoi.getFloatWidth()),
-                                                                                (int)Math.floor(tileRoi.getYBase()+tileRoi.getFloatHeight()))).
-                                                                        attr("title", image2.getName()).
-                                                                        attr("onclick", String.format("report.showImage(%d)", image2.getId()));
-
-                                                                // draw a black rectangle around the image
-                                                                roiGridThumb.getProcessor().draw(tileRoi);
+                                                                    roiGridThumb.getProcessor().copyBits(imp.getProcessor(), xlocScale, ylocScale, Blitter.COPY);
+                                                                    
+                                                                    Roi tileRoi = new Roi(xlocScale, ylocScale, imp.getWidth(), imp.getHeight());
+                                                                    // make the tile image clickable
+                                                                    Area().attr("shape", "rect"). 
+                                                                            attr("coords", String.format("%d,%d,%d,%d", 
+                                                                                    (int)Math.floor(tileRoi.getXBase()), 
+                                                                                    (int)Math.floor(tileRoi.getYBase()),
+                                                                                    (int)Math.floor(tileRoi.getXBase()+tileRoi.getFloatWidth()),
+                                                                                    (int)Math.floor(tileRoi.getYBase()+tileRoi.getFloatHeight()))).
+                                                                            attr("title", image2.getName()).
+                                                                            attr("onclick", String.format("report.showImage(%d)", image2.getId()));
+                                                                }
                                                             }
                                                         }
                                                     });
 
-                                                    // write the slide thumbnail as an embedded HTML image.
+                                                    // write the grid thumbnail as an embedded HTML image.
                                                     ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                                                     try { ImageIO.write(roiGridThumb.getBufferedImage(), "jpg", baos2); } 
                                                     catch (IOException e) {throw new RuntimeException(e);}
-                                                    Img().attr("src", String.format("data:image/jpg;base64,%s", Base64.getEncoder().encode(baos2.toByteArray()))).
+                                                    Img().attr("src", String.format("data:image/jpg;base64,%s", 
+                                                                Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
                                                             attr("width", roiGridThumb.getWidth()).
                                                             attr("height", roiGridThumb.getHeight()).
+                                                            attr("class", "map").
                                                             attr("usemap", String.format("#map-%s-ROI%d", imager.getId(), roi.getId()));
                                                 });
                                                 Td().with(()->{
@@ -591,7 +633,8 @@ public class WorkflowReport implements Report {
                                                             ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                                                             try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                             catch (IOException e) {throw new RuntimeException(e);}
-                                                            Img().attr("src", String.format("data:image/jpg;base64,%s", Base64.getEncoder().encode(baos2.toByteArray()))).
+                                                            Img().attr("src", String.format("data:image/jpg;base64,%s", 
+                                                                        Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
                                                                     attr("width", imp.getWidth()).
                                                                     attr("height", imp.getHeight()).
                                                                     attr("title", stitchedImageFile.getValue()).
