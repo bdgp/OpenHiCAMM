@@ -14,6 +14,7 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
 import org.bdgp.OpenHiCAMM.Modules.BDGPROIFinder;
+import org.bdgp.OpenHiCAMM.Modules.BDGPROIFinder2;
 import org.bdgp.OpenHiCAMM.Modules.ImageStitcher;
 import org.bdgp.OpenHiCAMM.Modules.SlideImager;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
@@ -149,6 +150,7 @@ public class OpenHiCAMM implements MMPlugin {
             moduleNames = new ArrayList<String>();
             moduleNames.add(SlideImager.class.getName());
             moduleNames.add(BDGPROIFinder.class.getName());
+            moduleNames.add(BDGPROIFinder2.class.getName());
             moduleNames.add(ImageStitcher.class.getName());
             
             reportNames = new ArrayList<String>();

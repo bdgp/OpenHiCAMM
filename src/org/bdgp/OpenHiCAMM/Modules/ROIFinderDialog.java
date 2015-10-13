@@ -22,7 +22,7 @@ import java.awt.event.ActionEvent;
 public class ROIFinderDialog extends JPanel {
 	DoubleSpinner minRoiArea;
 
-	public static final double DEFAULT_MIN_ROI_AREA = 300000.0;
+	public static final double DEFAULT_MIN_ROI_AREA = 250000.0;
 	public static final double DEFAULT_OVERLAP_PCT = 25.0;
 	public static final double DEFAULT_HIRES_PIXEL_SIZE_UM = 0.1253;
 
