@@ -337,7 +337,7 @@ public class SlideImager implements Module, ImageLogger {
                 
                 // Write the acquisition record
                 final Acquisition acquisition = new Acquisition(returnAcqName, prefix, rootDir);
-                acqDao.insertOrUpdate(acquisition,"name","directory");
+                acqDao.insertOrUpdate(acquisition,"prefix","directory");
                 acqDao.reload(acquisition);
                 logger.info(String.format("Using acquisition record: %s", acquisition));
 
