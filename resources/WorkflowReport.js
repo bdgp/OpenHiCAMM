@@ -1,7 +1,7 @@
 $(document).ready(function() {
 	// highlight image maps
     $.fn.maphilight.defaults.strokeColor = '000000';
-	$('.map').maphighlight();
+	$('.map').maphilight();
 
     // javascript hack to fix anchor links not working in WebView
 	$('a[href*=#],area[href*=#]').click(function(e) {
