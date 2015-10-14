@@ -52,6 +52,7 @@ import ij.ImagePlus;
 import ij.gui.NewImage;
 import ij.gui.Roi;
 import ij.process.Blitter;
+import ij.process.ImageProcessor;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 import static org.bdgp.OpenHiCAMM.Tag.T.*;
@@ -331,7 +332,7 @@ public class WorkflowReport implements Report {
                     if (imp != null) {
                         int width = imp.getWidth(), height = imp.getHeight();
                         log("Image width: %d, height: %d", width, height);
-                        imp.getProcessor().setInterpolate(true);
+                        imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
                         imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
                                 (int)Math.floor(imp.getWidth() * scaleFactor), 
                                 (int)Math.floor(imp.getHeight() * scaleFactor)));
@@ -549,7 +550,7 @@ public class WorkflowReport implements Report {
                                                                 if (imp != null) {
                                                                     int width = imp.getWidth(), height = imp.getHeight();
                                                                     log("imp: width=%d, height=%d", width, height);
-                                                                    imp.getProcessor().setInterpolate(true);
+                                                                    imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
                                                                     imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
                                                                             (int)Math.floor(imp.getWidth() * gridScaleFactor), 
                                                                             (int)Math.floor(imp.getHeight() * gridScaleFactor)));
@@ -618,12 +619,12 @@ public class WorkflowReport implements Report {
                                                             // Get a thumbnail of the image
                                                             ImagePlus imp = new ImagePlus(stitchedImageFile.getValue());
                                                             log("stitchedImage width = %d, height = %d", imp.getWidth(), imp.getHeight());
-                                                            imp.getProcessor().setInterpolate(true);
 
                                                             double stitchScaleFactor = (double)ROI_GRID_PREVIEW_WIDTH / (double)imp.getWidth();
                                                             log("stitchScaleFactor = %f", stitchScaleFactor);
                                                             int stitchPreviewHeight = (int)Math.floor(imp.getHeight() * stitchScaleFactor);
                                                             log("stitchPreviewHeight = %d", stitchPreviewHeight);
+                                                            imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
                                                             imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
                                                                     ROI_GRID_PREVIEW_WIDTH, 
                                                                     stitchPreviewHeight));
