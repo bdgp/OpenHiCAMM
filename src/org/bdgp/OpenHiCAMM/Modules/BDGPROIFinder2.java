@@ -137,17 +137,20 @@ public class BDGPROIFinder2 extends ROIFinder implements Module, ImageLogger {
             // ROI: upper left corner = bx/by with width/height
             if (area >= minRoiArea && bx > 1 && by > 1 && bx+width < w && by+height < h) {
                 ROI roi = new ROI(image.getId(), 
-                        (int)(bx*scale), 
-                        (int)(by*scale), 
-                        (int)((bx+width)*scale), 
-                        (int)((by+height)*scale));
+                        (int)Math.floor(bx), 
+                        (int)Math.floor(by), 
+                        (int)Math.floor(bx+width), 
+                        (int)Math.floor(by+height));
                 rois.add(roi);
                 roiDao.insert(roi);
                 logger.info(String.format("%s: Created new ROI record with width=%.2f, height=%.2f, area=%.2f: %s", 
                         label, width, height, area, roi));
                 
                 // Draw the ROI rectangle
-                imp.setRoi(roi.getX1(), roi.getY1(), roi.getX2()-roi.getX1()+1, roi.getY2()-roi.getY1()+1);
+                imp.setRoi((int)Math.floor(rt.getValue("BX", i)), 
+                        (int)Math.floor(rt.getValue("BY", i)), 
+                        (int)Math.floor(rt.getValue("Width", i)), 
+                        (int)Math.floor(rt.getValue("Height", i)));
                 IJ.setForegroundColor(255, 255, 0);
                 IJ.run(imp, "Draw", "");
             }
