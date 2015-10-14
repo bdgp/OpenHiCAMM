@@ -3,6 +3,7 @@ package org.bdgp.OpenHiCAMM.Modules;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
@@ -58,18 +59,17 @@ public class BDGPROIFinder2 extends ROIFinder implements Module, ImageLogger {
 
         // Resize to 1/4
         double scale = 0.25;
-        double ws=(double)w*scale;
-        double hs=(double)h*scale;
-        String scaleOp = String.format("x=%f y=%f width=%d height=%d interpolation=Bilinear average", 
-                scale, scale, (int)ws, (int)hs);
-        logger.fine(String.format("%s: Scaling: %s", label, scaleOp));
-        IJ.run(imp, "Scale...", scaleOp);
-        imageLog.addImage(imp, "Scaling: scaleOp");
+        logger.fine(String.format("%s: Resizing", label));
+        imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
+        imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
+                (int)Math.floor(imp.getWidth() * scale), 
+                (int)Math.floor(imp.getHeight() * scale)));
+        imageLog.addImage(imp, "Resizing");
         
         // get the minRoiArea config value and re-scale it
         Config minRoiAreaConf = config.get("minRoiArea");
         if (minRoiAreaConf == null) throw new RuntimeException("minRoiArea config value is missing!");
-        double minRoiArea = new Double(minRoiAreaConf.getValue()) * scale;
+        double minRoiArea = new Double(minRoiAreaConf.getValue());
         logger.fine(String.format("%s: Using minRoiArea: %f", label, minRoiArea));
         
         // Find edges
@@ -77,18 +77,33 @@ public class BDGPROIFinder2 extends ROIFinder implements Module, ImageLogger {
         IJ.run(imp, "Find Edges", "");
         imageLog.addImage(imp, "Find Edges");
 
-        // Auto threshold
-        logger.fine(String.format("%s: Running auto threshold", label));
-        IJ.run(imp, "Auto Threshold", "method=IsoData white");
-        imageLog.addImage(imp, "Auto Threshold");
+        // convert to short[] values
+        imp.setProcessor(imp.getProcessor().convertToByte(true));
 
+        // Auto threshold
+        byte pixelThreshold = 13;
+        byte pixMin = 0, pixMax = -1;
+        logger.fine(String.format("%s: Running threshold", label));
+        //IJ.run(imp, "Auto Threshold", "method=IsoData white");
+        byte[] pixels = (byte[])imp.getProcessor().getPixels();
+        for (int i=0; i<pixels.length; ++i) {
+            pixels[i] = pixels[i] < pixelThreshold? pixMin : pixMax;
+        }
+        imageLog.addImage(imp, "Threshold");
+        
         // Gray morphology
         logger.fine(String.format("%s: Running gray morphology", label));
         IJ.run(imp, "Gray Morphology", "radius=10 type=circle operator=[fast close]");
         imageLog.addImage(imp, "Gray Morphology");
 
+        // invert
+        //logger.fine(String.format("%s: Running invert", label));
+        //IJ.run(imp, "Invert", "");
+        //imageLog.addImage(imp, "Invert");
+
         // Fill holes
         logger.fine(String.format("%s: Filling holes", label));
+        IJ.run(imp, "Options...", "iterations=1 count=1 black");
         IJ.run(imp, "Fill Holes", "");
         imageLog.addImage(imp, "Filling holes");
 
@@ -101,7 +116,7 @@ public class BDGPROIFinder2 extends ROIFinder implements Module, ImageLogger {
         logger.fine(String.format("%s: Analyzing particles", label));
         IJ.run(imp, "Analyze Particles...", "exclude clear in_situ");
         imageLog.addImage(imp, "Analyzing particles");
-       
+
         Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
         // Get the objects and iterate through them
         ResultsTable rt = Analyzer.getResultsTable();
@@ -121,7 +136,11 @@ public class BDGPROIFinder2 extends ROIFinder implements Module, ImageLogger {
             // Select for area > 2000, check if object is at boundary of image (bx or by == 1)
             // ROI: upper left corner = bx/by with width/height
             if (area >= minRoiArea && bx > 1 && by > 1 && bx+width < w && by+height < h) {
-                ROI roi = new ROI(image.getId(), (int)(bx*scale), (int)(by*scale), (int)(bx+width), (int)(by+height));
+                ROI roi = new ROI(image.getId(), 
+                        (int)(bx*scale), 
+                        (int)(by*scale), 
+                        (int)((bx+width)*scale), 
+                        (int)((by+height)*scale));
                 rois.add(roi);
                 roiDao.insert(roi);
                 logger.info(String.format("%s: Created new ROI record with width=%.2f, height=%.2f, area=%.2f: %s", 
