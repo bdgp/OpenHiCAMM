@@ -120,9 +120,6 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			int imageWidth = MDUtils.getWidth(taggedImage.tags);
 			int imageHeight = MDUtils.getHeight(taggedImage.tags);
 			
-            long cameraWidth = this.script.getMMCore().getImageWidth();
-            long cameraHeight = this.script.getMMCore().getImageHeight();
-           
 			double x_stage = MDUtils.getXPositionUm(taggedImage.tags);
 			double y_stage = MDUtils.getYPositionUm(taggedImage.tags);
 			
@@ -150,8 +147,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			    int roiWidth = roi.getX2()-roi.getX1()+1;
 			    int roiHeight = roi.getY2()-roi.getY1()+1;
 
-			    int tileWidth = (int)Math.floor(((double)cameraWidth * hiResPixelSize) / pixelSize);
-			    int tileHeight = (int)Math.floor(((double)cameraHeight * hiResPixelSize) / pixelSize);
+			    int tileWidth = (int)Math.floor(((double)imageWidth * hiResPixelSize) / pixelSize);
+			    int tileHeight = (int)Math.floor(((double)imageHeight * hiResPixelSize) / pixelSize);
 
 			    int tileXOverlap = (int)Math.floor((overlapPct / 100.0) * tileWidth);
 			    int tileYOverlap = (int)Math.floor((overlapPct / 100.0) * tileHeight);
