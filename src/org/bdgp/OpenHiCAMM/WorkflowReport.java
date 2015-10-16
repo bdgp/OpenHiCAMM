@@ -494,7 +494,14 @@ public class WorkflowReport implements Report {
                             Double minX2 = minX2_, minY2 = minY2_;
                             log("minX2 = %f, minY2 = %f, maxX2 = %f, maxY2 = %f, imageWidth2 = %d, imageHeight2 = %d",
                                     minX2, minY2, maxX2, maxY2, imageWidth2, imageHeight2);
-                            if (!imagerTasks.isEmpty()) {
+                            if (!imagerTasks.isEmpty() && 
+                                minX2 != null && 
+                                minY2 != null && 
+                                maxX2 != null && 
+                                maxY2 != null && 
+                                imageWidth2 != null && 
+                                imageHeight2 != null) 
+                            {
                                 int gridWidthPx = (int)Math.floor(((maxX2 - minX2_) / hiResPixelSize) + (double)imageWidth2);
                                 int gridHeightPx = (int)Math.floor(((maxY2 - minY2_) / hiResPixelSize) + (double)imageHeight2);
                                 log("gridWidthPx = %d, gridHeightPx = %d", gridWidthPx, gridHeightPx);
