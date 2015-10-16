@@ -3,7 +3,6 @@ package org.bdgp.OpenHiCAMM.Modules;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
