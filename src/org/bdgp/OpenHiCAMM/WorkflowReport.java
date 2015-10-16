@@ -59,7 +59,7 @@ import static org.bdgp.OpenHiCAMM.Tag.T.*;
 
 public class WorkflowReport implements Report {
     public static final int SLIDE_PREVIEW_WIDTH = 1280; 
-    public static final int ROI_GRID_PREVIEW_WIDTH = 512; 
+    public static final int ROI_GRID_PREVIEW_WIDTH = 425; 
     public static final boolean DEBUG=true;
 
     private WorkflowRunner workflowRunner;
@@ -517,6 +517,7 @@ public class WorkflowReport implements Report {
                                     Thead().with(()->{
                                         Tr().with(()->{
                                             Th().text("Channel, Slice, Frame");
+                                            Th().text("Source ROI Cutout");
                                             Th().text("Tiled ROI Images");
                                             Th().text("Stitched ROI Image");
                                         });
@@ -530,6 +531,34 @@ public class WorkflowReport implements Report {
 
                                             Tr().with(()->{
                                                 Th().text(String.format("Channel %d, Slice %d, Frame %d", channel, slice, frame));
+                                                Td().with(()->{
+                                                    ImagePlus imp = null;
+                                                    try { imp = image.getImagePlus(acqDao); }
+                                                    catch (Throwable e) {
+                                                        StringWriter sw = new StringWriter();
+                                                        e.printStackTrace(new PrintWriter(sw));
+                                                        log("Couldn't retrieve image %s from the image cache!%n%s", image, sw);
+                                                    }
+                                                    if (imp != null) {
+                                                        imp.setRoi(new Roi(roi.getX1(), roi.getY1(), roi.getX2()-roi.getX1()+1, roi.getY2()-roi.getY1()+1));
+
+                                                        double roiScaleFactor = (double)ROI_GRID_PREVIEW_WIDTH / (double)imp.getWidth();
+                                                        int roiPreviewHeight = (int)Math.floor(imp.getHeight() * roiScaleFactor);
+                                                        imp.setProcessor(imp.getTitle(), imp.getProcessor().crop().resize(
+                                                                ROI_GRID_PREVIEW_WIDTH, 
+                                                                roiPreviewHeight));
+
+                                                        ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
+                                                        try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
+                                                        catch (IOException e) {throw new RuntimeException(e);}
+                                                        Img().attr("src", String.format("data:image/jpg;base64,%s", 
+                                                                    Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
+                                                                attr("width", imp.getWidth()).
+                                                                attr("height", imp.getHeight()).
+                                                                attr("title", roi.toString()).
+                                                                attr("onclick", String.format("report.showImage(%d)", image.getId()));
+                                                    }
+                                                });
                                                 Td().with(()->{
                                                     Map().attr("name", String.format("map-roi-%s-ROI%d", imager.getId(), roi.getId())).with(()->{
                                                         for (Task imagerTask : imagerTaskEntry.getValue()) {
