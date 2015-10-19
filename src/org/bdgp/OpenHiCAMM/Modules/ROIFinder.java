@@ -115,9 +115,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
             // get invertXAxis and invertYAxis conf values
             Config invertXAxisConf = config.get("invertXAxis");
-            boolean invertXAxis = invertXAxisConf == null || invertXAxisConf.equals("yes");
+            boolean invertXAxis = invertXAxisConf != null && invertXAxisConf.equals("yes");
             Config invertYAxisConf = config.get("invertYAxis");
-            boolean invertYAxis = invertYAxisConf == null || invertYAxisConf.equals("yes");
+            boolean invertYAxis = invertYAxisConf != null && invertYAxisConf.equals("yes");
 
 			int imageWidth = MDUtils.getWidth(taggedImage.tags);
 			int imageHeight = MDUtils.getHeight(taggedImage.tags);
@@ -180,7 +180,6 @@ public abstract class ROIFinder implements Module, ImageLogger {
                         StagePosition sp = new StagePosition();
                         sp.numAxes = 2;
                         sp.stageName = "XYStage";
-                        if (invertXAxis) {}
                         sp.x = invertXAxis? 
                         		x_stage-((tileX-(double)imageWidth/2.0)*pixelSize) :
                         		x_stage+((tileX-(double)imageWidth/2.0)*pixelSize);
