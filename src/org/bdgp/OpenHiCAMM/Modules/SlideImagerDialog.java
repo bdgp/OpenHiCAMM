@@ -189,11 +189,11 @@ public class SlideImagerDialog extends JPanel {
         
         invertXAxisYes = new JRadioButton("Yes");
         invertXAxisGroup.add(invertXAxisYes);
-        invertXAxisYes.setSelected(true);
         add(invertXAxisYes, "cell 0 11");
         
         invertXAxisNo = new JRadioButton("No");
         invertXAxisGroup.add(invertXAxisNo);
+        invertXAxisNo.setSelected(true);
         add(invertXAxisNo, "cell 0 11");
         
         JLabel lblInvertYAxis = new JLabel("Invert Y axis? ");
@@ -201,11 +201,11 @@ public class SlideImagerDialog extends JPanel {
         
         invertYAxisYes = new JRadioButton("Yes");
         invertYAxisGroup.add(invertYAxisYes);
-        invertYAxisYes.setSelected(true);
         add(invertYAxisYes, "cell 0 12");
         
         invertYAxisNo = new JRadioButton("No");
         invertYAxisGroup.add(invertYAxisNo);
+        invertYAxisNo.setSelected(true);
         add(invertYAxisNo, "cell 0 12");
 	}
 
