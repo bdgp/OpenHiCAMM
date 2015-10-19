@@ -549,8 +549,8 @@ public class WorkflowReport implements Report {
                                                     if (imp != null) {
                                                         imp.setRoi(new Roi(roi.getX1(), roi.getY1(), roi.getX2()-roi.getX1()+1, roi.getY2()-roi.getY1()+1));
 
-                                                        double roiScaleFactor = (double)ROI_GRID_PREVIEW_WIDTH / (double)imp.getWidth();
-                                                        int roiPreviewHeight = (int)Math.floor(imp.getHeight() * roiScaleFactor);
+                                                        double roiScaleFactor = (double)ROI_GRID_PREVIEW_WIDTH / (double)(roi.getX2()-roi.getX1()+1);
+                                                        int roiPreviewHeight = (int)Math.floor((roi.getY2()-roi.getY1()+1) * roiScaleFactor);
                                                         imp.setProcessor(imp.getTitle(), imp.getProcessor().crop().resize(
                                                                 ROI_GRID_PREVIEW_WIDTH, 
                                                                 roiPreviewHeight));
