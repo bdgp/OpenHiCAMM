@@ -113,7 +113,7 @@ public class BDGPROIFinder2 extends ROIFinder implements Module, ImageLogger {
                 ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES|ParticleAnalyzer.CLEAR_WORKSHEET|ParticleAnalyzer.IN_SITU_SHOW,
                 Measurements.AREA|Measurements.MEAN|Measurements.MIN_MAX|Measurements.RECT,
                 rt, 0.0, Double.POSITIVE_INFINITY);
-        particleAnalyzer.run(imp.getProcessor());
+        if (!particleAnalyzer.analyze(imp)) throw new RuntimeException("ParticleAnalyzer.analyze() returned false!");
 
         Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
         // Get the objects and iterate through them
