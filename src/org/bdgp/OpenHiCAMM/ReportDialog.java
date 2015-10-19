@@ -171,6 +171,9 @@ public class ReportDialog {
     }
     
     public static class Frame extends JFrame {
+        FXMLLoader loader;
+        ReportDialog controller;
+
         public Frame(WorkflowRunner workflowRunner) {
             JFXPanel fxPanel = new JFXPanel();
             this.add(fxPanel);
@@ -187,9 +190,9 @@ public class ReportDialog {
                 });
 
                 try {
-                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/ReportDialog.fxml"));
+                    loader = new FXMLLoader(getClass().getResource("/ReportDialog.fxml"));
                     Parent root = loader.load();
-                    ReportDialog controller = loader.<ReportDialog>getController();
+                    controller = loader.<ReportDialog>getController();
                     controller.initialize(workflowRunner);
                     Scene scene = new Scene(root);
                     fxPanel.setScene(scene);
@@ -201,6 +204,10 @@ public class ReportDialog {
                     throw new RuntimeException(e);
                 }
             });
+        }
+        
+        public void setWorkflowRunner(WorkflowRunner workflowRunner) {
+            controller.initialize(workflowRunner);
         }
     }
 

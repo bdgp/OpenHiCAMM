@@ -281,6 +281,7 @@ public class WorkflowDialog extends JDialog {
         	    if (WorkflowDialog.this.workflowRunner != null) {
         	        synchronized (this) {
                         if (reportDialog == null) reportDialog = new ReportDialog.Frame(WorkflowDialog.this.workflowRunner);
+                        else reportDialog.setWorkflowRunner(WorkflowDialog.this.workflowRunner);
                         reportDialog.setVisible(true);
         	        }
         	    }
