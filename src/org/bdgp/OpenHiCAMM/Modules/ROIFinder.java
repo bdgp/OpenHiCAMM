@@ -1,6 +1,8 @@
 package org.bdgp.OpenHiCAMM.Modules;
 
 import java.awt.Component;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -135,7 +137,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
                 rois = process(image, taggedImage, logger, new ImageLog.NullImageLogRunner(), config);
 			}
 			catch (Exception e) {
-			    logger.warning(String.format("Exception during ROI processing: %s", e.toString()));
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+			    logger.warning(String.format("Exception during ROI processing: %s", sw.toString()));
 			}
 
             // Convert the ROIs into a PositionList
