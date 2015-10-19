@@ -18,8 +18,9 @@ import org.micromanager.utils.MDUtils;
 
 import ij.IJ;
 import ij.ImagePlus;
+import ij.measure.Measurements;
 import ij.measure.ResultsTable;
-import ij.plugin.filter.Analyzer;
+import ij.plugin.filter.ParticleAnalyzer;
 import ij.process.ImageProcessor;
 import mmcorej.TaggedImage;
 
@@ -105,20 +106,17 @@ public class BDGPROIFinder2 extends ROIFinder implements Module, ImageLogger {
         IJ.run(imp, "Options...", "iterations=1 count=1 black");
         IJ.run(imp, "Fill Holes", "");
         imageLog.addImage(imp, "Filling holes");
-
-        // Set the measurements
-        logger.fine(String.format("%s: Set the measurements", label));
-        IJ.run(imp, "Set Measurements...", "area mean min bounding redirect=None decimal=3");
-        imageLog.addImage(imp, "Set measurements");
-
-        // Detect the objects
-        logger.fine(String.format("%s: Analyzing particles", label));
-        IJ.run(imp, "Analyze Particles...", "exclude clear in_situ");
-        imageLog.addImage(imp, "Analyzing particles");
+        
+        // Run the particle analyzer and save results to a results table
+        ResultsTable rt = new ResultsTable();
+        ParticleAnalyzer particleAnalyzer = new ParticleAnalyzer(
+                ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES|ParticleAnalyzer.CLEAR_WORKSHEET|ParticleAnalyzer.IN_SITU_SHOW,
+                Measurements.AREA|Measurements.MEAN|Measurements.MIN_MAX|Measurements.RECT,
+                rt, 0.0, Double.POSITIVE_INFINITY);
+        particleAnalyzer.run(imp.getProcessor());
 
         Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
         // Get the objects and iterate through them
-        ResultsTable rt = Analyzer.getResultsTable();
         logger.fine(String.format("ResultsTable Column Headings: %s", rt.getColumnHeadings()));
         for (int i=0; i < rt.getCounter(); i++) {
             double area = rt.getValue("Area", i) / (scale*scale); // area of the object
