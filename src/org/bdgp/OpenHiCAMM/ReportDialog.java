@@ -207,7 +207,9 @@ public class ReportDialog {
         }
         
         public void setWorkflowRunner(WorkflowRunner workflowRunner) {
-            controller.initialize(workflowRunner);
+            Platform.runLater(()->{
+                controller.initialize(workflowRunner);
+            });
         }
     }
 
