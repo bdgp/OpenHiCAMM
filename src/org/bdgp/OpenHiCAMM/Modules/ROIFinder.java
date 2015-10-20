@@ -115,9 +115,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
             // get invertXAxis and invertYAxis conf values
             Config invertXAxisConf = config.get("invertXAxis");
-            boolean invertXAxis = invertXAxisConf != null && invertXAxisConf.equals("yes");
+            boolean invertXAxis = invertXAxisConf == null || "yes".equals(invertXAxisConf.getValue());
             Config invertYAxisConf = config.get("invertYAxis");
-            boolean invertYAxis = invertYAxisConf != null && invertYAxisConf.equals("yes");
+            boolean invertYAxis = invertYAxisConf == null || "yes".equals(invertYAxisConf.getValue());
 
 			int imageWidth = MDUtils.getWidth(taggedImage.tags);
 			int imageHeight = MDUtils.getHeight(taggedImage.tags);
