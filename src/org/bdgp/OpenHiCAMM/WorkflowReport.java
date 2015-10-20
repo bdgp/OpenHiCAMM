@@ -103,6 +103,7 @@ public class WorkflowReport implements Report {
             });
             Body().with(()->{
                 List<Runnable> runnables = new ArrayList<Runnable>();
+                SLIDE_IMAGERS:
                 for (Config canImageSlides : this.workflowRunner.getModuleConfig().select(
                         where("key","canImageSlides").
                         and("value", "yes"))) 
@@ -115,9 +116,10 @@ public class WorkflowReport implements Report {
                             and("key", "posListModuleId")) == null) 
                     {
                        // get the loader module
-                        if (slideImager.getParentId() != null) {
+                        String loaderModuleId = slideImager.getParentId();
+                        while (loaderModuleId != null) {
                             WorkflowModule loaderModule = this.workflowRunner.getWorkflow().selectOneOrDie(
-                                    where("id", slideImager.getParentId()));
+                                    where("id", loaderModuleId));
                             if (this.workflowRunner.getModuleConfig().selectOne(
                                     where("id", loaderModule.getId()).
                                     and("key", "canLoadSlides").
@@ -141,10 +143,11 @@ public class WorkflowReport implements Report {
                                                 runReport(slideImager, ps);
                                             });
                                         }
-                                        continue;
+                                        continue SLIDE_IMAGERS;
                                     }
                                 }
                             }
+                            loaderModuleId = loaderModule.getParentId();
                         }
                         P().with(()->{
                             A(String.format("Module %s", slideImager)).
