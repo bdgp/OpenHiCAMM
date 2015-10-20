@@ -23,6 +23,8 @@ public class WorkflowModule extends DefaultMutableTreeNode {
     private String moduleName;
     @DatabaseField(dataType=DataType.LONG_STRING)
     private String parentId;
+    @DatabaseField(canBeNull=false)
+    private Integer priority;
     
     private Class<Module> module;
     
@@ -70,6 +72,14 @@ public class WorkflowModule extends DefaultMutableTreeNode {
     }
     public String getParentId() {
         return parentId;
+    }
+    
+    public Integer getPriority() {
+        return this.priority;
+    }
+    
+    public void setPriority(Integer priority) {
+        this.priority = priority;
     }
     
     public String toString(boolean all) {

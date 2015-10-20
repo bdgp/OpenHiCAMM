@@ -188,7 +188,9 @@ public class WorkflowRunner {
         this.moduleInstances.clear();
         
         // Re-load the module instances
-        for (WorkflowModule w : workflow.select()) {
+        List<WorkflowModule> modules = workflow.select();
+        Collections.sort(modules, (a,b)->a.getPriority().compareTo(b.getPriority()));
+        for (WorkflowModule w : modules) {
             // Make sure parent IDs are defined
             if (w.getParentId() != null) {
                 List<WorkflowModule> parent = workflow.select(where("id", w.getParentId()));
@@ -227,6 +229,7 @@ public class WorkflowRunner {
     
     public void deleteTaskRecords() {
         List<WorkflowModule> modules = this.workflow.select(where("parentId", null));
+        Collections.sort(modules, (a,b)->a.getPriority().compareTo(b.getPriority()));
         for (WorkflowModule m : modules) {
             this.deleteTaskRecords(m);
         }
@@ -238,6 +241,7 @@ public class WorkflowRunner {
     public void deleteTaskRecords(WorkflowModule module) {
         // Delete any child task/dispatch records
         List<WorkflowModule> childModules = this.workflow.select(where("parentId",module.getId()));
+        Collections.sort(childModules, (a,b)->a.getPriority().compareTo(b.getPriority()));
         for (WorkflowModule child : childModules) {
             deleteTaskRecords(child);
         }
@@ -261,6 +265,7 @@ public class WorkflowRunner {
         childTasks = m.createTaskRecords(tasks != null? tasks : new ArrayList<Task>());
         List<WorkflowModule> modules = workflow.select(
         		where("parentId",module != null? module.getId() : null));
+        Collections.sort(modules, (a,b)->a.getPriority().compareTo(b.getPriority()));
         for (WorkflowModule mod : modules) {
         	this.createTaskRecords(mod, childTasks);
         }
@@ -281,6 +286,7 @@ public class WorkflowRunner {
         }
 
         List<WorkflowModule> modules = workflow.select(where("parentId", module.getId()));
+        Collections.sort(modules, (a,b)->a.getPriority().compareTo(b.getPriority()));
         for (WorkflowModule mod : modules) {
         	this.runInitialize(mod);
         }
@@ -493,7 +499,9 @@ public class WorkflowRunner {
                             ((double)stats.get(status) / (double)tasks.size())*100.0));
                 }
                 // now evaluate any child nodes
-                childModules.addAll(this.workflow.select(where("parentId",module.getId())));
+                List<WorkflowModule> ms = this.workflow.select(where("parentId",module.getId()));
+                Collections.sort(ms, (a,b)->a.getPriority().compareTo(b.getPriority()));
+                childModules.addAll(ms);
             }
             modules = childModules;
         }
@@ -887,10 +895,7 @@ public class WorkflowRunner {
         final Set<Task> tasks = new HashSet<Task>();
         List<WorkflowModule> modules = this.getWorkflow().select(where("id",startModuleId));
         while (modules.size() > 0) {
-            Collections.sort(modules, new Comparator<WorkflowModule>() {
-                @Override public int compare(WorkflowModule a, WorkflowModule b) {
-                    return a.getModuleName().compareTo(b.getModuleName());
-                }});
+            Collections.sort(modules, (a,b)->a.getPriority().compareTo(b.getPriority()));
             List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
             for (WorkflowModule module : modules) {
                 tasks.addAll(this.getTaskStatus().select(where("moduleId",module.getId())));
@@ -1042,6 +1047,7 @@ public class WorkflowRunner {
     public List<ImageLogRecord> getImageLogRecords() {
         List<ImageLogRecord> imageLogRecords = new ArrayList<ImageLogRecord>();
         List<WorkflowModule> modules = this.workflow.select(where("parentId", null));
+        Collections.sort(modules, (a,b)->a.getPriority().compareTo(b.getPriority()));
         for (WorkflowModule module : modules) {
             List<Task> tasks = this.taskStatus.select(where("moduleId", module.getId()));
             for (Task task : tasks) {
@@ -1063,6 +1069,7 @@ public class WorkflowRunner {
     	List<WorkflowModule> ms = modules.select(where("parentId", null));
 
     	while (ms.size() > 0) {
+            Collections.sort(ms, (a,b)->a.getPriority().compareTo(b.getPriority()));
     		List<WorkflowModule> newms = new ArrayList<WorkflowModule>();
     		for (WorkflowModule m : ms) {
                 Module module = this.moduleInstances.get(m.getId());

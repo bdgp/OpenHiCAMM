@@ -173,13 +173,16 @@ public class WorkflowDesignerDialog extends JDialog {
 		        // clear the workflow
 	            wf.delete();
 	            // create the WorkflowModule records
+	            int priority = 1;
 	            for (@SuppressWarnings("unchecked")
                     Enumeration<WorkflowModule> enum_=treeRoot.breadthFirstEnumeration(); 
                     enum_.hasMoreElements();) 
 	            {
 	                WorkflowModule node = enum_.nextElement();
 	                if (node != treeRoot) {
+	                    node.setPriority(priority);
                         wf.insert(node);
+                        ++priority;
 	                }
 	            }
 	            WorkflowDesignerDialog.this.dispose();
