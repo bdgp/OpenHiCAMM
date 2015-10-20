@@ -51,6 +51,7 @@ public class ReportDialog {
     public void initialize(WorkflowRunner workflowRunner) {
         this.workflowRunner = workflowRunner;
 
+        selectReport.getItems().clear();
         selectReport.getItems().add("- Select a report -");
         List<String> reportNames = OpenHiCAMM.getReportNames();
         for (String reportName : reportNames) {
