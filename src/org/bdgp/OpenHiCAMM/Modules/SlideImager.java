@@ -222,7 +222,7 @@ public class SlideImager implements Module, ImageLogger {
             final String rootDir = new File(
                     workflowRunner.getWorkflowDir(), 
                     workflowRunner.getInstance().getStorageLocation()).getPath();
-            String acqName = "images";
+            String acqName = this.moduleId;
 
             CMMCore core = this.script.getMMCore();
             logger.fine(String.format("This task is the acquisition task")); 
@@ -629,22 +629,22 @@ public class SlideImager implements Module, ImageLogger {
                 }
                 
                 if (conf.containsKey("invertXAxis")) {
-                	if (conf.get("invertXAxis").equals("yes")) {
+                	if (conf.get("invertXAxis").getValue().equals("yes")) {
                 		slideImagerDialog.invertXAxisYes.setSelected(true);
                 		slideImagerDialog.invertXAxisNo.setSelected(false);
                 	}
-                	else if (conf.get("invertXAxis").equals("no")) {
+                	else if (conf.get("invertXAxis").getValue().equals("no")) {
                 		slideImagerDialog.invertXAxisYes.setSelected(false);
                 		slideImagerDialog.invertXAxisNo.setSelected(true);
                 	}
                 }
 
                 if (conf.containsKey("invertYAxis")) {
-                	if (conf.get("invertYAxis").equals("yes")) {
+                	if (conf.get("invertYAxis").getValue().equals("yes")) {
                 		slideImagerDialog.invertYAxisYes.setSelected(true);
                 		slideImagerDialog.invertYAxisNo.setSelected(false);
                 	}
-                	else if (conf.get("invertYAxis").equals("no")) {
+                	else if (conf.get("invertYAxis").getValue().equals("no")) {
                 		slideImagerDialog.invertYAxisYes.setSelected(false);
                 		slideImagerDialog.invertYAxisNo.setSelected(true);
                 	}
