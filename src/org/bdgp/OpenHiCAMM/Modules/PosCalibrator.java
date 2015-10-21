@@ -1,6 +1,7 @@
 package org.bdgp.OpenHiCAMM.Modules;
 
 import java.awt.Component;
+import java.awt.geom.Point2D;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -8,20 +9,31 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.Logger;
 import org.bdgp.OpenHiCAMM.ValidationError;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
+import org.bdgp.OpenHiCAMM.DB.Acquisition;
 import org.bdgp.OpenHiCAMM.DB.Config;
+import org.bdgp.OpenHiCAMM.DB.Image;
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
+import org.bdgp.OpenHiCAMM.DB.SlidePosList;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
+import org.bdgp.OpenHiCAMM.DB.TaskConfig;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
+import org.micromanager.api.MultiStagePosition;
+import org.micromanager.api.PositionList;
+import org.micromanager.api.StagePosition;
 
 import mmcorej.CMMCore;
+import mmcorej.TaggedImage;
 
-public class PosCalibrator implements Module {
+import static org.bdgp.OpenHiCAMM.Util.where;
+
+public abstract class PosCalibrator implements Module {
     String moduleId;
     WorkflowRunner workflow;
 
@@ -105,9 +117,89 @@ public class PosCalibrator implements Module {
     @Override public void runIntialize() { }
 
     @Override public Status run(Task task, Map<String, Config> config, Logger logger) {
+        Dao<Image> imageDao = workflow.getInstanceDb().table(Image.class);
+        Dao<Acquisition> acqDao = workflow.getInstanceDb().table(Acquisition.class);
+        Dao<SlidePosList> slidePosListDao = workflow.getInstanceDb().table(SlidePosList.class);
+
+        // get The reference image from the reference module
+        Config refSlideImagerModuleConf = config.get("refSlideImagerModule");
+        if (refSlideImagerModuleConf == null) throw new RuntimeException("Config refSlideImagerModule not found!");
+        List<TaggedImage> refImages = new ArrayList<>();
+        List<Task> refTasks = workflow.getTaskStatus().select(
+                where("moduleId", refSlideImagerModuleConf.getValue()));
+        for (Task t : refTasks) {
+            TaskConfig imageId = workflow.getTaskConfig().selectOne(
+                    where("id", t.getId()).
+                    and("key", "imageId"));
+            if (imageId != null) {
+                Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
+                TaggedImage taggedImage = image.getTaggedImage(acqDao);
+                refImages.add(taggedImage);
+            }
+        }
+        if (refImages.size() == 0) throw new RuntimeException(String.format(
+                "No images found for module %s", refSlideImagerModuleConf.getValue()));
+        if (refImages.size() > 1) throw new RuntimeException(String.format(
+                "More than one image found for module %s: %d", 
+                refSlideImagerModuleConf.getValue(), refImages.size()));
+        
+        // get the comparison image(s) from the comparison module
+        Config compareSlideImagerModuleConf = config.get("compareSlideImagerModule");
+        if (compareSlideImagerModuleConf == null) throw new RuntimeException("Config compareSlideImagerModule not found!");
+        List<TaggedImage> compareImages = new ArrayList<>();
+        List<Task> compareTasks = workflow.getTaskStatus().select(
+                where("moduleId", compareSlideImagerModuleConf.getValue()));
+        for (Task t : compareTasks) {
+            TaskConfig imageId = workflow.getTaskConfig().selectOne(
+                    where("id", t.getId()).
+                    and("key", "imageId"));
+            if (imageId != null) {
+                Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
+                TaggedImage taggedImage = image.getTaggedImage(acqDao);
+                compareImages.add(taggedImage);
+            }
+        }
+
+        // pass the reference image and comparison image(s) into the process() function to get the translation matrix
+        Point2D.Double translate = process(refImages.get(0), compareImages);
+
+        // get the position lists
+        Config roiFinderModuleConf = config.get("roiFinderModule");
+        if (roiFinderModuleConf == null) throw new RuntimeException("Config roiFinderModule not found!");
+        List<SlidePosList> slidePosLists = slidePosListDao.select(
+                where("moduleId", roiFinderModuleConf.getValue()));
+
+        // apply the translation matrix to the position list to derive a new position list
+        for (SlidePosList spl : slidePosLists) {
+            PositionList posList = spl.getPositionList();
+            MultiStagePosition[] msps = posList.getPositions();
+            for (MultiStagePosition msp : msps) {
+                for (int i=0; i<msp.size(); ++i) {
+                    StagePosition sp = msp.get(i);
+                    if (sp.numAxes == 2 && sp.stageName.compareTo(msp.getDefaultXYStage()) == 0) {
+                        sp.x += translate.getX();
+                        sp.y += translate.getY();
+                        break;
+                    }
+                }
+            }
+            posList.setPositions(msps);
+
+            // store the new position list into the database
+            SlidePosList slidePosList = new SlidePosList(this.moduleId, spl.getSlideId(), task.getId(), posList);
+            slidePosListDao.insert(slidePosList);
+        }
 
         return Status.SUCCESS;
     }
+    
+    /**
+     * Given a reference image and a set of comparison images, produce a stage-position translation (x,y) pair.
+     * @param ref The reference image
+     * @param compare The list of comparison images
+     * @return a Point2D.Double containing the translation (x,y) pair.
+     */
+    abstract Point2D.Double process(TaggedImage ref, List<TaggedImage> compare);
 
     @Override public String getTitle() {
         return this.getClass().getSimpleName();
