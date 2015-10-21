@@ -18,14 +18,13 @@ import org.micromanager.utils.MDUtils;
 
 import ij.IJ;
 import ij.ImagePlus;
-import ij.measure.Measurements;
 import ij.measure.ResultsTable;
-import ij.plugin.filter.ParticleAnalyzer;
+import ij.plugin.filter.Analyzer;
 import ij.process.ImageProcessor;
 import mmcorej.TaggedImage;
 
-public class BDGPROIFinder2 extends ROIFinder implements Module, ImageLogger {
-    public BDGPROIFinder2() {
+public class OldBDGPROIFinder extends ROIFinder implements Module, ImageLogger {
+    public OldBDGPROIFinder() {
         super();
     }
 
@@ -44,79 +43,79 @@ public class BDGPROIFinder2 extends ROIFinder implements Module, ImageLogger {
         String imageLabel = image.getLabel();
         String label = String.format("%s (%s)", positionName, imageLabel); 
 
+        // get the minRoiArea config value
+        Config minRoiAreaConf = config.get("minRoiArea");
+        if (minRoiAreaConf == null) throw new RuntimeException("minRoiArea config value is missing!");
+        double minRoiArea = new Double(minRoiAreaConf.getValue());
+        logger.fine(String.format("%s: Using minRoiArea: %f", label, minRoiArea));
+        
         List<ROI> rois = new ArrayList<ROI>();
         ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
         ImagePlus imp = new ImagePlus(image.toString(), processor);
+        //imp.show();
         
         // Convert to gray
         logger.fine(String.format("%s: Convert to gray", label));
         IJ.run(imp, "8-bit", "");
         imageLog.addImage(imp, "Convert to gray");
         
+        // Subtract background
+//        IJ.run(imp, "Subtract Background...", "rolling=200 light");
+//        imageLog.addImage(imp, "Subtract Background");
+
+        // Resize to 1/4
         int w=imp.getWidth();
         int h=imp.getHeight();
         logger.fine(String.format("%s: Image dimensions: (%d,%d)", label, w, h));
 
-        // Resize to 1/4
-        double scale = 0.25;
-        logger.fine(String.format("%s: Resizing", label));
-        imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
-        imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
-                (int)Math.floor(imp.getWidth() * scale), 
-                (int)Math.floor(imp.getHeight() * scale)));
-        imageLog.addImage(imp, "Resizing");
-        
-        // get the minRoiArea config value and re-scale it
-        Config minRoiAreaConf = config.get("minRoiArea");
-        if (minRoiAreaConf == null) throw new RuntimeException("minRoiArea config value is missing!");
-        double minRoiArea = new Double(minRoiAreaConf.getValue());
-        logger.fine(String.format("%s: Using minRoiArea: %f", label, minRoiArea));
-        
-        // Find edges
-        logger.fine(String.format("%s: Finding edges", label));
-        IJ.run(imp, "Find Edges", "");
-        imageLog.addImage(imp, "Find Edges");
+//        double scale = 0.25;
+        double scale = 1.0;
 
-        // convert to short[] values
-        imp.setProcessor(imp.getProcessor().convertToByte(true));
+        double ws=(double)w*scale;
+        double hs=(double)h*scale;
 
-        // Auto threshold
-        byte pixelThreshold = 13;
-        byte pixMin = 0, pixMax = -1;
-        logger.fine(String.format("%s: Running threshold", label));
-        //IJ.run(imp, "Auto Threshold", "method=IsoData white");
-        byte[] pixels = (byte[])imp.getProcessor().getPixels();
-        for (int i=0; i<pixels.length; ++i) {
-            pixels[i] = pixels[i] < pixelThreshold? pixMin : pixMax;
-        }
-        imageLog.addImage(imp, "Threshold");
-        
-        // Gray morphology
-        logger.fine(String.format("%s: Running gray morphology", label));
-        IJ.run(imp, "Gray Morphology", "radius=10 type=circle operator=[fast close]");
-        imageLog.addImage(imp, "Gray Morphology");
+        String scaleOp = String.format("x=%f y=%f width=%d height=%d interpolation=Bicubic average", 
+                scale, scale, (int)ws, (int)hs);
+        logger.fine(String.format("%s: Scaling: %s", label, scaleOp));
+        IJ.run(imp, "Scale...", scaleOp);
+        imageLog.addImage(imp, "Scaling: scaleOp");
 
-        // invert
-        //logger.fine(String.format("%s: Running invert", label));
-        //IJ.run(imp, "Invert", "");
-        //imageLog.addImage(imp, "Invert");
+        // Crop after scale
+        double crop = 2.0;
+        double rw=(w/crop)-(ws/crop);
+        double rh=(h/crop)-(hs/crop);
+        logger.fine(String.format("%s: Cropping: %d, %d, %d, %d", label, (int)rw, (int)rh, (int)ws, (int)hs));
+        imp.setRoi((int)rw,(int)rh,(int)ws,(int)hs);
+        IJ.run(imp, "Crop", "");
+        imageLog.addImage(imp, String.format("Cropping: %d, %d, %d, %d", (int)rw, (int)rh, (int)ws, (int)hs));
 
-        // Fill holes
+        // Binarize
+        logger.fine(String.format("%s: Binarizing", label));
+        IJ.run(imp, "Auto Threshold", "method=Huang white"); // array out of bounds exception
+        imageLog.addImage(imp, "Binarizing");
+
+        // Morphological operations: close gaps, fill holes
+        logger.fine(String.format("%s: Closing gaps", label));
+        IJ.run(imp, "Close-", "");
+        imageLog.addImage(imp, "Closing gaps");
+
         logger.fine(String.format("%s: Filling holes", label));
-        IJ.run(imp, "Options...", "iterations=1 count=1 black");
         IJ.run(imp, "Fill Holes", "");
         imageLog.addImage(imp, "Filling holes");
-        
-        // Run the particle analyzer and save results to a results table
-        ResultsTable rt = new ResultsTable();
-        ParticleAnalyzer particleAnalyzer = new ParticleAnalyzer(
-                ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES|ParticleAnalyzer.CLEAR_WORKSHEET|ParticleAnalyzer.IN_SITU_SHOW,
-                Measurements.AREA|Measurements.MEAN|Measurements.MIN_MAX|Measurements.RECT,
-                rt, 0.0, Double.POSITIVE_INFINITY);
-        if (!particleAnalyzer.analyze(imp)) throw new RuntimeException("ParticleAnalyzer.analyze() returned false!");
 
+        // Set the measurements
+        logger.fine(String.format("%s: Set the measurements", label));
+        IJ.run(imp, "Set Measurements...", "area mean min bounding redirect=None decimal=3");
+        imageLog.addImage(imp, "Set measurements");
+
+        // Detect the objects
+        logger.fine(String.format("%s: Analyzing particles", label));
+        IJ.run(imp, "Analyze Particles...", "exclude clear in_situ");
+        imageLog.addImage(imp, "Analyzing particles");
+       
         Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
         // Get the objects and iterate through them
+        ResultsTable rt = Analyzer.getResultsTable();
         logger.fine(String.format("ResultsTable Column Headings: %s", rt.getColumnHeadings()));
         for (int i=0; i < rt.getCounter(); i++) {
             double area = rt.getValue("Area", i) / (scale*scale); // area of the object
@@ -133,21 +132,14 @@ public class BDGPROIFinder2 extends ROIFinder implements Module, ImageLogger {
             // Select for area > 2000, check if object is at boundary of image (bx or by == 1)
             // ROI: upper left corner = bx/by with width/height
             if (area >= minRoiArea && bx > 1 && by > 1 && bx+width < w && by+height < h) {
-                ROI roi = new ROI(image.getId(), 
-                        (int)Math.floor(bx), 
-                        (int)Math.floor(by), 
-                        (int)Math.floor(bx+width), 
-                        (int)Math.floor(by+height));
+                ROI roi = new ROI(image.getId(), (int)(bx*scale), (int)(by*scale), (int)(bx+width), (int)(by+height));
                 rois.add(roi);
                 roiDao.insert(roi);
                 logger.info(String.format("%s: Created new ROI record with width=%.2f, height=%.2f, area=%.2f: %s", 
                         label, width, height, area, roi));
                 
                 // Draw the ROI rectangle
-                imp.setRoi((int)Math.floor(rt.getValue("BX", i)), 
-                        (int)Math.floor(rt.getValue("BY", i)), 
-                        (int)Math.floor(rt.getValue("Width", i)), 
-                        (int)Math.floor(rt.getValue("Height", i)));
+                imp.setRoi(roi.getX1(), roi.getY1(), roi.getX2()-roi.getX1()+1, roi.getY2()-roi.getY1()+1);
                 IJ.setForegroundColor(255, 255, 0);
                 IJ.run(imp, "Draw", "");
             }

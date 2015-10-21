@@ -13,8 +13,9 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
+//import org.bdgp.OpenHiCAMM.Modules.OldBDGPROIFinder;
+import org.bdgp.OpenHiCAMM.Modules.PosCalibrator;
 import org.bdgp.OpenHiCAMM.Modules.BDGPROIFinder;
-import org.bdgp.OpenHiCAMM.Modules.BDGPROIFinder2;
 import org.bdgp.OpenHiCAMM.Modules.ImageStitcher;
 import org.bdgp.OpenHiCAMM.Modules.SlideImager;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
@@ -149,9 +150,10 @@ public class OpenHiCAMM implements MMPlugin {
             // Add all the builtin modules to the modules list first
             moduleNames = new ArrayList<String>();
             moduleNames.add(SlideImager.class.getName());
+            //moduleNames.add(OldBDGPROIFinder.class.getName());
             moduleNames.add(BDGPROIFinder.class.getName());
-            moduleNames.add(BDGPROIFinder2.class.getName());
             moduleNames.add(ImageStitcher.class.getName());
+            moduleNames.add(PosCalibrator.class.getName());
             
             reportNames = new ArrayList<String>();
             reportNames.add(WorkflowReport.class.getName());
