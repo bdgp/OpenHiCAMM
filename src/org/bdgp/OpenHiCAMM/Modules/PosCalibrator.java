@@ -29,16 +29,16 @@ import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
 import org.micromanager.api.StagePosition;
 
+import bdgp.org.hough.GHT_Rawmatch;
 import ij.ImagePlus;
+import ij.gui.Roi;
 import mmcorej.CMMCore;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public abstract class PosCalibrator implements Module {
+public class PosCalibrator implements Module {
     String moduleId;
     WorkflowRunner workflow;
-
-    public PosCalibrator() { }
 
     @Override public void initialize(WorkflowRunner workflow, String moduleId) {
         this.workflow = workflow;
@@ -162,9 +162,16 @@ public abstract class PosCalibrator implements Module {
             }
         }
 
-        // pass the reference image and comparison image(s) into the process() function to get the translation matrix
-        Point2D.Double translateImage = process(refImage, compareImages);
-        
+        // pass the reference image and comparison image(s) into the GHT_Rawmatch.match() function 
+        // to get the translation matrix
+        GHT_Rawmatch matcher = new GHT_Rawmatch();
+        Roi roi = matcher.match(refImage, compareImages);
+        Point2D.Double translateImage = roi == null? 
+                new Point2D.Double(0.0, 0.0) : 
+                new Point2D.Double(
+                    Math.floor((roi.getXBase() + roi.getFloatWidth() / 2.0) - refImage.getWidth()), 
+                    Math.floor((roi.getYBase() + roi.getFloatHeight() / 2.0) - refImage.getHeight()));
+
         // convert between image coordinates and stage coordinates
         ModuleConfig pixelSizeConf = workflow.getModuleConfig().selectOne(
                 where("id", refSlideImagerModuleConf.getValue()).
@@ -230,14 +237,6 @@ public abstract class PosCalibrator implements Module {
         return Status.SUCCESS;
     }
     
-    /**
-     * Given a reference image and a set of comparison images, produce a stage-position translation (x,y) pair.
-     * @param ref The reference image
-     * @param compare The list of comparison images
-     * @return a Point2D.Double containing the translation (x,y) pair.
-     */
-    abstract Point2D.Double process(ImagePlus ref, List<ImagePlus> compare);
-
     @Override public String getTitle() {
         return this.getClass().getSimpleName();
     }

@@ -99,6 +99,10 @@
                   <groupId>com.miglayout</groupId>
                   <artifactId>miglayout</artifactId>
                 </artifactItem>
+                <artifactItem>
+                  <groupId>sc.fiji</groupId>
+                  <artifactId>Hough_Transform</artifactId>
+                </artifactItem>
               </artifactItems>
               <outputDirectory>${fiji.dir}/jars</outputDirectory>
               <overWriteReleases>true</overWriteReleases>
@@ -199,6 +203,11 @@
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>17.0</version>
+    </dependency>
+    <dependency>
+      <groupId>sc.fiji</groupId>
+      <artifactId>Hough_Transform</artifactId>
+      <version>1.0.0</version>
     </dependency>
   </dependencies>
 </project>
