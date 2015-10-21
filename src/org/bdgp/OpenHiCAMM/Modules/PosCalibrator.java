@@ -29,8 +29,8 @@ import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
 import org.micromanager.api.StagePosition;
 
+import ij.ImagePlus;
 import mmcorej.CMMCore;
-import mmcorej.TaggedImage;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
@@ -125,7 +125,7 @@ public abstract class PosCalibrator implements Module {
         // get The reference image from the reference module
         Config refSlideImagerModuleConf = config.get("refSlideImagerModule");
         if (refSlideImagerModuleConf == null) throw new RuntimeException("Config refSlideImagerModule not found!");
-        List<TaggedImage> refImages = new ArrayList<>();
+        List<ImagePlus> refImages = new ArrayList<>();
         List<Task> refTasks = workflow.getTaskStatus().select(
                 where("moduleId", refSlideImagerModuleConf.getValue()));
         for (Task t : refTasks) {
@@ -134,8 +134,8 @@ public abstract class PosCalibrator implements Module {
                     and("key", "imageId"));
             if (imageId != null) {
                 Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
-                TaggedImage taggedImage = image.getTaggedImage(acqDao);
-                refImages.add(taggedImage);
+                ImagePlus imp = image.getImagePlus(acqDao);
+                refImages.add(imp);
             }
         }
         if (refImages.size() == 0) throw new RuntimeException(String.format(
@@ -143,12 +143,12 @@ public abstract class PosCalibrator implements Module {
         if (refImages.size() > 1) throw new RuntimeException(String.format(
                 "More than one image found for module %s: %d", 
                 refSlideImagerModuleConf.getValue(), refImages.size()));
-        TaggedImage refImage = refImages.get(0);
+        ImagePlus refImage = refImages.get(0);
         
         // get the comparison image(s) from the comparison module
         Config compareSlideImagerModuleConf = config.get("compareSlideImagerModule");
         if (compareSlideImagerModuleConf == null) throw new RuntimeException("Config compareSlideImagerModule not found!");
-        List<TaggedImage> compareImages = new ArrayList<>();
+        List<ImagePlus> compareImages = new ArrayList<>();
         List<Task> compareTasks = workflow.getTaskStatus().select(
                 where("moduleId", compareSlideImagerModuleConf.getValue()));
         for (Task t : compareTasks) {
@@ -157,8 +157,8 @@ public abstract class PosCalibrator implements Module {
                     and("key", "imageId"));
             if (imageId != null) {
                 Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
-                TaggedImage taggedImage = image.getTaggedImage(acqDao);
-                compareImages.add(taggedImage);
+                ImagePlus imp = image.getImagePlus(acqDao);
+                compareImages.add(imp);
             }
         }
 
@@ -236,7 +236,7 @@ public abstract class PosCalibrator implements Module {
      * @param compare The list of comparison images
      * @return a Point2D.Double containing the translation (x,y) pair.
      */
-    abstract Point2D.Double process(TaggedImage ref, List<TaggedImage> compare);
+    abstract Point2D.Double process(ImagePlus ref, List<ImagePlus> compare);
 
     @Override public String getTitle() {
         return this.getClass().getSimpleName();
