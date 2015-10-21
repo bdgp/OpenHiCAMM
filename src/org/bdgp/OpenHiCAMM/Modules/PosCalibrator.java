@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.Logger;
@@ -142,6 +143,7 @@ public abstract class PosCalibrator implements Module {
         if (refImages.size() > 1) throw new RuntimeException(String.format(
                 "More than one image found for module %s: %d", 
                 refSlideImagerModuleConf.getValue(), refImages.size()));
+        TaggedImage refImage = refImages.get(0);
         
         // get the comparison image(s) from the comparison module
         Config compareSlideImagerModuleConf = config.get("compareSlideImagerModule");
@@ -161,7 +163,42 @@ public abstract class PosCalibrator implements Module {
         }
 
         // pass the reference image and comparison image(s) into the process() function to get the translation matrix
-        Point2D.Double translate = process(refImages.get(0), compareImages);
+        Point2D.Double translateImage = process(refImage, compareImages);
+        
+        // convert between image coordinates and stage coordinates
+        ModuleConfig pixelSizeConf = workflow.getModuleConfig().selectOne(
+                where("id", refSlideImagerModuleConf.getValue()).
+                and("key", "pixelSize"));
+        if (pixelSizeConf == null) throw new RuntimeException("pixelSize conf not found for ref imager!");
+        Double pixelSize = new Double(pixelSizeConf.getValue());
+
+        ModuleConfig invertXAxisConf = workflow.getModuleConfig().selectOne(
+                where("id", refSlideImagerModuleConf.getValue()).
+                and("key", "invertXAxis"));
+        if (invertXAxisConf == null) throw new RuntimeException("invertXAxis conf not found for ref imager!");
+        ModuleConfig invertXAxisConf2 = workflow.getModuleConfig().selectOne(
+                where("id", compareSlideImagerModuleConf.getValue()).
+                and("key", "invertXAxis"));
+        if (invertXAxisConf2 == null) throw new RuntimeException("invertXAxis conf not found for compare imager!");
+        ModuleConfig invertYAxisConf = workflow.getModuleConfig().selectOne(
+                where("id", refSlideImagerModuleConf.getValue()).
+                and("key", "invertYAxis"));
+        if (invertYAxisConf == null) throw new RuntimeException("invertYAxis conf not found for ref imager!");
+        ModuleConfig invertYAxisConf2 = workflow.getModuleConfig().selectOne(
+                where("id", compareSlideImagerModuleConf.getValue()).
+                and("key", "invertYAxis"));
+        if (invertYAxisConf2 == null) throw new RuntimeException("invertYAxis conf not found for compare imager!");
+        
+        if (!Objects.equals(invertXAxisConf.getValue(), invertXAxisConf2.getValue()))
+            throw new RuntimeException("inconsistent values for invertXAxis between ref and compare imagers!");
+        if (!Objects.equals(invertYAxisConf.getValue(), invertYAxisConf2.getValue()))
+            throw new RuntimeException("inconsistent values for invertYAxis between ref and compare imagers!");
+        Double invertXAxis = "yes".equals(invertXAxisConf.getValue())? -1.0 : 1.0;
+        Double invertYAxis = "yes".equals(invertYAxisConf.getValue())? -1.0 : 1.0;
+        
+        Point2D.Double translateStage = new Point2D.Double(
+                translateImage.getX() * pixelSize * invertXAxis, 
+                translateImage.getY() * pixelSize * invertYAxis);
 
         // get the position lists
         Config roiFinderModuleConf = config.get("roiFinderModule");
@@ -177,8 +214,8 @@ public abstract class PosCalibrator implements Module {
                 for (int i=0; i<msp.size(); ++i) {
                     StagePosition sp = msp.get(i);
                     if (sp.numAxes == 2 && sp.stageName.compareTo(msp.getDefaultXYStage()) == 0) {
-                        sp.x += translate.getX();
-                        sp.y += translate.getY();
+                        sp.x += translateStage.getX();
+                        sp.y += translateStage.getY();
                         break;
                     }
                 }
