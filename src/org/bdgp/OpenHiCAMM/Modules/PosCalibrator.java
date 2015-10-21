@@ -206,6 +206,9 @@ public class PosCalibrator implements Module {
         Point2D.Double translateStage = new Point2D.Double(
                 translateImage.getX() * pixelSize * invertXAxis, 
                 translateImage.getY() * pixelSize * invertYAxis);
+        
+        logger.info(String.format("%s: Computed image translation: %s -> stage translation: %s",
+                translateImage, translateStage));
 
         // get the position lists
         Config roiFinderModuleConf = config.get("roiFinderModule");
