@@ -36,13 +36,13 @@ public class PosCalibratorDialog extends JPanel {
         add(refSlideImagerModule, "cell 0 1,growx");
         
         // Populate the module ID drop-down list        
-        List<String> canSlideImages = new ArrayList<String>();
-        canSlideImages.add("- Select -");
+        List<String> canImageSlides = new ArrayList<String>();
+        canImageSlides.add("- Select -");
         for (ModuleConfig mc : workflowRunner.getModuleConfig().select(where("key","canImageSlides"))) {
-            canSlideImages.add(mc.getId());
+            canImageSlides.add(mc.getId());
         }
-        Collections.sort(canSlideImages);
-        refSlideImagerModule.setModel(new DefaultComboBoxModel<String>(canSlideImages.toArray(new String[]{})));
+        Collections.sort(canImageSlides);
+        refSlideImagerModule.setModel(new DefaultComboBoxModel<String>(canImageSlides.toArray(new String[]{})));
         refSlideImagerModule.setEnabled(true);
         
         JLabel lblChooseComparisonSlideimager = new JLabel("Choose Comparison SlideImager module:");
@@ -51,7 +51,7 @@ public class PosCalibratorDialog extends JPanel {
         compareSlideImagerModule = new JComboBox<String>();
         add(compareSlideImagerModule, "cell 0 3,growx");
 
-        compareSlideImagerModule.setModel(new DefaultComboBoxModel<String>(canSlideImages.toArray(new String[]{})));
+        compareSlideImagerModule.setModel(new DefaultComboBoxModel<String>(canImageSlides.toArray(new String[]{})));
         compareSlideImagerModule.setEnabled(true);
         
         JLabel lblChooseRoiFinder = new JLabel("Choose ROI Finder module:");
@@ -70,8 +70,8 @@ public class PosCalibratorDialog extends JPanel {
             }
         }
         Collections.sort(canProduceROIs);
-        refSlideImagerModule.setModel(new DefaultComboBoxModel<String>(canProduceROIs.toArray(new String[]{})));
-        refSlideImagerModule.setEnabled(true);
+        roiFinderModule.setModel(new DefaultComboBoxModel<String>(canProduceROIs.toArray(new String[]{})));
+        roiFinderModule.setEnabled(true);
     }
 
 }
