@@ -27,6 +27,7 @@ import org.bdgp.OpenHiCAMM.DB.Pool;
 import org.bdgp.OpenHiCAMM.DB.PoolSlide;
 import org.bdgp.OpenHiCAMM.DB.ROI;
 import org.bdgp.OpenHiCAMM.DB.Slide;
+import org.bdgp.OpenHiCAMM.DB.SlidePosList;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.TaskConfig;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
@@ -174,43 +175,61 @@ public class WorkflowReport implements Report {
         Dao<Image> imageDao = this.workflowRunner.getInstanceDb().table(Image.class);
         Dao<Acquisition> acqDao = this.workflowRunner.getInstanceDb().table(Acquisition.class);
         Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
+        Dao<SlidePosList> slidePosListDao = this.workflowRunner.getInstanceDb().table(SlidePosList.class);
         
-        // get the ROIFinder module(s)
-        List<WorkflowModule> roiFinderModules = new ArrayList<WorkflowModule>();
-        for (WorkflowModule wm : this.workflowRunner.getWorkflow().select(where("parentId", startModule.getId()))) {
-            if (this.workflowRunner.getModuleConfig().selectOne(
-                    where("id", wm.getId()).
-                    and("key", "canProduceROIs").
-                    and("value", "yes")) != null) 
-            {
-                roiFinderModules.add(wm);
-            }
-        }
-        log("roiFinderModules = %s", roiFinderModules);
-
-        // get the associated hi res ROI slide imager modules for each ROI finder module
-        Map<WorkflowModule,List<WorkflowModule>> roiImagers = new HashMap<WorkflowModule,List<WorkflowModule>>();
-        for (WorkflowModule roiFinderModule : roiFinderModules) {
-            for (Config canImageSlides : this.workflowRunner.getModuleConfig().select(
-                    where("key","canImageSlides").
-                    and("value", "yes"))) 
-            {
-                WorkflowModule slideImager = this.workflowRunner.getWorkflow().selectOneOrDie(
-                        where("id", canImageSlides.getId()));
-                if (!workflowRunner.getModuleConfig().select(
-                        where("id", slideImager.getId()).
-                        and("key", "posListModuleId").
-                        and("value", roiFinderModule.getId())).isEmpty()) 
-                {
-                    if (!roiImagers.containsKey(roiFinderModule)) {
-                        roiImagers.put(roiFinderModule, new ArrayList<WorkflowModule>());
+        // get a ROI ID -> moduleId(s) mapping from the slideposlist
+        Map<Integer, Set<String>> roiModules = new HashMap<>();
+        for (SlidePosList spl : slidePosListDao.select()) {
+            if (spl.getModuleId() != null) {
+                PositionList posList = spl.getPositionList();
+                for (MultiStagePosition msp : posList.getPositions()) {
+                    String roiIdConf = msp.getProperty("ROI");
+                    if (roiIdConf != null) {
+                        Integer roiId = new Integer(roiIdConf);
+                        if (!roiModules.containsKey(roiId)) roiModules.put(roiId, new HashSet<>());
+                        roiModules.get(roiId).add(spl.getModuleId());
                     }
-                    roiImagers.get(roiFinderModule).add(slideImager);
                 }
             }
         }
-        log("roiImagers = %s", roiImagers);
         
+        // get the associated hi res slide imager modules for each ROI finder module
+        // ROIFinder module ID -> List of associated imager module IDs
+        Map<String,Set<String>> roiImagers = new HashMap<>();
+        for (Task task : workflowRunner.getTaskStatus().select(
+                where("moduleId", startModule.getId()))) 
+        {
+            TaskConfig imageIdConf = workflowRunner.getTaskConfig().selectOne(
+                    where("id", task.getId()).
+                    and("key", "imageId"));
+            if (imageIdConf != null) {
+                for (ROI roi : roiDao.select(where("imageId", imageIdConf.getValue()))) {
+                    for (String roiModuleId : roiModules.get(roi.getId())) {
+                        WorkflowModule roiModule = this.workflowRunner.getWorkflow().selectOne(where("id", roiModuleId));
+                        if (roiModule != null) {
+                            for (ModuleConfig posListModuleIdConf : this.workflowRunner.getModuleConfig().select(
+                                    where("key", "posListModuleId").
+                                    and("value", roiModule.getId()))) 
+                            {
+                                if (this.workflowRunner.getModuleConfig().selectOne(
+                                        where("id", posListModuleIdConf.getId()).
+                                        and("key", "canImageSlides").
+                                        and("value", "yes")) != null) 
+                                {
+                                    WorkflowModule imagerModule = this.workflowRunner.getWorkflow().selectOne(
+                                            where("id", posListModuleIdConf.getId()));
+                                    if (imagerModule != null) {
+                                        if (!roiImagers.containsKey(roiModule.getId())) roiImagers.put(roiModule.getId(), new HashSet<>());
+                                        roiImagers.get(roiModule.getId()).add(imagerModule.getId());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // display the title
         Slide slide;
         String slideId;
@@ -440,8 +459,10 @@ public class WorkflowReport implements Report {
                         
                         // go through each attached SlideImager and look for MSP's with an ROI property
                         // that matches this ROI's ID.
-                        for (Map.Entry<WorkflowModule, List<WorkflowModule>> entry : roiImagers.entrySet()) {
-                            for (WorkflowModule imager : entry.getValue()) {
+                        for (Map.Entry<String, Set<String>> entry : roiImagers.entrySet()) {
+                            for (String imagerModuleId : entry.getValue()) {
+                                WorkflowModule imager = this.workflowRunner.getWorkflow().selectOneOrDie(
+                                        where("id", imagerModuleId));
                                 // get the hires pixel size for this imager
                                 Config hiResPixelSizeConf = this.workflowRunner.getModuleConfig().selectOne(where("id", imager.getId()).and("key","pixelSize"));
                                 Double hiResPixelSize = hiResPixelSizeConf != null? new Double(hiResPixelSizeConf.getValue()) : ROIFinderDialog.DEFAULT_HIRES_PIXEL_SIZE_UM;
