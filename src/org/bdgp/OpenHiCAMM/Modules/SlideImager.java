@@ -281,12 +281,12 @@ public class SlideImager implements Module, ImageLogger {
             // build a map of imageLabel -> sibling task record
             final Dao<Task> taskDao = this.workflowRunner.getTaskStatus();
             Dao<TaskDispatch> taskDispatchDao = this.workflowRunner.getTaskDispatch();
-            TaskDispatch td = taskDispatchDao.selectOne(where("taskId", task.getId()));
-            List<TaskDispatch> tds = td != null? 
-                    taskDispatchDao.select(where("parentTaskId", td.getParentTaskId())) :
-                    null;
+            List<TaskDispatch> tds = new ArrayList<>();
+            for (Task t : taskDao.select(where("moduleId", this.moduleId))) {
+                tds.addAll(taskDispatchDao.select(where("taskId", t.getId())));
+            }
             final Map<String,Task> tasks = new LinkedHashMap<String,Task>();
-            if (tds != null) {
+            if (!tds.isEmpty()) {
                 Collections.sort(tds, new Comparator<TaskDispatch>() {
                     @Override public int compare(TaskDispatch a, TaskDispatch b) {
                         return a.getTaskId() - b.getTaskId();
@@ -462,7 +462,7 @@ public class SlideImager implements Module, ImageLogger {
                     throw new RuntimeException(String.format(
                         "Error: Unexpected image set from acquisition! acquisition image count is %d, expected %d!%n"+
                         "From acquisition: %s%nFrom task config: %s",
-                        taggedImages.size(), totalImages, taggedImages, tasks.keySet()));
+                        taggedImages.size(), taggedImages, totalImages, tasks.keySet()));
                 }
                 
                 // Add any missing Image record for e.g. the acquisition task. This is also important because
@@ -701,7 +701,7 @@ public class SlideImager implements Module, ImageLogger {
         // Create task records and connect to parent tasks
         // If no parent tasks were defined, then just create a single task instance.
         List<Task> tasks = new ArrayList<Task>();
-        for (Task parentTask : parentTasks.size()>0? parentTasks.toArray(new Task[0]) : new Task[] {null}) 
+        for (Task parentTask : parentTasks.size()>0? parentTasks.toArray(new Task[]{}) : new Task[]{null}) 
         {
             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Connecting parent task %s", 
             		this.moduleId, Util.escape(parentTask)));
@@ -715,16 +715,7 @@ public class SlideImager implements Module, ImageLogger {
                             this.moduleId, c));
                 }
         	}
-        	// Make sure this isn't a sentinel (dummy) task. The final slide loader task is only 
-        	// used for putting the last slide back, and should have no child tasks.
-        	if (parentTask != null && 
-                (!parentTaskConf.containsKey("poolSlideId") || parentTaskConf.get("poolSlideId") == null)) 
-        	{
-                workflowRunner.getLogger().info(String.format(
-                		"%s: createTaskRecords: Task %d is a sentinel, not attaching child tasks", 
-                        this.moduleId, parentTask.getId()));
-                continue;
-        	}
+
         	// Get the associated slide.
         	Slide slide;
             if (parentTaskConf.containsKey("slideId")) {
