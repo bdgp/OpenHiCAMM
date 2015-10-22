@@ -103,6 +103,18 @@ public class PosCalibrator implements Module {
     }
 
     @Override public List<Task> createTaskRecords(List<Task> parentTasks) {
+        // get the position lists
+        Config roiFinderModuleConf = this.workflow.getModuleConfig().selectOne(
+                where("id", this.moduleId).
+                and("key","roiFinderModule"));
+        if (roiFinderModuleConf == null) throw new RuntimeException("Config roiFinderModule not found!");
+        Dao<SlidePosList> slidePosListDao = workflow.getInstanceDb().table(SlidePosList.class);
+        List<SlidePosList> slidePosLists = slidePosListDao.select(
+                where("moduleId", roiFinderModuleConf.getValue()));
+        
+        // remove old slide pos lists
+        slidePosListDao.delete(where("moduleId", this.moduleId));
+
         List<Task> tasks = new ArrayList<Task>();
         for (Task parentTask : parentTasks.size()>0? parentTasks.toArray(new Task[]{}) : new Task[]{null}) {
             Task task = new Task(this.moduleId, Status.NEW);
@@ -111,6 +123,14 @@ public class PosCalibrator implements Module {
             
             if (parentTask != null) {
                 workflow.getTaskDispatch().insert(new TaskDispatch(task.getId(), parentTask.getId()));
+            }
+
+            // store a copy of the source position lists; these will be updated later with
+            // the translated coordinates.
+            for (SlidePosList spl : slidePosLists) {
+                // store the new position list into the database
+                SlidePosList slidePosList = new SlidePosList(this.moduleId, spl.getSlideId(), null, spl.getPositionList());
+                slidePosListDao.insert(slidePosList);
             }
         }
         return tasks;
@@ -219,10 +239,8 @@ public class PosCalibrator implements Module {
                 translateImage, translateStage));
 
         // get the position lists
-        Config roiFinderModuleConf = config.get("roiFinderModule");
-        if (roiFinderModuleConf == null) throw new RuntimeException("Config roiFinderModule not found!");
         List<SlidePosList> slidePosLists = slidePosListDao.select(
-                where("moduleId", roiFinderModuleConf.getValue()));
+                where("moduleId", this.moduleId));
 
         // apply the translation matrix to the position list to derive a new position list
         for (SlidePosList spl : slidePosLists) {
@@ -240,9 +258,9 @@ public class PosCalibrator implements Module {
             }
             posList.setPositions(msps);
 
-            // store the new position list into the database
-            SlidePosList slidePosList = new SlidePosList(this.moduleId, spl.getSlideId(), task.getId(), posList);
-            slidePosListDao.insert(slidePosList);
+            // store the translated position list into the database
+            spl.setPositionList(posList);
+            slidePosListDao.update(spl, "id");
         }
 
         return Status.SUCCESS;
