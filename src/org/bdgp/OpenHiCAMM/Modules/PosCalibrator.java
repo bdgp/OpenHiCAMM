@@ -32,6 +32,7 @@ import org.micromanager.api.StagePosition;
 import bdgp.org.hough.GHT_Rawmatch;
 import ij.ImagePlus;
 import ij.gui.Roi;
+import ij.process.ImageConverter;
 import mmcorej.CMMCore;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
@@ -135,6 +136,7 @@ public class PosCalibrator implements Module {
             if (imageId != null) {
                 Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
                 ImagePlus imp = image.getImagePlus(acqDao);
+                new ImageConverter(imp).convertToGray8();
                 refImages.add(imp);
             }
         }
@@ -158,6 +160,7 @@ public class PosCalibrator implements Module {
             if (imageId != null) {
                 Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
                 ImagePlus imp = image.getImagePlus(acqDao);
+                new ImageConverter(imp).convertToGray8();
                 compareImages.add(imp);
             }
         }
@@ -165,12 +168,17 @@ public class PosCalibrator implements Module {
         // pass the reference image and comparison image(s) into the GHT_Rawmatch.match() function 
         // to get the translation matrix
         GHT_Rawmatch matcher = new GHT_Rawmatch();
+        matcher.intIP = false; // Show all intermediate ImagePlus images
+        matcher.doLog = true; // Log results
+
         Roi roi = matcher.match(refImage, compareImages);
+        logger.info(String.format("Got ROI from matcher: %s", roi));
+
         Point2D.Double translateImage = roi == null? 
                 new Point2D.Double(0.0, 0.0) : 
                 new Point2D.Double(
-                    Math.floor((roi.getXBase() + roi.getFloatWidth() / 2.0) - refImage.getWidth()), 
-                    Math.floor((roi.getYBase() + roi.getFloatHeight() / 2.0) - refImage.getHeight()));
+                    Math.floor((roi.getXBase() + roi.getFloatWidth() / 2.0) - refImage.getWidth() / 2.0), 
+                    Math.floor((roi.getYBase() + roi.getFloatHeight() / 2.0) - refImage.getHeight() / 2.0));
 
         // convert between image coordinates and stage coordinates
         ModuleConfig pixelSizeConf = workflow.getModuleConfig().selectOne(
@@ -207,7 +215,7 @@ public class PosCalibrator implements Module {
                 translateImage.getX() * pixelSize * invertXAxis, 
                 translateImage.getY() * pixelSize * invertYAxis);
         
-        logger.info(String.format("%s: Computed image translation: %s -> stage translation: %s",
+        logger.info(String.format("Computed image translation: %s -> stage translation: %s",
                 translateImage, translateStage));
 
         // get the position lists
