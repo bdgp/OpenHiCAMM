@@ -652,7 +652,7 @@ public class WorkflowReport implements Report {
                                                                 attr("width", roiGridThumb.getWidth()).
                                                                 attr("height", roiGridThumb.getHeight()).
                                                                 attr("class", "map").
-                                                                attr("usemap", String.format("#map-%s-ROI%d", imager.getId(), roi.getId()));
+                                                                attr("usemap", String.format("#map-roi-%s-ROI%d", imager.getId(), roi.getId()));
                                                     });
                                                     Td().with(()->{
                                                         // get the downstream stitcher tasks
