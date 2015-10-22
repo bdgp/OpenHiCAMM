@@ -169,7 +169,7 @@ public class PosCalibrator implements Module {
         // to get the translation matrix
         GHT_Rawmatch matcher = new GHT_Rawmatch();
         matcher.intIP = false; // Show all intermediate ImagePlus images
-        matcher.doLog = true; // Log results
+        matcher.doLog = false; // Log results
 
         Roi roi = matcher.match(refImage, compareImages);
         logger.info(String.format("Got ROI from matcher: %s", roi));
