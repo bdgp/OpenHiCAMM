@@ -346,13 +346,14 @@ public class WorkflowDialog extends JDialog {
                         new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
                 // get list of starting modules
                 Dao<WorkflowModule> modules = workflowDb.table(WorkflowModule.class);
-                for (WorkflowModule module : modules.select()) {
+                List<WorkflowModule> ms = modules.select();
+                Collections.sort(ms, (a,b)->a.getPriority().compareTo(b.getPriority()));
+                for (WorkflowModule module : ms) {
                     if (module.getParentId() == null) {
                         startModules.add(module.getId());
                     }
                 }
 
-                Collections.sort(startModules);
                 String startModuleId = null;
                 if (startModule.getModel() != null) {
                     startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
