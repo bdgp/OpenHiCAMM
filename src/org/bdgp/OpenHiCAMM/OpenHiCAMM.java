@@ -157,6 +157,7 @@ public class OpenHiCAMM implements MMPlugin {
             
             reportNames = new ArrayList<String>();
             reportNames.add(WorkflowReport.class.getName());
+            reportNames.add(ImageFileReport.class.getName());
             
             // Look in the mmslidemodules/ directory for any additional workflow modules.
             File pluginRootDir = new File(System.getProperty("org.bdgp.mmslide.module.path", MMSLIDEMODULESDIR));
