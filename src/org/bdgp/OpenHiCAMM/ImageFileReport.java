@@ -22,9 +22,7 @@ import static org.bdgp.OpenHiCAMM.Tag.T.*;
 public class ImageFileReport implements Report {
     WorkflowRunner workflowRunner;
 
-    public ImageFileReport() {
-        // TODO Auto-generated constructor stub
-    }
+    public ImageFileReport() { }
 
     @Override public void initialize(WorkflowRunner workflowRunner) {
         this.workflowRunner = workflowRunner;
