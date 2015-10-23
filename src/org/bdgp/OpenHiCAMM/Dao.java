@@ -86,6 +86,8 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     		    // call CREATE TABLE
         		List<String> create = TableUtils.getCreateTableStatements(connection, tableConfig);
         		for (String c: create) {
+        		    // store all tables as cached tables
+        		    c = c.replaceFirst("^CREATE TABLE ","CREATE CACHED TABLE ");
         		    dao.executeRaw(c);
         		}
     		}

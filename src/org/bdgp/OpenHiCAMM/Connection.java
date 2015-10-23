@@ -91,7 +91,7 @@ public class Connection extends JdbcConnectionSource {
                 }
 
                 return new Connection(
-                		String.format("jdbc:hsqldb:%s;file:%s;user=%s;password=%s",dbURI,dbPath,user,pw), 
+                		String.format("jdbc:hsqldb:%s;file:%s;user=%s;password=%s;hsqldb.default_table_type=cached;hsqldb.script_format=3",dbURI,dbPath,user,pw), 
                 		user, pw);
             }
             else {
@@ -124,7 +124,7 @@ public class Connection extends JdbcConnectionSource {
                 URI dbURI = new URI(dbString);
                 try {
                     Connection con = new Connection(
-                    		String.format("jdbc:hsqldb:%s;file:%s;user=%s;password=%s", dbURI,dbPath,username,password), 
+                    		String.format("jdbc:hsqldb:%s;file:%s;user=%s;password=%s;hsqldb.default_table_type=cached;hsqldb.script_format=3", dbURI,dbPath,username,password), 
                     		username, password);
                     // test the connection
                     con.getReadWriteConnection();
