@@ -24,6 +24,7 @@ public class ROIFinderDialog extends JPanel {
 
 	public static final double DEFAULT_MIN_ROI_AREA = 250000.0;
 	public static final double DEFAULT_OVERLAP_PCT = 25.0;
+	public static final double DEFAULT_ROI_MARGIN_PCT = 5.0;
 	public static final double DEFAULT_HIRES_PIXEL_SIZE_UM = 0.1253;
 
 	private JLabel lblMinRoiArea;
@@ -33,9 +34,10 @@ public class ROIFinderDialog extends JPanel {
 
 	DoubleSpinner overlapPct;
 	DoubleSpinner hiResPixelSize;
+	DoubleSpinner roiMarginPct;
 
 	public ROIFinderDialog(final ROIFinder roiFinder) {
-		this.setLayout(new MigLayout("", "[][grow]", "[][][][]"));
+		this.setLayout(new MigLayout("", "[][grow]", "[][][][][]"));
         
         lblMinRoiArea = new JLabel("Min ROI Area");
         add(lblMinRoiArea, "cell 0 0");
@@ -77,7 +79,14 @@ public class ROIFinderDialog extends JPanel {
         hiResPixelSize = new DoubleSpinner();
         hiResPixelSize.setValue(DEFAULT_HIRES_PIXEL_SIZE_UM);
         add(hiResPixelSize, "cell 1 2");
-        add(btnRoiTest, "cell 0 3");
+        
+        JLabel lblRoiMarginPercentage = new JLabel("ROI Margin Percentage:");
+        add(lblRoiMarginPercentage, "cell 0 3");
+        
+        roiMarginPct = new DoubleSpinner();
+        roiMarginPct.setValue(DEFAULT_ROI_MARGIN_PCT);
+        add(roiMarginPct, "cell 1 3");
+        add(btnRoiTest, "cell 0 4");
 	}
 	
 }

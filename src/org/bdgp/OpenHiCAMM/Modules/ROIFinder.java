@@ -107,6 +107,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			double hiResPixelSize = new Double(config.get("hiResPixelSize").getValue());
 			logger.fine(String.format("%s: Using hiResPixelSize: %f", label, hiResPixelSize));
 
+			double roiMarginPct = new Double(config.get("roiMarginPct").getValue());
+			logger.fine(String.format("%s: Using ROI margin size in percent of image size: %f", label, roiMarginPct));
+
 			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
 			logger.fine(String.format("%s: Using positionIndex: %d", label, positionIndex));
 
@@ -146,10 +149,18 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			Map<MultiStagePosition,ROI> roiMap = new HashMap<MultiStagePosition,ROI>();
 			PositionList posList = new PositionList();
 			for (ROI roi : rois) {
+			    // increase the ROI dimensions to add the margins
+			    int roiMarginWidth = (int)Math.floor((roiMarginPct / 100.0) * imageWidth * hiResPixelSize / pixelSize);
+			    int roiMarginHeight = (int)Math.floor((roiMarginPct / 100.0) * imageHeight * hiResPixelSize / pixelSize);
+			    int roiX1 = roi.getX1() - roiMarginWidth;
+			    int roiY1 = roi.getY1() + roiMarginHeight;
+			    int roiX2 = roi.getX2() + roiMarginWidth;
+			    int roiY2 = roi.getY2() + roiMarginHeight;
+			    
 			    // We need to potentially create a grid of Stage positions in order to capture all of the 
 			    // ROI.
-			    int roiWidth = roi.getX2()-roi.getX1()+1;
-			    int roiHeight = roi.getY2()-roi.getY1()+1;
+			    int roiWidth = roiX2-roiX1+1;
+			    int roiHeight = roiY2-roiY1+1;
 
 			    int tileWidth = (int)Math.floor(((double)imageWidth * hiResPixelSize) / pixelSize);
 			    int tileHeight = (int)Math.floor(((double)imageHeight * hiResPixelSize) / pixelSize);
@@ -164,11 +175,11 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			    int tileSetHeight = (tileYCount * (tileHeight - tileYOverlap)) + tileYOverlap;
 
 			    int tileXOffset = (int)Math.floor(
-			            (roi.getX1() + ((double)roiWidth / 2.0)) 
+			            (roiX1 + ((double)roiWidth / 2.0)) 
 			            - ((double)tileSetWidth / 2.0) 
 			            + ((double)tileWidth / 2.0));
 			    int tileYOffset = (int)Math.floor(
-			            (roi.getY1() + ((double)roiHeight / 2.0)) 
+			            (roiY1 + ((double)roiHeight / 2.0)) 
 			            - ((double)tileSetHeight / 2.0) 
 			            + ((double)tileHeight / 2.0));
 
@@ -180,12 +191,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
                         StagePosition sp = new StagePosition();
                         sp.numAxes = 2;
                         sp.stageName = "XYStage";
-                        sp.x = invertXAxis? 
-                        		x_stage-((tileX-(double)imageWidth/2.0)*pixelSize) :
-                        		x_stage+((tileX-(double)imageWidth/2.0)*pixelSize);
-                        sp.y = invertYAxis? 
-                        		y_stage-((tileY-(double)imageHeight/2.0)*pixelSize) :
-                        		y_stage+((tileY-(double)imageHeight/2.0)*pixelSize);
+                        sp.x = x_stage+((tileX-(double)imageWidth/2.0)*pixelSize)*(invertXAxis? -1.0 : 1.0);
+                        sp.y = y_stage+((tileY-(double)imageHeight/2.0)*pixelSize)*(invertYAxis? -1.0 : 1.0);
                         String mspLabel = String.format("%s: ROI=%d, tileX=%d, tileY=%d", label, roi.getId(), x, y);
                         msp.setProperty("stitchGroup", "ROI"+roi.getId());
                         msp.setProperty("ROI", new Integer(roi.getId()).toString());
@@ -313,6 +320,10 @@ public abstract class ROIFinder implements Module, ImageLogger {
             	if (overlapPct != null) {
             	    configs.add(new Config(ROIFinder.this.moduleId, "overlapPct", overlapPct.toString()));
             	}
+            	Double roiMarginPct = (Double)dialog.roiMarginPct.getValue();
+            	if (roiMarginPct != null) {
+            	    configs.add(new Config(ROIFinder.this.moduleId, "roiMarginPct", roiMarginPct.toString()));
+            	}
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -330,6 +341,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
             	}
             	if (confs.containsKey("overlapPct")) {
             	    dialog.overlapPct.setValue(new Double(confs.get("overlapPct").getValue()));
+            	}
+            	if (confs.containsKey("roiMarginPct")) {
+            	    dialog.roiMarginPct.setValue(new Double(confs.get("roiMarginPct").getValue()));
             	}
                 return dialog;
             }
@@ -350,6 +364,11 @@ public abstract class ROIFinder implements Module, ImageLogger {
             	if (overlapPct == null || overlapPct < 0.0 || overlapPct > 100.0) {
             	    errors.add(new ValidationError(ROIFinder.this.moduleId, 
             	            "Please enter a value between 0 and 100 for Tile Percent Overlap"));
+            	}
+            	Double roiMarginPct = (Double)dialog.roiMarginPct.getValue();
+            	if (roiMarginPct == null || roiMarginPct < 0.0 || roiMarginPct > 100.0) {
+            	    errors.add(new ValidationError(ROIFinder.this.moduleId, 
+            	            "Please enter a value between 0 and 100 for ROI Margin Percent"));
             	}
                 return errors.toArray(new ValidationError[0]);
             }
