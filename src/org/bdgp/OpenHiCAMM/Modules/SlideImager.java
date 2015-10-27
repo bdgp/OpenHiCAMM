@@ -278,12 +278,23 @@ public class SlideImager implements Module, ImageLogger {
             } 
             catch (MMException e) {throw new RuntimeException(e);}
 
+            // get the slide ID from the config
+            if (!conf.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
+            final Integer slideId = new Integer(conf.get("slideId").getValue());
+            logger.info(String.format("Using slideId: %d", slideId));
+
             // build a map of imageLabel -> sibling task record
             final Dao<Task> taskDao = this.workflowRunner.getTaskStatus();
             Dao<TaskDispatch> taskDispatchDao = this.workflowRunner.getTaskDispatch();
             List<TaskDispatch> tds = new ArrayList<>();
             for (Task t : taskDao.select(where("moduleId", this.moduleId))) {
-                tds.addAll(taskDispatchDao.select(where("taskId", t.getId())));
+                TaskConfig slideIdConf = this.workflowRunner.getTaskConfig().selectOne(
+                        where("id", t.getId()).
+                        and("key", "slideId").
+                        and("value", slideId));
+                if (slideIdConf != null) {
+                    tds.addAll(taskDispatchDao.select(where("taskId", t.getId())));
+                }
             }
             final Map<String,Task> tasks = new LinkedHashMap<String,Task>();
             if (!tds.isEmpty()) {
@@ -312,11 +323,6 @@ public class SlideImager implements Module, ImageLogger {
                     tasks.put(imageLabelConf2.getValue(), tt);
             	}
             }
-
-            // get the slide ID from the config
-            if (!conf.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
-            final Integer slideId = new Integer(conf.get("slideId").getValue());
-            logger.info(String.format("Using slideId: %d", slideId));
 
             // Start the acquisition engine. This runs asynchronously.
             try {
