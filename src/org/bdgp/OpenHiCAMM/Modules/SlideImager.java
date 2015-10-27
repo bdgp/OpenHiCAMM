@@ -469,7 +469,7 @@ public class SlideImager implements Module, ImageLogger {
                     throw new RuntimeException(String.format(
                         "Error: Unexpected image set from acquisition! acquisition image count is %d, expected %d!%n"+
                         "From acquisition: %s%nFrom task config: %s",
-                        taggedImages.size(), taggedImages, totalImages, tasks.keySet()));
+                        taggedImages.size(), tasks.size(), taggedImages, totalImages, tasks.keySet()));
                 }
                 
                 // Add any missing Image record for e.g. the acquisition task. This is also important because
