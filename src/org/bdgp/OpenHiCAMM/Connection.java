@@ -162,6 +162,7 @@ public class Connection extends JdbcConnectionSource {
             p.setProperty("hsqldb.script_format","3");
             p.setProperty("hsqldb.applog","3");
             p.setProperty("hsqldb.sqllog","3");
+            p.setProperty("hsqldb.defrag_limit","10");
             // writer server output to a log file
             Logger logger = Logger.create(new File(logDir, "db.log").getPath(), 
             "HSQLDB", Level.INFO);
