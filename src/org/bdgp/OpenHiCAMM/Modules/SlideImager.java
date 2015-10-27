@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 import java.util.prefs.Preferences;
@@ -744,7 +745,8 @@ public class SlideImager implements Module, ImageLogger {
             }
             // If no associated slide is registered, create a slide to represent this task
             else {
-            	slide = new Slide(moduleId);
+                String uuid = UUID.randomUUID().toString();
+            	slide = new Slide(uuid);
             	slideDao.insertOrUpdate(slide,"experimentId");
             	slideDao.reload(slide, "experimentId");
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created new slide: %s", this.moduleId, slide.toString()));
