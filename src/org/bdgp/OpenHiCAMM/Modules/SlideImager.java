@@ -690,16 +690,16 @@ public class SlideImager implements Module, ImageLogger {
     
     
     @Override
-    public List<Task> createTaskRecords(List<Task> parentTasks) {
+    public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
         Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
         Dao<SlidePosList> posListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
         Dao<SlidePos> posDao = workflowRunner.getInstanceDb().table(SlidePos.class);
-        Dao<ModuleConfig> config = workflowRunner.getInstanceDb().table(ModuleConfig.class);
+        Dao<ModuleConfig> moduleConfig = workflowRunner.getInstanceDb().table(ModuleConfig.class);
         Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
 
         // Load all the module configuration into a HashMap
         Map<String,Config> conf = new HashMap<String,Config>();
-        for (ModuleConfig c : config.select(where("id",this.moduleId))) {
+        for (ModuleConfig c : moduleConfig.select(where("id",this.moduleId))) {
             conf.put(c.getKey(), c);
             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Using module config: %s", 
             		this.moduleId, c));
@@ -994,7 +994,7 @@ public class SlideImager implements Module, ImageLogger {
         return Module.TaskType.SERIAL;
     }
 
-    @Override public void cleanup(Task task) { }
+    @Override public void cleanup(Task task, Map<String,Config> config, Logger logger) { }
 
     @Override
     public List<ImageLogRecord> logImages(final Task task, final Map<String,Config> config, final Logger logger) {

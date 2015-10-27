@@ -29,7 +29,7 @@ public interface Module {
      * Create the task records before running the workflow.
      * @return The list of created tasks
      */
-    public List<Task> createTaskRecords(List<Task> parentTasks);
+    public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger);
     
     /**
      * Perform some initialization before starting the run.
@@ -61,5 +61,5 @@ public interface Module {
     /**
      * cleanup routine to be run after each task
      */
-    public void cleanup(Task task);
+    public void cleanup(Task task, Map<String,Config> config, Logger logger);
 }

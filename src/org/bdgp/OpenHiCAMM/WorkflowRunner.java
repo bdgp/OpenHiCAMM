@@ -257,17 +257,25 @@ public class WorkflowRunner {
     
     public void createTaskRecords(String moduleId) {
         WorkflowModule module = this.workflow.selectOneOrDie(where("id",moduleId));
-        createTaskRecords(module, new ArrayList<Task>());
+        createTaskRecords(module, new ArrayList<Task>(), new HashMap<String,Config>(), this.logger);
     }
-    public void createTaskRecords(WorkflowModule module, List<Task> tasks) {
+    public void createTaskRecords(WorkflowModule module, List<Task> tasks, Map<String,Config> configs, Logger logger) {
+        // merge the task and module configuration
+
+        Map<String,Config> moduleConfig = new HashMap<>(configs);
+        List<ModuleConfig> moduleConfigs = this.getModuleConfig().select(where("id",module.getId()));
+        for (ModuleConfig mc : moduleConfigs) {
+            moduleConfig.put(mc.getKey(), mc);
+        }
+        
     	List<Task> childTasks = new ArrayList<Task>();
         Module m = this.moduleInstances.get(module.getId());
-        childTasks = m.createTaskRecords(tasks != null? tasks : new ArrayList<Task>());
+        childTasks = m.createTaskRecords(tasks != null? tasks : new ArrayList<Task>(), moduleConfig, logger);
         List<WorkflowModule> modules = workflow.select(
         		where("parentId",module != null? module.getId() : null));
         Collections.sort(modules, (a,b)->a.getPriority().compareTo(b.getPriority()));
         for (WorkflowModule mod : modules) {
-        	this.createTaskRecords(mod, childTasks);
+        	this.createTaskRecords(mod, childTasks, moduleConfig, logger);
         }
     }
     
@@ -748,7 +756,7 @@ public class WorkflowRunner {
                     }
                     finally {
                         WorkflowRunner.this.logger.fine(String.format("%s: Calling cleanup", task.getName()));
-                        taskModule.cleanup(task); 
+                        taskModule.cleanup(task, config, taskLogger); 
                     }
                     WorkflowRunner.this.logger.fine(String.format("%s: Finished running task", task.getName()));
                     WorkflowRunner.this.logger.info(String.format("%s: Setting task status to %s", task.getName(), status));

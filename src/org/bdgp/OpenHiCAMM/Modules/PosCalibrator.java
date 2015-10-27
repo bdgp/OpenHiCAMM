@@ -102,7 +102,7 @@ public class PosCalibrator implements Module {
             }};
     }
 
-    @Override public List<Task> createTaskRecords(List<Task> parentTasks) {
+    @Override public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
         // get the position lists
         Config roiFinderModuleConf = this.workflow.getModuleConfig().selectOne(
                 where("id", this.moduleId).
@@ -302,7 +302,7 @@ public class PosCalibrator implements Module {
         return TaskType.SERIAL;
     }
 
-    @Override public void cleanup(Task task) { }
+    @Override public void cleanup(Task task, Map<String,Config> config, Logger logger) { }
 
     public static void moveStage(CMMCore core, double x, double y) {
     	core.setTimeoutMs(10000);

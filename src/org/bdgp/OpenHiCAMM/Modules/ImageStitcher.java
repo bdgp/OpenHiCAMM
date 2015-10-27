@@ -460,7 +460,7 @@ public class ImageStitcher implements Module, ImageLogger {
     }
 
     @Override
-    public List<Task> createTaskRecords(List<Task> parentTasks) {
+    public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
         Dao<Task> taskDao = this.workflowRunner.getTaskStatus();
         Dao<TaskConfig> taskConfigDao = this.workflowRunner.getTaskConfig();
         Dao<TaskDispatch> taskDispatchDao = this.workflowRunner.getTaskDispatch();
@@ -558,7 +558,7 @@ public class ImageStitcher implements Module, ImageLogger {
 		return Module.TaskType.PARALLEL;
 	}
 
-	@Override public void cleanup(Task task) { }
+	@Override public void cleanup(Task task, Map<String,Config> config, Logger logger) { }
 
     @Override
     public void runIntialize() { }

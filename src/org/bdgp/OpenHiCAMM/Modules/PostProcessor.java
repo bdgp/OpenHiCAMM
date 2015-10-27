@@ -160,7 +160,7 @@ public abstract class PostProcessor implements Module, ImageLogger {
     }
 
     @Override
-    public List<Task> createTaskRecords(List<Task> parentTasks) {
+    public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
         WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",moduleId));
         List<Task> tasks = new ArrayList<Task>();
         if (module.getParentId() != null) {
@@ -187,7 +187,7 @@ public abstract class PostProcessor implements Module, ImageLogger {
 		return Module.TaskType.PARALLEL;
 	}
 
-	@Override public void cleanup(Task task) { }
+	@Override public void cleanup(Task task, Map<String,Config> config, Logger logger) { }
 
     @Override
     public List<ImageLogRecord> logImages(final Task task, final Map<String,Config> config, final Logger logger) {
