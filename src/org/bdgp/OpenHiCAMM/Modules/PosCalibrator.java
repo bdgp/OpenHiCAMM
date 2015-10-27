@@ -123,6 +123,15 @@ public class PosCalibrator implements Module {
             
             if (parentTask != null) {
                 workflow.getTaskDispatch().insert(new TaskDispatch(task.getId(), parentTask.getId()));
+                
+                // re-export the slideId task config
+                TaskConfig slideIdConf = this.workflow.getTaskConfig().selectOne(
+                        where("id", parentTask.getId()).
+                        and("key", "slideId"));
+                if (slideIdConf != null) {
+                    this.workflow.getTaskConfig().insert(new TaskConfig(
+                            new Integer(task.getId()).toString(), "slideId", slideIdConf.getValue()));
+                }
             }
 
             // store a copy of the source position lists; these will be updated later with
@@ -143,6 +152,9 @@ public class PosCalibrator implements Module {
         Dao<Acquisition> acqDao = workflow.getInstanceDb().table(Acquisition.class);
         Dao<SlidePosList> slidePosListDao = workflow.getInstanceDb().table(SlidePosList.class);
 
+        // get the slide ID conf
+        Config slideIdConf = config.get("slideId");
+
         // get The reference image from the reference module
         Config refSlideImagerModuleConf = config.get("refSlideImagerModule");
         if (refSlideImagerModuleConf == null) throw new RuntimeException("Config refSlideImagerModule not found!");
@@ -150,21 +162,29 @@ public class PosCalibrator implements Module {
         List<Task> refTasks = workflow.getTaskStatus().select(
                 where("moduleId", refSlideImagerModuleConf.getValue()));
         for (Task t : refTasks) {
-            TaskConfig imageId = workflow.getTaskConfig().selectOne(
+            TaskConfig slideId = workflow.getTaskConfig().selectOne(
                     where("id", t.getId()).
-                    and("key", "imageId"));
-            if (imageId != null) {
-                Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
-                ImagePlus imp = image.getImagePlus(acqDao);
-                new ImageConverter(imp).convertToGray8();
-                refImages.add(imp);
+                    and("key", "slideId"));
+            if ((slideIdConf == null && slideId == null) || Objects.equals(slideIdConf.getValue(), slideId.getValue())) {
+                TaskConfig imageId = workflow.getTaskConfig().selectOne(
+                        where("id", t.getId()).
+                        and("key", "imageId"));
+                if (imageId != null) {
+                    Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
+                    ImagePlus imp = image.getImagePlus(acqDao);
+                    new ImageConverter(imp).convertToGray8();
+                    refImages.add(imp);
+                }
             }
         }
-        if (refImages.size() == 0) throw new RuntimeException(String.format(
-                "No images found for module %s", refSlideImagerModuleConf.getValue()));
-        if (refImages.size() > 1) throw new RuntimeException(String.format(
-                "More than one image found for module %s: %d", 
-                refSlideImagerModuleConf.getValue(), refImages.size()));
+        if (refImages.size() == 0) {
+          throw new RuntimeException(String.format("No images found for module %s", refSlideImagerModuleConf.getValue()));  
+        }
+        if (refImages.size() > 1) {
+            throw new RuntimeException(String.format(
+                    "More than one image found for module %s: %d", 
+                    refSlideImagerModuleConf.getValue(), refImages.size()));
+        }
         ImagePlus refImage = refImages.get(0);
         
         // get the comparison image(s) from the comparison module
@@ -193,6 +213,10 @@ public class PosCalibrator implements Module {
 
         Roi roi = matcher.match(refImage, compareImages);
         logger.info(String.format("Got ROI from matcher: %s", roi));
+        
+        if (matcher.badRef) {
+            logger.warning("GHT_Rawmatch returned image that doesn't match QC and is unlikely to yield useful results!");
+        }
 
         Point2D.Double translateImage = roi == null? 
                 new Point2D.Double(0.0, 0.0) : 
