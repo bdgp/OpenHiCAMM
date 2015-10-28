@@ -64,10 +64,10 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     private CMMCore core_;
     private ImageProcessor ipCurrent_ = null;
 
-    public double SIZE_FIRST = 2;//
+    public double SIZE_FIRST = 20.0;//
     public int NUM_FIRST = 10; // +/- #of snapshot
-    public double SIZE_SECOND = 0.2;
-    public int NUM_SECOND = 1;
+    public double SIZE_SECOND = 3.3;
+    public int NUM_SECOND = 3;
     public double THRES = 0.02;
     public double CROP_SIZE = 0.2; 
     public String CHANNEL="";
