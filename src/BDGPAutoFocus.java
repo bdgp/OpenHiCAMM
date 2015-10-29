@@ -83,7 +83,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     private double bestSh;
     
     // variables for skipping autofocus every acquisition
-    public int skipCounter = -1;
+    private int skipCounter = -1;
     public static final int MAX_SKIP = 10;
     
     Double minAutoFocus;
