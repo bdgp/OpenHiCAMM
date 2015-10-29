@@ -40,7 +40,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     // set z axis position in beanshell:
     // org.micromanager.MMStudio.getInstance().getMMCore().setPosition(org.micromanager.MMStudio.getInstance().getMMCore().getFocusDevice(), 200)
 
-   private static boolean verbose_ = true; // displaying debug info or not
+   private static Boolean verbose_ = true; // displaying debug info or not
 
    private static final String KEY_SIZE_FIRST = "1st step size";
    private static final String KEY_NUM_FIRST = "1st step number";
@@ -110,6 +110,8 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
     public void run(String arg)
     {
+        applySettings();
+
         // only run autofocus every MAX_SKIP acquisitions
         skipCounter++;
         if (skipCounter > MAX_SKIP) skipCounter = 0;
@@ -122,10 +124,12 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
         bestSh = 0;
         
         //############# CHECK INPUT ARG AND CORE ########
-        if (arg.compareTo("silent") == 0)
-            verbose_ = false;
-        else
-            verbose_ = true;
+        if (verbose_ == null) {
+            if (arg.compareTo("silent") == 0)
+                verbose_ = false;
+            else
+                verbose_ = true;
+        }
 
         if (core_ == null)
         {
@@ -208,14 +212,13 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                     curShScale = computeFFT(ipCurrent_, 9, 10, 0.75); //local rescaling
                     curSh = curSh / curShScale;
                     
-                    if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", baseDist + i * SIZE_FIRST, curSh));
-
-                    if (verbose_) IJ.log(curDist + "\t" + curSh);
+                    if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", curDist, curSh));
 
                     if (curSh > bestSh)
                     {
                         bestSh = curSh;
                         bestDist = curDist;
+                        if (verbose_) IJ.log(String.format("Found new bestDist: %.5f, bestSh: %.5f", bestDist, bestSh));
                     }
                     /*else if (bestSh - curSh > THRES * bestSh && bestDist < 5000)
                     {
@@ -249,14 +252,13 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                     curShScale = computeFFT(ipCurrent_, 9, 10, 0.75); //local rescaling
                     curSh = curSh / curShScale;
                     
-                    if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", baseDist + i * SIZE_FIRST, curSh));
-
-                    if (verbose_) IJ.log(curDist + "\t" + curSh);
+                    if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", curDist, curSh));
 
                     if (curSh > bestSh)
                     {
                         bestSh = curSh;
                         bestDist = curDist;
+                        if (verbose_) IJ.log(String.format("Found new bestDist: %.5f, bestSh: %.5f", bestDist, bestSh));
                     }
                     /*else if (bestSh - curSh > THRES * bestSh && bestDist < 5000)
                     {
@@ -610,13 +612,13 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             ImagePlus implus = newWindow(); // this step will create a new window iff indx = 1
             implus.getProcessor().setPixels(img);
             ipCurrent_ = implus.getProcessor();
-            if (verbose_) {
-                FileSaver fileSaver = new FileSaver(implus);
-                String filename = String.format("debug_%d.tif", imgCounter);
-                imgCounter++;
-                fileSaver.saveAsTiff(filename);
-                IJ.log(String.format("Wrote image to file: %s", filename));
-            }
+            //if (verbose_) {
+            //    FileSaver fileSaver = new FileSaver(implus);
+            //    String filename = String.format("debug_%d.tif", imgCounter);
+            //    imgCounter++;
+            //    fileSaver.saveAsTiff(filename);
+            //    IJ.log(String.format("Wrote image to file: %s", filename));
+            //}
         } catch (Exception e)
         {
             IJ.error(e.getMessage());
