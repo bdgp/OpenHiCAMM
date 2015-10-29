@@ -702,6 +702,8 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
       try {
           // reset the skip counter
           skipCounter = -1;
+          bestDist = null;
+          prevBestDist = null;
 
           SIZE_FIRST = Double.parseDouble(getPropertyValue(KEY_SIZE_FIRST));
           NUM_FIRST = Integer.parseInt(getPropertyValue(KEY_NUM_FIRST));
