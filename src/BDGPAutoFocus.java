@@ -63,7 +63,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     private CMMCore core_;
     private ImageProcessor ipCurrent_ = null;
 
-    public double ADAPTIVE_DIST_DIFF = 10.0;
+    public double ADAPTIVE_DIST_DIFF = 20.0;
     public double SIZE_FIRST = 20.0;//
     public int NUM_FIRST = 10; // +/- #of snapshot
     public double SIZE_SECOND = 3.3;
@@ -79,12 +79,12 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     private Double prevBestDist;
     private Double bestDist;
     private double curSh;
-    private double curShScale; //sharpness rescaling factor
+    //private double curShScale; //sharpness rescaling factor
     private double bestSh;
     
     // variables for skipping autofocus every acquisition
     private int skipCounter = -1;
-    public static final int MAX_SKIP = 10;
+    public static final int MAX_SKIP = 25;
     
     Double minAutoFocus;
     Double maxAutoFocus;
@@ -211,10 +211,12 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                     snapSingleImage();
                     // indx =0;
 
-                    //curSh = sharpNess(ipCurrent_);
-                    curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
-                    curShScale = computeFFT(ipCurrent_, 9, 10, 0.75); //local rescaling
-                    curSh = curSh / curShScale;
+                    ////curSh = sharpNess(ipCurrent_);
+                    //curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
+                    //curShScale = computeFFT(ipCurrent_, 9, 10, 0.75); //local rescaling
+                    //curSh = curSh / curShScale;
+                    curSh = computeFFT(ipCurrent_, 15, 80, 1);
+                    
                     
                     if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", curDist, curSh));
 
@@ -251,10 +253,11 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                     snapSingleImage();
                     // indx =0;
 
-                    //curSh = sharpNess(ipCurrent_);
-                    curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
-                    curShScale = computeFFT(ipCurrent_, 9, 10, 0.75); //local rescaling
-                    curSh = curSh / curShScale;
+                    ////curSh = sharpNess(ipCurrent_);
+                    //curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
+                    //curShScale = computeFFT(ipCurrent_, 9, 10, 0.75); //local rescaling
+                    //curSh = curSh / curShScale;
+                    curSh = computeFFT(ipCurrent_, 15, 80, 1);
                     
                     if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", curDist, curSh));
 
