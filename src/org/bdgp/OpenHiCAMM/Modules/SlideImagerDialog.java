@@ -18,8 +18,6 @@ import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.micromanager.dialogs.AcqControlDlg;
 
-import mmcorej.CMMCore;
-
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
@@ -37,8 +35,6 @@ public class SlideImagerDialog extends JPanel {
     JTextField acqSettingsText;
 	JTextField posListText;
 	JComboBox<String> moduleId;
-    DoubleSpinner minAutoFocus;
-    DoubleSpinner maxAutoFocus;
     DoubleSpinner pixelSize;
     JSpinner dummyImageCount;
     
@@ -52,7 +48,7 @@ public class SlideImagerDialog extends JPanel {
 	private final ButtonGroup invertYAxisGroup = new ButtonGroup();
 	
 	public SlideImagerDialog(final AcqControlDlg acqControlDlg, final WorkflowRunner workflowRunner) {
-		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][][][][][][]"));
+		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][][][][]"));
 		
 		JButton btnShowAcquisitionDialog = new JButton("Show Acquisition Dialog");
 		if (acqControlDlg == null) {
@@ -135,78 +131,40 @@ public class SlideImagerDialog extends JPanel {
         JLabel lblTakeSeveralDummy = new JLabel("How many dummy adjustment images to take?");
         add(lblTakeSeveralDummy, "flowx,cell 0 7");
         
-        JLabel lblSetMinimumAutofocus = new JLabel("Set Minimum AutoFocus Z axis value:");
-        add(lblSetMinimumAutofocus, "flowx,cell 0 8");
-        
-        minAutoFocus = new DoubleSpinner();
-        add(minAutoFocus, "cell 0 8");
-        
-        JLabel lblSetMaximumAutofocus = new JLabel("Set Maximum AutoFocus Z axis value: ");
-        add(lblSetMaximumAutofocus, "flowx,cell 0 9");
-        
-        maxAutoFocus = new DoubleSpinner();
-        add(maxAutoFocus, "cell 0 9");
-        
-        JButton minGetFromStage = new JButton("Get From Stage");
-        minGetFromStage.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                CMMCore core = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
-                try {
-                    double curDist = core.getPosition(core.getFocusDevice());
-                    minAutoFocus.setValue(curDist);
-                } 
-                catch (Exception e1) {throw new RuntimeException(e1);}
-            }
-        });
-        add(minGetFromStage, "cell 0 8");
-        
-        JButton maxGetFromStage = new JButton("Get From Stage");
-        maxGetFromStage.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                CMMCore core = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
-                try {
-                    double curDist = core.getPosition(core.getFocusDevice());
-                    maxAutoFocus.setValue(curDist);
-                } 
-                catch (Exception e1) {throw new RuntimeException(e1);}
-            }
-        });
-        add(maxGetFromStage, "cell 0 9");
-        
         dummyImageCount = new JSpinner();
         add(dummyImageCount, "cell 0 7");
         dummyImageCount.setValue(new Integer(DEFAULT_DUMMY_IMAGE_COUNT));
         
         JLabel lblPixelSize = new JLabel("Pixel Size: ");
-        add(lblPixelSize, "flowx,cell 0 10");
+        add(lblPixelSize, "flowx,cell 0 8");
         
         pixelSize = new DoubleSpinner();
         pixelSize.setValue(DEFAULT_PIXEL_SIZE_UM);
-        add(pixelSize, "cell 0 10");
+        add(pixelSize, "cell 0 8");
         
         JLabel lblInvertXAxis = new JLabel("Invert X axis? ");
-        add(lblInvertXAxis, "flowx,cell 0 11");
+        add(lblInvertXAxis, "flowx,cell 0 9");
         
         invertXAxisYes = new JRadioButton("Yes");
         invertXAxisGroup.add(invertXAxisYes);
         invertXAxisYes.setSelected(true);
-        add(invertXAxisYes, "cell 0 11");
+        add(invertXAxisYes, "cell 0 9");
         
         invertXAxisNo = new JRadioButton("No");
         invertXAxisGroup.add(invertXAxisNo);
-        add(invertXAxisNo, "cell 0 11");
+        add(invertXAxisNo, "cell 0 9");
         
         JLabel lblInvertYAxis = new JLabel("Invert Y axis? ");
-        add(lblInvertYAxis, "flowx,cell 0 12");
+        add(lblInvertYAxis, "flowx,cell 0 10");
         
         invertYAxisYes = new JRadioButton("Yes");
         invertYAxisGroup.add(invertYAxisYes);
         invertYAxisYes.setSelected(true);
-        add(invertYAxisYes, "cell 0 12");
+        add(invertYAxisYes, "cell 0 10");
         
         invertYAxisNo = new JRadioButton("No");
         invertYAxisGroup.add(invertYAxisNo);
-        add(invertYAxisNo, "cell 0 12");
+        add(invertYAxisNo, "cell 0 10");
 	}
 
 }

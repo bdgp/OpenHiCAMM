@@ -257,27 +257,9 @@ public class SlideImager implements Module, ImageLogger {
                 }
             }
             
-            // Set the autofocus device
-            try { 
-                this.script.getAutofocusManager().selectDevice("BDGP"); 
-                Autofocus autofocus = this.script.getAutofocus();
-
-                // Only pass these settings to the autofocus object:
-                Set<String> autoFocusKeys = new HashSet<String>();
-                autoFocusKeys.add("minAutoFocus");
-                autoFocusKeys.add("maxAutoFocus");
-
-                // Set the autofocus property values
-                for (Map.Entry<String, Config> entry : conf.entrySet()) {
-                    if (autoFocusKeys.contains(entry.getKey())) {
-                        autofocus.setPropertyValue(entry.getKey(), entry.getValue().getValue());
-                    }
-                }
-                
-                // now apply the settings
-                autofocus.applySettings();
-            } 
-            catch (MMException e) {throw new RuntimeException(e);}
+            // apply the auto-focus settings
+            Autofocus autofocus = this.script.getAutofocus();
+            autofocus.applySettings();
 
             // get the slide ID from the config
             if (!conf.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
@@ -575,12 +557,6 @@ public class SlideImager implements Module, ImageLogger {
                             slideImagerDialog.dummyImageCount.getValue().toString()));
                 }
 
-                if (((Double)slideImagerDialog.minAutoFocus.getValue()).doubleValue() != 0.0) {
-                    configs.add(new Config(moduleId, "minAutoFocus", slideImagerDialog.minAutoFocus.getValue().toString()));
-                }
-                if (((Double)slideImagerDialog.maxAutoFocus.getValue()).doubleValue() != 0.0) {
-                    configs.add(new Config(moduleId, "maxAutoFocus", slideImagerDialog.maxAutoFocus.getValue().toString()));
-                }
                 if (((Double)slideImagerDialog.pixelSize.getValue()).doubleValue() != 0.0) {
                     configs.add(new Config(moduleId, "pixelSize", slideImagerDialog.pixelSize.getValue().toString()));
                 }
@@ -625,12 +601,6 @@ public class SlideImager implements Module, ImageLogger {
                     slideImagerDialog.dummyImageCount.setValue(new Integer(dummyImageCount.getValue()));
                 }
 
-                if (conf.containsKey("minAutoFocus")) {
-                    slideImagerDialog.minAutoFocus.setValue(new Double(conf.get("minAutoFocus").getValue()));
-                }
-                if (conf.containsKey("maxAutoFocus")) {
-                    slideImagerDialog.maxAutoFocus.setValue(new Double(conf.get("maxAutoFocus").getValue()));
-                }
                 if (conf.containsKey("pixelSize")) {
                     slideImagerDialog.pixelSize.setValue(new Double(conf.get("pixelSize").getValue()));
                 }
