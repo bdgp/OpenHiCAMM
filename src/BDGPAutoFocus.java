@@ -3,7 +3,6 @@
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.ImageWindow;
-import ij.io.FileSaver;
 import ij.plugin.PlugIn;
 import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
@@ -64,6 +63,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     private CMMCore core_;
     private ImageProcessor ipCurrent_ = null;
 
+    public double ADAPTIVE_DIST_DIFF = 10.0;
     public double SIZE_FIRST = 20.0;//
     public int NUM_FIRST = 10; // +/- #of snapshot
     public double SIZE_SECOND = 3.3;
@@ -76,14 +76,15 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
     private double curDist;
     private double baseDist;
-    private double bestDist;
+    private Double prevBestDist;
+    private Double bestDist;
     private double curSh;
     private double curShScale; //sharpness rescaling factor
     private double bestSh;
     
     // variables for skipping autofocus every acquisition
-    private int skipCounter = -1;
-    public static final int MAX_SKIP = 20;
+    public int skipCounter = -1;
+    public static final int MAX_SKIP = 10;
     
     Double minAutoFocus;
     Double maxAutoFocus;
@@ -110,17 +111,19 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
     public void run(String arg)
     {
-        applySettings();
-
         // only run autofocus every MAX_SKIP acquisitions
-        skipCounter++;
-        if (skipCounter > MAX_SKIP) skipCounter = 0;
-        if (skipCounter != 0) {
-            if (verbose_) IJ.log(String.format("Skipping autofocus %d/%d", skipCounter, MAX_SKIP));
-            return;
+        if (bestDist != null && prevBestDist != null && Math.abs(bestDist - prevBestDist) <= ADAPTIVE_DIST_DIFF) {
+            skipCounter++;
+            if (skipCounter > MAX_SKIP) skipCounter = 0;
+            if (skipCounter != 0) {
+                if (verbose_) IJ.log(String.format("Skipping autofocus %d/%d", skipCounter, MAX_SKIP));
+                return;
+            }
+        }
+        else {
+            skipCounter = -1;
         }
         
-        bestDist = 5000;
         bestSh = 0;
         
         //############# CHECK INPUT ARG AND CORE ########
@@ -194,6 +197,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             //
 
             // Rough search
+            prevBestDist = bestDist;
             for (int i = 0; i < 2 * NUM_FIRST + 1; i++)
             {
                 if (minAutoFocus == null || maxAutoFocus == null || 
@@ -285,7 +289,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             // End of insertion
             //
 
-            core_.setPosition(core_.getFocusDevice(), bestDist);
+            if (bestDist != null) core_.setPosition(core_.getFocusDevice(), bestDist);
             // indx =1;
             //if (verbose_) snapSingleImage();
             // indx =0;
@@ -696,18 +700,21 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     @Override
     public void applySettings() {
       try {
-         SIZE_FIRST = Double.parseDouble(getPropertyValue(KEY_SIZE_FIRST));
-         NUM_FIRST = Integer.parseInt(getPropertyValue(KEY_NUM_FIRST));
-         SIZE_SECOND = Double.parseDouble(getPropertyValue(KEY_SIZE_SECOND));
-         NUM_SECOND = Integer.parseInt(getPropertyValue(KEY_NUM_SECOND));
-         THRES = Double.parseDouble(getPropertyValue(KEY_THRES));
-         CROP_SIZE = Double.parseDouble(getPropertyValue(KEY_CROP_SIZE));
-         CHANNEL = getPropertyValue(KEY_CHANNEL);
-         
-         minAutoFocus = getPropertyValue(KEY_MIN_AUTOFOCUS).equals("")? null : 
-             Double.parseDouble(getPropertyValue(KEY_MIN_AUTOFOCUS));
-         maxAutoFocus = getPropertyValue(KEY_MAX_AUTOFOCUS).equals("")? null : 
-             Double.parseDouble(getPropertyValue(KEY_MAX_AUTOFOCUS));
+          // reset the skip counter
+          skipCounter = -1;
+
+          SIZE_FIRST = Double.parseDouble(getPropertyValue(KEY_SIZE_FIRST));
+          NUM_FIRST = Integer.parseInt(getPropertyValue(KEY_NUM_FIRST));
+          SIZE_SECOND = Double.parseDouble(getPropertyValue(KEY_SIZE_SECOND));
+          NUM_SECOND = Integer.parseInt(getPropertyValue(KEY_NUM_SECOND));
+          THRES = Double.parseDouble(getPropertyValue(KEY_THRES));
+          CROP_SIZE = Double.parseDouble(getPropertyValue(KEY_CROP_SIZE));
+          CHANNEL = getPropertyValue(KEY_CHANNEL);
+
+          minAutoFocus = getPropertyValue(KEY_MIN_AUTOFOCUS).equals("")? null : 
+              Double.parseDouble(getPropertyValue(KEY_MIN_AUTOFOCUS));
+          maxAutoFocus = getPropertyValue(KEY_MAX_AUTOFOCUS).equals("")? null : 
+              Double.parseDouble(getPropertyValue(KEY_MAX_AUTOFOCUS));
       
       } catch (NumberFormatException e) {
          e.printStackTrace();
