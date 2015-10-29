@@ -131,6 +131,9 @@ public class SlideImager implements Module, ImageLogger {
                 PositionList pl = spl.getPositionList();
                 for (int j=0; j<pl.getNumberOfPositions(); ++j) {
                     MultiStagePosition msp = pl.getPosition(j);
+                    // sanitize the MSP label. This will be used as the directory name for each image
+                    String label = msp.getLabel().replaceAll("[ ():,]+", ".").replaceAll("[=]+", "");
+                    msp.setLabel(label);
                     positionList.addPosition(msp);
                 }
             }
