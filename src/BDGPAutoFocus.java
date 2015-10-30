@@ -297,7 +297,11 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             // End of insertion
             //
 
-            if (bestDist != null) core_.setPosition(core_.getFocusDevice(), bestDist);
+            if (bestDist != null) {
+                core_.setPosition(core_.getFocusDevice(), bestDist);
+                core_.waitForDevice(core_.getFocusDevice());
+            }
+
             // indx =1;
             //if (verbose_) snapSingleImage();
             // indx =0;
