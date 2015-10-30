@@ -283,8 +283,8 @@ public class PosCalibrator implements Module {
                     Math.floor((roi.getYBase() + roi.getFloatHeight() / 2.0) - refImage.getHeight() / 2.0));
 
         Point2D.Double translateStage = new Point2D.Double(
-                (translateImage.getX() * pixelSize * invertXAxis) + (matchedRefCoords.getX() - refCoords.getX()), 
-                (translateImage.getY() * pixelSize * invertYAxis) + (matchedRefCoords.getY() - refCoords.getY()));
+                (translateImage.getX() * pixelSize * invertXAxis) - (matchedRefCoords.getX() - refCoords.getX()), 
+                (translateImage.getY() * pixelSize * invertYAxis) - (matchedRefCoords.getY() - refCoords.getY()));
         
         logger.info(String.format("Computed image translation: %s -> stage translation: %s",
                 translateImage, translateStage));
