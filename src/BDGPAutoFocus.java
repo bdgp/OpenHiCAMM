@@ -35,9 +35,9 @@ import edu.mines.jtk.dsp.FftReal;
 public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     // NOTES:
     // get z axis position in beanshell:
-    // org.micromanager.MMStudio.getInstance().getMMCore().getPosition(org.micromanager.MMStudio.getInstance().getMMCore().getFocusDevice())
+    // mmc.getPosition(mmc.getFocusDevice())
     // set z axis position in beanshell:
-    // org.micromanager.MMStudio.getInstance().getMMCore().setPosition(org.micromanager.MMStudio.getInstance().getMMCore().getFocusDevice(), 200)
+    // mmc.setPosition(mmc.getFocusDevice(), 200)
 
    private static Boolean verbose_ = true; // displaying debug info or not
 
@@ -111,6 +111,9 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
     public void run(String arg)
     {
+        // make sure minAutoFocus and maxAutoFocus is set
+        if (minAutoFocus == null || maxAutoFocus == null) applySettings();
+
         // only run autofocus every MAX_SKIP acquisitions
         if (bestDist != null && prevBestDist != null && Math.abs(bestDist - prevBestDist) <= ADAPTIVE_DIST_DIFF) {
             skipCounter++;
@@ -201,15 +204,16 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             for (int i = 0; i < 2 * NUM_FIRST + 1; i++)
             {
                 if (minAutoFocus == null || maxAutoFocus == null || 
-                    minAutoFocus <= baseDist + i * SIZE_FIRST && baseDist + i * SIZE_FIRST <= maxAutoFocus) 
+                    (minAutoFocus <= baseDist + i * SIZE_FIRST && baseDist + i * SIZE_FIRST <= maxAutoFocus)) 
                 {
                     core_.setPosition(core_.getFocusDevice(), baseDist + i * SIZE_FIRST);
                     core_.waitForDevice(core_.getFocusDevice());
 
-                    curDist = core_.getPosition(core_.getFocusDevice());
                     // indx =1;
                     snapSingleImage();
                     // indx =0;
+
+                    curDist = core_.getPosition(core_.getFocusDevice());
 
                     ////curSh = sharpNess(ipCurrent_);
                     //curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
@@ -218,7 +222,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                     curSh = computeFFT(ipCurrent_, 15, 80, 1);
                     
                     
-                    if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", curDist, curSh));
+                    if (verbose_) IJ.log(String.format("setPosition: %.5f, real: %.5f, curSh: %.5f", baseDist + i * SIZE_FIRST, curDist, curSh));
 
                     if (curSh > bestSh)
                     {
@@ -243,15 +247,16 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             for (int i = 0; i < 2 * NUM_SECOND + 1; i++)
             {
                 if (minAutoFocus == null || maxAutoFocus == null || 
-                    minAutoFocus <= baseDist + i * SIZE_SECOND && baseDist + i * SIZE_SECOND <= maxAutoFocus) 
+                    (minAutoFocus <= baseDist + i * SIZE_SECOND && baseDist + i * SIZE_SECOND <= maxAutoFocus)) 
                 {
                     core_.setPosition(core_.getFocusDevice(), baseDist + i * SIZE_SECOND);
                     core_.waitForDevice(core_.getFocusDevice());
 
-                    curDist = core_.getPosition(core_.getFocusDevice());
                     // indx =1;
                     snapSingleImage();
                     // indx =0;
+
+                    curDist = core_.getPosition(core_.getFocusDevice());
 
                     ////curSh = sharpNess(ipCurrent_);
                     //curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
@@ -259,7 +264,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                     //curSh = curSh / curShScale;
                     curSh = computeFFT(ipCurrent_, 15, 80, 1);
                     
-                    if (verbose_) IJ.log(String.format("setPosition: %.5f, curSh: %.5f", curDist, curSh));
+                    if (verbose_) IJ.log(String.format("setPosition: %.5f, real: %.5f, curSh: %.5f", baseDist + i * SIZE_SECOND, curDist, curSh));
 
                     if (curSh > bestSh)
                     {
