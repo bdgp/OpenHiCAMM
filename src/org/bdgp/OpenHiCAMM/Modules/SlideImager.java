@@ -34,7 +34,6 @@ import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.Image;
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.Slide;
-import org.bdgp.OpenHiCAMM.DB.SlidePos;
 import org.bdgp.OpenHiCAMM.DB.SlidePosList;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
@@ -453,8 +452,10 @@ public class SlideImager implements Module, ImageLogger {
                 if (!taggedImages.equals(tasks.keySet())) {
                     throw new RuntimeException(String.format(
                         "Error: Unexpected image set from acquisition! acquisition image count is %d, expected %d!%n"+
-                        "From acquisition: %s%nFrom task config: %s",
-                        taggedImages.size(), tasks.size(), taggedImages, totalImages, tasks.keySet()));
+                        "Verbose summary: %s%nFrom acquisition: %s%nFrom task config: %s",
+                        taggedImages.size(), tasks.size(), 
+                        totalImages, 
+                        taggedImages, tasks.keySet()));
                 }
                 
                 // Add any missing Image record for e.g. the acquisition task. This is also important because
@@ -665,8 +666,6 @@ public class SlideImager implements Module, ImageLogger {
     @Override
     public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
         Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
-        Dao<SlidePosList> posListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
-        Dao<SlidePos> posDao = workflowRunner.getInstanceDb().table(SlidePos.class);
         Dao<ModuleConfig> moduleConfig = workflowRunner.getInstanceDb().table(ModuleConfig.class);
         Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
 
@@ -726,74 +725,9 @@ public class SlideImager implements Module, ImageLogger {
             }
             conf.put("slideId", new Config(this.moduleId, "slideId", new Integer(slide.getId()).toString()));
 
-            // get the position list for the slide
-            SlidePosList posList = null;
-            // first try to load a position list from the DB
-            if (conf.containsKey("posListModuleId")) {
-                // get a sorted list of all the SlidePosList records for the posListModuleId module
-                Config posListModuleId = conf.get("posListModuleId");
-                List<SlidePosList> posLists = posListDao.select(
-                        where("slideId", slide.getId()).
-                        and("moduleId", posListModuleId.getValue()));
-                Collections.sort(posLists, new Comparator<SlidePosList>() {
-                    @Override public int compare(SlidePosList a, SlidePosList b) {
-                        return a.getId()-b.getId();
-                    }});
-                if (posLists.isEmpty()) {
-                    throw new RuntimeException("Position list from module \""+posListModuleId.getValue()+"\" not found in database");
-                }
-
-                // Merge the list of PositionLists into a single positionList
-                PositionList positionList = posLists.get(0).getPositionList();
-                for (int i=1; i<posLists.size(); ++i) {
-                    SlidePosList spl = posLists.get(i);
-                    PositionList pl = spl.getPositionList();
-                    for (int j=0; j<pl.getNumberOfPositions(); ++j) {
-                        MultiStagePosition msp = pl.getPosition(j);
-                        positionList.addPosition(msp);
-                    }
-                }
-                posList = new SlidePosList(posLists.get(0).getModuleId(), posLists.get(0).getSlideId(), null, positionList);
-                workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Read position list from module %s", 
-            			this.moduleId, conf.get("posListModuleId")));
-            }
-            // otherwise, load a position list from a file
-            else if (conf.containsKey("posListFile")) {
-                Config posListConf = conf.get("posListFile");
-
-                File posListFile = new File(posListConf.getValue());
-                if (!posListFile.exists()) {
-                    throw new RuntimeException("Cannot find position list file "+posListFile.getPath());
-                }
-                try { 
-                    PositionList positionList = new PositionList();
-                    positionList.load(posListFile.getPath()); 
-                    posList = new SlidePosList(this.moduleId, slide.getId(), null, positionList);
-                } 
-                catch (MMException e) {throw new RuntimeException(e);}
-                
-            	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Read position list from file %s", 
-            			this.moduleId, Util.escape(posListConf.getValue())));
-
-                // store the loaded position list in the DB
-                posListDao.insertOrUpdate(posList,"moduleId","slideId");
-                posListDao.reload(posList,"moduleId","slideId");
-            	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created/Updated posList: %s", 
-            			this.moduleId, posList));
-                // delete any old record first
-                posDao.delete(where("slidePosListId", posList.getId()));
-                // then create new records
-                MultiStagePosition[] msps = posList.getPositionList().getPositions();
-                for (int i=0; i<msps.length; ++i) {
-                	SlidePos slidePos = new SlidePos(posList.getId(), i);
-                    posDao.insert(slidePos);
-                    workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Inserted slidePos at position %d: %s", 
-                            this.moduleId, i, slidePos));
-                }
-            }
-
             // Load the position list and set the acquisition settings
             PositionList positionList = loadPositionList(conf, workflowRunner.getLogger());
+
             // get the total images
             VerboseSummary verboseSummary = getVerboseSummary();
             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Verbose summary:%n%s%n", 
