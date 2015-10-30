@@ -6,6 +6,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,15 +26,18 @@ import org.bdgp.OpenHiCAMM.DB.TaskConfig;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
+import org.json.JSONException;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
 import org.micromanager.api.StagePosition;
+import org.micromanager.utils.MDUtils;
 
 import bdgp.org.hough.GHT_Rawmatch;
 import ij.ImagePlus;
 import ij.gui.Roi;
 import ij.process.ImageConverter;
 import mmcorej.CMMCore;
+import mmcorej.TaggedImage;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
@@ -158,7 +162,7 @@ public class PosCalibrator implements Module {
         // get The reference image from the reference module
         Config refSlideImagerModuleConf = config.get("refSlideImagerModule");
         if (refSlideImagerModuleConf == null) throw new RuntimeException("Config refSlideImagerModule not found!");
-        List<ImagePlus> refImages = new ArrayList<>();
+        Map<ImagePlus,Point2D.Double> refImages = new LinkedHashMap<>();
         List<Task> refTasks = workflow.getTaskStatus().select(
                 where("moduleId", refSlideImagerModuleConf.getValue()));
         for (Task t : refTasks) {
@@ -173,7 +177,13 @@ public class PosCalibrator implements Module {
                     Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
                     ImagePlus imp = image.getImagePlus(acqDao);
                     new ImageConverter(imp).convertToGray8();
-                    refImages.add(imp);
+                    TaggedImage taggedImage = image.getTaggedImage(acqDao);
+                    try {
+                        Double xPos = MDUtils.getXPositionUm(taggedImage.tags);
+                        Double yPos = MDUtils.getYPositionUm(taggedImage.tags);
+                        refImages.put(imp, new Point2D.Double(xPos, yPos));
+                    }
+                    catch (JSONException e) { throw new RuntimeException(e); }
                 }
             }
         }
@@ -185,12 +195,13 @@ public class PosCalibrator implements Module {
                     "More than one image found for module %s: %d", 
                     refSlideImagerModuleConf.getValue(), refImages.size()));
         }
-        ImagePlus refImage = refImages.get(0);
+        ImagePlus refImage = new ArrayList<>(refImages.keySet()).get(0);
+        Point2D.Double refCoords = refImages.get(refImage);
         
         // get the comparison image(s) from the comparison module
         Config compareSlideImagerModuleConf = config.get("compareSlideImagerModule");
         if (compareSlideImagerModuleConf == null) throw new RuntimeException("Config compareSlideImagerModule not found!");
-        List<ImagePlus> compareImages = new ArrayList<>();
+        Map<ImagePlus,Point2D.Double> compareImages = new LinkedHashMap<>();
         List<Task> compareTasks = workflow.getTaskStatus().select(
                 where("moduleId", compareSlideImagerModuleConf.getValue()));
         for (Task t : compareTasks) {
@@ -201,7 +212,13 @@ public class PosCalibrator implements Module {
                 Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
                 ImagePlus imp = image.getImagePlus(acqDao);
                 new ImageConverter(imp).convertToGray8();
-                compareImages.add(imp);
+                TaggedImage taggedImage = image.getTaggedImage(acqDao);
+                try {
+                    Double xPos = MDUtils.getXPositionUm(taggedImage.tags);
+                    Double yPos = MDUtils.getYPositionUm(taggedImage.tags);
+                    compareImages.put(imp, new Point2D.Double(xPos, yPos));
+                } 
+                catch (JSONException e) {throw new RuntimeException(e);}
             }
         }
 
@@ -211,19 +228,23 @@ public class PosCalibrator implements Module {
         matcher.intIP = false; // Show all intermediate ImagePlus images
         matcher.doLog = false; // Log results
 
-        Roi roi = matcher.match(refImage, compareImages);
+        Roi roi = matcher.match(refImage, new ArrayList<>(compareImages.keySet()));
         logger.info(String.format("Got ROI from matcher: %s", roi));
         
         if (matcher.badRef) {
             logger.warning("GHT_Rawmatch returned image that doesn't match QC and is unlikely to yield useful results!");
         }
+        if (matcher.badMatch) {
+            logger.warning("GHT_Rawmatch returned image that had to use a very low threshold!");
+        }
 
-        Point2D.Double translateImage = roi == null? 
-                new Point2D.Double(0.0, 0.0) : 
-                new Point2D.Double(
-                    Math.floor((roi.getXBase() + roi.getFloatWidth() / 2.0) - refImage.getWidth() / 2.0), 
-                    Math.floor((roi.getYBase() + roi.getFloatHeight() / 2.0) - refImage.getHeight() / 2.0));
-
+        // get the matched reference image's stage coordinates
+        ImagePlus matchedReference = matcher.matched_reference;
+        Point2D.Double matchedRefCoords = compareImages.get(matchedReference);
+        if (matchedRefCoords == null) throw new RuntimeException(
+                String.format("Could not find matched reference image %s in comparison list!", 
+                        matchedReference.getTitle()));
+        
         // convert between image coordinates and stage coordinates
         ModuleConfig pixelSizeConf = workflow.getModuleConfig().selectOne(
                 where("id", refSlideImagerModuleConf.getValue()).
@@ -255,9 +276,15 @@ public class PosCalibrator implements Module {
         Double invertXAxis = "yes".equals(invertXAxisConf.getValue())? -1.0 : 1.0;
         Double invertYAxis = "yes".equals(invertYAxisConf.getValue())? -1.0 : 1.0;
         
+        Point2D.Double translateImage = roi == null? 
+                new Point2D.Double(0.0, 0.0) : 
+                new Point2D.Double(
+                    Math.floor((roi.getXBase() + roi.getFloatWidth() / 2.0) - refImage.getWidth() / 2.0), 
+                    Math.floor((roi.getYBase() + roi.getFloatHeight() / 2.0) - refImage.getHeight() / 2.0));
+
         Point2D.Double translateStage = new Point2D.Double(
-                translateImage.getX() * pixelSize * invertXAxis, 
-                translateImage.getY() * pixelSize * invertYAxis);
+                (translateImage.getX() * pixelSize * invertXAxis) + (matchedRefCoords.getX() - refCoords.getX()), 
+                (translateImage.getY() * pixelSize * invertYAxis) + (matchedRefCoords.getY() - refCoords.getY()));
         
         logger.info(String.format("Computed image translation: %s -> stage translation: %s",
                 translateImage, translateStage));
