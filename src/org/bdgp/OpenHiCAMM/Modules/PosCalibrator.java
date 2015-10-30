@@ -215,13 +215,13 @@ public class PosCalibrator implements Module {
         if (matcher.badMatch) {
             logger.warning("GHT_Rawmatch returned image that had to use a very low threshold!");
         }
-
         // get the matched reference image's stage coordinates
         ImagePlus matchedReference = matcher.matched_reference;
         Point2D.Double matchedRefCoords = compareImages.get(matchedReference);
         if (matchedRefCoords == null) throw new RuntimeException(
                 String.format("Could not find matched reference image %s in comparison list!", 
                         matchedReference.getTitle()));
+        logger.info(String.format("Using input image %s for position calibration", matchedReference.getTitle()));
         
         // convert between image coordinates and stage coordinates
         ModuleConfig pixelSizeConf = workflow.getModuleConfig().selectOne(
@@ -266,6 +266,17 @@ public class PosCalibrator implements Module {
                 (translateImage.getX() * pixelSize * invertXAxis) - (matchedRefCoords.getX() - refCoords.getX()), 
                 (translateImage.getY() * pixelSize * invertYAxis) - (matchedRefCoords.getY() - refCoords.getY()));
         
+        if ((matcher.badRef || matcher.badMatch) && 
+            (matchedReference == null ||
+             Math.abs(translateStage.getX()) >= matchedReference.getWidth() * pixelSize / 2.0 || 
+             Math.abs(translateStage.getY()) >= matchedReference.getHeight() * pixelSize / 2.0)) 
+        {
+            logger.info(String.format("badRef/badMatch is set and translation is large, so we will not translate"));
+            logger.info(String.format("badRef=%s, badMatch=%s, translateStage=%s, matchedReference=%s",
+                    matcher.badRef, matcher.badMatch, translateStage, matchedReference));
+            translateStage = new Point2D.Double(0.0, 0.0);
+        }
+
         logger.info(String.format("Computed image translation: %s -> stage translation: %s",
                 translateImage, translateStage));
 
