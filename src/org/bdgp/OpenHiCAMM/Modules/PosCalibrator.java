@@ -260,7 +260,9 @@ public class PosCalibrator implements Module {
                     Math.floor((roi.getXBase() + roi.getFloatWidth() / 2.0) - refImage.getWidth() / 2.0), 
                     Math.floor((roi.getYBase() + roi.getFloatHeight() / 2.0) - refImage.getHeight() / 2.0));
 
-        Point2D.Double translateStage = new Point2D.Double(
+        Point2D.Double translateStage = roi == null? 
+            new Point2D.Double(0.0, 0.0) :
+            new Point2D.Double(
                 (translateImage.getX() * pixelSize * invertXAxis) - (matchedRefCoords.getX() - refCoords.getX()), 
                 (translateImage.getY() * pixelSize * invertYAxis) - (matchedRefCoords.getY() - refCoords.getY()));
         
