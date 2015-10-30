@@ -2,8 +2,6 @@ package org.bdgp.OpenHiCAMM.Modules;
 
 import java.awt.Component;
 import java.awt.geom.Point2D;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -36,7 +34,6 @@ import bdgp.org.hough.GHT_Rawmatch;
 import ij.ImagePlus;
 import ij.gui.Roi;
 import ij.process.ImageConverter;
-import mmcorej.CMMCore;
 import mmcorej.TaggedImage;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
@@ -107,18 +104,6 @@ public class PosCalibrator implements Module {
     }
 
     @Override public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
-        // get the position lists
-        Config roiFinderModuleConf = this.workflow.getModuleConfig().selectOne(
-                where("id", this.moduleId).
-                and("key","roiFinderModule"));
-        if (roiFinderModuleConf == null) throw new RuntimeException("Config roiFinderModule not found!");
-        Dao<SlidePosList> slidePosListDao = workflow.getInstanceDb().table(SlidePosList.class);
-        List<SlidePosList> slidePosLists = slidePosListDao.select(
-                where("moduleId", roiFinderModuleConf.getValue()));
-        
-        // remove old slide pos lists
-        slidePosListDao.delete(where("moduleId", this.moduleId));
-
         List<Task> tasks = new ArrayList<Task>();
         for (Task parentTask : parentTasks.size()>0? parentTasks.toArray(new Task[]{}) : new Task[]{null}) {
             Task task = new Task(this.moduleId, Status.NEW);
@@ -137,14 +122,6 @@ public class PosCalibrator implements Module {
                             new Integer(task.getId()).toString(), "slideId", slideIdConf.getValue()));
                 }
             }
-
-            // store a copy of the source position lists; these will be updated later with
-            // the translated coordinates.
-            for (SlidePosList spl : slidePosLists) {
-                // store the new position list into the database
-                SlidePosList slidePosList = new SlidePosList(this.moduleId, spl.getSlideId(), null, spl.getPositionList());
-                slidePosListDao.insert(slidePosList);
-            }
         }
         return tasks;
     }
@@ -158,6 +135,7 @@ public class PosCalibrator implements Module {
 
         // get the slide ID conf
         Config slideIdConf = config.get("slideId");
+        if (slideIdConf == null) throw new RuntimeException("slideId conf not defined!");
 
         // get The reference image from the reference module
         Config refSlideImagerModuleConf = config.get("refSlideImagerModule");
@@ -290,8 +268,18 @@ public class PosCalibrator implements Module {
                 translateImage, translateStage));
 
         // get the position lists
+        Config roiFinderModuleConf = this.workflow.getModuleConfig().selectOne(
+                where("id", this.moduleId).
+                and("key","roiFinderModule"));
+        if (roiFinderModuleConf == null) throw new RuntimeException("Config roiFinderModule not found!");
         List<SlidePosList> slidePosLists = slidePosListDao.select(
-                where("moduleId", this.moduleId));
+                where("moduleId", roiFinderModuleConf.getValue()).
+                and("slideId", new Integer(slideIdConf.getValue())));
+        
+        // remove old slide pos lists
+        slidePosListDao.delete(
+                where("moduleId", this.moduleId).
+                and("slideId", new Integer(slideIdConf.getValue())));
 
         // apply the translation matrix to the position list to derive a new position list
         for (SlidePosList spl : slidePosLists) {
@@ -310,8 +298,8 @@ public class PosCalibrator implements Module {
             posList.setPositions(msps);
 
             // store the translated position list into the database
-            spl.setPositionList(posList);
-            slidePosListDao.update(spl, "id");
+            SlidePosList slidePosList = new SlidePosList(this.moduleId, spl.getSlideId(), null, posList);
+            slidePosListDao.insert(slidePosList);
         }
 
         return Status.SUCCESS;
@@ -330,45 +318,4 @@ public class PosCalibrator implements Module {
     }
 
     @Override public void cleanup(Task task, Map<String,Config> config, Logger logger) { }
-
-    public static void moveStage(CMMCore core, double x, double y) {
-    	core.setTimeoutMs(10000);
-        String xyStage = core.getXYStageDevice();
-
-        try {
-            double[] x_stage = new double[] {0.0};
-            double[] y_stage = new double[] {0.0};
-            core.getXYPosition(xyStage, x_stage, y_stage);
-
-            final long MAX_WAIT = 10000000000L; // 10 seconds
-            long startTime = System.nanoTime();
-            core.setXYPosition(xyStage, x, y);
-            // wait for the stage to finish moving
-            while (core.deviceBusy(xyStage)) {
-                if (MAX_WAIT < System.nanoTime() - startTime) {
-                    // If it's taking too long to move the stage, 
-                    // try re-sending the stage movement command.
-                    core.stop(xyStage);
-                    Thread.sleep(500);
-                    startTime = System.nanoTime();
-                    core.setXYPosition(xyStage, x, y);
-                }
-                Thread.sleep(500);
-            }
-            
-            double[] x_stage_new = new double[] {0.0};
-            double[] y_stage_new = new double[] {0.0};
-            core.getXYPosition(xyStage, x_stage_new, y_stage_new);
-            final double EPSILON = 1000;
-            if (!(Math.abs(x_stage_new[0]-x) < EPSILON && Math.abs(y_stage_new[0]-y) < EPSILON)) {
-            	throw new RuntimeException(String.format("Stage moved to wrong coordinates: (%.2f,%.2f)",
-            			x_stage_new[0], y_stage_new[0]));
-            }
-		} 
-        catch (Throwable e) { 
-        	StringWriter sw = new StringWriter();
-        	e.printStackTrace(new PrintWriter(sw));
-        	throw new RuntimeException(e);
-        }
-    }
 }
