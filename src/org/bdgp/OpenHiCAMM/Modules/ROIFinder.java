@@ -143,12 +143,16 @@ public abstract class ROIFinder implements Module, ImageLogger {
                 StringWriter sw = new StringWriter();
                 e.printStackTrace(new PrintWriter(sw));
 			    logger.warning(String.format("Exception during ROI processing: %s", sw.toString()));
+			    return Status.ERROR;
 			}
 
             // Convert the ROIs into a PositionList
 			Map<MultiStagePosition,ROI> roiMap = new HashMap<MultiStagePosition,ROI>();
 			PositionList posList = new PositionList();
 			for (ROI roi : rois) {
+			    // insert the ROI record
+			    roiDao.insert(roi);
+
 			    // increase the ROI dimensions to add the margins
 			    int roiMarginWidth = (int)Math.floor((roiMarginPct / 100.0) * imageWidth * hiResPixelSize / pixelSize);
 			    int roiMarginHeight = (int)Math.floor((roiMarginPct / 100.0) * imageHeight * hiResPixelSize / pixelSize);

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
 import org.bdgp.OpenHiCAMM.Logger;
 import org.bdgp.OpenHiCAMM.DB.Config;
@@ -115,7 +114,6 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
                 rt, 0.0, Double.POSITIVE_INFINITY);
         if (!particleAnalyzer.analyze(imp)) throw new RuntimeException("ParticleAnalyzer.analyze() returned false!");
 
-        Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
         // Get the objects and iterate through them
         logger.fine(String.format("ResultsTable Column Headings: %s", rt.getColumnHeadings()));
         for (int i=0; i < rt.getCounter(); i++) {
@@ -139,7 +137,6 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
                         (int)Math.floor(bx+width), 
                         (int)Math.floor(by+height));
                 rois.add(roi);
-                roiDao.insert(roi);
                 logger.info(String.format("%s: Created new ROI record with width=%.2f, height=%.2f, area=%.2f: %s", 
                         label, width, height, area, roi));
                 
