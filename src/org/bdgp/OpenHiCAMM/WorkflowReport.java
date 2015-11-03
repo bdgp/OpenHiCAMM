@@ -204,23 +204,29 @@ public class WorkflowReport implements Report {
                     and("key", "imageId"));
             if (imageIdConf != null) {
                 for (ROI roi : roiDao.select(where("imageId", imageIdConf.getValue()))) {
-                    for (String roiModuleId : roiModules.get(roi.getId())) {
-                        WorkflowModule roiModule = this.workflowRunner.getWorkflow().selectOne(where("id", roiModuleId));
-                        if (roiModule != null) {
-                            for (ModuleConfig posListModuleIdConf : this.workflowRunner.getModuleConfig().select(
-                                    where("key", "posListModuleId").
-                                    and("value", roiModule.getId()))) 
-                            {
-                                if (this.workflowRunner.getModuleConfig().selectOne(
-                                        where("id", posListModuleIdConf.getId()).
-                                        and("key", "canImageSlides").
-                                        and("value", "yes")) != null) 
+                    Set<String> roiModuleSet = roiModules.get(roi.getId());
+                    if (roiModuleSet == null) {
+                        log(String.format("No ROI modules found for ROI %s!", roi));
+                    }
+                    else {
+                        for (String roiModuleId : roiModuleSet) {
+                            WorkflowModule roiModule = this.workflowRunner.getWorkflow().selectOne(where("id", roiModuleId));
+                            if (roiModule != null) {
+                                for (ModuleConfig posListModuleIdConf : this.workflowRunner.getModuleConfig().select(
+                                        where("key", "posListModuleId").
+                                        and("value", roiModule.getId()))) 
                                 {
-                                    WorkflowModule imagerModule = this.workflowRunner.getWorkflow().selectOne(
-                                            where("id", posListModuleIdConf.getId()));
-                                    if (imagerModule != null) {
-                                        if (!roiImagers.containsKey(roiModule.getId())) roiImagers.put(roiModule.getId(), new HashSet<>());
-                                        roiImagers.get(roiModule.getId()).add(imagerModule.getId());
+                                    if (this.workflowRunner.getModuleConfig().selectOne(
+                                            where("id", posListModuleIdConf.getId()).
+                                            and("key", "canImageSlides").
+                                            and("value", "yes")) != null) 
+                                    {
+                                        WorkflowModule imagerModule = this.workflowRunner.getWorkflow().selectOne(
+                                                where("id", posListModuleIdConf.getId()));
+                                        if (imagerModule != null) {
+                                            if (!roiImagers.containsKey(roiModule.getId())) roiImagers.put(roiModule.getId(), new HashSet<>());
+                                            roiImagers.get(roiModule.getId()).add(imagerModule.getId());
+                                        }
                                     }
                                 }
                             }
@@ -336,6 +342,7 @@ public class WorkflowReport implements Report {
             Map<Integer,Roi> imageRois = new LinkedHashMap<Integer,Roi>();
             List<Roi> roiRois = new ArrayList<Roi>();
             Map().attr("name",String.format("map-%s-%s", startModule.getId(), slideId)).with(()->{
+                // TODO: parallelize
                 for (Task task : imageTasks) {
                     Config imageIdConf = this.workflowRunner.getTaskConfig().selectOne(
                             where("id", new Integer(task.getId()).toString()).and("key", "imageId"));
@@ -439,6 +446,7 @@ public class WorkflowReport implements Report {
                     attr("style", "border: 1px solid black");
             
             // now render the individual ROI sections
+            // TODO: parallelize
             for (Task task : imageTasks) {
                 Config imageIdConf = this.workflowRunner.getTaskConfig().selectOne(
                         where("id", new Integer(task.getId()).toString()).and("key", "imageId"));
