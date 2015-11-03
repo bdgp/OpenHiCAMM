@@ -104,6 +104,8 @@ public class PosCalibrator implements Module {
     }
 
     @Override public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
+        Dao<SlidePosList> slidePosListDao = workflow.getInstanceDb().table(SlidePosList.class);
+
         List<Task> tasks = new ArrayList<Task>();
         for (Task parentTask : parentTasks.size()>0? parentTasks.toArray(new Task[]{}) : new Task[]{null}) {
             Task task = new Task(this.moduleId, Status.NEW);
@@ -121,8 +123,44 @@ public class PosCalibrator implements Module {
                     this.workflow.getTaskConfig().insert(new TaskConfig(
                             new Integer(task.getId()).toString(), "slideId", slideIdConf.getValue()));
                 }
+
+                // get the position lists
+                Config roiFinderModuleConf = this.workflow.getModuleConfig().selectOne(
+                        where("id", this.moduleId).
+                        and("key","roiFinderModule"));
+                if (roiFinderModuleConf == null) throw new RuntimeException("Config roiFinderModule not found!");
+                List<SlidePosList> slidePosLists = slidePosListDao.select(
+                        where("moduleId", roiFinderModuleConf.getValue()).
+                        and("slideId", new Integer(slideIdConf.getValue())));
+                
+                // remove old slide pos lists
+                slidePosListDao.delete(
+                        where("moduleId", this.moduleId).
+                        and("slideId", new Integer(slideIdConf.getValue())));
+
+                // save the original X and Y positions as property values
+                for (SlidePosList spl : slidePosLists) {
+                    PositionList posList = spl.getPositionList();
+                    MultiStagePosition[] msps = posList.getPositions();
+                    for (MultiStagePosition msp : msps) {
+                        for (int i=0; i<msp.size(); ++i) {
+                            StagePosition sp = msp.get(i);
+                            if (sp.numAxes == 2 && sp.stageName.compareTo(msp.getDefaultXYStage()) == 0) {
+                                msp.setProperty("origX", new Double(sp.x).toString());
+                                msp.setProperty("origY", new Double(sp.y).toString());
+                                break;
+                            }
+                        }
+                    }
+                    posList.setPositions(msps);
+
+                    // store the translated position list into the database
+                    SlidePosList slidePosList = new SlidePosList(this.moduleId, spl.getSlideId(), null, posList);
+                    slidePosListDao.insert(slidePosList);
+                }
             }
         }
+
         return tasks;
     }
 
@@ -281,38 +319,33 @@ public class PosCalibrator implements Module {
                 translateImage, translateStage));
 
         // get the position lists
-        Config roiFinderModuleConf = this.workflow.getModuleConfig().selectOne(
-                where("id", this.moduleId).
-                and("key","roiFinderModule"));
-        if (roiFinderModuleConf == null) throw new RuntimeException("Config roiFinderModule not found!");
         List<SlidePosList> slidePosLists = slidePosListDao.select(
-                where("moduleId", roiFinderModuleConf.getValue()).
-                and("slideId", new Integer(slideIdConf.getValue())));
-        
-        // remove old slide pos lists
-        slidePosListDao.delete(
                 where("moduleId", this.moduleId).
                 and("slideId", new Integer(slideIdConf.getValue())));
-
+        
         // apply the translation matrix to the position list to derive a new position list
         for (SlidePosList spl : slidePosLists) {
             PositionList posList = spl.getPositionList();
             MultiStagePosition[] msps = posList.getPositions();
             for (MultiStagePosition msp : msps) {
+                if (!msp.hasProperty("origX")) throw new RuntimeException(String.format("MSP property origX is missing!: %s", msp));
+                Double origX = new Double(msp.getProperty("origX"));
+                if (!msp.hasProperty("origY")) throw new RuntimeException(String.format("MSP property origY is missing!: %s", msp));
+                Double origY = new Double(msp.getProperty("origY"));
+
                 for (int i=0; i<msp.size(); ++i) {
                     StagePosition sp = msp.get(i);
                     if (sp.numAxes == 2 && sp.stageName.compareTo(msp.getDefaultXYStage()) == 0) {
-                        sp.x += translateStage.getX();
-                        sp.y += translateStage.getY();
+                        sp.x = origX + translateStage.getX();
+                        sp.y = origY + translateStage.getY();
                         break;
                     }
                 }
             }
             posList.setPositions(msps);
 
-            // store the translated position list into the database
-            SlidePosList slidePosList = new SlidePosList(this.moduleId, spl.getSlideId(), null, posList);
-            slidePosListDao.insert(slidePosList);
+            // update the translated position list into the database
+            slidePosListDao.update(spl, "id");
         }
 
         return Status.SUCCESS;
