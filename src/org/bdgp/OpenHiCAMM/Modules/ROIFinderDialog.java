@@ -24,7 +24,7 @@ public class ROIFinderDialog extends JPanel {
 
 	public static final double DEFAULT_MIN_ROI_AREA = 250000.0;
 	public static final double DEFAULT_OVERLAP_PCT = 25.0;
-	public static final double DEFAULT_ROI_MARGIN_PCT = 5.0;
+	public static final double DEFAULT_ROI_MARGIN_PCT = 10.0;
 	public static final double DEFAULT_HIRES_PIXEL_SIZE_UM = 0.1253;
 
 	private JLabel lblMinRoiArea;
