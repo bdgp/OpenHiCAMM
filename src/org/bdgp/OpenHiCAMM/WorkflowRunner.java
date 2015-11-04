@@ -995,6 +995,7 @@ public class WorkflowRunner {
     public File getWorkflowDir() { return workflowDirectory; }
     public Connection getInstanceDb() { return instanceDb; }
     public OpenHiCAMM getOpenHiCAMM() { return mmslide; }
+    public Map<String,Module> getModuleInstances() { return moduleInstances; }
     
     public void addTaskListener(TaskListener listener) {
         taskListeners.add(listener);
