@@ -72,6 +72,7 @@ public class WorkflowReport implements Report {
 
     private WorkflowRunner workflowRunner;
     private Integer prevPoolSlideId;
+    private Map<String,Boolean> isLoaderInitialized;
 
     public void jsLog(String message) {
         IJ.log(String.format("[WorkflowReport:js] %s", message));
@@ -85,6 +86,7 @@ public class WorkflowReport implements Report {
     
     @Override public void initialize(WorkflowRunner workflowRunner) {
         this.workflowRunner = workflowRunner;
+        isLoaderInitialized = new HashMap<String,Boolean>();
     }
     
     @Override
@@ -826,13 +828,15 @@ public class WorkflowReport implements Report {
                             if (module == null) throw new RuntimeException(String.format("Could not find instance for module %s!", loaderModule));
 
                             // init loader and scan for slides
-                            if (this.prevPoolSlideId == null) {
+                            if (this.isLoaderInitialized.get(loaderModuleId_) == null || !this.isLoaderInitialized.get(loaderModuleId_)) {
                                 try {
                                     Method initSlideLoader = module.getClass().getDeclaredMethod("initSlideLoader", boolean.class);
                                     initSlideLoader.invoke(module, true);
 
                                     Method scanForSlides = module.getClass().getDeclaredMethod("scanForSlides");
                                     scanForSlides.invoke(module);
+                                    
+                                    this.isLoaderInitialized.put(loaderModuleId_, true);
                                 } 
                                 catch (Throwable e) { 
                                     StringWriter sw = new StringWriter();
