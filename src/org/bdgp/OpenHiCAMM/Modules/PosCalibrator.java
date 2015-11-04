@@ -292,17 +292,24 @@ public class PosCalibrator implements Module {
         Double invertXAxis = "yes".equals(invertXAxisConf.getValue())? -1.0 : 1.0;
         Double invertYAxis = "yes".equals(invertYAxisConf.getValue())? -1.0 : 1.0;
         
-        Point2D.Double translateImage = roi == null? 
-                new Point2D.Double(0.0, 0.0) : 
-                new Point2D.Double(
-                    Math.floor((roi.getXBase() + roi.getFloatWidth() / 2.0) - refImage.getWidth() / 2.0), 
-                    Math.floor((roi.getYBase() + roi.getFloatHeight() / 2.0) - refImage.getHeight() / 2.0));
-
+        // translate = actual - expected
+        // where actual is: the center of the fitted ROI - the center of the reference image,
+        //     scaled (multiplied) by the pixel size and by the invert axis value (the stage coordinates scale factor)
+        //     translated (added) to the reference stage coordinates,
+        // and expected is: the stage coordinates of the comparison image from the position list
         Point2D.Double translateStage = roi == null? 
             new Point2D.Double(0.0, 0.0) :
             new Point2D.Double(
-                (translateImage.getX() * pixelSize * invertXAxis) - (matchedRefCoords.getX() - refCoords.getX()), 
-                (translateImage.getY() * pixelSize * invertYAxis) - (matchedRefCoords.getY() - refCoords.getY()));
+                (((roi.getXBase() + roi.getFloatWidth() / 2.0) 
+                    - (double)refImage.getWidth() / 2.0) 
+                        * pixelSize * invertXAxis) 
+                + refCoords.getX() 
+                - matchedRefCoords.getX(), 
+                (((roi.getYBase() + roi.getFloatHeight() / 2.0) 
+                    - (double)refImage.getHeight() / 2.0) 
+                        * pixelSize * invertYAxis) 
+                + refCoords.getY() 
+                - matchedRefCoords.getY());
         
         if ((matcher.badRef || matcher.badMatch) && 
             (matchedReference == null ||
@@ -315,8 +322,7 @@ public class PosCalibrator implements Module {
             translateStage = new Point2D.Double(0.0, 0.0);
         }
 
-        logger.info(String.format("Computed image translation: %s -> stage translation: %s",
-                translateImage, translateStage));
+        logger.info(String.format("Computed stage translation: %s", translateStage));
 
         // get the position lists
         List<SlidePosList> slidePosLists = slidePosListDao.select(
