@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
@@ -18,6 +19,8 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import javax.imageio.ImageIO;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 import org.bdgp.OpenHiCAMM.DB.Acquisition;
 import org.bdgp.OpenHiCAMM.DB.Config;
@@ -35,12 +38,15 @@ import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.Modules.ROIFinderDialog;
 import org.bdgp.OpenHiCAMM.Modules.SlideImagerDialog;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.micromanager.MMStudio;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
+import org.micromanager.api.StagePosition;
 import org.micromanager.utils.ImageLabelComparator;
 import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMSerializationException;
@@ -54,6 +60,7 @@ import ij.gui.NewImage;
 import ij.gui.Roi;
 import ij.process.Blitter;
 import ij.process.ImageProcessor;
+import mmcorej.CMMCore;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 import static org.bdgp.OpenHiCAMM.Tag.T.*;
@@ -64,6 +71,7 @@ public class WorkflowReport implements Report {
     public static final boolean DEBUG=true;
 
     private WorkflowRunner workflowRunner;
+    private Integer prevPoolSlideId;
 
     public void jsLog(String message) {
         IJ.log(String.format("[WorkflowReport:js] %s", message));
@@ -139,9 +147,11 @@ public class WorkflowReport implements Report {
                                                 A(String.format("Module %s, Slide %s", slideImager, ps)).
                                                     attr("href", String.format("#report-%s-PS%s", slideImager.getId(), ps.getId()));
                                             });
+                                            String loaderModuleId_ = loaderModuleId;
                                             runnables.add(()->{
-                                                log("Calling runReport(startModule=%s, poolSlide=%s)", slideImager, ps);
-                                                runReport(slideImager, ps);
+                                                log("Calling runReport(startModule=%s, poolSlide=%s, loaderModuleId=%s)", 
+                                                        slideImager, ps, loaderModuleId_);
+                                                runReport(slideImager, ps, loaderModuleId_);
                                             });
                                         }
                                         continue SLIDE_IMAGERS;
@@ -155,8 +165,8 @@ public class WorkflowReport implements Report {
                                 attr("href", String.format("#report-%s", slideImager.getId()));
                         });
                         runnables.add(()->{
-                            log("Calling runReport(startModule=%s, poolSlide=null)", slideImager);
-                            runReport(slideImager, null);
+                            log("Calling runReport(startModule=%s, poolSlide=null, loaderModuleId=null)", slideImager);
+                            runReport(slideImager, null, null);
                         });
                     }
                 }
@@ -168,7 +178,7 @@ public class WorkflowReport implements Report {
         }).toString();
     }
 
-    private void runReport(WorkflowModule startModule, PoolSlide poolSlide) {
+    private void runReport(WorkflowModule startModule, PoolSlide poolSlide, String loaderModuleId) {
         log("Called runReport(startModule=%s, poolSlide=%s)", startModule, poolSlide);
 
         Dao<Slide> slideDao = this.workflowRunner.getInstanceDb().table(Slide.class);
@@ -238,10 +248,10 @@ public class WorkflowReport implements Report {
 
         // display the title
         Slide slide;
-        String slideId;
+        String slideName;
         if (poolSlide != null) {
             slide = slideDao.selectOneOrDie(where("id", poolSlide.getSlideId()));
-            slideId = slide.getName();
+            slideName = slide.getName();
             String title = String.format("SlideImager %s, Slide %s, Pool %d, Cartridge %d, Slide Position %d", 
                     startModule.getId(), 
                     slide.getName(), 
@@ -254,7 +264,7 @@ public class WorkflowReport implements Report {
         }
         else {
             slide = null;
-            slideId = "slide";
+            slideName = "slide";
             String title = String.format("SlideImager %s", startModule.getId());
             A().attr("name", String.format("report-%s", startModule.getId()));
             H1().text(title);
@@ -341,7 +351,7 @@ public class WorkflowReport implements Report {
             ImagePlus slideThumb = NewImage.createRGBImage("slideThumb", SLIDE_PREVIEW_WIDTH, slidePreviewHeight, 1, NewImage.FILL_WHITE);
             Map<Integer,Roi> imageRois = new LinkedHashMap<Integer,Roi>();
             List<Roi> roiRois = new ArrayList<Roi>();
-            Map().attr("name",String.format("map-%s-%s", startModule.getId(), slideId)).with(()->{
+            Map().attr("name",String.format("map-%s-%s", startModule.getId(), slideName)).with(()->{
                 // TODO: parallelize
                 for (Task task : imageTasks) {
                     Config imageIdConf = this.workflowRunner.getTaskConfig().selectOne(
@@ -441,7 +451,7 @@ public class WorkflowReport implements Report {
                     Base64.getMimeEncoder().encodeToString(baos.toByteArray()))).
                     attr("width", slideThumb.getWidth()).
                     attr("height", slideThumb.getHeight()).
-                    attr("usemap", String.format("#map-%s-%s", startModule.getId(), slideId)).
+                    attr("usemap", String.format("#map-%s-%s", startModule.getId(), slideName)).
                     attr("class","map").
                     attr("style", "border: 1px solid black");
             
@@ -556,7 +566,7 @@ public class WorkflowReport implements Report {
                                         with(()->{
                                         Thead().with(()->{
                                             Tr().with(()->{
-                                                Th().text("Channel, Slice, Frame");
+                                                Th().text("Image Properties");
                                                 Th().text("Source ROI Cutout");
                                                 Th().text("Tiled ROI Images");
                                                 Th().text("Stitched ROI Image");
@@ -570,7 +580,56 @@ public class WorkflowReport implements Report {
                                                 log("Working on channel %d, slice %d, frame %d", channel, slice, frame);
 
                                                 Tr().with(()->{
-                                                    Th().text(String.format("Channel %d, Slice %d, Frame %d", channel, slice, frame));
+                                                    Th().with(()->{
+                                                        P(String.format("Channel %d, Slice %d, Frame %d", channel, slice, frame)); 
+
+                                                        // get the average stage position of all the tiled ROI images
+                                                        int posCount = 0;
+                                                        double xPos = 0.0;
+                                                        double yPos = 0.0;
+                                                        for (Task imagerTask : imagerTaskEntry.getValue()) {
+                                                            Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
+                                                                    where("id", new Integer(imagerTask.getId()).toString()).and("key", "imageId"));
+                                                            if (imageIdConf2 != null) {
+                                                                MultiStagePosition msp = getMsp(imagerTask);
+                                                                for (int i=0; i<msp.size(); ++i) {
+                                                                    StagePosition sp = msp.get(i);
+                                                                    if (sp.numAxes == 2 && sp.stageName.compareTo(msp.getDefaultXYStage()) == 0) {
+                                                                        xPos += sp.x;
+                                                                        yPos += sp.y;
+                                                                        ++posCount;
+                                                                        break;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+
+                                                        // add a link to load the slide and go to the stage position
+                                                        if (posCount > 0) {
+                                                            Double xPos_ = xPos / posCount;
+                                                            Double yPos_ = yPos / posCount;
+                                                            P().with(()->{
+                                                                A().attr("href", "#").
+                                                                    attr("onclick", 
+                                                                        String.format("report.goToPosition(\"%s\",%d,%f,%f)", 
+                                                                                Util.escapeJavaStyleString(loaderModuleId),
+                                                                                poolSlide != null? poolSlide.getId() : -1, 
+                                                                                        xPos_, 
+                                                                                        yPos_)).
+                                                                    text(String.format("Go To Stage Position: (%.2f,%.2f)", xPos_, yPos_));
+                                                            });
+
+                                                            // add another link to put the slide back
+                                                            if (poolSlide != null) {
+                                                                P().with(()->{
+                                                                    A().attr("href", "#").
+                                                                        attr("onclick", String.format("report.returnSlide(\"%s\")",
+                                                                                Util.escapeJavaStyleString(loaderModuleId))).
+                                                                        text("Return slide to loader");
+                                                                });
+                                                            }
+                                                        }
+                                                    });
                                                     Td().with(()->{
                                                         ImagePlus imp = null;
                                                         try { imp = image.getImagePlus(acqDao); }
@@ -733,6 +792,153 @@ public class WorkflowReport implements Report {
         Image image = imageDao.selectOneOrDie(where("id", imageId));
         ImagePlus imp = image.getImagePlus(acqDao);
         imp.show();
+    }
+    
+    public void goToPosition(String loaderModuleId, int poolSlideId, double xPos, double yPos) {
+        synchronized(this) {
+            Dao<PoolSlide> poolSlideDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);
+            PoolSlide poolSlide = poolSlideId > 0? poolSlideDao.selectOne(where("id", poolSlideId)) : null;
+
+            SwingUtilities.invokeLater(()->{
+                Double xPos_ = xPos;
+                Double yPos_ = yPos;
+                PoolSlide poolSlide_ = poolSlide;
+                String loaderModuleId_ = loaderModuleId;
+                Integer poolSlideId_ = poolSlideId;
+                Integer cartridgePosition = poolSlide_.getCartridgePosition();
+                Integer slidePosition = poolSlide_.getSlidePosition();
+                String slideMessage = poolSlide_ != null && loaderModuleId_ != null && prevPoolSlideId != poolSlideId_?
+                                        String.format(" on cartridge %d, slide %d?", cartridgePosition, slidePosition) 
+                                        : "?";
+                String message = String.format("Would you like to move the stage to position (%.2f,%.2f)%s", 
+                                xPos_, yPos_, slideMessage);
+                if (JOptionPane.showConfirmDialog(null, 
+                        message,
+                        "Move To Position", 
+                        JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
+                {
+                    new Thread(()->{
+                        // load the slide
+                        if (poolSlideId_ > 0 && loaderModuleId_ != null && this.prevPoolSlideId != poolSlideId_) {
+                            WorkflowModule loaderModule = this.workflowRunner.getWorkflow().selectOneOrDie(
+                                    where("id", loaderModuleId_));
+                            Module module = this.workflowRunner.getModuleInstances().get(loaderModule.getId());
+                            if (module == null) throw new RuntimeException(String.format("Could not find instance for module %s!", loaderModule));
+
+                            // init loader and scan for slides
+                            if (this.prevPoolSlideId == null) {
+                                try {
+                                    Method initSlideLoader = module.getClass().getDeclaredMethod("initSlideLoader", boolean.class);
+                                    initSlideLoader.invoke(module, true);
+
+                                    Method scanForSlides = module.getClass().getDeclaredMethod("scanForSlides");
+                                    scanForSlides.invoke(module);
+                                } 
+                                catch (Throwable e) { 
+                                    StringWriter sw = new StringWriter();
+                                    e.printStackTrace(new PrintWriter(sw));
+                                    log("Couldn't scan for slides!%n%s", sw);
+                                    return;
+                                }
+                            }
+                            
+                            // unload the previous slide first
+                            if (this.prevPoolSlideId != null) {
+                                PoolSlide prevPoolSlide = poolSlideDao.selectOneOrDie(where("id", prevPoolSlideId));
+                                try {
+                                    Method unloadSlide = module.getClass().getDeclaredMethod("unloadSlide", PoolSlide.class);
+                                    unloadSlide.invoke(module, prevPoolSlide);
+                                } 
+                                catch (Throwable e) { 
+                                    StringWriter sw = new StringWriter();
+                                    e.printStackTrace(new PrintWriter(sw));
+                                    log("Couldn't unload slide %s from stage!%n%s", prevPoolSlide, sw);
+                                    return;
+                                }
+                            }
+                            
+                            // now load the slide
+                            try {
+                                Method loadSlide = module.getClass().getDeclaredMethod("loadSlide", PoolSlide.class);
+                                loadSlide.invoke(module, poolSlide_);
+
+                                // set previous pool slide to this slide
+                                this.prevPoolSlideId = poolSlideId_;
+                            } 
+                            catch (Throwable e) { 
+                                StringWriter sw = new StringWriter();
+                                e.printStackTrace(new PrintWriter(sw));
+                                log("Couldn't unload slide %s from stage!%n%s", poolSlide, sw);
+                                return;
+                            }
+                        }
+                        
+                        // move the stage
+                        CMMCore core = MMStudio.getInstance().getMMCore();
+                        String xyStage = core.getXYStageDevice();
+                        try { 
+                            core.setXYPosition(xyStage, xPos_, yPos_); 
+                            while (core.deviceBusy(xyStage)) { Thread.sleep(500); }
+                        } 
+                        catch (Exception e) {
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            log("Error while attempting to move stage to coordinates: (%.2f,%.2f)%n%s", xPos_, yPos_, sw);
+                            return;
+                        }
+                        
+                        // autofocus?
+                        SwingUtilities.invokeLater(()->{
+                            if (JOptionPane.showConfirmDialog(null, 
+                                    "Autofocus now?",
+                                    "Move To Position", 
+                                    JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
+                            {
+                                new Thread(()->{
+                                    MMStudio.getInstance().autofocusNow();
+                                }).start();
+                            }
+                        });
+                    }).start();
+                }
+            });
+        }
+    }
+    
+    public void returnSlide(String loaderModuleId) {
+        synchronized(this) {
+            if (this.prevPoolSlideId != null) {
+                SwingUtilities.invokeLater(()->{
+                    if (JOptionPane.showConfirmDialog(null, 
+                            String.format("Would you like to return the slide to the loader?"),
+                            "Return Slide to Stage", 
+                            JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION)  
+                    {
+                        new Thread(()->{
+                            WorkflowModule loaderModule = this.workflowRunner.getWorkflow().selectOneOrDie(
+                                    where("id", loaderModuleId));
+                            Module module = this.workflowRunner.getModuleInstances().get(loaderModule.getId());
+                            if (module == null) throw new RuntimeException(String.format("Could not find instance for module %s!", loaderModule));
+                            
+                            Dao<PoolSlide> poolSlideDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);
+                            PoolSlide prevPoolSlide = poolSlideDao.selectOneOrDie(where("id", prevPoolSlideId));
+                            try {
+                                Method unloadSlide = module.getClass().getDeclaredMethod("unloadSlide", PoolSlide.class);
+                                unloadSlide.invoke(module, prevPoolSlide);
+                                
+                                this.prevPoolSlideId = null;
+                            } 
+                            catch (Throwable e) { 
+                                StringWriter sw = new StringWriter();
+                                e.printStackTrace(new PrintWriter(sw));
+                                log("Couldn't unload slide %s from stage!%n%s", prevPoolSlide, sw);
+                                return;
+                            }
+                        }).start();
+                    }
+                });
+            }
+        }
     }
 
     public void showImageFile(String imagePath) {
