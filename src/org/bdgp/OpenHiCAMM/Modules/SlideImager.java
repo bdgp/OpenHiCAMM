@@ -2,9 +2,12 @@ package org.bdgp.OpenHiCAMM.Modules;
 
 import java.awt.Component;
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -312,6 +315,14 @@ public class SlideImager implements Module, ImageLogger {
             // Start the acquisition engine. This runs asynchronously.
             try {
                 EventManager.register(this);
+                
+                Date startAcquisition = new Date();
+                this.workflowRunner.getTaskConfig().insertOrUpdate(
+                        new TaskConfig(new Integer(task.getId()).toString(), 
+                                "startAcquisition", 
+                                new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(startAcquisition)), 
+                        "id", "key");
+                
                 logger.info(String.format("Now running the image acquisition sequence, please wait..."));
                 String returnAcqName = acqControlDlg.runAcquisition(acqName, rootDir);
                 if (returnAcqName == null) {
@@ -424,6 +435,30 @@ public class SlideImager implements Module, ImageLogger {
                              return Status.ERROR;
                          }
                      }
+                }
+
+                Date endAcquisition = new Date();
+                this.workflowRunner.getTaskConfig().insertOrUpdate(
+                        new TaskConfig(new Integer(task.getId()).toString(), 
+                                "endAcquisition", 
+                                new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(endAcquisition)), 
+                        "id", "key");
+
+                this.workflowRunner.getTaskConfig().insertOrUpdate(
+                        new TaskConfig(new Integer(task.getId()).toString(), 
+                                "acquisitionDuration", 
+                                new Long(endAcquisition.getTime() - startAcquisition.getTime()).toString()), 
+                        "id", "key");
+                
+                if (new HashSet<String>(Arrays.asList(autofocus.getPropertyNames())).contains("autofocusDuration")) {
+                    try {
+                        this.workflowRunner.getTaskConfig().insertOrUpdate(
+                                new TaskConfig(new Integer(task.getId()).toString(), 
+                                        "autofocusDuration", 
+                                        autofocus.getPropertyValue("autofocusDuration")),
+                                "id", "key");
+                    } 
+                    catch (MMException e) { throw new RuntimeException(e); }
                 }
 
                 // Get the ImageCache object for this acquisition
@@ -727,6 +762,14 @@ public class SlideImager implements Module, ImageLogger {
 
             // Load the position list and set the acquisition settings
             PositionList positionList = loadPositionList(conf, workflowRunner.getLogger());
+            
+            // count the number of ROIs
+            Set<String> rois = new HashSet<>();
+            for (MultiStagePosition msp : positionList.getPositions()) {
+                if (msp.getProperty("ROI") != null) {
+                    rois.add(msp.getProperty("ROI"));
+                }
+            }
 
             // get the total images
             VerboseSummary verboseSummary = getVerboseSummary();
@@ -803,6 +846,27 @@ public class SlideImager implements Module, ImageLogger {
                             taskConfigDao.insert(slideId);
                             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created task config: %s", 
                                     this.moduleId, slideId));
+                            
+                            // add some task configs to the first imaging task to assist in calculating metrics
+                            if (c==0 && s==0 && f==0 && p==0) {
+                                TaskConfig positionsConf = new TaskConfig(
+                                        new Integer(task.getId()).toString(), 
+                                        "positions", 
+                                        new Integer(verboseSummary.positions).toString());
+                                taskConfigDao.insert(positionsConf);
+                                
+                                TaskConfig roisConf = new TaskConfig(
+                                        new Integer(task.getId()).toString(), 
+                                        "ROIs", 
+                                        new Integer(rois.size()).toString());
+                                taskConfigDao.insert(roisConf);
+                                
+                                TaskConfig verboseSummaryConf = new TaskConfig(
+                                        new Integer(task.getId()).toString(), 
+                                        "verboseSummary", 
+                                        verboseSummary.summary);
+                                taskConfigDao.insert(verboseSummaryConf);
+                            }
 
                             // Create task dispatch record
                             if (parentTask != null) {
