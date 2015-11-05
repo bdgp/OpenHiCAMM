@@ -268,6 +268,12 @@ public class PosCalibrator implements Module {
         if (pixelSizeConf == null) throw new RuntimeException("pixelSize conf not found for ref imager!");
         Double pixelSize = new Double(pixelSizeConf.getValue());
 
+        ModuleConfig hiResPixelSizeConf = workflow.getModuleConfig().selectOne(
+                where("id", compareSlideImagerModuleConf.getValue()).
+                and("key", "pixelSize"));
+        if (hiResPixelSizeConf == null) throw new RuntimeException("hires pixelSize conf not found for compare imager!");
+        Double hiResPixelSize = new Double(hiResPixelSizeConf.getValue());
+
         ModuleConfig invertXAxisConf = workflow.getModuleConfig().selectOne(
                 where("id", refSlideImagerModuleConf.getValue()).
                 and("key", "invertXAxis"));
@@ -313,8 +319,8 @@ public class PosCalibrator implements Module {
         
         if ((matcher.badRef || matcher.badMatch) && 
             (matchedReference == null ||
-             Math.abs(translateStage.getX()) >= matchedReference.getWidth() * pixelSize / 2.0 || 
-             Math.abs(translateStage.getY()) >= matchedReference.getHeight() * pixelSize / 2.0)) 
+             Math.abs(translateStage.getX()) >= matchedReference.getWidth() * hiResPixelSize / 2.0 || 
+             Math.abs(translateStage.getY()) >= matchedReference.getHeight() * hiResPixelSize / 2.0)) 
         {
             logger.info(String.format("badRef/badMatch is set and translation is large, so we will not translate"));
             logger.info(String.format("badRef=%s, badMatch=%s, translateStage=%s, matchedReference=%s",
