@@ -24,6 +24,8 @@ import org.micromanager.MMStudio;
 import org.micromanager.api.MMPlugin;
 import org.micromanager.api.ScriptInterface;
 import org.micromanager.utils.JavaUtils;
+import org.micromanager.utils.MMException;
+import org.micromanager.utils.ReportingUtils;
 
 
 public class OpenHiCAMM implements MMPlugin {
@@ -42,7 +44,9 @@ public class OpenHiCAMM implements MMPlugin {
 	
     // Add the AutoFocus plugin
 	static {
-        MMStudio.getInstance().installAutofocusPlugin("BDGPAutoFocus");
+        MMStudio.getInstance().getAutofocusManager().setAFPluginClassName(BDGPAutoFocus.class.getName());
+        try { MMStudio.getInstance().getAutofocusManager().refresh(); } 
+        catch (MMException e) { ReportingUtils.logError(e.getMessage()); }
 	}
 
 	/**
