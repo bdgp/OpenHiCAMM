@@ -71,7 +71,7 @@ public class Logger extends java.util.logging.Logger {
     		setFormatter();
 		}
 		public void setFormatter() {
-		    final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss.SSSZ");
+		    final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 			setFormatter(new SimpleFormatter() {
 				public String format(LogRecord record) {
 					return String.format("[%s|%s|%s] %s%n", 
