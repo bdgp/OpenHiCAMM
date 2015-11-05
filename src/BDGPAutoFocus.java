@@ -34,43 +34,49 @@ import edu.mines.jtk.dsp.FftReal;
  */
 public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     // NOTES:
-    // get z axis position in beanshell:
-    // mmc.getPosition(mmc.getFocusDevice())
-    // set z axis position in beanshell:
-    // mmc.setPosition(mmc.getFocusDevice(), 200)
+    // gui = MMStudio, mmc = MMCore, acq = AcquisitionWrapperEngine
+    // gui.getAutofocus()
+    // mmc.getPosition(mmc.getFocusDevice());
+    // mmc.setPosition(mmc.getFocusDevice(), 200);
+    // gui.getAutofocus().fullFocus(); gui.doSnap(); 
+    // mmc.setExposure(mmc.getExposure()*Math.pow(Integer.parseInt(mmc.getProperty(mmc.getCameraDevice(),"Binning"))/4.0,2))
+    // mmc.setProperty(mmc.getCameraDevice(),"Binning","4")
+    // mmc.setProperty(mmc.getCameraDevice(),"PixelType","Grayscale")
 
-   private static Boolean verbose_ = true; // displaying debug info or not
+   public static Boolean verbose_ = true; // displaying debug info or not
 
-   private static final String KEY_SIZE_FIRST = "1st step size";
-   private static final String KEY_NUM_FIRST = "1st step number";
-   private static final String KEY_SIZE_SECOND = "2nd step size";
-   private static final String KEY_NUM_SECOND = "2nd step number";
-   private static final String KEY_THRES    = "Threshold";
-   private static final String KEY_CROP_SIZE = "Crop ratio";
-   private static final String KEY_CHANNEL = "Channel";
+   public static final String KEY_SIZE_FIRST = "1st step size";
+   public static final String KEY_NUM_FIRST = "1st step number";
+   public static final String KEY_SIZE_SECOND = "2nd step size";
+   public static final String KEY_NUM_SECOND = "2nd step number";
+   public static final String KEY_THRES    = "Threshold";
+   public static final String KEY_CROP_SIZE = "Crop ratio";
+   public static final String KEY_CHANNEL = "Channel";
    //private static final String AF_SETTINGS_NODE = "micro-manager/extensions/autofocus";
    
-   private static final String AF_DEVICE_NAME = "BDGP";
+   public static final String AF_DEVICE_NAME = "BDGP";
 
-   private static final String KEY_MIN_AUTOFOCUS = "minAutoFocus";
-   private static final String KEY_MAX_AUTOFOCUS = "maxAutoFocus";
+   public static final String KEY_MIN_AUTOFOCUS = "minAutoFocus";
+   public static final String KEY_MAX_AUTOFOCUS = "maxAutoFocus";
 
     /*private ImagePlus outputRough = null;
     private ImageStack outputStackRough = null;
     private ImagePlus outputFine = null;
     private ImageStack outputStackFine = null;*/
 
-    private CMMCore core_;
-    private ImageProcessor ipCurrent_ = null;
+    public CMMCore core_;
+    public ImageProcessor ipCurrent_ = null;
 
     public double ADAPTIVE_DIST_DIFF = 20.0;
-    public double SIZE_FIRST = 20.0;//
-    public int NUM_FIRST = 10; // +/- #of snapshot
+    public double SIZE_FIRST = 10.0;//
+    public int NUM_FIRST = 20; // +/- #of snapshot
     public double SIZE_SECOND = 3.3;
     public int NUM_SECOND = 3;
     public double THRES = 0.02;
     public double CROP_SIZE = 0.2; 
     public String CHANNEL="";
+    public double WAIT_FOR_DEVICE_THRESHOLD = 1.0;
+    public int WAIT_FOR_DEVICE_SLEEP = 250;
 
     private double indx = 0; //snapshot show new window iff indx = 1
 
@@ -167,6 +173,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             baseDist = curDist - SIZE_FIRST * NUM_FIRST; //-30
             core_.setPosition(core_.getFocusDevice(), baseDist);
             core_.waitForDevice(core_.getFocusDevice());
+            while (Math.abs(core_.getPosition(core_.getFocusDevice()) - baseDist) > WAIT_FOR_DEVICE_THRESHOLD) Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
             delay_time(300);
 
             //
@@ -208,6 +215,8 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                 {
                     core_.setPosition(core_.getFocusDevice(), baseDist + i * SIZE_FIRST);
                     core_.waitForDevice(core_.getFocusDevice());
+                    while (Math.abs(core_.getPosition(core_.getFocusDevice()) - (baseDist + i * SIZE_FIRST)) > WAIT_FOR_DEVICE_THRESHOLD) Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
+                    delay_time(300);
 
                     // indx =1;
                     snapSingleImage();
@@ -251,6 +260,8 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                 {
                     core_.setPosition(core_.getFocusDevice(), baseDist + i * SIZE_SECOND);
                     core_.waitForDevice(core_.getFocusDevice());
+                    while (Math.abs(core_.getPosition(core_.getFocusDevice()) - (baseDist + i * SIZE_SECOND)) > WAIT_FOR_DEVICE_THRESHOLD) Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
+                    Thread.sleep(300);
 
                     // indx =1;
                     snapSingleImage();
@@ -300,6 +311,8 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             if (bestDist != null) {
                 core_.setPosition(core_.getFocusDevice(), bestDist);
                 core_.waitForDevice(core_.getFocusDevice());
+                while (Math.abs(core_.getPosition(core_.getFocusDevice()) - bestDist) > WAIT_FOR_DEVICE_THRESHOLD) Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
+                delay_time(300);
             }
 
             // indx =1;
@@ -320,7 +333,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
         }
     }
 
-    private FloatArray2D ImageToFloatArray(ImageProcessor ip)
+    public FloatArray2D ImageToFloatArray(ImageProcessor ip)
     {
             if (ip == null)
             {
@@ -526,7 +539,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
      * @param starPercent - How much of the center to cut out [in %], a good guess is 1
      * @return Amount of detail on linear scale, the higher the more content
      */
-    private double computeFFT(ImageProcessor ip, double minPercent, double maxPercent, double starPercent)
+    public double computeFFT(ImageProcessor ip, double minPercent, double maxPercent, double starPercent)
     {
         //
         // Convert to Float Datastructure
@@ -618,7 +631,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
     //take a snapshot and save pixel values in ipCurrent_
     static int imgCounter=0;
-    private boolean snapSingleImage()
+    public boolean snapSingleImage()
     {
 
         try
@@ -637,7 +650,9 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             //}
         } catch (Exception e)
         {
-            IJ.error(e.getMessage());
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            IJ.error(sw.toString());
             return false;
         }
 
@@ -645,7 +660,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     }
 
     //waiting
-    private void delay_time(double delay)
+    public void delay_time(double delay)
     {
         Date date = new Date();
         long sec = date.getTime();
@@ -656,7 +671,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     }
 
     //making a new window for a new snapshot.
-    private ImagePlus newWindow()
+    public ImagePlus newWindow()
     {
         ImagePlus implus;
         ImageProcessor ip;
