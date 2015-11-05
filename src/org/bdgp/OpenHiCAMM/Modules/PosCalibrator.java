@@ -329,6 +329,13 @@ public class PosCalibrator implements Module {
         }
 
         logger.info(String.format("Computed stage translation: %s", translateStage));
+        // store translated stage coordinates as task config
+        this.workflow.getTaskConfig().insertOrUpdate(
+                new TaskConfig(new Integer(task.getId()).toString(), 
+                        "translateStageX", new Double(translateStage.getX()).toString()), "id", "key");
+        this.workflow.getTaskConfig().insertOrUpdate(
+                new TaskConfig(new Integer(task.getId()).toString(), 
+                        "translateStageY", new Double(translateStage.getY()).toString()), "id", "key");
 
         // get the position lists
         List<SlidePosList> slidePosLists = slidePosListDao.select(
