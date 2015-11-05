@@ -1,3 +1,4 @@
+package org.bdgp.OpenHiCAMM;
 
 
 import ij.IJ;
@@ -19,6 +20,7 @@ import org.micromanager.api.Autofocus;
 import org.micromanager.api.ScriptInterface;
 import org.micromanager.utils.AutofocusBase;
 import org.micromanager.utils.MMException;
+import org.micromanager.utils.PropertyItem;
 
 import mmcorej.CMMCore;
 import edu.mines.jtk.dsp.FftComplex;
@@ -89,7 +91,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     private double bestSh;
     
     // variables for skipping autofocus every acquisition
-    private int skipCounter = -1;
+    public int skipCounter = -1;
     public static final int MAX_SKIP = 25;
     
     Double minAutoFocus;
@@ -702,7 +704,18 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
     public double fullFocus()
     {
-        run("silent");
+        Date startTime = new Date();
+        try {
+            run("silent");
+        }
+        finally {
+            try {
+                this.setProperty(new PropertyItem(
+                        "autofocusDuration", 
+                        new Long(new Date().getTime() - startTime.getTime()).toString()));
+            } 
+            catch (MMException e) {throw new RuntimeException(e);}
+        }
         //run("");
         return 0;
     }
@@ -714,7 +727,18 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
     public double incrementalFocus()
     {
-        run("silent");
+        Date startTime = new Date();
+        try {
+            run("silent");
+        }
+        finally {
+            try {
+                this.setProperty(new PropertyItem(
+                        "autofocusDuration", 
+                        new Long(new Date().getTime() - startTime.getTime()).toString()));
+            } 
+            catch (MMException e) {throw new RuntimeException(e);}
+        }
         //run("");
         return 0;
     }
