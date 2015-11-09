@@ -98,16 +98,16 @@ public class WorkflowReport implements Report {
         // This is the starting SlideImager module.
         return Html().indent().with(()->{
             Head().with(()->{
-                // use bootstrap with the default theme
-                Link().attr("rel", "stylesheet").
-                    attr("href", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css");
-                Link().attr("rel", "stylesheet").
-                    attr("href", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css");
-                Script().attr("src", "https://code.jquery.com/jquery-2.1.4.min.js");
-                Script().attr("src", "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js");
                 try {
-                    // taken from https://github.com/kemayo/maphilight
+                    // CSS
+                    Style().raw(Resources.toString(Resources.getResource("bootstrap.min.css"), Charsets.UTF_8));
+                    Style().raw(Resources.toString(Resources.getResource("bootstrap-theme.min.css"), Charsets.UTF_8));
+                    Style().raw(Resources.toString(Resources.getResource("jquery.powertip.min.css"), Charsets.UTF_8));
+                    // Javascript
+                    Script().raw(Resources.toString(Resources.getResource("jquery-2.1.4.min.js"), Charsets.UTF_8));
+                    Script().raw(Resources.toString(Resources.getResource("bootstrap.min.js"), Charsets.UTF_8));
                     Script().raw(Resources.toString(Resources.getResource("jquery.maphilight.js"), Charsets.UTF_8));
+                    Script().raw(Resources.toString(Resources.getResource("jquery.powertip.min.js"), Charsets.UTF_8));
                     Script().raw(Resources.toString(Resources.getResource("WorkflowReport.js"), Charsets.UTF_8));
                 } 
                 catch (Exception e) {throw new RuntimeException(e);}
@@ -435,7 +435,7 @@ public class WorkflowReport implements Report {
                                    (int)Math.floor(roi.getYBase()), 
                                    (int)Math.floor(roi.getXBase()+roi.getFloatWidth()), 
                                    (int)Math.floor(roi.getYBase()+roi.getFloatHeight()))).
-                           attr("title", roi.getName()).
+                           //attr("title", roi.getName()).
                            attr("onclick", String.format("report.showImage(%d)", new Integer(roi.getProperty("id"))));
                 }
                 // now draw the ROI rois in red
@@ -454,7 +454,11 @@ public class WorkflowReport implements Report {
                     attr("width", slideThumb.getWidth()).
                     attr("height", slideThumb.getHeight()).
                     attr("usemap", String.format("#map-%s-%s", startModule.getId(), slideName)).
-                    attr("class","map").
+                    attr("class","map stageCoords").
+                    attr("data-min-x", minX - imageWidth / 2.0 * pixelSize * (invertXAxis? -1.0 : 1.0)).
+                    attr("data-max-x", maxX + imageWidth / 2.0 * pixelSize * (invertXAxis? -1.0 : 1.0)).
+                    attr("data-min-y", minY - imageHeight / 2.0 * pixelSize * (invertYAxis? -1.0 : 1.0)).
+                    attr("data-max-y", maxY + imageHeight / 2.0 * pixelSize * (invertYAxis? -1.0 : 1.0)).
                     attr("style", "border: 1px solid black");
             
             // now render the individual ROI sections
@@ -490,8 +494,8 @@ public class WorkflowReport implements Report {
 
                                 // determine the stage coordinate bounds of this ROI tile grid.
                                 // also get the image width and height of the acqusition.
-                                Double minX2_=null, minY2_=null, maxX2=null, maxY2=null;
-                                Integer imageWidth2 = null, imageHeight2 = null;
+                                Double minX2_=null, minY2_=null, maxX2_=null, maxY2_=null;
+                                Integer imageWidth2_ = null, imageHeight2_ = null;
                                 Map<String,List<Task>> imagerTasks = new TreeMap<String,List<Task>>(new ImageLabelComparator());
                                 for (Task imagerTask : this.workflowRunner.getTaskStatus().select(where("moduleId", imager.getId()))) {
                                     MultiStagePosition msp = getMsp(imagerTask);
@@ -510,9 +514,9 @@ public class WorkflowReport implements Report {
                                             
                                             if (minX2_ == null || msp.getX() < minX2_) minX2_ = msp.getX();
                                             if (minY2_ == null || msp.getY() < minY2_) minY2_ = msp.getY();
-                                            if (maxX2 == null || msp.getX() > maxX2) maxX2 = msp.getX();
-                                            if (maxY2 == null || msp.getY() > maxY2) maxY2 = msp.getY();
-                                            if (imageWidth2 == null || imageHeight2 == null) {
+                                            if (maxX2_ == null || msp.getX() > maxX2_) maxX2_ = msp.getX();
+                                            if (maxY2_ == null || msp.getY() > maxY2_) maxY2_ = msp.getY();
+                                            if (imageWidth2_ == null || imageHeight2_ == null) {
                                                 Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
                                                         where("id", imagerTask.getId()).
                                                         and("key", "imageId"));
@@ -528,27 +532,28 @@ public class WorkflowReport implements Report {
                                                         log("Couldn't retrieve image %s from the image cache!%n%s", image2, sw);
                                                     }
                                                     if (imp != null) {
-                                                        imageWidth2 = imp.getWidth();
-                                                        imageHeight2 = imp.getHeight();
+                                                        imageWidth2_ = imp.getWidth();
+                                                        imageHeight2_ = imp.getHeight();
                                                     }
                                                 }
                                             }
                                         }
                                     }
                                 }
-                                Double minX2 = minX2_, minY2 = minY2_;
+                                Double minX2 = minX2_, minY2 = minY2_, maxX2 = maxX2_, maxY2 = maxY2_; 
+                                Integer imageWidth2 = imageWidth2_, imageHeight2 = imageHeight2_;
                                 log("minX2 = %f, minY2 = %f, maxX2 = %f, maxY2 = %f, imageWidth2 = %d, imageHeight2 = %d",
-                                        minX2, minY2, maxX2, maxY2, imageWidth2, imageHeight2);
+                                        minX2, minY2, maxX2_, maxY2_, imageWidth2_, imageHeight2_);
                                 if (!imagerTasks.isEmpty() && 
                                     minX2 != null && 
                                     minY2 != null && 
-                                    maxX2 != null && 
-                                    maxY2 != null && 
-                                    imageWidth2 != null && 
-                                    imageHeight2 != null) 
+                                    maxX2_ != null && 
+                                    maxY2_ != null && 
+                                    imageWidth2_ != null && 
+                                    imageHeight2_ != null) 
                                 {
-                                    int gridWidthPx = (int)Math.floor(((maxX2 - minX2_) / hiResPixelSize) + (double)imageWidth2);
-                                    int gridHeightPx = (int)Math.floor(((maxY2 - minY2_) / hiResPixelSize) + (double)imageHeight2);
+                                    int gridWidthPx = (int)Math.floor(((maxX2_ - minX2_) / hiResPixelSize) + (double)imageWidth2_);
+                                    int gridHeightPx = (int)Math.floor(((maxY2_ - minY2_) / hiResPixelSize) + (double)imageHeight2_);
                                     log("gridWidthPx = %d, gridHeightPx = %d", gridWidthPx, gridHeightPx);
                                     
                                     // this is the scale factor for creating the thumbnail images
@@ -641,6 +646,7 @@ public class WorkflowReport implements Report {
                                                             log("Couldn't retrieve image %s from the image cache!%n%s", image, sw);
                                                         }
                                                         if (imp != null) {
+                                                            MultiStagePosition msp = getMsp(task);
                                                             imp.setRoi(new Roi(roi.getX1(), roi.getY1(), roi.getX2()-roi.getX1()+1, roi.getY2()-roi.getY1()+1));
 
                                                             double roiScaleFactor = (double)ROI_GRID_PREVIEW_WIDTH / (double)(roi.getX2()-roi.getX1()+1);
@@ -656,7 +662,12 @@ public class WorkflowReport implements Report {
                                                                         Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
                                                                     attr("width", imp.getWidth()).
                                                                     attr("height", imp.getHeight()).
-                                                                    attr("title", roi.toString()).
+                                                                    attr("data-min-x", msp.getX() + (roi.getX1() - (imp.getWidth() / 2.0)) * pixelSize * (invertXAxis? -1.0 : 1.0)).
+                                                                    attr("data-max-x", msp.getX() + (roi.getX2() - (imp.getWidth() / 2.0)) * pixelSize * (invertXAxis? -1.0 : 1.0)).
+                                                                    attr("data-min-y", msp.getY() + (roi.getY1() - (imp.getHeight() / 2.0)) * pixelSize * (invertYAxis? -1.0 : 1.0)).
+                                                                    attr("data-max-y", msp.getY() + (roi.getY2() - (imp.getHeight() / 2.0)) * pixelSize * (invertYAxis? -1.0 : 1.0)).
+                                                                    //attr("title", roi.toString()).
+                                                                    attr("class", "stageCoords").
                                                                     attr("onclick", String.format("report.showImage(%d)", image.getId()));
                                                         }
                                                     });
@@ -720,7 +731,11 @@ public class WorkflowReport implements Report {
                                                                     Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
                                                                 attr("width", roiGridThumb.getWidth()).
                                                                 attr("height", roiGridThumb.getHeight()).
-                                                                attr("class", "map").
+                                                                attr("class", "map stageCoords").
+                                                                attr("data-min-x", minX2 - imageWidth2 / 2.0 * hiResPixelSize * (invertXAxis? -1.0 : 1.0)).
+                                                                attr("data-max-x", maxX2 + imageWidth2 / 2.0 * hiResPixelSize * (invertXAxis? -1.0 : 1.0)).
+                                                                attr("data-min-y", minY2 - imageHeight2 / 2.0 * hiResPixelSize * (invertYAxis? -1.0 : 1.0)).
+                                                                attr("data-max-y", maxY2 + imageHeight2 / 2.0 * hiResPixelSize * (invertYAxis? -1.0 : 1.0)).
                                                                 attr("usemap", String.format("#map-roi-%s-ROI%d", imager.getId(), roi.getId()));
                                                     });
                                                     Td().with(()->{
