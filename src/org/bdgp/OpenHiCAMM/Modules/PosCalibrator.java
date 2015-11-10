@@ -182,10 +182,10 @@ public class PosCalibrator implements Module {
         List<Task> refTasks = workflow.getTaskStatus().select(
                 where("moduleId", refSlideImagerModuleConf.getValue()));
         for (Task t : refTasks) {
-            TaskConfig slideId = workflow.getTaskConfig().selectOne(
+            TaskConfig refSlideIdConf = workflow.getTaskConfig().selectOne(
                     where("id", t.getId()).
                     and("key", "slideId"));
-            if ((slideIdConf == null && slideId == null) || Objects.equals(slideIdConf.getValue(), slideId.getValue())) {
+            if ((slideIdConf == null && refSlideIdConf == null) || Objects.equals(slideIdConf.getValue(), refSlideIdConf.getValue())) {
                 TaskConfig imageId = workflow.getTaskConfig().selectOne(
                         where("id", t.getId()).
                         and("key", "imageId"));
@@ -221,20 +221,25 @@ public class PosCalibrator implements Module {
         List<Task> compareTasks = workflow.getTaskStatus().select(
                 where("moduleId", compareSlideImagerModuleConf.getValue()));
         for (Task t : compareTasks) {
-            TaskConfig imageId = workflow.getTaskConfig().selectOne(
+            TaskConfig compareSlideIdConf = workflow.getTaskConfig().selectOne(
                     where("id", t.getId()).
-                    and("key", "imageId"));
-            if (imageId != null) {
-                Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
-                ImagePlus imp = image.getImagePlus(acqDao);
-                new ImageConverter(imp).convertToGray8();
-                TaggedImage taggedImage = image.getTaggedImage(acqDao);
-                try {
-                    Double xPos = MDUtils.getXPositionUm(taggedImage.tags);
-                    Double yPos = MDUtils.getYPositionUm(taggedImage.tags);
-                    compareImages.put(imp, new Point2D.Double(xPos, yPos));
-                } 
-                catch (JSONException e) {throw new RuntimeException(e);}
+                    and("key", "slideId"));
+            if ((slideIdConf == null && compareSlideIdConf == null) || Objects.equals(slideIdConf.getValue(), compareSlideIdConf.getValue())) {
+                TaskConfig imageId = workflow.getTaskConfig().selectOne(
+                        where("id", t.getId()).
+                        and("key", "imageId"));
+                if (imageId != null) {
+                    Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
+                    ImagePlus imp = image.getImagePlus(acqDao);
+                    new ImageConverter(imp).convertToGray8();
+                    TaggedImage taggedImage = image.getTaggedImage(acqDao);
+                    try {
+                        Double xPos = MDUtils.getXPositionUm(taggedImage.tags);
+                        Double yPos = MDUtils.getYPositionUm(taggedImage.tags);
+                        compareImages.put(imp, new Point2D.Double(xPos, yPos));
+                    } 
+                    catch (JSONException e) {throw new RuntimeException(e);}
+                }
             }
         }
 
