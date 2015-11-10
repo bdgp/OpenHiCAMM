@@ -171,11 +171,16 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             //core_.waitForDevice(core_.getShutterDevice());
             
             //set z-distance to the lowest z-distance of the stack
-            curDist = core_.getPosition(core_.getFocusDevice());
+            final int MAX_TRIES = 10;
+            int tries = 0;
+            do {
+                try { curDist = core_.getPosition(core_.getFocusDevice()); }
+                catch (Throwable e) { Thread.sleep(500); continue; }
+            } while (tries < MAX_TRIES);
+
             baseDist = curDist - SIZE_FIRST * NUM_FIRST; //-30
             core_.setPosition(core_.getFocusDevice(), baseDist);
             core_.waitForDevice(core_.getFocusDevice());
-            while (Math.abs(core_.getPosition(core_.getFocusDevice()) - baseDist) > WAIT_FOR_DEVICE_THRESHOLD) Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
             delay_time(300);
 
             //
@@ -217,14 +222,14 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                 {
                     core_.setPosition(core_.getFocusDevice(), baseDist + i * SIZE_FIRST);
                     core_.waitForDevice(core_.getFocusDevice());
-                    while (Math.abs(core_.getPosition(core_.getFocusDevice()) - (baseDist + i * SIZE_FIRST)) > WAIT_FOR_DEVICE_THRESHOLD) Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
                     delay_time(300);
 
                     // indx =1;
                     snapSingleImage();
                     // indx =0;
 
-                    curDist = core_.getPosition(core_.getFocusDevice());
+                    try { curDist = core_.getPosition(core_.getFocusDevice()); }
+                    catch (Throwable e) { Thread.sleep(500); continue; }
 
                     ////curSh = sharpNess(ipCurrent_);
                     //curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
@@ -262,14 +267,14 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                 {
                     core_.setPosition(core_.getFocusDevice(), baseDist + i * SIZE_SECOND);
                     core_.waitForDevice(core_.getFocusDevice());
-                    while (Math.abs(core_.getPosition(core_.getFocusDevice()) - (baseDist + i * SIZE_SECOND)) > WAIT_FOR_DEVICE_THRESHOLD) Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
                     Thread.sleep(300);
 
                     // indx =1;
                     snapSingleImage();
                     // indx =0;
 
-                    curDist = core_.getPosition(core_.getFocusDevice());
+                    try { curDist = core_.getPosition(core_.getFocusDevice()); }
+                    catch (Throwable e) { Thread.sleep(500); continue; }
 
                     ////curSh = sharpNess(ipCurrent_);
                     //curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
@@ -313,7 +318,6 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             if (bestDist != null) {
                 core_.setPosition(core_.getFocusDevice(), bestDist);
                 core_.waitForDevice(core_.getFocusDevice());
-                while (Math.abs(core_.getPosition(core_.getFocusDevice()) - bestDist) > WAIT_FOR_DEVICE_THRESHOLD) Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
                 delay_time(300);
             }
 
