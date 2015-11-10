@@ -157,7 +157,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			    int roiMarginWidth = (int)Math.floor((roiMarginPct / 100.0) * imageWidth * hiResPixelSize / pixelSize);
 			    int roiMarginHeight = (int)Math.floor((roiMarginPct / 100.0) * imageHeight * hiResPixelSize / pixelSize);
 			    int roiX1 = roi.getX1() - roiMarginWidth;
-			    int roiY1 = roi.getY1() + roiMarginHeight;
+			    int roiY1 = roi.getY1() - roiMarginHeight;
 			    int roiX2 = roi.getX2() + roiMarginWidth;
 			    int roiY2 = roi.getY2() + roiMarginHeight;
 			    
