@@ -59,7 +59,7 @@ public class ImageStitcher implements Module, ImageLogger {
     private static final double OVERLAP_WIDTH = 0.25;
     private static final double OVERLAP_HEIGHT = 0.25;
     private static final String STITCHED_IMAGE_DIRECTORY_PREFIX = "stitched";
-    private static final boolean DEBUG_MODE = true;
+    private static final boolean DEBUG_MODE = false;
 
     WorkflowRunner workflowRunner;
     String moduleId;
@@ -97,10 +97,8 @@ public class ImageStitcher implements Module, ImageLogger {
             if (image != null) imageTitles.add(Util.escape(image.getTitle()));
         }
         String imageTitleList = Util.join(", ", imageTitles);
-        if (DEBUG_MODE) {
-            logger.info(String.format(
-                    "%s: Image Table (%d count): [%s]", message, imageTitles.size(), imageTitleList));
-        }
+        logger.fine(String.format(
+                "%s: Image Table (%d count): [%s]", message, imageTitles.size(), imageTitleList));
     }
 
     @Override
@@ -391,15 +389,23 @@ public class ImageStitcher implements Module, ImageLogger {
         // the modified images with the same title, and close those instead.
         this.showImageTable("Before close()", logger);
         ImagePlus modifiedImage1 = WindowManager.getImage(image1.getTitle());
-        if (modifiedImage1 == null) throw new RuntimeException(String.format(
+        if (modifiedImage1 != null) {
+            modifiedImage1.changes = false;
+            modifiedImage1.close();
+        }
+        else {
+            logger.warning(String.format(
                 "Pairwise Stitching: could not find modified input image 1 with title: %s", image1.getTitle()));
-        modifiedImage1.changes = false;
-        modifiedImage1.close();
+        }
         ImagePlus modifiedImage2 = WindowManager.getImage(image2.getTitle());
-        if (modifiedImage2 == null) throw new RuntimeException(String.format(
+        if (modifiedImage2 != null) {
+            modifiedImage2.changes = false;
+            modifiedImage2.close();
+        } 
+        else {
+            logger.warning(String.format(
                 "Pairwise Stitching: could not find modified input image 2 with title: %s", image2.getTitle()));
-        modifiedImage2.changes = false;
-        modifiedImage2.close();
+        }
         this.showImageTable("After close()", logger);
         
         // get the fused image
