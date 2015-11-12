@@ -173,10 +173,10 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             //set z-distance to the lowest z-distance of the stack
             final int MAX_TRIES = 10;
             int tries = 0;
-            do {
-                try { curDist = core_.getPosition(core_.getFocusDevice()); }
-                catch (Throwable e) { Thread.sleep(500); continue; }
-            } while (tries < MAX_TRIES);
+            while (tries < MAX_TRIES) {
+                try { curDist = core_.getPosition(core_.getFocusDevice()); break; }
+                catch (Throwable e) { Thread.sleep(500); ++tries; }
+            }
 
             baseDist = curDist - SIZE_FIRST * NUM_FIRST; //-30
             core_.setPosition(core_.getFocusDevice(), baseDist);
