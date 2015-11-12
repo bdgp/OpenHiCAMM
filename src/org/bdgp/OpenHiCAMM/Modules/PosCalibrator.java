@@ -260,6 +260,11 @@ public class PosCalibrator implements Module {
         }
         // get the matched reference image's stage coordinates
         ImagePlus matchedReference = matcher.matched_reference;
+        if (matchedReference == null) {
+            logger.warning("No matched reference was found, skipping position calibration step.");
+            return Status.SUCCESS;
+        }
+
         Point2D.Double matchedRefCoords = compareImages.get(matchedReference);
         if (matchedRefCoords == null) throw new RuntimeException(
                 String.format("Could not find matched reference image %s in comparison list!", 
