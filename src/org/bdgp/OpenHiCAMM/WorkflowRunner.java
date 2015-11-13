@@ -97,6 +97,8 @@ public class WorkflowRunner {
     private String startModuleId;
     
     public static final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd.HH'T'mm:ss.SSSZ");
+    
+    private static WorkflowRunner workflowRunnerInstance;
 
     public boolean isResume() {
         return resume;
@@ -181,6 +183,8 @@ public class WorkflowRunner {
                 if (!keySet.contains(dc.getKey())) this.moduleConfig.insertOrUpdate(dc,"id","key");
             }
         }
+        
+        workflowRunnerInstance = this;
     }
 
     // instantiate the workflow module object instances
@@ -983,11 +987,11 @@ public class WorkflowRunner {
     // Various getters/setters
     public Dao<WorkflowModule> getWorkflow() { return workflow; }
     public Dao<ModuleConfig> getModuleConfig() { return moduleConfig; }
-    public Dao<WorkflowInstance> getWorkflowInstance() { return workflowInstance; }
+    public Dao<WorkflowInstance> getWorkflowInstanceDao() { return workflowInstance; }
     public Level getLogLevel() { return logLevel; }
     public void setLogLevel(Level logLevel) { this.logLevel = logLevel; }
     public int getMaxThreads() { return maxThreads; }
-    public WorkflowInstance getInstance() { return instance; }
+    public WorkflowInstance getWorkflowInstance() { return instance; }
     public Dao<Task> getTaskStatus() { return taskStatus; }
     public Dao<TaskDispatch> getTaskDispatch() { return taskDispatch; }
     public Dao<TaskConfig> getTaskConfig() { return taskConfig; }
@@ -1087,5 +1091,12 @@ public class WorkflowRunner {
     		ms = newms;
     	}
     	return configurations;
+    }
+    
+    public static WorkflowRunner getInstance() {
+        return workflowRunnerInstance;
+    }
+    public static void setInstance(WorkflowRunner workflowRunnerInstance) {
+        WorkflowRunner.workflowRunnerInstance = workflowRunnerInstance;
     }
 }

@@ -227,7 +227,7 @@ public class SlideImager implements Module, ImageLogger {
             // Set rootDir and acqName
             final String rootDir = new File(
                     workflowRunner.getWorkflowDir(), 
-                    workflowRunner.getInstance().getStorageLocation()).getPath();
+                    workflowRunner.getWorkflowInstance().getStorageLocation()).getPath();
             String acqName = this.moduleId;
 
             CMMCore core = this.script.getMMCore();

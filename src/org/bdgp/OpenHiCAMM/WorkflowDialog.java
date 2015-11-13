@@ -431,7 +431,7 @@ public class WorkflowDialog extends JDialog {
     public void initWorkflowRunner(boolean force) {
         Integer instanceId = workflowInstance.getSelectedIndex() < 0 ? null :
             Integer.parseInt(((String)workflowInstance.getItemAt(workflowInstance.getSelectedIndex())).replaceAll("^WF",""));
-        if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getInstance().getId()) || force) {
+        if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getWorkflowInstance().getId()) || force) {
             workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, Level.INFO, mmslide);
 
             workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);

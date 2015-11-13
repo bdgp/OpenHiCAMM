@@ -121,7 +121,7 @@ public class ReportDialog {
             // get the report file path
             File reportDir = new File(new File(
                     this.workflowRunner.getWorkflowDir(), 
-                    this.workflowRunner.getInstance().getStorageLocation()),
+                    this.workflowRunner.getWorkflowInstance().getStorageLocation()),
                     "reports");
             reportDir.mkdirs();
             String reportName = report.getClass().getSimpleName();

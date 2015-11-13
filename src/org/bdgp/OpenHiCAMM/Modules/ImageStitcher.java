@@ -549,7 +549,7 @@ public class ImageStitcher implements Module, ImageLogger {
     private File createStitchedImageFolder() {
         String rootDir = new File(
                 this.workflowRunner.getWorkflowDir(), 
-                this.workflowRunner.getInstance().getStorageLocation()).getPath();
+                this.workflowRunner.getWorkflowInstance().getStorageLocation()).getPath();
         int count = 1;
         File stitchedFolder = new File(rootDir, String.format("%s_%d", STITCHED_IMAGE_DIRECTORY_PREFIX, count));
         while (!stitchedFolder.mkdirs()) {
