@@ -1055,7 +1055,7 @@ public class WorkflowReport implements Report {
                             double diffY = diffYPx * pixelSize * invertY;
 
                             // write the diff to the log and stderr
-                            String message = String.format("PosCalibrator check: ref %s, compare %s, pixel offset: (%d,%d), stage offset: (%.2f,%.2f)", 
+                            String message = String.format("PosCalibrator\tref_image\t%s\tcompare_image\t%s\tpixel_offset\t%d\t%d\tstage_offset\t%.2f\t%.2f", 
                                     image1.getName(), image2.getName(), diffXPx, diffYPx, diffX, diffY);
                             IJ.log(message);
                             System.err.println(message);
