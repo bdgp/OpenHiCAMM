@@ -1,6 +1,9 @@
 package org.bdgp.OpenHiCAMM;
 
 import java.awt.Color;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +18,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -56,7 +60,9 @@ import com.google.common.io.Resources;
 
 import ij.IJ;
 import ij.ImagePlus;
+import ij.gui.ImageRoi;
 import ij.gui.NewImage;
+import ij.gui.Overlay;
 import ij.gui.Roi;
 import ij.process.Blitter;
 import ij.process.ImageProcessor;
@@ -308,7 +314,7 @@ public class WorkflowReport implements Report {
 
         // determine the bounds of the stage coordinates
         Double minX_ = null, minY_ = null, maxX = null, maxY = null; 
-        Integer imageWidth = null, imageHeight = null;
+        Integer imageWidth_ = null, imageHeight_ = null;
         for (Task task : imageTasks) {
             MultiStagePosition msp = getMsp(task);
 
@@ -316,7 +322,7 @@ public class WorkflowReport implements Report {
             if (maxX == null || msp.getX() > maxX) maxX = msp.getX();
             if (minY_ == null || msp.getY() < minY_) minY_ = msp.getY();
             if (maxY == null || msp.getY() > maxY) maxY = msp.getY();
-            if (imageWidth == null || imageHeight == null) {
+            if (imageWidth_ == null || imageHeight_ == null) {
                 Config imageIdConf = this.workflowRunner.getTaskConfig().selectOne(
                         where("id", task.getId()).and("key", "imageId"));
                 if (imageIdConf != null) {
@@ -330,15 +336,17 @@ public class WorkflowReport implements Report {
                         log("Couldn't retrieve image %s from the image cache!%n%s", image, sw);
                     }
                     if (imp != null) {
-                        imageWidth = imp.getWidth();
-                        imageHeight = imp.getHeight();
+                        imageWidth_ = imp.getWidth();
+                        imageHeight_ = imp.getHeight();
                     }
                 }
             }
         }
         Double minX = minX_, minY = minY_;
+        Integer imageWidth = imageWidth_, imageHeight = imageHeight_;
         log("minX = %f, minY = %f, maxX = %f, maxY = %f, imageWidth = %d, imageHeight = %d", 
                 minX, minY, maxX, maxY, imageWidth, imageHeight);
+
         if (minX != null && minY != null && maxX != null && maxY != null && imageWidth != null && imageHeight != null) {
             int slideWidthPx = (int)Math.floor(((maxX - minX) / pixelSize) + (double)imageWidth);
             int slideHeightPx = (int)Math.floor(((maxY - minY) / pixelSize) + (double)imageHeight);
@@ -472,6 +480,7 @@ public class WorkflowReport implements Report {
                     // make sure this image was included in the slide thumbnail image
                     if (!imageRois.containsKey(image.getId())) continue;
 
+                    MultiStagePosition msp = getMsp(task);
                     List<ROI> rois = roiDao.select(where("imageId", image.getId())); 
                     Collections.sort(rois, (a,b)->a.getId()-b.getId());
                     for (ROI roi : rois) {
@@ -498,8 +507,8 @@ public class WorkflowReport implements Report {
                                 Integer imageWidth2_ = null, imageHeight2_ = null;
                                 Map<String,List<Task>> imagerTasks = new TreeMap<String,List<Task>>(new ImageLabelComparator());
                                 for (Task imagerTask : this.workflowRunner.getTaskStatus().select(where("moduleId", imager.getId()))) {
-                                    MultiStagePosition msp = getMsp(imagerTask);
-                                    if (msp.hasProperty("ROI") && msp.getProperty("ROI").equals(new Integer(roi.getId()).toString())) 
+                                    MultiStagePosition imagerMsp = getMsp(imagerTask);
+                                    if (imagerMsp.hasProperty("ROI") && imagerMsp.getProperty("ROI").equals(new Integer(roi.getId()).toString())) 
                                     {
                                         TaskConfig imageLabelConf = this.workflowRunner.getTaskConfig().selectOne(
                                                 where("id", imagerTask.getId()).
@@ -512,10 +521,10 @@ public class WorkflowReport implements Report {
                                             }
                                             imagerTasks.get(imageLabel).add(imagerTask);
                                             
-                                            if (minX2_ == null || msp.getX() < minX2_) minX2_ = msp.getX();
-                                            if (minY2_ == null || msp.getY() < minY2_) minY2_ = msp.getY();
-                                            if (maxX2_ == null || msp.getX() > maxX2_) maxX2_ = msp.getX();
-                                            if (maxY2_ == null || msp.getY() > maxY2_) maxY2_ = msp.getY();
+                                            if (minX2_ == null || imagerMsp.getX() < minX2_) minX2_ = imagerMsp.getX();
+                                            if (minY2_ == null || imagerMsp.getY() < minY2_) minY2_ = imagerMsp.getY();
+                                            if (maxX2_ == null || imagerMsp.getX() > maxX2_) maxX2_ = imagerMsp.getX();
+                                            if (maxY2_ == null || imagerMsp.getY() > maxY2_) maxY2_ = imagerMsp.getY();
                                             if (imageWidth2_ == null || imageHeight2_ == null) {
                                                 Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
                                                         where("id", imagerTask.getId()).
@@ -540,6 +549,7 @@ public class WorkflowReport implements Report {
                                         }
                                     }
                                 }
+
                                 Double minX2 = minX2_, minY2 = minY2_, maxX2 = maxX2_, maxY2 = maxY2_; 
                                 Integer imageWidth2 = imageWidth2_, imageHeight2 = imageHeight2_;
                                 log("minX2 = %f, minY2 = %f, maxX2 = %f, maxY2 = %f, imageWidth2 = %d, imageHeight2 = %d",
@@ -595,13 +605,13 @@ public class WorkflowReport implements Report {
                                                         double xPos = 0.0;
                                                         double yPos = 0.0;
                                                         for (Task imagerTask : imagerTaskEntry.getValue()) {
+                                                            MultiStagePosition imagerMsp = getMsp(imagerTask);
                                                             Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
                                                                     where("id", new Integer(imagerTask.getId()).toString()).and("key", "imageId"));
                                                             if (imageIdConf2 != null) {
-                                                                MultiStagePosition msp = getMsp(imagerTask);
-                                                                for (int i=0; i<msp.size(); ++i) {
-                                                                    StagePosition sp = msp.get(i);
-                                                                    if (sp.numAxes == 2 && sp.stageName.compareTo(msp.getDefaultXYStage()) == 0) {
+                                                                for (int i=0; i<imagerMsp.size(); ++i) {
+                                                                    StagePosition sp = imagerMsp.get(i);
+                                                                    if (sp.numAxes == 2 && sp.stageName.compareTo(imagerMsp.getDefaultXYStage()) == 0) {
                                                                         xPos += sp.x;
                                                                         yPos += sp.y;
                                                                         ++posCount;
@@ -646,7 +656,6 @@ public class WorkflowReport implements Report {
                                                             log("Couldn't retrieve image %s from the image cache!%n%s", image, sw);
                                                         }
                                                         if (imp != null) {
-                                                            MultiStagePosition msp = getMsp(task);
                                                             imp.setRoi(new Roi(roi.getX1(), roi.getY1(), roi.getX2()-roi.getX1()+1, roi.getY2()-roi.getY1()+1));
 
                                                             double roiScaleFactor = (double)ROI_GRID_PREVIEW_WIDTH / (double)(roi.getX2()-roi.getX1()+1);
@@ -672,12 +681,13 @@ public class WorkflowReport implements Report {
                                                         }
                                                     });
                                                     Td().with(()->{
+                                                        List<Runnable> makeLinks = new ArrayList<>();
                                                         Map().attr("name", String.format("map-roi-%s-ROI%d", imager.getId(), roi.getId())).with(()->{
                                                             for (Task imagerTask : imagerTaskEntry.getValue()) {
                                                                 Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
                                                                         where("id", new Integer(imagerTask.getId()).toString()).and("key", "imageId"));
                                                                 if (imageIdConf2 != null) {
-                                                                    MultiStagePosition msp = getMsp(imagerTask);
+                                                                    MultiStagePosition imagerMsp = getMsp(imagerTask);
 
                                                                     // Get a thumbnail of the image
                                                                     Image image2 = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf2.getValue())));
@@ -697,11 +707,11 @@ public class WorkflowReport implements Report {
                                                                                 (int)Math.floor(imp.getHeight() * gridScaleFactor)));
                                                                         log("imp: resized width=%d, height=%d", imp.getWidth(), imp.getHeight());
 
-                                                                        int xloc = (int)Math.floor((msp.getX() - minX2) / hiResPixelSize);
+                                                                        int xloc = (int)Math.floor((imagerMsp.getX() - minX2) / hiResPixelSize);
                                                                         int xlocInvert = invertXAxis? gridWidthPx - (xloc + width) : xloc;
                                                                         int xlocScale = (int)Math.floor(xlocInvert * gridScaleFactor);
                                                                         log("xloc=%d, xlocInvert=%d, xlocScale=%d", xloc, xlocInvert, xlocScale);
-                                                                        int yloc = (int)Math.floor((msp.getY() - minY2) / hiResPixelSize);
+                                                                        int yloc = (int)Math.floor((imagerMsp.getY() - minY2) / hiResPixelSize);
                                                                         int ylocInvert = invertYAxis? gridHeightPx - (yloc + height) : yloc;
                                                                         int ylocScale = (int)Math.floor(ylocInvert * gridScaleFactor);
                                                                         log("yloc=%d, ylocInvert=%d, ylocScale=%d", yloc, ylocInvert, ylocScale);
@@ -718,6 +728,24 @@ public class WorkflowReport implements Report {
                                                                                         (int)Math.floor(tileRoi.getYBase()+tileRoi.getFloatHeight()))).
                                                                                 attr("title", image2.getName()).
                                                                                 attr("onclick", String.format("report.showImage(%d)", image2.getId()));
+                                                                        
+                                                                        makeLinks.add(()->{
+                                                                            P().with(()->{
+                                                                                A().attr("onclick",String.format("report.checkPosCalibration(%d,%d,%f,%f,%f,%f,%f,%f,%f,%f)",
+                                                                                        image.getId(), 
+                                                                                        image2.getId(), 
+                                                                                        pixelSize,
+                                                                                        hiResPixelSize,
+                                                                                        invertXAxis? -1.0 : 1.0,
+                                                                                        invertYAxis? -1.0 : 1.0,
+                                                                                        msp.getX(), 
+                                                                                        msp.getY(),
+                                                                                        imagerMsp.getX(), 
+                                                                                        imagerMsp.getY())).
+                                                                                    attr("href","#").
+                                                                                    text(String.format("Check pos calibration for image %s", image2.getName()));
+                                                                            });
+                                                                        });
                                                                     }
                                                                 }
                                                             }
@@ -737,6 +765,10 @@ public class WorkflowReport implements Report {
                                                                 attr("data-min-y", minY2 - imageHeight2 / 2.0 * hiResPixelSize * (invertYAxis? -1.0 : 1.0)).
                                                                 attr("data-max-y", maxY2 + imageHeight2 / 2.0 * hiResPixelSize * (invertYAxis? -1.0 : 1.0)).
                                                                 attr("usemap", String.format("#map-roi-%s-ROI%d", imager.getId(), roi.getId()));
+                                                        
+                                                        for (Runnable r : makeLinks) {
+                                                            r.run();
+                                                        }
                                                     });
                                                     Td().with(()->{
                                                         // get the downstream stitcher tasks
@@ -964,6 +996,75 @@ public class WorkflowReport implements Report {
         //log("called showImageFile(imagePath=%s)", imagePath);
         ImagePlus imp = new ImagePlus(imagePath);
         imp.show();
+    }
+    
+    public void checkPosCalibration(
+            int image1Id, 
+            int image2Id, 
+            double pixelSize, 
+            double hiResPixelSize, 
+            double invertX, 
+            double invertY,
+            double image1X,
+            double image1Y,
+            double image2X,
+            double image2Y) 
+    {
+        Dao<Acquisition> acqDao = this.workflowRunner.getInstanceDb().table(Acquisition.class);
+        Dao<Image> imageDao = this.workflowRunner.getInstanceDb().table(Image.class);
+        Image image1 = imageDao.selectOneOrDie(where("id", image1Id));
+        ImagePlus imp1 = image1.getImagePlus(acqDao);
+        Image image2 = imageDao.selectOneOrDie(where("id", image2Id));
+        ImagePlus imp2 = image2.getImagePlus(acqDao);
+        
+        imp2.setProcessor(imp2.getProcessor().resize(
+                (int)Math.floor(imp2.getWidth() * (hiResPixelSize / pixelSize)), 
+                (int)Math.floor(imp2.getHeight() * (hiResPixelSize / pixelSize))));
+        
+        int roiX = (int)Math.floor((image2X - image1X) / pixelSize * invertX + (imp1.getWidth() / 2.0) - (imp2.getWidth() / 2.0));
+        int roiY = (int)Math.floor((image2Y - image1Y) / pixelSize * invertY + (imp1.getHeight() / 2.0) - (imp2.getHeight() / 2.0));
+        int roiWidth = imp2.getWidth();
+        int roiHeight = imp2.getHeight();
+        ImageRoi roi = new ImageRoi(roiX, roiY, imp2.getProcessor());
+        roi.setName(image2.getName());
+        roi.setOpacity(0.3);
+
+        Overlay overlayList = imp1.getOverlay();
+        if (overlayList == null) overlayList = new Overlay();
+        overlayList.add(roi);
+        imp1.setOverlay(overlayList);
+
+        // pop open the window
+        imp1.setHideOverlay(false);
+        imp1.show();
+        
+        // wait for window to close, then calculate the ROI diff
+        imp1.getWindow().addWindowListener(new WindowAdapter() {
+            @Override public void windowClosing(WindowEvent e) {
+                Overlay overlayList = imp1.getOverlay();
+                if (overlayList != null) {
+                    for (int i=0; i<overlayList.size(); ++i) {
+                        Roi roi2 = overlayList.get(i);
+                        if (Objects.equals(roi2.getName(), image2.getName())) {
+                            int diffXPx = (int)Math.floor(
+                                    (roi2.getXBase() + roi2.getFloatWidth() / 2.0) 
+                                    - (roiX + roiWidth / 2.0));
+                            int diffYPx = (int)Math.floor(
+                                    (roi2.getYBase() + roi2.getFloatHeight() / 2.0) 
+                                    - (roiY + roiHeight / 2.0));
+                            double diffX = diffXPx * pixelSize * invertX;
+                            double diffY = diffYPx * pixelSize * invertY;
+
+                            // write the diff to the log and stderr
+                            String message = String.format("PosCalibrator check: ref %s, compare %s, pixel offset: (%d,%d), stage offset: (%.2f,%.2f)", 
+                                    image1.getName(), image2.getName(), diffXPx, diffYPx, diffX, diffY);
+                            IJ.log(message);
+                            System.err.println(message);
+                        }
+                    }
+                }
+            }
+        });
     }
     
     private MultiStagePosition getMsp(Task task) {
