@@ -227,42 +227,6 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	}
 	
 	/**
-	 * Override queryForFieldValues and queryForFieldValuesArgs to handle nulls
-	 */
-	public List<T> queryForFieldValues(Map<String, Object> fieldValues) throws SQLException {
-		return queryForFieldValues(fieldValues, false);
-	}
-	public List<T> queryForFieldValuesArgs(Map<String, Object> fieldValues) throws SQLException {
-		return queryForFieldValues(fieldValues, true);
-	}
-	private List<T> queryForFieldValues(Map<String, Object> fieldValues, boolean useArgs) throws SQLException {
-		if (fieldValues.size() == 0) {
-			return Collections.emptyList();
-		}
-		checkForInitialized();
-		QueryBuilder<T, Object> qb = queryBuilder();
-		Where<T, Object> where = qb.where();
-		for (Map.Entry<String, Object> entry : fieldValues.entrySet()) {
-		    if (!this.fields.containsKey(entry.getKey())) throw new RuntimeException(
-		            String.format("queryForFieldValues: Class %s does not contain field %s!", 
-		                    this.getDataClass(), entry.getKey()));
-		    String columnName = this.fields.get(entry.getKey()).getColumnName();
-			Object fieldValue = entry.getValue();
-			if (useArgs) {
-				fieldValue = new SelectArg(fieldValue);
-			}
-			if (entry.getValue() == null) {
-			    where.isNull(columnName);
-			}
-			else {
-    			where.eq(columnName, fieldValue);
-			}
-		}
-        where.and(fieldValues.size());
-        return qb.query();
-	}
-	
-	/**
 	 * Insert a value into the database table.
 	 * @param value Object to insert
 	 * @return The number of rows updated in the database. This should be 1.
@@ -364,9 +328,32 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	 * @return
 	 */
 	public List<T> select(Map<String,Object> fieldValues) {
-	    try { return queryForFieldValuesArgs(fieldValues); }
-        catch (SQLException e) {throw new RuntimeException(e);}
+	    try {
+            if (fieldValues.size() == 0) {
+                return Collections.emptyList();
+            }
+            checkForInitialized();
+            QueryBuilder<T, Object> qb = queryBuilder();
+            Where<T, Object> where = qb.where();
+            for (Map.Entry<String, Object> entry : fieldValues.entrySet()) {
+                if (!this.fields.containsKey(entry.getKey())) throw new RuntimeException(
+                        String.format("select: Class %s does not contain field %s!", 
+                                this.getDataClass(), entry.getKey()));
+                String columnName = this.fields.get(entry.getKey()).getColumnName();
+                Object fieldValue = new SelectArg(entry.getValue());
+                if (entry.getValue() == null) {
+                    where.isNull(columnName);
+                }
+                else {
+                    where.eq(columnName, fieldValue);
+                }
+            }
+            where.and(fieldValues.size());
+            return qb.query();
+	    }
+	    catch (SQLException e) {throw new RuntimeException(e);}
 	}
+	
 	public List<T> select(T matchObj) {
 	    try { return queryForMatchingArgs(matchObj); }
         catch (SQLException e) {throw new RuntimeException(e);}
