@@ -714,9 +714,10 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
         }
         finally {
             try {
+                Long autofocusDuration = new Long(this.getPropertyValue("autofocusDuration"));
                 this.setProperty(new PropertyItem(
                         "autofocusDuration", 
-                        new Long(new Date().getTime() - startTime.getTime()).toString()));
+                        new Long(new Date().getTime() - startTime.getTime() + autofocusDuration).toString()));
             } 
             catch (MMException e) {throw new RuntimeException(e);}
         }
@@ -737,9 +738,10 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
         }
         finally {
             try {
+                Long autofocusDuration = new Long(this.getPropertyValue("autofocusDuration"));
                 this.setProperty(new PropertyItem(
                         "autofocusDuration", 
-                        new Long(new Date().getTime() - startTime.getTime()).toString()));
+                        new Long(new Date().getTime() - startTime.getTime() + autofocusDuration).toString()));
             } 
             catch (MMException e) {throw new RuntimeException(e);}
         }
@@ -773,6 +775,8 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
           maxAutoFocus = getPropertyValue(KEY_MAX_AUTOFOCUS).equals("")? null : 
               Double.parseDouble(getPropertyValue(KEY_MAX_AUTOFOCUS));
       
+          setPropertyValue("autofocusDuration", new Long(0).toString());
+
       } catch (NumberFormatException e) {
          e.printStackTrace();
       } catch (MMException e) {
