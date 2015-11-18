@@ -437,6 +437,24 @@ public class SlideImager implements Module, ImageLogger {
                      }
                 }
 
+                // Get the ImageCache object for this acquisition
+                MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
+                ImageCache imageCache = mmacquisition.getImageCache();
+                if (imageCache == null) throw new RuntimeException("MMAcquisition object was not initialized; imageCache is null!");
+                
+                // Wait for the image cache to finish...
+                while (!imageCache.isFinished()) {
+                    try { 
+                        logger.info("Waiting for the ImageCache to finish...");
+                        Thread.sleep(1000); 
+                    } 
+                    catch (InterruptedException e) { 
+                        logger.warning("Thread was interrupted while waiting for the Image Cache to finish");
+                        return Status.ERROR;
+                    }
+                }
+                if (!imageCache.isFinished()) throw new RuntimeException("ImageCache is not finished!");
+
                 Date endAcquisition = new Date();
                 this.workflowRunner.getTaskConfig().insertOrUpdate(
                         new TaskConfig(new Integer(task.getId()).toString(), 
@@ -460,24 +478,6 @@ public class SlideImager implements Module, ImageLogger {
                     } 
                     catch (MMException e) { throw new RuntimeException(e); }
                 }
-
-                // Get the ImageCache object for this acquisition
-                MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
-                ImageCache imageCache = mmacquisition.getImageCache();
-                if (imageCache == null) throw new RuntimeException("MMAcquisition object was not initialized; imageCache is null!");
-                
-                // Wait for the image cache to finish...
-                while (!imageCache.isFinished()) {
-                    try { 
-                        logger.info("Waiting for the ImageCache to finish...");
-                        Thread.sleep(1000); 
-                    } 
-                    catch (InterruptedException e) { 
-                        logger.warning("Thread was interrupted while waiting for the Image Cache to finish");
-                        return Status.ERROR;
-                    }
-                }
-                if (!imageCache.isFinished()) throw new RuntimeException("ImageCache is not finished!");
 
                 // Get the set of taggedImage labels from the acquisition
                 Set<String> taggedImages = imageCache.imageKeys();
