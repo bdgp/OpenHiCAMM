@@ -177,7 +177,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     	    
     	    // fill the set map and fields map
     	    for (FieldType field : this.tableInfo.getFieldTypes()) {
-    	        Object fieldValue = field.extractRawJavaFieldValue(value);
+    	        Object fieldValue = field.getFieldValueIfNotDefault(value);
                 if (fieldValue != null) {
                     set.put(field.getFieldName(), fieldValue);
                 }
@@ -203,31 +203,27 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	    insertOrUpdate(T value, String ... where)
 	{
 	    try {
-    	    // Construct the query
-    	    Map<String,Object> query = new HashMap<String,Object>();
-    	    for (String w : where) {
-    	        if (!this.fields.containsKey(w)) {
-    	            throw new SQLException("Class "+this.getDataClass().getName()
-    	                    +" does not contain field "+w);
-    	        }
-    	        query.put(w, fields.get(w).extractRawJavaFieldValue(value));
-    	    }
-	        
-    	    if (this.queryForFieldValuesArgs(query).size() == 0) {
-    	        // try an insert, if that fails, try an update
-    	        try {
-                    int rows = this.create(value);
-                    return new Dao.CreateOrUpdateStatus(true, false, rows);
-    	        } catch (SQLException e) {
-                    int rows = this.update(value, where);
-                    return new Dao.CreateOrUpdateStatus(false, true, rows);
-    	        }
-    	    }
-    	    else {
-    	        int rows = this.update(value, where);
-    	        return new Dao.CreateOrUpdateStatus(false, true, rows);
-    	    }
-	    } catch (SQLException e) {throw new RuntimeException(e);}
+            // Construct the query
+            Map<String,Object> query = new HashMap<String,Object>();
+            for (String w : where) {
+                if (!this.fields.containsKey(w)) {
+                    throw new RuntimeException("Class "+this.getDataClass().getName()
+                            +" does not contain field "+w);
+                }
+                query.put(w, fields.get(w).extractRawJavaFieldValue(value));
+            }
+            
+            T existing = this.selectOne(query);
+            if (existing == null) {
+                // try an insert, if that fails, try an update
+                int rows = this.create(value);
+                return new Dao.CreateOrUpdateStatus(true, false, rows);
+            }
+
+            int rows = this.update(value, where);
+            return new Dao.CreateOrUpdateStatus(false, true, rows);
+	    }
+	    catch (SQLException e) {throw new RuntimeException(e);}
 	}
 	
 	/**
