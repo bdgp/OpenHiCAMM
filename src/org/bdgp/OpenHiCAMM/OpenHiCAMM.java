@@ -13,7 +13,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
-//import org.bdgp.OpenHiCAMM.Modules.OldBDGPROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.PosCalibrator;
 import org.bdgp.OpenHiCAMM.Modules.BDGPROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.ImageStitcher;
@@ -89,6 +88,8 @@ public class OpenHiCAMM implements MMPlugin {
                 //dialog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 dialog.pack();
                 dialog.setVisible(true);
+                dialog.toFront();
+                //dialog.requestFocus();
                 
                 // Handle uncaught exceptions by print to stderr and displaying a GUI
                 // window with the stack trace.
