@@ -114,6 +114,8 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
       createProperty(KEY_MIN_AUTOFOCUS, "");
       createProperty(KEY_MAX_AUTOFOCUS, "");
       
+      createProperty("autofocusDuration", new Long(0).toString());
+      
       loadSettings();
     }
 
