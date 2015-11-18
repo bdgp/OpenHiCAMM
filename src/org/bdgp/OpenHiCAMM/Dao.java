@@ -1,11 +1,6 @@
 package org.bdgp.OpenHiCAMM;
 
-import java.io.File;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -19,7 +14,6 @@ import com.j256.ormlite.stmt.SelectArg;
 import com.j256.ormlite.stmt.UpdateBuilder;
 import com.j256.ormlite.stmt.Where;
 import com.j256.ormlite.table.DatabaseTableConfig;
-import com.j256.ormlite.table.TableInfo;
 import com.j256.ormlite.table.TableUtils;
 import com.j256.ormlite.dao.BaseDaoImpl;
 
@@ -30,18 +24,26 @@ import com.j256.ormlite.dao.BaseDaoImpl;
  * @param <ID>
  */
 public class Dao<T> extends BaseDaoImpl<T,Object> {
-	protected static final String options = 
-	        "fs=\\t;textdb.allow_full_path=true;encoding=UTF-8;quoted=true;"+
-            "cache_rows=10000;cache_size=2000;ignore_first=true";
 	private Connection connection;
+	private Map<String,FieldType> fields;
 	
 	protected Dao(Connection connection, Class<T> class_) throws SQLException { 
 	    super(connection, class_);
 	    this.connection = connection;
+
+        this.fields = new HashMap<>();
+        for (FieldType field : this.tableInfo.getFieldTypes()) {
+            this.fields.put(field.getFieldName(), field);
+        }
 	}
 	protected Dao(Connection connection, DatabaseTableConfig<T> tableConfig) throws SQLException { 
 	    super(connection, tableConfig);
 	    this.connection = connection;
+
+        this.fields = new HashMap<>();
+        for (FieldType field : this.tableInfo.getFieldTypes()) {
+            this.fields.put(field.getFieldName(), field);
+        }
 	}
 	
 	public Connection getConnection() {
@@ -63,22 +65,24 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     		// get the table configuration
     		DatabaseTableConfig<T> tableConfig = DatabaseTableConfig.fromClass(
     		        connection, class_);
-    		
-    		if (tableConfig == null) {
-        		// get the field configurations
-        		List<DatabaseFieldConfig> fieldConfigs = new ArrayList<DatabaseFieldConfig>();
-        		for (Field field : class_.getFields()) {
-        		    DatabaseFieldConfig dfield = DatabaseFieldConfig.fromField(
-        		            connection.getDatabaseType(), class_.getName(), field);
-        		    if (dfield == null) {
-        		        dfield = new DatabaseFieldConfig(field.getName());
-        		    }
-        		    fieldConfigs.add(dfield);
-        		}
-        		tableConfig = new DatabaseTableConfig<T>(class_, fieldConfigs);
-    		}
-    		
     		tableConfig.setTableName(tablename);
+
+            // make sure all the column names are uppercased
+            if (connection.getDatabaseType().isEntityNamesMustBeUpCase()) {
+                FieldType[] fieldTypes = tableConfig.getFieldTypes(connection.getDatabaseType());
+                for (int i=0; i<fieldTypes.length; ++i) {
+                    FieldType ft = fieldTypes[i];
+                    DatabaseFieldConfig fieldConfig = DatabaseFieldConfig.fromField(
+                            connection.getDatabaseType(), 
+                            ft.getTableName(), 
+                            ft.getField());
+                    if (fieldConfig != null) {
+                        fieldConfig.setColumnName(ft.getColumnName().toUpperCase());
+                        fieldTypes[i] = new FieldType(connection, ft.getTableName(), ft.getField(), fieldConfig, class_);
+                    }
+                }
+            }
+
     		Dao<T> dao = new Dao<T>(connection, tableConfig);
     		
     		// create the table if it doesn't already exist
@@ -96,95 +100,10 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	    catch (SQLException e) { throw new RuntimeException(e); }
     }
 	
-	/**
-	 * Return a DAO instance for a database table.
-	 * 
-	 * @param class_ The class to wrap
-	 * @param connection The database connection
-	 * @param tablename The name of the table to access
-	 * @return A DAO instance
-	 * @throws SQLException
-	 */
-	public static synchronized <T> Dao<T> getTable(Class<T> class_, String dbPath, String tablename) 
-	{
-        return getTable(class_, Connection.get(dbPath), tablename);
-    }
-	
-	/**
-	 * Return a DAO instance for a CSV file.
-	 * 
-	 * @param class_ The class to wrap
-	 * @param dir The directory to store the CSV file
-	 * @param filename The file name of the CSV file
-	 * @return A DAO instance
-	 * @throws SQLException
-	 */
-	public static synchronized <T> Dao<T> getFile(Class<T> class_, Connection connection, String filename) 
-	{
-	    try {
-    		File file = new File(filename);
-    		
-    		// get the table configuration
-    		DatabaseTableConfig<T> tableConfig = DatabaseTableConfig.fromClass(
-    		        connection, class_);
-    		
-    		if (tableConfig == null) {
-        		// get the field configurations
-        		List<DatabaseFieldConfig> fieldConfigs = new ArrayList<DatabaseFieldConfig>();
-        		for (Field field : class_.getFields()) {
-        		    DatabaseFieldConfig dfield = DatabaseFieldConfig.fromField(
-        		            connection.getDatabaseType(), class_.getName(), field);
-        		    if (dfield == null) {
-        		        dfield = new DatabaseFieldConfig(field.getName());
-        		    }
-        		    fieldConfigs.add(dfield);
-        		}
-        		tableConfig = new DatabaseTableConfig<T>(class_, fieldConfigs);
-    		}
-    		
-    		// set the table name to the file's path. 
-    		// Hopefully the ORM supports quoted identifiers...
-    		tableConfig.setTableName(file.getAbsolutePath());
-    		Dao<T> dao = new Dao<T>(connection, tableConfig);
-    		
-    		// create the table if it doesn't already exist
-    		if (!dao.isTableExists()) {
-    		    // make sure the parent directories exist
-    		    File dir = file.getParentFile();
-    		    if (dir != null && !(dir.exists() && dir.isDirectory())) {
-    		        dir.mkdirs();
-            		if (!(dir.exists() && dir.isDirectory())) {
-            		    throw new SQLException("Could not create directory "+dir.getPath());
-            		}
-    		    }
-    		    // call CREATE TEXT TABLE
-        		List<String> create = TableUtils.getCreateTableStatements(connection, tableConfig);
-        		for (String c: create) {
-        		    dao.executeRaw(c.replaceFirst("^CREATE TABLE ","CREATE TEXT TABLE "));
-        		}
-        		
-        		// call SET TABLE
-        		if (file.getPath().matches("[;\\]")) {
-        		    throw new SQLException("Invalid characters in filename: "+file.getPath());
-        		}
-        		String tablename = file.getPath().replaceAll("\"","\"\"");
-        		String source = tablename+';'+options.replaceAll("\"","\"\"");
-        		dao.executeRaw("SET TABLE \""+tablename+"\" SOURCE \""+source+"\"");
-        		
-        		// build the header string
-        		StringBuilder headerBuilder = new StringBuilder();
-        		List<DatabaseFieldConfig> fields = tableConfig.getFieldConfigs();
-        		for (int i=0; i<fields.size(); ++i) {
-        		    headerBuilder.append(fields.get(i).getColumnName());
-        		    if (i != fields.size()-1) headerBuilder.append("\t");
-        		}
-        		String header = headerBuilder.toString().replaceAll("'","''");
-        		dao.executeRaw("SET TABLE \""+tablename+"\" SOURCE HEADER '"+header+"'");
-    		}
-    		return dao;
-	    }
-	    catch (SQLException e) { throw new RuntimeException(e); }
-    }
+	@Override
+	public boolean isTableExists() {
+	    return this.connection.isTableExists(this.getTableInfo().getTableName());
+	}
 	
 	/**
 	 * Update function which takes a dao, a map of columns to set,
@@ -200,20 +119,29 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	{
 	    try {
     	    UpdateBuilder<T,Object> update = this.updateBuilder();
-    	    
+
     	    // Update all columns, and store the fields in a map
     	    for (Map.Entry<String,Object> entry : set.entrySet()) {
-        	    update.updateColumnValue(entry.getKey(), entry.getValue());
+    	        if (!this.fields.containsKey(entry.getKey())) throw new RuntimeException(
+    	                String.format("Update set: Class %s has no field named %s!",
+    	                        this.getDataClass(), entry.getKey()));
+        	    update.updateColumnValue(
+        	            this.fields.get(entry.getKey()).getColumnName(), 
+        	            entry.getValue());
     	    }
     	    // Add the where clause
     	    if (where.size()>0) {
                 Where<T,Object> whereClause = update.where();
                 for (Map.Entry<String,Object> entry : where.entrySet()) {
+                    if (!this.fields.containsKey(entry.getKey())) throw new RuntimeException(
+                            String.format("Update where: Class %s has no field named %s!",
+                                    this.getDataClass(), entry.getKey()));
+                    String columnName = this.fields.get(entry.getKey()).getColumnName();
                     if (entry.getValue() == null) {
-                        whereClause.isNull(entry.getKey());
+                        whereClause.isNull(columnName);
                     }
                     else {
-                        whereClause.eq(entry.getKey(), new SelectArg(entry.getValue()));
+                        whereClause.eq(columnName, new SelectArg(entry.getValue()));
                     }
                 }
                 whereClause.and(where.size());
@@ -244,27 +172,19 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	        String ... where) 
 	{
 	    try {
-	        Class<T> class_ = this.getDataClass();
-    	    TableInfo<T,Object> table = new TableInfo<T,Object>(connection, this, class_);
     	    Map<String,Object> set = new HashMap<String,Object>();
     	    Map<String,Object> whereMap = new HashMap<String,Object>();
-    	    Map<String,FieldType> fields = new HashMap<String,FieldType>();
     	    
     	    // fill the set map and fields map
-    	    for (FieldType field : table.getFieldTypes()) {
-    	        fields.put(field.getFieldName(), field);
-    	        Object fieldValue = field.getFieldValueIfNotDefault(value);
+    	    for (FieldType field : this.tableInfo.getFieldTypes()) {
+    	        Object fieldValue = field.extractRawJavaFieldValue(value);
                 if (fieldValue != null) {
-                    set.put(field.getColumnName(), fieldValue);
+                    set.put(field.getFieldName(), fieldValue);
                 }
     	    }
     	    // fill the where map
     	    for (String w : where) {
-    	        if (!fields.containsKey(w)) {
-    	            throw new SQLException("Class "+class_.getName()
-    	                    +" does not contain field "+w);
-    	        }
-    	        whereMap.put(w, fields.get(w).extractJavaFieldValue(value));
+    	        whereMap.put(w, fields.get(w).extractRawJavaFieldValue(value));
     	    }
     	    // call the more generic update function
             return this.update(set, whereMap);
@@ -283,21 +203,14 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	    insertOrUpdate(T value, String ... where)
 	{
 	    try {
-	        Class<T> class_ = this.getDataClass();
-	        TableInfo<T,Object> table = new TableInfo<T,Object>(connection, this, class_);
-            Map<String,FieldType> fields = new HashMap<String,FieldType>();
-            for (FieldType field : table.getFieldTypes()) {
-    	        fields.put(field.getFieldName(), field);
-    	    }
-    	    
     	    // Construct the query
     	    Map<String,Object> query = new HashMap<String,Object>();
     	    for (String w : where) {
-    	        if (!fields.containsKey(w)) {
-    	            throw new SQLException("Class "+class_.getName()
+    	        if (!this.fields.containsKey(w)) {
+    	            throw new SQLException("Class "+this.getDataClass().getName()
     	                    +" does not contain field "+w);
     	        }
-    	        query.put(w, fields.get(w).extractJavaFieldValue(value));
+    	        query.put(w, fields.get(w).extractRawJavaFieldValue(value));
     	    }
 	        
     	    if (this.queryForFieldValuesArgs(query).size() == 0) {
@@ -334,15 +247,19 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 		QueryBuilder<T, Object> qb = queryBuilder();
 		Where<T, Object> where = qb.where();
 		for (Map.Entry<String, Object> entry : fieldValues.entrySet()) {
+		    if (!this.fields.containsKey(entry.getKey())) throw new RuntimeException(
+		            String.format("queryForFieldValues: Class %s does not contain field %s!", 
+		                    this.getDataClass(), entry.getKey()));
+		    String columnName = this.fields.get(entry.getKey()).getColumnName();
 			Object fieldValue = entry.getValue();
 			if (useArgs) {
 				fieldValue = new SelectArg(fieldValue);
 			}
 			if (entry.getValue() == null) {
-			    where.isNull(entry.getKey());
+			    where.isNull(columnName);
 			}
 			else {
-    			where.eq(entry.getKey(), fieldValue);
+    			where.eq(columnName, fieldValue);
 			}
 		}
         where.and(fieldValues.size());
@@ -369,19 +286,14 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	 * @return A refreshed copy of the object
 	 */
 	public T reload(T value, String ... where) {
-		Class<T> class_ = this.getDataClass();
 		// get a map of the where values
-		Map<String,Object> values = new HashMap<String,Object>();
+		Map<String,Object> values = new HashMap<>();
 		for (String w : where) {
-			try {
-				Field f = class_.getDeclaredField(w);
-				f.setAccessible(true);
-				values.put(w, f.get(value));
-			} 
-			catch (IllegalArgumentException e) {throw new RuntimeException(e);} 
-			catch (IllegalAccessException e) {throw new RuntimeException(e);} 
-			catch (NoSuchFieldException e) {throw new RuntimeException(e);} 
-			catch (SecurityException e) {throw new RuntimeException(e);}
+		    if (!this.fields.containsKey(w)) throw new RuntimeException(
+		            String.format("reload: class %s does not have field %s!", 
+		                    this.getDataClass(), w));
+		    try { values.put(w, this.fields.get(w).extractRawJavaFieldValue(value)); } 
+		    catch (SQLException e) {throw new RuntimeException(e);}
 		}
 		// get the updated object values
 		T updated = where.length == 0?
@@ -389,33 +301,10 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 				this.selectOneOrDie(values);
 
 		// set the updated object values on the original field
-		FIELD:
-        for (Field field : class_.getDeclaredFields()) {
-            field.setAccessible(true);
-			try {
-				// make sure the field is an annotated database field. If not, skip it.
-                DatabaseFieldConfig dfield = DatabaseFieldConfig.fromField(
-				        connection.getDatabaseType(), class_.getName(), field);
-                if (dfield != null) {
-                	// first try setting using a setter
-                	String setterName = "set"+field.getName().substring(0,1).toUpperCase()+field.getName().substring(1);
-                	for (Method method : class_.getDeclaredMethods()) {
-                		if (method.getName().equals(setterName)) {
-                            method.setAccessible(true);
-                            try { method.invoke(value, field.get(updated)); } 
-                            catch (IllegalArgumentException e) {throw new RuntimeException(e);} 
-                            catch (IllegalAccessException e) {throw new RuntimeException(e);} 
-                            catch (InvocationTargetException e) {throw new RuntimeException(e);}
-                            continue FIELD;
-                		}
-                	}
-                	// next try setting using the raw field
-                    try { field.set(value, field.get(updated)); } 
-                    catch (IllegalArgumentException e) {throw new RuntimeException(e);} 
-                    catch (IllegalAccessException e) {throw new RuntimeException(e);}
-                }
-			} 
-			catch (SQLException e) {throw new RuntimeException(e);}
+        for (Map.Entry<String,FieldType> entry : this.fields.entrySet()) {
+            FieldType field = entry.getValue();
+            try { field.assignField(value, field.extractRawJavaFieldValue(updated), false, this.getObjectCache()); } 
+            catch (IllegalArgumentException | SQLException e) { throw new RuntimeException(e); }
         }
 		return value;
 	}
@@ -456,11 +345,15 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     	    if (where.size()>0) {
                 Where<T,Object> whereClause = delete.where();
                 for (Map.Entry<String,Object> entry : where.entrySet()) {
+                    if (!this.fields.containsKey(entry.getKey())) throw new RuntimeException(
+                            String.format("delete: Class %s has no field named %s!", 
+                                    this.getDataClass(), entry.getKey()));
+                    String columnName = this.fields.get(entry.getKey()).getColumnName();
                     if (entry.getValue() == null) {
-                        whereClause.isNull(entry.getKey());
+                        whereClause.isNull(columnName);
                     }
                     else {
-                        whereClause.eq(entry.getKey(), new SelectArg(entry.getValue()));
+                        whereClause.eq(columnName, new SelectArg(entry.getValue()));
                     }
                 }
                 whereClause.and(where.size());
