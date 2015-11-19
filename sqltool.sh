@@ -3,4 +3,4 @@
 if hash rlwrap &>/dev/null; then
   RLWRAP=rlwrap
 fi
-exec $RLWRAP mvn -f "$(dirname "$0")/pom.xml" -q exec:java -Dexec.mainClass=org.bdgp.OpenHiCAMM.SqlTool -Dexec.classpathScope=compile -Dexec.args="$*"
+exec $RLWRAP -z pipeto mvn -f "$(dirname "$0")/pom.xml" -q exec:java -Dexec.mainClass=org.bdgp.OpenHiCAMM.SqlTool -Dexec.classpathScope=compile -Dexec.args="$*"
