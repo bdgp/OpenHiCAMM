@@ -228,9 +228,6 @@ public class WorkflowRunner {
         instance.createStorageLocation(this.workflowDirectory.getPath());
         workflowInstance.update(instance,"id");
         
-        // create a new schema for the workflow instance
-        this.workflowDb.createSchema(instance.getName());
-        
         return instance;
     }
     

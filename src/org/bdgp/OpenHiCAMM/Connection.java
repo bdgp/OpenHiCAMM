@@ -234,6 +234,9 @@ public class Connection extends JdbcConnectionSource {
     
     public void setSchema(String schema) {
         try {
+            if (!isSchemaExists(schema)) {
+                createSchema(schema);
+            }
             DatabaseConnection dc = this.getReadWriteConnection();
             StringBuilder sb = new StringBuilder();
             sb.append("SET SCHEMA ");
@@ -264,7 +267,7 @@ public class Connection extends JdbcConnectionSource {
             // we only support schema checking for JdbcDatabaseConnections.
             DatabaseConnection dc = this.getReadWriteConnection();
             if (!JdbcDatabaseConnection.class.isAssignableFrom(dc.getClass()) || tableSchem == null) {
-                return dc.isTableExists(tableName);
+                throw new RuntimeException("Only JdbcDatabaseConnections are supported!");
             }
 
             JdbcDatabaseConnection jdc = (JdbcDatabaseConnection)dc;
@@ -282,6 +285,40 @@ public class Connection extends JdbcConnectionSource {
                     String dbTableName = results.getString(table_name);
                     String dbTableSchem = results.getString(table_schem);
                     if (tableName.equalsIgnoreCase(dbTableName) && tableSchem.equalsIgnoreCase(dbTableSchem)) {
+                        return true;
+                    }
+                } while (results.next());
+                return false;
+            } finally {
+                if (results != null) {
+                    results.close();
+                }
+            }
+	    } 
+	    catch (SQLException e) { throw new RuntimeException(e); }
+	}
+	
+	public boolean isSchemaExists(String tableSchem) {
+	    try {
+            // we only support schema checking for JdbcDatabaseConnections.
+            DatabaseConnection dc = this.getReadWriteConnection();
+            if (!JdbcDatabaseConnection.class.isAssignableFrom(dc.getClass()) || tableSchem == null) {
+                throw new RuntimeException("Only JdbcDatabaseConnections are supported!");
+            }
+
+            JdbcDatabaseConnection jdc = (JdbcDatabaseConnection)dc;
+            DatabaseMetaData metaData = jdc.getInternalConnection().getMetaData();
+            ResultSet results = null;
+            try {
+                results = metaData.getSchemas();
+                // we do it this way because some result sets don't like us to findColumn if no results
+                if (!results.next()) {
+                    return false;
+                }
+                int table_schem = results.findColumn("TABLE_SCHEM");
+                do {
+                    String dbTableSchem = results.getString(table_schem);
+                    if (tableSchem.equalsIgnoreCase(dbTableSchem)) {
                         return true;
                     }
                 } while (results.next());
