@@ -262,10 +262,6 @@ public class SlideImager implements Module, ImageLogger {
                 }
             }
             
-            // apply the auto-focus settings
-            Autofocus autofocus = this.script.getAutofocus();
-            autofocus.applySettings();
-
             // get the slide ID from the config
             if (!conf.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
             final Integer slideId = new Integer(conf.get("slideId").getValue());
@@ -468,6 +464,8 @@ public class SlideImager implements Module, ImageLogger {
                                 new Long(endAcquisition.getTime() - startAcquisition.getTime()).toString()), 
                         "id", "key");
                 
+                // get the autofocus duration from the autofocus object
+                Autofocus autofocus = this.script.getAutofocus();
                 if (new HashSet<String>(Arrays.asList(autofocus.getPropertyNames())).contains("autofocusDuration")) {
                     try {
                         this.workflowRunner.getTaskConfig().insertOrUpdate(
@@ -478,6 +476,8 @@ public class SlideImager implements Module, ImageLogger {
                     } 
                     catch (MMException e) { throw new RuntimeException(e); }
                 }
+                // reset the autofocus settings back to defaults
+                autofocus.applySettings();
 
                 // Get the set of taggedImage labels from the acquisition
                 Set<String> taggedImages = imageCache.imageKeys();
