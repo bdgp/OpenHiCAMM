@@ -96,7 +96,7 @@ public class WorkflowRunner {
     private Long startTime;
     private String startModuleId;
     
-    public static final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd.HH'T'mm:ss.SSSZ");
+    public static final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     
     private static WorkflowRunner workflowRunnerInstance;
 
@@ -579,6 +579,9 @@ public class WorkflowRunner {
                         WorkflowRunner.this.getModuleConfig().delete(
                                 where("id", startModuleId).
                                 and("key", "endTime"));
+                        WorkflowRunner.this.getModuleConfig().delete(
+                                where("id", startModuleId).
+                                and("key", "duration"));
                     }
 
                     // call the runInitialize module method
@@ -651,9 +654,11 @@ public class WorkflowRunner {
                     Status status = coalesceStatuses(statuses);
 
                     long endTime = System.currentTimeMillis();
-                    String endTimestamp = dateFormat.format(new Date(WorkflowRunner.this.startTime)); 
+                    String endTimestamp = dateFormat.format(new Date(endTime)); 
                     WorkflowRunner.this.getModuleConfig().insertOrUpdate(
                             new ModuleConfig(startModuleId, "endTime", endTimestamp), "id","key");
+                    WorkflowRunner.this.getModuleConfig().insertOrUpdate(
+                            new ModuleConfig(startModuleId, "duration", new Long(endTime - startTime).toString()), "id","key");
 
                     // Display a summary of all the task statuses
                     logTaskSummary(startModuleId);
@@ -958,9 +963,12 @@ public class WorkflowRunner {
         List<Runnable> runnables = pool.shutdownNow();
 
         long endTime = System.currentTimeMillis();
-        String endTimestamp = dateFormat.format(new Date(WorkflowRunner.this.startTime)); 
+        String endTimestamp = dateFormat.format(new Date(endTime)); 
         WorkflowRunner.this.getModuleConfig().insertOrUpdate(
                 new ModuleConfig(startModuleId, "endTime", endTimestamp), "id","key");
+        WorkflowRunner.this.getModuleConfig().insertOrUpdate(
+                new ModuleConfig(startModuleId, "duration", new Long(endTime - startTime).toString()), "id","key");
+
 
         // Log a summary
         logTaskSummary(this.startModuleId);
