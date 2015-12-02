@@ -6,8 +6,9 @@ import ij.ImagePlus;
 import ij.gui.ImageWindow;
 import ij.plugin.PlugIn;
 import ij.process.ByteProcessor;
+import ij.process.ImageConverter;
 import ij.process.ImageProcessor;
-import ij.process.ShortProcessor;
+//import ij.process.ShortProcessor;
 
 import java.awt.Color;
 import java.io.PrintWriter;
@@ -19,9 +20,12 @@ import org.micromanager.MMStudio;
 import org.micromanager.api.Autofocus;
 import org.micromanager.api.ScriptInterface;
 import org.micromanager.utils.AutofocusBase;
+import org.micromanager.utils.ImageUtils;
+import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMException;
 
 import mmcorej.CMMCore;
+import mmcorej.TaggedImage;
 import edu.mines.jtk.dsp.FftComplex;
 import edu.mines.jtk.dsp.FftReal;
 
@@ -77,7 +81,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     public double CROP_SIZE = 0.2; 
     public String CHANNEL="";
     public double WAIT_FOR_DEVICE_THRESHOLD = 1.0;
-    public int WAIT_FOR_DEVICE_SLEEP = 250;
+    public int WAIT_FOR_DEVICE_SLEEP = 100;
 
     private double indx = 0; //snapshot show new window iff indx = 1
 
@@ -91,7 +95,8 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     
     // variables for skipping autofocus every acquisition
     public int skipCounter = -1;
-    public static final int MAX_SKIP = 25;
+    //public static final int MAX_SKIP = 25;
+    public static final int MAX_SKIP = 0;
     
     Double minAutoFocus;
     Double maxAutoFocus;
@@ -122,7 +127,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     {
         // make sure minAutoFocus and maxAutoFocus is set
         if (minAutoFocus == null || maxAutoFocus == null) applySettings();
-
+        
         // only run autofocus every MAX_SKIP acquisitions
         if (bestDist != null && prevBestDist != null && Math.abs(bestDist - prevBestDist) <= ADAPTIVE_DIST_DIFF) {
             skipCounter++;
@@ -163,9 +168,9 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
 
         try
         {
-            core_.setShutterOpen(true);
-            core_.setAutoShutter(false);
-            
+//            core_.setShutterOpen(true);
+//            core_.setAutoShutter(false);
+
             //########System setup##########
             //core_.setConfig("Channel", CHANNEL);
             core_.waitForSystem();
@@ -176,43 +181,50 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             int tries = 0;
             while (tries < MAX_TRIES) {
                 try { curDist = core_.getPosition(core_.getFocusDevice()); break; }
-                catch (Throwable e) { Thread.sleep(500); ++tries; }
+                catch (Throwable e) { Thread.sleep(WAIT_FOR_DEVICE_SLEEP); ++tries; }
             }
 
             baseDist = curDist - SIZE_FIRST * NUM_FIRST; //-30
             core_.setPosition(core_.getFocusDevice(), baseDist);
             core_.waitForDevice(core_.getFocusDevice());
-            delay_time(300);
+            Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
 
             //
             // Inserted by Stephan Preibisch
             //
 
             // get the set exposure time and current binning
-            double exposure = core_.getExposure();
-            
-            String binning = core_.getProperty(core_.getCameraDevice(), "Binning");
-            int bin = Integer.parseInt(binning);
-            
-            // get pixel depth
-            String bits = core_.getProperty(core_.getCameraDevice(), "PixelType");
+//            double exposure = core_.getExposure();
+//            
+//            String binning = core_.getProperty(core_.getCameraDevice(), "Binning");
+//            int bin = Integer.parseInt(binning);
+//            
+//            // get pixel depth
+//            String bits = core_.getProperty(core_.getCameraDevice(), "PixelType");
+//
+//            // enable 4x4 binning and adjust the exposure
+//            double focusBin = 4.0;
+//            double exposureFactor = (bin/focusBin) * (bin/focusBin);
 
-            // enable 4x4 binning and adjust the exposure
-            double focusBin = 4.0;
-            double exposureFactor = (bin/focusBin) * (bin/focusBin);
-
-            if (verbose_) IJ.log("Setting Exposure to "+ exposure * exposureFactor +"....");
-            core_.setExposure(exposure * exposureFactor);
-
-            if (verbose_) IJ.log("Setting Binning to 4....");
-            core_.setProperty(core_.getCameraDevice(), "Binning", "4");
-
-            if (verbose_) IJ.log("Setting Camera to 8bit ...");
-            core_.setProperty(core_.getCameraDevice(), "PixelType", "Grayscale");
+//            if (verbose_) IJ.log("Setting Exposure to "+ exposure * exposureFactor +"....");
+//            core_.setExposure(exposure * exposureFactor);
+//
+//            if (verbose_) IJ.log("Setting Binning to 4....");
+//            core_.setProperty(core_.getCameraDevice(), "Binning", "4");
+//
+//            if (verbose_) IJ.log("Setting Camera to 8bit ...");
+//            core_.setProperty(core_.getCameraDevice(), "PixelType", "Grayscale");
 
             //
             // End of insertion
             //
+
+            if (core_.isSequenceRunning()) {
+                core_.stopSequenceAcquisition();
+                Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
+            }
+            core_.clearCircularBuffer();
+            core_.startContinuousSequenceAcquisition(0);
 
             // Rough search
             prevBestDist = bestDist;
@@ -223,14 +235,14 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                 {
                     core_.setPosition(core_.getFocusDevice(), baseDist + i * SIZE_FIRST);
                     core_.waitForDevice(core_.getFocusDevice());
-                    delay_time(300);
+                    Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
 
                     // indx =1;
                     snapSingleImage();
                     // indx =0;
 
                     try { curDist = core_.getPosition(core_.getFocusDevice()); }
-                    catch (Throwable e) { Thread.sleep(500); continue; }
+                    catch (Throwable e) { Thread.sleep(WAIT_FOR_DEVICE_SLEEP); continue; }
 
                     ////curSh = sharpNess(ipCurrent_);
                     //curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
@@ -241,7 +253,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                     
                     if (verbose_) IJ.log(String.format("setPosition: %.5f, real: %.5f, curSh: %.5f", baseDist + i * SIZE_FIRST, curDist, curSh));
 
-                    if (curSh > bestSh)
+                    if (curSh > bestSh || bestDist == null)
                     {
                         bestSh = curSh;
                         bestDist = curDist;
@@ -253,10 +265,11 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                     }*/
                 }
             }
+            if (bestDist == null) throw new RuntimeException("baseDist is outside of min/max range!");
 
             baseDist = bestDist - SIZE_SECOND * NUM_SECOND;
             core_.setPosition(core_.getFocusDevice(), baseDist);
-            delay_time(100);
+            Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
 
             //bestSh = 0;
 
@@ -268,14 +281,14 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                 {
                     core_.setPosition(core_.getFocusDevice(), baseDist + i * SIZE_SECOND);
                     core_.waitForDevice(core_.getFocusDevice());
-                    Thread.sleep(300);
+                    Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
 
                     // indx =1;
                     snapSingleImage();
                     // indx =0;
 
                     try { curDist = core_.getPosition(core_.getFocusDevice()); }
-                    catch (Throwable e) { Thread.sleep(500); continue; }
+                    catch (Throwable e) { Thread.sleep(WAIT_FOR_DEVICE_SLEEP); continue; }
 
                     ////curSh = sharpNess(ipCurrent_);
                     //curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
@@ -285,7 +298,7 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
                     
                     if (verbose_) IJ.log(String.format("setPosition: %.5f, real: %.5f, curSh: %.5f", baseDist + i * SIZE_SECOND, curDist, curSh));
 
-                    if (curSh > bestSh)
+                    if (curSh > bestSh || bestDist == null)
                     {
                         bestSh = curSh;
                         bestDist = curDist;
@@ -303,30 +316,34 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
             //
 
             // reset binning and re-adjust the exposure
-            if (verbose_) IJ.log("ReSet Exposure....");
-            core_.setExposure(exposure);
-
-            if (verbose_) IJ.log("ReSet Binning....");
-            core_.setProperty(core_.getCameraDevice(), "Binning", binning);
-
-            if (verbose_) IJ.log("ReSet Camera Bits....");
-            core_.setProperty(core_.getCameraDevice(), "PixelType", bits);
+//            if (verbose_) IJ.log("ReSet Exposure....");
+//            core_.setExposure(exposure);
+//
+//            if (verbose_) IJ.log("ReSet Binning....");
+//            core_.setProperty(core_.getCameraDevice(), "Binning", binning);
+//
+//            if (verbose_) IJ.log("ReSet Camera Bits....");
+//            core_.setProperty(core_.getCameraDevice(), "PixelType", bits);
 
             //
             // End of insertion
             //
 
+            core_.stopSequenceAcquisition();
+
             if (bestDist != null) {
+                if (verbose_) IJ.log(String.format("*** FOUND BEST bestDist: %.5f, bestSh: %.5f", bestDist, bestSh));
                 core_.setPosition(core_.getFocusDevice(), bestDist);
                 core_.waitForDevice(core_.getFocusDevice());
-                delay_time(300);
             }
+            Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
 
             // indx =1;
             //if (verbose_) snapSingleImage();
             // indx =0;
-            core_.setShutterOpen(false);
-            core_.setAutoShutter(true);
+            
+//            core_.setShutterOpen(false);
+//            core_.setAutoShutter(true);
             
             //Thread.sleep(10000);
         } 
@@ -640,14 +657,33 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
     static int imgCounter=0;
     public boolean snapSingleImage()
     {
-
         try
         {
-            core_.snapImage();
-            Object img = core_.getImage();
-            ImagePlus implus = newWindow(); // this step will create a new window iff indx = 1
-            implus.getProcessor().setPixels(img);
+            TaggedImage img = core_.getLastTaggedImage();
+            Long seqNum = null;
+            if (img != null && img.tags != null) {
+                try {seqNum = MDUtils.getSequenceNumber(img.tags);} 
+                catch(Throwable e) {}
+            }
+
+            while (img == null || seqNum == null) {
+                img = core_.getLastTaggedImage();
+                if (img != null && img.tags != null) {
+                    try {seqNum = MDUtils.getSequenceNumber(img.tags);} 
+                    catch(Throwable e) {}
+                }
+                Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
+            }
+
+            IJ.log(String.format("Found image number %s", MDUtils.getSequenceNumber(img.tags)));
+            ImagePlus implus = new ImagePlus(String.valueOf(curDist), ImageUtils.makeProcessor(img));
+            new ImageConverter(implus).convertToGray8();
             ipCurrent_ = implus.getProcessor();
+
+            //core_.snapImage();
+            //Object img = core_.getImage();
+            //ImagePlus implus = newWindow(); // this step will create a new window iff indx = 1
+            //implus.getProcessor().setPixels(img);
             //if (verbose_) {
             //    FileSaver fileSaver = new FileSaver(implus);
             //    String filename = String.format("debug_%d.tif", imgCounter);
@@ -666,32 +702,20 @@ public class BDGPAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
         return true;
     }
 
-    //waiting
-    public void delay_time(double delay)
-    {
-        Date date = new Date();
-        long sec = date.getTime();
-        while (date.getTime() < sec + delay)
-        {
-            date = new Date();
-        }
-    }
-
     //making a new window for a new snapshot.
     public ImagePlus newWindow()
     {
         ImagePlus implus;
         ImageProcessor ip;
-        long byteDepth = core_.getBytesPerPixel();
 
-        if (byteDepth == 1)
-        {
-            ip = new ByteProcessor((int) core_.getImageWidth(), (int) core_.getImageHeight());
-        }
-        else
-        {
-            ip = new ShortProcessor((int) core_.getImageWidth(), (int) core_.getImageHeight());
-        }
+        //long byteDepth = core_.getBytesPerPixel();
+        //if (byteDepth == 1) {
+        //    ip = new ByteProcessor((int) core_.getImageWidth(), (int) core_.getImageHeight());
+        //}
+        //else {
+        //    ip = new ShortProcessor((int) core_.getImageWidth(), (int) core_.getImageHeight());
+        //}
+        ip = new ByteProcessor((int) core_.getImageWidth(), (int) core_.getImageHeight());
         ip.setColor(Color.black);
         ip.fill();
 
