@@ -555,7 +555,8 @@ public class WorkflowRunner {
                             for (Task task : tasks) {
                                 task.setDispatchUUID(null);
                                 if (task.getStatus() == Status.DEFER || 
-                                    task.getStatus() == Status.IN_PROGRESS) 
+                                    task.getStatus() == Status.IN_PROGRESS ||
+                                    task.getStatus() == Status.ERROR) 
                                 {
                                     task.setStatus(Task.Status.NEW);
                                 }
