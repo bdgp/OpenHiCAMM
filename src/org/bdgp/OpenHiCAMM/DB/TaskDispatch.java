@@ -5,8 +5,8 @@ import com.j256.ormlite.table.DatabaseTable;
 
 @DatabaseTable
 public class TaskDispatch {
-    @DatabaseField(canBeNull=false, uniqueCombo=true) private int parentTaskId;
-	@DatabaseField(canBeNull=false, uniqueCombo=true) private int taskId;
+    @DatabaseField(canBeNull=false, uniqueCombo=true, index=true) private int parentTaskId;
+	@DatabaseField(canBeNull=false, uniqueCombo=true, index=true) private int taskId;
 
     public TaskDispatch() {}
     public TaskDispatch(int taskId, int parentTaskId) {

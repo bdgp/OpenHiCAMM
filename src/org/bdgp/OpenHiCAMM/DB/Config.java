@@ -29,10 +29,10 @@ public class Config {
         this.value = value;
         this.object = object;
     }
-    @DatabaseField(canBeNull=false,uniqueCombo=true,dataType=DataType.LONG_STRING)
+    @DatabaseField(canBeNull=false,uniqueCombo=true,dataType=DataType.LONG_STRING, index=true)
     private String id;
     
-    @DatabaseField(canBeNull=false,uniqueCombo=true,dataType=DataType.LONG_STRING)
+    @DatabaseField(canBeNull=false,uniqueCombo=true,dataType=DataType.LONG_STRING, index=true)
     private String key;
     
     @DatabaseField(canBeNull=true,dataType=DataType.LONG_STRING)
