@@ -1,0 +1,17 @@
+Index: mmstudio/src/org/micromanager/acquisition/AcquisitionWrapperEngine.java
+===================================================================
+--- mmstudio/src/org/micromanager/acquisition/AcquisitionWrapperEngine.java	(revision 15877)
++++ mmstudio/src/org/micromanager/acquisition/AcquisitionWrapperEngine.java	(working copy)
+@@ -139,9 +139,9 @@
+                return null;
+             }
+          } else if (!this.enoughDiskSpace()) {
+-            ReportingUtils.showError(
+-                    "Not enough space on disk to save the requested image set; acquisition canceled.");
+-            return null;
++            //ReportingUtils.showError(
++            //        "Not enough space on disk to save the requested image set; acquisition canceled.");
++            //return null;
+          }
+       }
+ 

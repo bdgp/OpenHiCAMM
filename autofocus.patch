@@ -1,0 +1,102 @@
+Index: autofocus/Autofocus.java
+===================================================================
+--- autofocus/Autofocus.java	(revision 15877)
++++ autofocus/Autofocus.java	(working copy)
+@@ -98,6 +98,9 @@
+    private long tPrev;
+    private long tcur;
+ 
++   // XXX: remove me
++   private int imageNum=0;
++
+    public Autofocus(){ //constructor!!!
+       super();
+       //Preferences root = Preferences.userNodeForPackage(this.getClass());
+@@ -193,8 +196,42 @@
+          curSh = sharpNess(ipCurrent_);
+          tcur = System.currentTimeMillis()-tPrev;*/
+ 
++         // XXX: remove me
++         { double bestDist = 0.0, bestScore = 0.0;
++           long startTime = new java.util.Date().getTime();
++           String bits = core_.getProperty(core_.getCameraDevice(), "PixelType");
++           core_.setProperty(core_.getCameraDevice(), "PixelType", "Grayscale");
++           for (int i = -100; i <= 100; i += 2) {
++               core_.setPosition(core_.getFocusDevice(), (double)i);
++               Double curDist = core_.getPosition(), lastDist = null;
++               while (!curDist.equals(lastDist)) {
++                   lastDist = curDist;
++                   curDist = core_.getPosition();
++                   Thread.sleep(25);
++               }
++               snapSingleImage();
++               double score = computeScore(ipCurrent_);
++               if (bestScore < score) {
++                 bestScore = score;
++                 bestDist = i;
++               }
++               ij.IJ.log(String.format("J&M\tscore\t%s\t%s\t%s", imageNum, i, score));
++           }
++           core_.setPosition(core_.getFocusDevice(), bestDist);
++           Double curDist = core_.getPosition(), lastDist = null;
++           while (!curDist.equals(lastDist)) {
++               lastDist = curDist;
++               curDist = core_.getPosition();
++               Thread.sleep(25);
++           }
++           ij.IJ.log(String.format("J&M\tbest_score\t%s\t%s\t%s", imageNum, bestDist, bestScore));
++           ij.IJ.log(String.format("J&M\ttime\t%s\t%s", imageNum++, new java.util.Date().getTime()-startTime));
++           core_.setProperty(core_.getCameraDevice(), "PixelType", bits);
++           core_.setShutterOpen(shutterOpen);
++           core_.setAutoShutter(autoShutter);
++           if (true) return;
++         }
+ 
+-
+          //set z-distance to the lowest z-distance of the stack
+          curDist = core_.getPosition(core_.getFocusDevice());
+          baseDist = curDist-SIZE_FIRST*NUM_FIRST;
+Index: autofocus/OughtaFocus.java
+===================================================================
+--- autofocus/OughtaFocus.java	(revision 15877)
++++ autofocus/OughtaFocus.java	(working copy)
+@@ -86,6 +86,9 @@
+    private boolean liveModeOn_;
+    private boolean settingsLoaded_ = false;
+ 
++   // XXX: remove me
++   private int imageNum=0;
++
+    public OughtaFocus() {
+       super();
+       createProperty(SEARCH_RANGE, NumberUtils.doubleToDisplayString(searchRange));
+@@ -158,6 +161,29 @@
+          double oldExposure = core.getExposure();
+          core.setExposure(exposure);
+ 
++         // XXX: remove me
++         { double bestDist = 0.0, bestScore = 0.0;
++           long startTime = new java.util.Date().getTime();
++           for (int i = -100; i <= 100; i += 2) {
++               double score = measureFocusScore((double)i);
++               if (bestScore < score) {
++                 bestScore = score;
++                 bestDist = i;
++               }
++               ij.IJ.log(String.format("Oughta\tscore\t%s\t%s\t%s", imageNum, i, score));
++           }
++           core.setPosition(core.getFocusDevice(), bestDist);
++           Double curDist = core.getPosition(), lastDist = null;
++           while (!curDist.equals(lastDist)) {
++               lastDist = curDist;
++               curDist = core.getPosition();
++               Thread.sleep(25);
++           }
++           ij.IJ.log(String.format("Oughta\tbest_score\t%s\t%s\t%s", imageNum, bestDist, bestScore));
++           ij.IJ.log(String.format("Oughta\ttime\t%s\t%s", imageNum++, new java.util.Date().getTime()-startTime));
++           if (true) return bestDist;
++         }
++
+          double z = runAutofocusAlgorithm();
+ 
+          if (cropFactor < 1.0) {
