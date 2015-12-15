@@ -45,7 +45,7 @@ public class OpenHiCAMM implements MMPlugin {
 	
     // Add the AutoFocus plugin
 	static {
-        MMStudio.getInstance().getAutofocusManager().setAFPluginClassName(BDGPAutoFocus.class.getName());
+        MMStudio.getInstance().getAutofocusManager().setAFPluginClassName(FastFFTAutoFocus.class.getName());
         try { MMStudio.getInstance().getAutofocusManager().refresh(); } 
         catch (MMException e) { ReportingUtils.logError(e.getMessage()); }
 	}
