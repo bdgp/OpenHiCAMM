@@ -40,6 +40,7 @@ import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.Modules.ROIFinderDialog;
+import org.bdgp.OpenHiCAMM.Modules.SlideImager;
 import org.bdgp.OpenHiCAMM.Modules.SlideImagerDialog;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
@@ -925,11 +926,7 @@ public class WorkflowReport implements Report {
                         
                         // move the stage
                         CMMCore core = MMStudio.getInstance().getMMCore();
-                        String xyStage = core.getXYStageDevice();
-                        try { 
-                            core.setXYPosition(xyStage, xPos_, yPos_); 
-                            while (core.deviceBusy(xyStage)) { Thread.sleep(500); }
-                        } 
+                        try { SlideImager.moveStage(this.getClass().getSimpleName(), core, xPos_, yPos_, null); } 
                         catch (Exception e) {
                             StringWriter sw = new StringWriter();
                             e.printStackTrace(new PrintWriter(sw));
