@@ -130,7 +130,9 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
             // -> I’d suggest:
             // Select for area > 2000, check if object is at boundary of image (bx or by == 1)
             // ROI: upper left corner = bx/by with width/height
-            if (area >= minRoiArea && bx > 1 && by > 1 && bx+width < w && by+height < h) {
+
+            //if (area >= minRoiArea && bx > 1 && by > 1 && bx+width < w && by+height < h) {
+            if (area >= minRoiArea) {
                 ROI roi = new ROI(image.getId(), 
                         (int)Math.floor(bx), 
                         (int)Math.floor(by), 
@@ -152,9 +154,9 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
                 if (area < minRoiArea) {
                     logger.finest(String.format("Skipping, area %.2f is less than %.2f", area, minRoiArea));
                 }
-                if (!(bx > 1 && by > 1 && bx+width < w && by+height < h)) {
-                    logger.finest(String.format("Skipping, ROI hits edge"));
-                }
+                //if (!(bx > 1 && by > 1 && bx+width < w && by+height < h)) {
+                //    logger.finest(String.format("Skipping, ROI hits edge"));
+                //}
             }
         }
         imageLog.addImage(imp, "Adding ROIs to image");
