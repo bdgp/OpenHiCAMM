@@ -294,7 +294,7 @@ public class WorkflowRunner {
         newTasks.addAll(this.getTaskStatus().select(where("moduleId", module.getId()).and("status", Status.NEW)));
         newTasks.addAll(this.getTaskStatus().select(where("moduleId", module.getId()).and("status", Status.IN_PROGRESS)));
         if (newTasks.size() > 0) {
-            m.runIntialize();
+            m.runInitialize();
         }
 
         List<WorkflowModule> modules = workflow.select(where("parentId", module.getId()));

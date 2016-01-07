@@ -34,7 +34,7 @@ public interface Module {
     /**
      * Perform some initialization before starting the run.
      */
-    public void runIntialize();
+    public default void runInitialize() {}
     
     /**
      * Run the task.

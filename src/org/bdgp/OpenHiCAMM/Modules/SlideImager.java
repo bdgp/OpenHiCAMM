@@ -1005,7 +1005,7 @@ public class SlideImager implements Module, ImageLogger {
     }
 
     @Override
-    public void runIntialize() { }
+    public void runInitialize() { }
     
     public static void moveStage(String moduleId, CMMCore core, double x, double y, Logger logger) {
     	core.setTimeoutMs(10000);

@@ -231,5 +231,5 @@ public abstract class PostProcessor implements Module, ImageLogger {
     }
 
     @Override
-    public void runIntialize() { }
+    public void runInitialize() { }
 }

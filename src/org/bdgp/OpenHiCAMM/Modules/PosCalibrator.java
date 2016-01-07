@@ -164,7 +164,7 @@ public class PosCalibrator implements Module {
         return tasks;
     }
 
-    @Override public void runIntialize() { }
+    @Override public void runInitialize() { }
 
     @Override public Status run(Task task, Map<String, Config> config, Logger logger) {
         Dao<Image> imageDao = workflow.getInstanceDb().table(Image.class);

@@ -452,5 +452,5 @@ public abstract class ROIFinder implements Module, ImageLogger {
     }
 
     @Override
-    public void runIntialize() { }
+    public void runInitialize() { }
 }

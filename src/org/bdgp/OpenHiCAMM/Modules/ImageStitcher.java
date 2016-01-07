@@ -567,7 +567,7 @@ public class ImageStitcher implements Module, ImageLogger {
 	@Override public void cleanup(Task task, Map<String,Config> config, Logger logger) { }
 
     @Override
-    public void runIntialize() { }
+    public void runInitialize() { }
 
     @Override
     public List<ImageLogRecord> logImages(final Task task, final Map<String,Config> config, final Logger logger) {
