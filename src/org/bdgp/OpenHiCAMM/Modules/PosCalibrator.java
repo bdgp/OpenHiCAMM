@@ -380,17 +380,40 @@ public class PosCalibrator implements Module {
         return Status.SUCCESS;
     }
     
-    @Override public String getTitle() {
-        return this.getClass().getSimpleName();
-    }
-
-    @Override public String getDescription() {
-        return this.getClass().getSimpleName();
-    }
-
     @Override public TaskType getTaskType() {
         return TaskType.SERIAL;
     }
 
-    @Override public void cleanup(Task task, Map<String,Config> config, Logger logger) { }
+    public Status setTaskStatusOnResume(Task task) {
+        if (task.getStatus() == Status.DEFER || 
+            task.getStatus() == Status.IN_PROGRESS ||
+            task.getStatus() == Status.ERROR) 
+        {
+            return Status.NEW;
+        }
+        // try to find the parent slide loader task
+        // if slide loader parent task needs to be re-run, then re-run this as well.
+        List<TaskDispatch> tds = this.workflow.getTaskDispatch().select(where("taskId", task.getId()));
+        while (!tds.isEmpty()) {
+            List<TaskDispatch> parentTds = new ArrayList<>();
+            for (TaskDispatch td : tds) {
+                Task parentTask = this.workflow.getTaskStatus().selectOneOrDie(where("id", td.getParentTaskId()));
+                if (this.workflow.getModuleConfig().selectOne(
+                        where("id", parentTask.getModuleId()).
+                        and("key", "canLoadSlides").
+                        and("value", "yes")) != null) 
+                {
+                    if (parentTask.getStatus() == Status.NEW) {
+                        return Status.NEW;
+                    }
+                    else {
+                        return null;
+                    }
+                }
+                parentTds.addAll(this.workflow.getTaskDispatch().select(where("taskId", parentTask.getId())));
+            }
+            tds = parentTds;
+        }
+        return null;
+    }
 }

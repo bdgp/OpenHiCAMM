@@ -45,13 +45,17 @@ public interface Module {
      * Return the title of this module.
      * @return
      */
-    public String getTitle();
+    public default String getTitle() {
+        return this.getClass().getName();
+    }
     
     /**
      * Return the module's description text.
      * @return
      */
-    public String getDescription();
+    public default String getDescription() {
+        return this.getClass().getName();
+    }
     
     /**
      *  Return the module's task type (Serial or Parallel).
@@ -61,5 +65,19 @@ public interface Module {
     /**
      * cleanup routine to be run after each task
      */
-    public void cleanup(Task task, Map<String,Config> config, Logger logger);
+    public default void cleanup(Task task, Map<String,Config> config, Logger logger) {}
+
+    /**
+     * If resumimg a workflow, should this task's status be reset?
+     * @param task
+     */
+    public default Status setTaskStatusOnResume(Task task) {
+        if (task.getStatus() == Status.DEFER || 
+            task.getStatus() == Status.IN_PROGRESS ||
+            task.getStatus() == Status.ERROR) 
+        {
+            return Task.Status.NEW;
+        }
+        return null;
+    }
 }

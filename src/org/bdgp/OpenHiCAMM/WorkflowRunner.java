@@ -554,13 +554,15 @@ public class WorkflowRunner {
                             List<TaskDispatch> dispatch = new ArrayList<TaskDispatch>();
                             for (Task task : tasks) {
                                 task.setDispatchUUID(null);
-                                if (task.getStatus() == Status.DEFER || 
-                                    task.getStatus() == Status.IN_PROGRESS ||
-                                    task.getStatus() == Status.ERROR) 
-                                {
-                                    task.setStatus(Task.Status.NEW);
+
+                                Module module = moduleInstances.get(task.getModuleId());
+                                if (module == null) throw new RuntimeException(String.format(
+                                        "Unknown module: %s", task.getModuleId()));
+                                Status status = module.setTaskStatusOnResume(task);
+                                if (status != null) {
+                                    task.setStatus(status);
+                                    WorkflowRunner.this.taskStatus.update(task, "id");
                                 }
-                                WorkflowRunner.this.taskStatus.update(task, "id");
                                 dispatch.addAll(WorkflowRunner.this.taskDispatch.select(where("parentTaskId", task.getId())));
                             }
                             tasks.clear();
