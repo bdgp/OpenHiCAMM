@@ -1,0 +1,70 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use File::Basename qw(dirname basename);
+use File::Path qw(make_path);
+use File::Find qw(find);
+use File::Spec::Functions qw(catdir);
+use String::ShellQuote qw(shell_quote);
+use Cwd qw(abs_path getcwd);
+
+my $appdir='/Applications/Fiji.app';
+my $libdir='lib';
+my $gphotodir='/usr/local/opt/libgphoto2/lib';
+my %seen;
+
+make_path(catdir($appdir,$libdir), {error=>my $err});
+die $err if $err;
+print join(' ','mkdir','-pv',shell_quote(catdir($appdir,$libdir)))."\n";
+opendir my $d, $appdir or die;
+for my $f (readdir($d)) {
+  my $file = catdir($appdir, $f);
+  if (-f $file && -x $file) {
+    findlib($file, $file, $libdir);
+  }
+}
+closedir $d;
+
+for my $dir (qw(libgphoto2 libgphoto2_port)) {
+  make_path(catdir($appdir,$libdir,$dir), {error=>my $err});
+  die $err if $err;
+  print join(' ','mkdir','-pv',shell_quote(catdir($appdir,$libdir, $dir)))."\n";
+  find(sub {
+      my $file = $File::Find::name;
+      if ($file =~ /\.so$/ && -f $file) {
+        my $destfile = catdir($appdir,$libdir,$dir,basename($file));
+        print join(' ','test','-e',shell_quote($destfile),'||','install','-v','-m','0775',shell_quote($file),shell_quote($destfile))."\n";
+        findlib($file, $destfile, '..');
+      }
+    }, catdir($gphotodir,$dir));
+}
+
+exit 0;
+
+sub findlib {
+  my ($src, $dest, $libdir) = @_;
+  if (!$seen{$dest}) {
+    $seen{$dest}=1;
+    print join(' ','install_name_tool','-id',shell_quote(catdir('@loader_path',basename($dest))), shell_quote($dest))."\n";
+
+    my $otool = join(' ','otool','-L',shell_quote($src));
+    my @libs = grep {!m(^\s*/System/Library/|^\s*/Library/|^\s*/usr/lib/)} map {/^\s+(\S+)/? $1: ()} split /\n/, qx($otool);
+    for my $lib (@libs) {
+      # resolve $lib to absolute path
+      my $cwd = getcwd();
+      chdir(dirname($src));
+      (my $abslib = $lib) =~ s|^\@loader_path/||;
+      $abslib = abs_path($abslib);
+      # resolve $libdir to absolute path
+      chdir(dirname($dest));
+      my $abslibdir = abs_path($libdir);
+      chdir($cwd);
+
+      my $destfile = catdir($abslibdir,basename($abslib));
+      print join(' ','test','-e',shell_quote($destfile),'||','install','-v','-m','0775',shell_quote($abslib),shell_quote($destfile))."\n";
+      print join(' ','install_name_tool','-change',shell_quote($lib), shell_quote(catdir('@loader_path',$libdir,basename($abslib))), shell_quote($dest))."\n";
+      findlib($abslib, $destfile, '.');
+    }
+  }
+}
+
