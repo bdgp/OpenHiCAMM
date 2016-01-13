@@ -3,17 +3,29 @@ use strict;
 use warnings;
 use File::Basename qw(dirname basename fileparse);
 use File::Path qw(make_path);
-use File::Spec::Functions qw(catdir rel2abs abs2rel);
+use File::Spec::Functions qw(catdir rel2abs abs2rel canonpath);
 use String::ShellQuote qw(shell_quote);
 use Cwd qw(abs_path getcwd);
 
 my $appdir='/Applications/Fiji.app';
-my $libdir='lib';
+my $libdir=catdir($appdir, 'lib');
 my %gphotodir=(
   libgphoto2=>abs_path([glob('/usr/local/opt/libgphoto2/lib/libgphoto2/*')]->[0]),
   libgphoto2_port=>abs_path([glob('/usr/local/opt/libgphoto2/lib/libgphoto2_port/*')]->[0]),
 );
 my %seen;
+
+make_path($libdir, {error=>my $err});
+die $err if $err;
+print join(' ','mkdir','-pv',shell_quote($libdir))."\n";
+opendir my $d, $appdir or die;
+for my $f (readdir($d)) {
+  my $file = catdir($appdir, $f);
+  if (-f $file && -x $file && -B $file) {
+    findlib($file, $file, $libdir);
+  }
+}
+closedir $d;
 
 for my $dir (sort keys %gphotodir) {
   my $gphotodir = $gphotodir{$dir};
@@ -27,23 +39,11 @@ for my $dir (sort keys %gphotodir) {
     if ($file =~ /\.so$/ && -f $file) {
       my $destfile = catdir($appdir,'libgphoto2',$dir,basename($file));
       print join(' ','install','-v','-m','0755',shell_quote($file),shell_quote($destfile))."\n";
-      findlib($file, $destfile, '..');
+      findlib($file, $destfile, $libdir);
     }
   }
   closedir $d;
 }
-
-make_path(catdir($appdir,$libdir), {error=>my $err});
-die $err if $err;
-print join(' ','mkdir','-pv',shell_quote(catdir($appdir,$libdir)))."\n";
-opendir my $d, $appdir or die;
-for my $f (readdir($d)) {
-  my $file = catdir($appdir, $f);
-  if (-f $file && -x $file && -B $file) {
-    findlib($file, $file, $libdir);
-  }
-}
-closedir $d;
 
 exit 0;
 
@@ -53,7 +53,7 @@ sub findlib {
 
   #my $libname = fileparse($dest,qr/\..*$/);
   #if (exists($gphotodir{$libname})) {
-  #  print join(' ','perl','-i','-pe',shell_quote('s{'.$gphotodir{$libname}.'}{pack("Z'.length($gphotodir{$libname}).'", "'.catdir($appdir,$libdir,$libname).'")}e'),shell_quote($dest))."\n";
+  #  print join(' ','perl','-i','-pe',shell_quote('s{'.$gphotodir{$libname}.'}{pack("Z'.length($gphotodir{$libname}).'", "'.catdir($libdir,$libname).'")}e'),shell_quote($dest))."\n";
   #}
 
   my $otool = join(' ','otool','-L',shell_quote($src));
@@ -63,7 +63,7 @@ sub findlib {
     $abslib = abs_path(rel2abs($abslib, dirname($src)));
     my $abslibdest = abs_path(rel2abs($libdest, dirname($dest)));
 
-    my $destfile = abs_path(catdir($abslibdest,basename($abslib)));
+    my $destfile = canonpath(catdir($abslibdest,basename($abslib)));
     if (!$seen{basename($destfile)}) {
       print join(' ','install','-v','-m','0755',shell_quote($abslib),shell_quote($destfile))."\n";
       $seen{basename($destfile)} = $destfile;
