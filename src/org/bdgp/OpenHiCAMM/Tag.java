@@ -1,9 +1,12 @@
 package org.bdgp.OpenHiCAMM;
 
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Arrays;
@@ -223,10 +226,20 @@ public class Tag {
 	    Tag.writer.set(writer);
 	    this.write();
 	}
-
+	
 	public void print() {
 	    Writer writer = new BufferedWriter(new OutputStreamWriter(System.out)); 
 	    this.write(writer);
+	}
+	
+	public void write(String file) {
+	    try { this.write(new PrintWriter(file)); } 
+	    catch (FileNotFoundException e) {throw new RuntimeException(e);}
+	}
+
+	public void write(File file) {
+	    try { this.write(new PrintWriter(file)); } 
+	    catch (FileNotFoundException e) {throw new RuntimeException(e);}
 	}
 
 	public String toString() {
