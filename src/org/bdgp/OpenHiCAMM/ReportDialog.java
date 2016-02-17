@@ -1,7 +1,6 @@
 package org.bdgp.OpenHiCAMM;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
@@ -119,16 +118,17 @@ public class ReportDialog {
             }
 
             // get the report file path
-            File reportDir = new File(new File(
+            String reportName = report.getClass().getSimpleName();
+            File reportDir = new File(new File(new File(
                     this.workflowRunner.getWorkflowDir(), 
                     this.workflowRunner.getWorkflowInstance().getStorageLocation()),
-                    "reports");
+                    "reports"),
+                    reportName);
             reportDir.mkdirs();
-            String reportName = report.getClass().getSimpleName();
-            File reportFile = new File(reportDir, String.format("%s.html", reportName));
+            File reportIndex = new File(reportDir, "index.html");
 
-            if (reportFile.exists()) {
-                String html = new String(Files.readAllBytes(Paths.get(reportFile.getPath())));
+            if (reportIndex.exists()) {
+                String html = new String(Files.readAllBytes(Paths.get(reportIndex.getPath())));
                 Platform.runLater(()->{
                     webEngine.loadContent(html);
                 });
@@ -136,7 +136,7 @@ public class ReportDialog {
 
             // if the report file's timestamp is older than the workflow run time,
             // it needs to be regenerated
-            if (workflowRunTime == null || !reportFile.exists() || reportFile.lastModified() <= workflowRunTime) {
+            if (workflowRunTime == null || !reportIndex.exists() || reportIndex.lastModified() <= workflowRunTime) {
                 Alert alert = new Alert(AlertType.CONFIRMATION);
                 alert.setTitle(String.format("Report %s", reportName));
                 alert.setHeaderText(String.format("Report %s is outdated.", reportName));
@@ -148,17 +148,19 @@ public class ReportDialog {
                 if (result.get() == ButtonType.YES) {
                     new Thread(()->{
                         log("Generating report for %s", reportName);
-                        String html = report.runReport();
-                        try {
-                            PrintWriter htmlOut = new PrintWriter(reportFile.getPath());
-                            htmlOut.print(html);
-                            htmlOut.close();
+                        report.runReport(reportDir.getPath(), reportIndex.getName());
+                        if (reportIndex.exists()) {
+                            try {
+                                String html = new String(Files.readAllBytes(Paths.get(reportIndex.getPath())));
+                                Platform.runLater(()->{
+                                    webEngine.loadContent(html);
+                                });
+                            } 
+                            catch (Exception e) {throw new RuntimeException(e);}
                         }
-                        catch (FileNotFoundException e) { throw new RuntimeException(e); }
-
-                        Platform.runLater(()->{
-                            webEngine.loadContent(html);
-                        });
+                        else {
+                            throw new RuntimeException(String.format("Report index file %s was not created!", reportIndex));
+                        }
                     }).start();
                 }
             }
