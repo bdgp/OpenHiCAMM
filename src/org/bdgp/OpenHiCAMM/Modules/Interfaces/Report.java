@@ -17,5 +17,5 @@ public interface Report {
      * Runs a report and returns the report document
      * as a HTML string.
      */
-    public String runReport();
+    public void runReport(String reportDir, String reportIndex);
 }

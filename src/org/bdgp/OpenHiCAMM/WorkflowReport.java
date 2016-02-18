@@ -20,6 +20,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
@@ -96,13 +100,15 @@ public class WorkflowReport implements Report {
     }
     
     @Override
-    public String runReport() {
+    public void runReport(String reportDir, String reportIndex) {
         Dao<Pool> poolDao = this.workflowRunner.getInstanceDb().table(Pool.class);
         Dao<PoolSlide> psDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);
 
         // Find SlideImager modules where there is no associated posListModuleId module config
         // This is the starting SlideImager module.
-        return Html().indent().with(()->{
+        int[] reportCounter = new int[]{1};
+        Map<String,Runnable> runnables = new LinkedHashMap<String,Runnable>();
+        Tag index = Html().indent().with(()->{
             Head().with(()->{
                 try {
                     // CSS
@@ -119,7 +125,6 @@ public class WorkflowReport implements Report {
                 catch (Exception e) {throw new RuntimeException(e);}
             });
             Body().with(()->{
-                List<Runnable> runnables = new ArrayList<Runnable>();
                 SLIDE_IMAGERS:
                 for (Config canImageSlides : this.workflowRunner.getModuleConfig().select(
                         where("key","canImageSlides").
@@ -151,12 +156,14 @@ public class WorkflowReport implements Report {
                                     List<PoolSlide> pss = psDao.select(where("poolId", pool.getId()));
                                     if (!pss.isEmpty()) {
                                         for (PoolSlide ps : pss) {
+                                            String reportFile = String.format("report%03d.cartridge%d.pos%02d.slide%05d.html", 
+                                                        reportCounter[0]++, ps.getCartridgePosition(), ps.getSlidePosition(), ps.getSlideId());
                                             P().with(()->{
                                                 A(String.format("Module %s, Slide %s", slideImager, ps)).
-                                                    attr("href", String.format("#report-%s-PS%s", slideImager.getId(), ps.getId()));
+                                                    attr("href", reportFile);
                                             });
                                             String loaderModuleId_ = loaderModuleId;
-                                            runnables.add(()->{
+                                            runnables.put(reportFile, ()->{
                                                 log("Calling runReport(startModule=%s, poolSlide=%s, loaderModuleId=%s)", 
                                                         slideImager, ps, loaderModuleId_);
                                                 runReport(slideImager, ps, loaderModuleId_);
@@ -168,22 +175,58 @@ public class WorkflowReport implements Report {
                             }
                             loaderModuleId = loaderModule.getParentId();
                         }
+                        String reportFile = String.format("report%03d.html", reportCounter[0]++); 
                         P().with(()->{
                             A(String.format("Module %s", slideImager)).
-                                attr("href", String.format("#report-%s", slideImager.getId()));
+                                attr("href", reportFile);
                         });
-                        runnables.add(()->{
+                        runnables.put(reportFile, ()->{
                             log("Calling runReport(startModule=%s, poolSlide=null, loaderModuleId=null)", slideImager);
                             runReport(slideImager, null, null);
                         });
                     }
                 }
-                Hr();
-                for (Runnable runnable : runnables) {
-                    runnable.run();
-                }
             });
-        }).toString();
+        });
+
+        ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        List<Future<?>> futures = new ArrayList<>();
+        for (Map.Entry<String,Runnable> entry : runnables.entrySet()) {
+            String reportFile = entry.getKey();
+            Runnable runnable = entry.getValue();
+
+            futures.add(pool.submit(()->{
+                Html().indent().with(()->{
+                    Head().with(()->{
+                        try {
+                            // CSS
+                            Style().raw(Resources.toString(Resources.getResource("bootstrap.min.css"), Charsets.UTF_8));
+                            Style().raw(Resources.toString(Resources.getResource("bootstrap-theme.min.css"), Charsets.UTF_8));
+                            Style().raw(Resources.toString(Resources.getResource("jquery.powertip.min.css"), Charsets.UTF_8));
+                            // Javascript
+                            Script().raw(Resources.toString(Resources.getResource("jquery-2.1.4.min.js"), Charsets.UTF_8));
+                            Script().raw(Resources.toString(Resources.getResource("bootstrap.min.js"), Charsets.UTF_8));
+                            Script().raw(Resources.toString(Resources.getResource("jquery.maphilight.js"), Charsets.UTF_8));
+                            Script().raw(Resources.toString(Resources.getResource("jquery.powertip.min.js"), Charsets.UTF_8));
+                            Script().raw(Resources.toString(Resources.getResource("WorkflowReport.js"), Charsets.UTF_8));
+                        } 
+                        catch (Exception e) {throw new RuntimeException(e);}
+                    });
+                    Body().with(()->{
+                        runnable.run();
+                    });
+                }).write(new File(reportDir, reportFile));
+            }));
+        }
+        for (Future<?> f : futures) { 
+            try { f.get(); } 
+            catch (InterruptedException | ExecutionException e) { 
+                throw new RuntimeException(e);
+            } 
+        }
+
+        // write the index last
+        index.write(new File(reportDir, reportIndex));
     }
 
     private void runReport(WorkflowModule startModule, PoolSlide poolSlide, String loaderModuleId) {

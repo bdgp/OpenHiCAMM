@@ -29,11 +29,11 @@ public class ImageFileReport implements Report {
     }
 
     @Override
-    public String runReport() {
+    public void runReport(String reportDir, String reportIndex) {
         Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
         Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
 
-        return Html().with(()->{
+        Html().with(()->{
             Head();
             Body().with(()->{
                 H1("Image File Report");
@@ -77,7 +77,6 @@ public class ImageFileReport implements Report {
                     
                 });
             });
-        }).toString();
+        }).write(new File(reportDir, reportIndex));
     }
-
 }
