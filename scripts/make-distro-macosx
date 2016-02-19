@@ -6,3 +6,5 @@ if [[ $# -lt 2 ]]; then
 fi
 cd "$1"
 rsync -avR MMConfig_demo.cfg MMCorePy.py MMCoreWrapDemo.py _MMCorePy.so libMMCoreJ_wrap.jnilib libgphoto2 libmmgr_dal_* luts macros mmautofocus mmplugins plugins/Micro-Manager scripts "$2"
+defaults write "$2"/Contents/Info LSEnvironment -dict-add CAMLIBS libgphoto2/libgphoto2 IOLIBS libgphoto2/libgphoto2_port
+plutil -convert xml1 "$2"/Contents/Info.plist
