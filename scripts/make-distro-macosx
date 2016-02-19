@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
-if [[ $# -lt 2 ]]; then
-  echo "Usage: $0 mm-dir fiji-dir" >&2
+if [[ $# -lt 3 ]]; then
+  echo "Usage: $0 mm-dir fiji-dir update-site" >&2
   exit 1
 fi
 cd "$1"
 rsync -avR MMConfig_demo.cfg MMCorePy.py MMCoreWrapDemo.py _MMCorePy.so libMMCoreJ_wrap.jnilib libgphoto2 libmmgr_dal_* luts macros mmautofocus mmplugins plugins/Micro-Manager scripts "$2"
 defaults write "$2"/Contents/Info LSEnvironment -dict-add CAMLIBS libgphoto2/libgphoto2 IOLIBS libgphoto2/libgphoto2_port
 plutil -convert xml1 "$2"/Contents/Info.plist
+open "$2" --args --update upload-complete-site --force --force-shadow "$3"
