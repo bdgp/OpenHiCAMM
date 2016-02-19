@@ -5,4 +5,4 @@ if [[ $# -lt 2 ]]; then
   exit 1
 fi
 cd "$1"
-cp -vnr MMConfig_demo.cfg MMCorePy.py MMCoreWrapDemo.py _MMCorePy.so libMMCoreJ_wrap.jnilib libgphoto2 libmmgr_dal_* luts macros mmautofocus mmplugins plugins scripts "$2"
+rsync -avR MMConfig_demo.cfg MMCorePy.py MMCoreWrapDemo.py _MMCorePy.so libMMCoreJ_wrap.jnilib libgphoto2 libmmgr_dal_* luts macros mmautofocus mmplugins plugins/Micro-Manager scripts "$2"
