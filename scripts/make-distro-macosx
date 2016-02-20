@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
 if [[ $# -lt 3 ]]; then
-  echo "Usage: $0 mm-dir fiji-dir update-site" >&2
+  echo "Usage: $0 mm-dir fiji-dir" >&2
   exit 1
 fi
 cd "$1"
-rsync -avR MMConfig_demo.cfg MMCorePy.py MMCoreWrapDemo.py _MMCorePy.so libMMCoreJ_wrap.jnilib libgphoto2 libmmgr_dal_* luts macros mmautofocus mmplugins plugins/Micro-Manager scripts "$2"
-defaults write "$2"/Contents/Info LSEnvironment -dict-add CAMLIBS libgphoto2/libgphoto2 IOLIBS libgphoto2/libgphoto2_port
+
+mkdir -pv "$2"/mm/macosx
+rsync -avR luts macros mmautofocus mmplugins plugins/Micro-Manager scripts "$2"
+rsync -avR MMConfig_demo.cfg "$2"/mm
+rsync -avR MMCorePy.py MMCoreWrapDemo.py _MMCorePy.so libMMCoreJ_wrap.jnilib libgphoto2 libmmgr_dal_* "$2"/mm/macosx
+
+defaults write "$2"/Contents/Info LSEnvironment -dict-add CAMLIBS mm/macosx/libgphoto2/libgphoto2 IOLIBS mm/macosx/libgphoto2/libgphoto2_port
 plutil -convert xml1 "$2"/Contents/Info.plist
-open "$2" --args --update upload-complete-site --force --force-shadow "$3"
+cd "$2"
+
+#./Contents/MacOS/Imagej-macosx --update add-update-site micromanager-macosx http://fruitfly.org/openhicamm/micromanager-macosx ssh:bbooth@sina.lbl.gov /www/fruitfly.org_80/www/htdocs/openhicamm/micromanager-macosx
+./Contents/MacOS/Imagej-macosx --update upload-complete-site --force --force-shadow micromanager-macosx
