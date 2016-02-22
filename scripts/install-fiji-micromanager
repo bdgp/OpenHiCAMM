@@ -30,18 +30,16 @@ if [[ $(uname -s) == Darwin ]]; then
   cd -
 elif [[ $(uname -s) == Linux && $(lsb_release -d) =~ Ubuntu ]]; then
   # install dependencies on ubuntu:
-  sudo apt-get install build-essential autoconf automake libtool pkg-config swig subversion libboost-dev libusb-dev libhidapi-dev libdc1394-22-dev libgphoto2-dev libfreeimage-dev libopencv-dev python python-numpy python3 python3-numpy git maven ant libmsgpack-dev openjdk-8-jdk libusb-1.0.0-dev
+  sudo apt-get install build-essential autoconf automake libtool pkg-config swig subversion libboost-all-dev libusb-dev libhidapi-dev libdc1394-22-dev libgphoto2-dev libfreeimage-dev libopencv-dev python python-numpy python3 python3-numpy git maven ant libmsgpack-dev openjdk-8-jdk libusb-1.0.0-dev
   
   if [[ $(uname -m) == x86_64 ]]; then
-    # install fiji on ubuntu 64-bit
     wget http://jenkins.imagej.net/job/Stable-Fiji-Java-8/lastSuccessfulBuild/artifact/fiji-linux64.zip
     unzip fiji-linux64.zip
-    mv -v Fiji.app Fiji64.app
+    FIJIDIR="$PWD/Fiji.app"
   elif [[ $(uname -m) == i686 ]]; then
-    # install fiji on ubuntu 32-bit
     wget http://jenkins.imagej.net/job/Stable-Fiji-Java-8/lastSuccessfulBuild/artifact/fiji-linux32.zip
     unzip fiji-linux32.zip
-    mv -v Fiji.app Fiji32.app
+    FIJIDIR="$PWD/Fiji.app"
   else 
     echo "Unsupported architecture: $(uname -m)" >&2
     exit 1
