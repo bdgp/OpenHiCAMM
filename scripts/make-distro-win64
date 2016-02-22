@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -eu -o pipefail
+sambashare=smb://mmwin.dhcp.lbl.gov/mmwin
+mmdir="/Volumes/mmwin/Program Files/Micro-Manager1.4"
+fijidir="/Volumes/mmwin/Users/insitu/Desktop/Fiji64"
+arch=win64
+updatesite=micromanager-$arch
+
+osascript -e "mount volume \"$sambashare\""
+
+cd "$mmdir"
+mkdir -pv "$fijidir"/mm/"$arch"
+rsync -avR macros mmautofocus mmplugins plugins/Micro-Manager scripts "$fijidir"
+rsync -av MMConfig_demo.cfg "$fijidir"/mm
+rsync -av MMCorePy.py MMCoreWrapDemo.py *.dll *.pyd OlympusIX3Control OlympusIX3Control/ "$fijidir"/mm/"$arch"
+
+cd "$fijidir"
+java -jar ./jars/imagej-updater-*.jar upload-complete-site --force --force-shadow "$updatesite"

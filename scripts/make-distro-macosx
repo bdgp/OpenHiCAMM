@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
-if [[ $# -lt 3 ]]; then
-  echo "Usage: $0 mm-dir fiji-dir" >&2
-  exit 1
-fi
-cd "$1"
+mmdir=/Applications/Micro-Manager1.4
+fijidir=/Applications/Fiji.app
+arch=macosx
+updatesite=micromanager-"$arch"
 
-mkdir -pv "$2"/mm/macosx
-rsync -avR luts macros mmautofocus mmplugins plugins/Micro-Manager scripts "$2"
-rsync -avR MMConfig_demo.cfg "$2"/mm
-rsync -avR MMCorePy.py MMCoreWrapDemo.py _MMCorePy.so libMMCoreJ_wrap.jnilib libgphoto2 libmmgr_dal_* "$2"/mm/macosx
+#updateurl=http://fruitfly.org/openhicamm/micromanager-macosx
+#updatessh=bbooth@sina.lbl.gov 
+#updatesshpath=/www/fruitfly.org_80/www/htdocs/openhicamm/micromanager-macosx
+#./Contents/MacOS/Imagej-macosx --update add-update-site "$updatesite" "$updateurl"  "$updatessh" "$updatesshpath"
 
-defaults write "$2"/Contents/Info LSEnvironment -dict-add CAMLIBS mm/macosx/libgphoto2/libgphoto2 IOLIBS mm/macosx/libgphoto2/libgphoto2_port
-plutil -convert xml1 "$2"/Contents/Info.plist
-cd "$2"
+cd "$mmdir"
+mkdir -pv "$fijidir"/mm/"$arch"
+rsync -avR luts macros mmautofocus mmplugins plugins/Micro-Manager scripts "$fijidir"
+rsync -av MMConfig_demo.cfg "$fijidir"/mm
+rsync -av MMCorePy.py MMCoreWrapDemo.py _MMCorePy.so libMMCoreJ_wrap.jnilib libgphoto2 libmmgr_dal_* "$fijidir"/mm/"$arch"
+defaults write "$fijidir"/Contents/Info LSEnvironment -dict-add CAMLIBS mm/"$arch"/libgphoto2/libgphoto2 IOLIBS mm/"$arch"/libgphoto2/libgphoto2_port
+plutil -convert xml1 "$fijidir"/Contents/Info.plist
 
-#./Contents/MacOS/Imagej-macosx --update add-update-site micromanager-macosx http://fruitfly.org/openhicamm/micromanager-macosx ssh:bbooth@sina.lbl.gov /www/fruitfly.org_80/www/htdocs/openhicamm/micromanager-macosx
-./Contents/MacOS/Imagej-macosx --update upload-complete-site --force --force-shadow micromanager-macosx
+cd "$fijidir"
+./Contents/MacOS/Imagej-macosx --update upload-complete-site --force --force-shadow "$updatesite"
