@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -o errexit
+set -eu
 # see https://www.micro-manager.org/wiki/Build_on_MacOS_X#Getting_Micro-Manager_source_code
 # and https://www.micro-manager.org/wiki/Download%20Micro-Manager_Latest%20Release
 
@@ -7,44 +7,60 @@ set -o errexit
 FIJIDIR="${FIJIDIR:-/Applications/Fiji.app}"
 PORT=4000
 
-# install homebrew and project dependencies
-#ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
-brew tap homebrew/science
-brew install autoconf automake libtool pkg-config swig subversion boost libusb-compat hidapi libdc1394 libgphoto2 freeimage opencv python numpy git maven ant msgpack
+if [[ $(uname -s) == Darwin ]]; then
+  # install dependencies on mac using homebrew
+  if [[ -z $(command -v brew) ]]; then
+    ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
+  fi
+  brew tap homebrew/science
+  brew install autoconf automake libtool pkg-config swig subversion boost libusb-compat hidapi libdc1394 libgphoto2 freeimage opencv python numpy git maven ant msgpack
+  brew cask install java
 
-# install latest Java from Oracle
-#brew tap caskroom/cask
-#brew install brew-cask
-brew cask install java
-
-# install fiji from homebrew cask
-pushd .
-HOMEBREW_CASK_OPTS="--appdir=/Applications" brew cask install fiji
-cd "$FIJIDIR"
-# add the following to fiji/Contents/Info.plist:
-defaults write "$PWD"/Contents/Info fiji -dict-add JVMOptions "-Dorg.micromanager.plugin.path=$PWD/mmplugins -Dorg.micromanager.autofocus.path=$PWD/mmautofocus -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$PORT"
-defaults write "$PWD"/Contents/Info CFBundleExecutable -string ImageJ-macosx
-plutil -convert xml1 Contents/Info.plist
-popd
-
-# set JAVA_HOME
-export JAVA_HOME="$(/usr/libexec/java_home)"
-# set Java source and compile targets to version 1.6 for compatibility with Micro-Manager and Fiji
-export JAVACFLAGS='-source 1.6 -target 1.6'
+  # install fiji on mac
+  wget http://jenkins.imagej.net/job/Stable-Fiji-MacOSX/lastSuccessfulBuild/artifact/fiji-macosx.dmg
+  hdiutil attach fiji-macosx.dmg
+  if test -e "$FIJIDIR"; then rm -rv "$FIJIDIR"; fi
+  cp -Rv /Volumes/Fiji/Fiji.app "$FIJIDIR"
+  hdiutil detach /Volumes/Fiji
+  
+  # add remote debugging support to Info.plist
+  cd "$FIJIDIR"
+  defaults write "$PWD"/Contents/Info fiji -dict-add JVMOptions "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$PORT"
+  plutil -convert xml1 Contents/Info.plist
+  cd -
+elif [[ $(uname -s) == Linux && $(lsb_release -d) =~ Ubuntu ]]; then
+  # install dependencies on ubuntu:
+  sudo apt-get install build-essential autoconf automake libtool pkg-config swig subversion libboost-dev libusb-dev libhidapi-dev libdc1394-22-dev libgphoto2-dev libfreeimage-dev libopencv-dev python python-numpy python3 python3-numpy git maven ant libmsgpack-dev openjdk-8-jdk
+  
+  if [[ $(uname -m) == x86_64 ]]; then
+    # install fiji on ubuntu 64-bit
+    wget http://jenkins.imagej.net/job/Stable-Fiji-Java-8/lastSuccessfulBuild/artifact/fiji-linux64.zip
+    unzip fiji-linux64.zip
+    mv -v Fiji.app Fiji64.app
+  elif [[ $(uname -m) == i686 ]]; then
+    # install fiji on ubuntu 32-bit
+    wget http://jenkins.imagej.net/job/Stable-Fiji-Java-8/lastSuccessfulBuild/artifact/fiji-linux32.zip
+    unzip fiji-linux32.zip
+    mv -v Fiji.app Fiji32.app
+  else 
+    echo "Unsupported architecture: $(uname -m)" >&2
+    exit 1
+  fi
+else
+  echo "Unsupported OS: $(uname -a)" >&2
+  exit 1
+fi
 
 #install micro-manager from source
-pushd .
-mkdir micromanager
+#export JAVA_HOME=$(/usr/libexec/java_home)
+mkdir -pv micromanager
 cd micromanager
 svn --username guest --password guest checkout https://valelab.ucsf.edu/svn/micromanager2/trunk micromanager
-mkdir 3rdpartypublic
+mkdir -pv 3rdpartypublic
 svn --username guest --password guest checkout https://valelab.ucsf.edu/svn/3rdpartypublic/classext 3rdpartypublic/classext
 cd micromanager
-# Configure, build, and install
 ./autogen.sh
 ./configure --enable-imagej-plugin="$FIJIDIR" --with-ij-jar="$(echo "$FIJIDIR"/jars/ij*.jar)"
 make fetchdeps
-
-make -j "$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
+make -j
 make install
-popd
