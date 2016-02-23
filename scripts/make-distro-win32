@@ -15,4 +15,6 @@ rsync -av MMConfig_demo.cfg "$fijidir"/mm
 rsync -av MMCorePy.py MMCoreWrapDemo.py *.dll *.pyd OlympusIX3Control OlympusIX3Control/ "$fijidir"/mm/"$arch"
 
 cd "$fijidir"
+# remove the ssh plugin to work around bug in imagej updater
+rm -v jars/imagej-plugins-uploader-ssh-*.jar
 java -jar ./jars/imagej-updater-*.jar upload-complete-site --force --force-shadow "$updatesite"

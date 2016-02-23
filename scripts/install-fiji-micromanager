@@ -4,8 +4,8 @@ set -eu
 # and https://www.micro-manager.org/wiki/Download%20Micro-Manager_Latest%20Release
 
 # Configuration variables
-FIJIDIR="${FIJIDIR:-/Applications/Fiji.app}"
-PORT=4000
+fijidir="${fijidir:-/Applications/Fiji.app}"
+port=4000
 
 if [[ $(uname -s) == Darwin ]]; then
   # install dependencies on mac using homebrew
@@ -19,18 +19,18 @@ if [[ $(uname -s) == Darwin ]]; then
   # install fiji on mac
   wget http://jenkins.imagej.net/job/Stable-Fiji-MacOSX/lastSuccessfulBuild/artifact/fiji-macosx.dmg
   hdiutil attach fiji-macosx.dmg
-  if test -e "$FIJIDIR"; then rm -rv "$FIJIDIR"; fi
-  cp -Rv /Volumes/Fiji/Fiji.app "$FIJIDIR"
+  if test -e "$fijidir"; then rm -rv "$fijidir"; fi
+  cp -Rv /Volumes/Fiji/Fiji.app "$fijidir"
   hdiutil detach /Volumes/Fiji
   
   # add remote debugging support to Info.plist
-  cd "$FIJIDIR"
-  defaults write "$PWD"/Contents/Info fiji -dict-add JVMOptions "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$PORT"
+  cd "$fijidir"
+  defaults write "$PWD"/Contents/Info fiji -dict-add JVMOptions "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$port"
   plutil -convert xml1 Contents/Info.plist
   cd -
 elif [[ $(uname -s) == Linux && $(lsb_release -d) =~ Ubuntu ]]; then
   # install dependencies on ubuntu:
-  sudo apt-get install build-essential autoconf automake libtool pkg-config swig subversion libboost-all-dev libusb-dev libhidapi-dev libdc1394-22-dev libgphoto2-dev libfreeimage-dev libopencv-dev python python-numpy python3 python3-numpy git maven ant libmsgpack-dev openjdk-8-jdk libusb-1.0.0-dev
+  sudo apt-get install build-essential autoconf automake libtool pkg-config swig subversion libboost-all-dev libusb-dev libhidapi-dev libdc1394-22-dev libgphoto2-dev libfreeimage-dev libopencv-dev python python-numpy python3 python3-numpy git maven ant libmsgpack-dev openjdk-8-jdk libusb-1.0.0-dev gphoto2
 
   # fix for libhidapi not being detected by mm config scripts
   sudo ln -sv /usr/lib/"$(uname -m)"-linux-gnu/libhidapi-libusb.so /usr/lib/x86_64-linux-gnu/libhidapi.so
@@ -38,11 +38,11 @@ elif [[ $(uname -s) == Linux && $(lsb_release -d) =~ Ubuntu ]]; then
   if [[ $(uname -m) == x86_64 ]]; then
     wget http://jenkins.imagej.net/job/Stable-Fiji-Java-8/lastSuccessfulBuild/artifact/fiji-linux64.zip
     unzip fiji-linux64.zip
-    FIJIDIR="$PWD/Fiji.app"
+  fijidir="$PWD/Fiji.app"
   elif [[ $(uname -m) == i686 ]]; then
     wget http://jenkins.imagej.net/job/Stable-Fiji-Java-8/lastSuccessfulBuild/artifact/fiji-linux32.zip
     unzip fiji-linux32.zip
-    FIJIDIR="$PWD/Fiji.app"
+  fijidir="$PWD/Fiji.app"
   else 
     echo "Unsupported architecture: $(uname -m)" >&2
     exit 1
@@ -61,7 +61,7 @@ mkdir -pv 3rdpartypublic
 svn --username guest --password guest checkout https://valelab.ucsf.edu/svn/3rdpartypublic/classext 3rdpartypublic/classext
 cd micromanager
 ./autogen.sh
-./configure --enable-imagej-plugin="$FIJIDIR" --with-ij-jar="$(echo "$FIJIDIR"/jars/ij*.jar)"
+./configure --enable-imagej-plugin="$fijidir" --with-ij-jar="$(echo "$fijidir"/jars/ij*.jar)"
 make fetchdeps
 make -j
 make install
