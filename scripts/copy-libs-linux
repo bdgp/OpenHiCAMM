@@ -13,7 +13,7 @@ my $platform = $arch eq 'x86_64'? 'linux64' : $arch eq 'i686'? 'linux32' : 'linu
 
 # get hte list of libraries installed by ubuntu-desktop installer
 my $rdepends = "$platform.rdepends";
-system(qq(apt-rdepends ubuntu-desktop | perl -nle 'print \$1 if /(?:Depends): (\\S+)/' | xargs -n 1 dpkg -L | perl -nle 'm{^/lib/|^/usr/lib/} && m{/lib([^/]+).so[^/]*} && print \$1' |sort |uniq 2>/dev/null >"$rdepends")) if !-e $rdepends;
+system(q(apt-rdepends ubuntu-desktop | perl -nle 'print $1 if /(?:Depends): (\\S+)/' | xargs -n 1 dpkg -L | perl -nle 'm{^/lib/|^/usr/lib/} && m{/lib([^/]+).so[^/]*} && print $1' |sort |uniq 2>/dev/null >).shell_quote($rdepends)) if !-e $rdepends;
 die "Error running rdepends command: ".($?>>8) if $?>>8;
 my %syslibs = map {chomp; ($_=>1)} do {local @ARGV = $rdepends; <>};
 
