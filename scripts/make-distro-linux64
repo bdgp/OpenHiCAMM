@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# make sure to add user to the dialout group: sudo usermod -a -G dialout "$USER"
+fijidir=$HOME/src/Fiji.app
+arch=linux64
+updatesite=micromanager-$arch
+
+source "$(dirname "$0")"/install-fiji-micromanager
+
+cd "$fijidir"
+mkdir -pv mm/"$arch"
+mv -v lib* MMCorePy.py _MMCorePy.so mm/"$arch"
+mv -v mmimagej mm
+# remove conflicting dependency
+rm -v plugins/Micro-Manager/scijava-common-*.jar
+
+"$(dirname "$0")"/copy-libs-linux
+
+java -jar ./jars/imagej-updater-*.jar upload-complete-site --force --force-shadow "$updatesite"
