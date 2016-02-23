@@ -9,26 +9,37 @@ use Cwd qw(abs_path getcwd);
 
 my $appdir=catdir($ENV{HOME},'src','Fiji.app');
 my $arch = qx(uname -m);
+chomp $arch;
 my $platform = $arch eq 'x86_64'? 'linux64' : $arch eq 'i686'? 'linux32' : 'linux';
 
 # get hte list of libraries installed by ubuntu-desktop installer
 my $rdepends = "$platform.rdepends";
-system(q(apt-rdepends ubuntu-desktop | perl -nle 'print $1 if /(?:Depends): (\\S+)/' | xargs -n 1 dpkg -L | perl -nle 'm{^/lib/|^/usr/lib/} && m{/lib([^/]+).so[^/]*} && print $1' |sort |uniq 2>/dev/null >).shell_quote($rdepends)) if !-e $rdepends;
-die "Error running rdepends command: ".($?>>8) if $?>>8;
+if (!-e $rdepends) {
+  system(q(apt-rdepends ubuntu-minimal 2>/dev/null | perl -nle 'print $1 if /(?:Depends): (\\S+)/' | xargs -n 1 dpkg -L 2>/dev/null | perl -nle 'm{^/lib/|^/usr/lib/} && m{/lib([^/]+).so[^/]*} && print $1' |sort |uniq | tee ).shell_quote($rdepends));
+  die "Error running rdepends command: ".($?>>8) if $?>>8;
+}
 my %syslibs = map {chomp; ($_=>1)} do {local @ARGV = $rdepends; <>};
+$syslibs{'linux-vdso'} = 1;
+$syslibs{"ld-linux-i686"} = 1;
+$syslibs{"ld-linux-x86-64"} = 1;
 
 my $libdir=catdir($appdir, 'mm', $platform);
 my %gphotodir=(
-  libgphoto2=>abs_path([glob("/usr/lib/$arch-linux-gnu/libgphoto2/*/*")]->[0]),
-  libgphoto2_port=>abs_path([glob("/usr/lib/$arch-linux-gnu/libgphoto2_port/*/*")]->[0]),
+  libgphoto2=>abs_path([glob("/usr/lib/$arch-linux-gnu/libgphoto2/*")]->[0]),
+  libgphoto2_port=>abs_path([glob("/usr/lib/$arch-linux-gnu/libgphoto2_port/*")]->[0]),
 );
 my %seen;
 
+make_path(catdir($libdir), {error=>my $err});
+die $err if $err;
+print join(' ','mkdir','-pv',shell_quote($libdir))."\n";
 opendir my $d, $appdir or die;
 for my $f (readdir($d)) {
   my $file = catdir($appdir, $f);
   if (-f $file && -x $file && -B $file) {
-    findlib($file, $file, $libdir);
+    my $destfile = catdir($libdir,basename($file));
+    print join(' ','install','-v','-m','0755',shell_quote($file),shell_quote($destfile))."\n";
+    findlib($file, $destfile, $libdir);
   }
 }
 closedir $d;
@@ -55,10 +66,13 @@ exit 0;
 
 sub findlib {
   my ($src, $dest, $libdest) = @_;
+  my $rellibdest = abs2rel($libdest, dirname($dest));
+  print join(' ','patchelf','--set-rpath',shell_quote(catdir('${ORIGIN}', $rellibdest)), shell_quote($dest))."\n";
+
   my $ldd = join(' ','ldd',shell_quote($src));
-  my @libs = grep {basename($_)=~/^(?:lib)?([^.\/]+)\.so/ && !$syslibs{$1}} map {/^\s+(\S+)/? $1: ()} split /\n/, qx($ldd);
+  my @libs = grep {/^\// && basename($_)=~/^(?:lib)?([^.\/]+)\.so/ && !$syslibs{$1}} map {/^\s+\S+\s*=>\s*(\S+)/? $1 : /\s+(\S+)/? $1 : ()} split /\n/, qx($ldd);
   for my $lib (@libs) {
-    (my $abslib = $lib) =~ s|^\$ORIGIN/||;
+    (my $abslib = $lib) =~ s{^\$ORIGIN/|^\$\{ORIGIN\}/}{};
     $abslib = abs_path(rel2abs($abslib, dirname($src)));
     my $abslibdest = abs_path(rel2abs($libdest, dirname($dest)));
 
@@ -66,10 +80,8 @@ sub findlib {
     if (!$seen{basename($destfile)}) {
       print join(' ','install','-v','-m','0755',shell_quote($abslib),shell_quote($destfile))."\n";
       $seen{basename($destfile)} = $destfile;
-      findlib($abslib, $destfile, '.');
+      findlib($abslib, $destfile, $libdest);
     }
-    $destfile = abs2rel($seen{basename($destfile)}, dirname($dest));
-    print join(' ','patchelf','--set-rpath',shell_quote($lib), shell_quote(catdir('$ORIGIN', dirname($destfile))), shell_quote($dest))."\n";
   }
 }
 

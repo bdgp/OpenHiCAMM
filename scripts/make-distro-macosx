@@ -19,4 +19,6 @@ defaults write "$fijidir"/Contents/Info LSEnvironment -dict-add CAMLIBS mm/"$arc
 plutil -convert xml1 "$fijidir"/Contents/Info.plist
 
 cd "$fijidir"
+# remove the ssh plugin to work around bug in imagej updater
+rm -v jars/imagej-plugins-uploader-ssh-*.jar
 ./Contents/MacOS/Imagej-macosx --update upload-complete-site --force --force-shadow "$updatesite"

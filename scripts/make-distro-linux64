@@ -7,12 +7,13 @@ updatesite=micromanager-$arch
 source "$(dirname "$0")"/install-fiji-micromanager
 
 cd "$fijidir"
-mkdir -pv mm/"$arch"
-mv -v lib* MMCorePy.py _MMCorePy.so mm/"$arch"
+"$(dirname "$0")"/copy-libs-linux |bash -x
+rm -v lib* MMCorePy.py _MMCorePy.so mm/"$arch"/ImageJ-linux
 mv -v mmimagej mm
+
 # remove conflicting dependency
 rm -v plugins/Micro-Manager/scijava-common-*.jar
 
-"$(dirname "$0")"/copy-libs-linux
-
+# remove the ssh plugin to work around bug in imagej updater
+rm -v jars/imagej-plugins-uploader-ssh-*.jar
 java -jar ./jars/imagej-updater-*.jar upload-complete-site --force --force-shadow "$updatesite"
