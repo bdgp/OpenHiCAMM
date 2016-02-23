@@ -1,0 +1,40 @@
+Index: DeviceAdapters/SimpleCam/gphoto/SimpleCam.cpp
+===================================================================
+--- DeviceAdapters/SimpleCam/gphoto/SimpleCam.cpp	(revision 15952)
++++ DeviceAdapters/SimpleCam/gphoto/SimpleCam.cpp	(working copy)
+@@ -37,6 +37,12 @@
+ #include <sys/stat.h>
+ #endif // __APPLE__
+ 
++#ifdef __linux__
++#include <linux/limits.h>
++#include <unistd.h>
++#include <string>
++#endif // __linux__
++
+ using namespace std;
+ 
+ CSimpleCam::CSimpleCam()
+@@ -115,6 +121,22 @@
+    else
+       gp_log(GP_LOG_ERROR, "SimpleCam", "Failed to get path of executable. Using default libgphoto2 and libgphoto2_port driver directory.");
+ #endif // __APPLE__
++#ifdef __linux__
++  char result[PATH_MAX];
++  ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
++  std::string path(result, (count > 0) ? count : 0);
++  std::cerr << "gphoto: exe path=" << path << std::endl;
++  if (!path.empty()) {
++    std::string arch("linux64");
++    size_t diridx = path.find_last_of("/\\");
++    std::string camlibs = path.substr(0,diridx)+"mm/"+arch+"/libgphoto2/libgphoto2";
++    setenv("CAMLIBS", camlibs.c_str(), 0);
++    std::cerr << "gphoto: CAMLIBS=" << camlibs << std::endl;
++    std::string iolibs = path.substr(0,diridx) + "mm/"+arch+"/libgphoto2/libgphoto2_port";
++    setenv("IOLIBS", iolibs.c_str(), 0);
++    std::cerr << "gphoto: IOLIBS=" << iolibs << std::endl;
++  }
++#endif // __linux__
+ return 0;
+ }
+ 
