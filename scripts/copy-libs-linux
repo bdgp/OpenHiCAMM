@@ -9,16 +9,21 @@ use Cwd qw(abs_path getcwd);
 
 my $appdir=catdir($ENV{HOME},'src','Fiji.app');
 my $arch = qx(uname -m);
-my $libdir=catdir($appdir, 'mm',$arch eq 'x86_64'? 'linux64' : $arch eq 'i686'? 'linux32' : 'linux');
+my $platform = $arch eq 'x86_64'? 'linux64' : $arch eq 'i686'? 'linux32' : 'linux';
+
+# get hte list of libraries installed by ubuntu-desktop installer
+my $rdepends = "$platform.rdepends";
+system(qq(apt-rdepends ubuntu-desktop | perl -nle 'print \$1 if /(?:Depends): (\\S+)/' | xargs -n 1 dpkg -L | perl -nle 'm{^/lib/|^/usr/lib/} && m{/lib([^/]+).so[^/]*} && print \$1' |sort |uniq 2>/dev/null >"$rdepends")) if !-e $rdepends;
+die "Error running rdepends command: ".($?>>8) if $?>>8;
+my %syslibs = map {chomp; ($_=>1)} do {local @ARGV = $rdepends; <>};
+
+my $libdir=catdir($appdir, 'mm', $platform);
 my %gphotodir=(
   libgphoto2=>abs_path([glob("/usr/lib/$arch-linux-gnu/libgphoto2/*/*")]->[0]),
   libgphoto2_port=>abs_path([glob("/usr/lib/$arch-linux-gnu/libgphoto2_port/*/*")]->[0]),
 );
 my %seen;
 
-make_path($libdir, {error=>my $err});
-die $err if $err;
-print join(' ','mkdir','-pv',shell_quote($libdir))."\n";
 opendir my $d, $appdir or die;
 for my $f (readdir($d)) {
   my $file = catdir($appdir, $f);
@@ -30,15 +35,15 @@ closedir $d;
 
 for my $dir (sort keys %gphotodir) {
   my $gphotodir = $gphotodir{$dir};
-  make_path(catdir($appdir,'libgphoto2',$dir), {error=>my $err});
+  make_path(catdir($libdir,'libgphoto2',$dir), {error=>my $err});
   die $err if $err;
-  print join(' ','mkdir','-pv',shell_quote(catdir($appdir,'libgphoto2',$dir)))."\n";
+  print join(' ','mkdir','-pv',shell_quote(catdir($libdir,'libgphoto2',$dir)))."\n";
 
   opendir my $d, $gphotodir or die;
   for my $f (readdir($d)) {
     my $file = catdir($gphotodir, $f);
     if ($file =~ /\.so$/ && -f $file) {
-      my $destfile = catdir($appdir,'libgphoto2',$dir,basename($file));
+      my $destfile = catdir($libdir,'libgphoto2',$dir,basename($file));
       print join(' ','install','-v','-m','0755',shell_quote($file),shell_quote($destfile))."\n";
       findlib($file, $destfile, $libdir);
     }
@@ -50,17 +55,10 @@ exit 0;
 
 sub findlib {
   my ($src, $dest, $libdest) = @_;
-  print join(' ','patchelf','-id',shell_quote(catdir('@loader_path',basename($dest))), shell_quote($dest))."\n";
-
-  my $libname = fileparse($dest,qr/\..*$/);
-  if (exists($gphotodir{$libname})) {
-    print join(' ','perl','-i','-pe',shell_quote('s{'.$gphotodir{$libname}.'}{pack("Z'.length($gphotodir{$libname}).'", "'.catdir($libdir,$libname).'")}e'),shell_quote($dest))."\n";
-  }
-
   my $ldd = join(' ','ldd',shell_quote($src));
-  my @libs = grep {!m(^\s*/System/Library/|^\s*/Library/|^\s*/usr/lib/)} map {/^\s+(\S+)/? $1: ()} split /\n/, qx($ldd);
+  my @libs = grep {basename($_)=~/^(?:lib)?([^.\/]+)\.so/ && !$syslibs{$1}} map {/^\s+(\S+)/? $1: ()} split /\n/, qx($ldd);
   for my $lib (@libs) {
-    (my $abslib = $lib) =~ s|^\@loader_path/||;
+    (my $abslib = $lib) =~ s|^\$ORIGIN/||;
     $abslib = abs_path(rel2abs($abslib, dirname($src)));
     my $abslibdest = abs_path(rel2abs($libdest, dirname($dest)));
 
@@ -71,7 +69,7 @@ sub findlib {
       findlib($abslib, $destfile, '.');
     }
     $destfile = abs2rel($seen{basename($destfile)}, dirname($dest));
-    print join(' ','patchelf','--set-rpath',shell_quote($lib), shell_quote(catdir('@loader_path', $destfile)), shell_quote($dest))."\n";
+    print join(' ','patchelf','--set-rpath',shell_quote($lib), shell_quote(catdir('$ORIGIN', dirname($destfile))), shell_quote($dest))."\n";
   }
 }
 
