@@ -17,7 +17,7 @@ else
 fi
 
 # install dependencies on ubuntu:
-sudo apt-get install build-essential autoconf automake libtool pkg-config swig subversion libboost-all-dev libusb-dev libhidapi-dev libdc1394-22-dev libgphoto2-dev libfreeimage-dev libopencv-dev python python-numpy python3 python3-numpy git maven ant libmsgpack-dev openjdk-8-jdk libusb-1.0.0-dev gphoto2
+sudo apt-get install build-essential autoconf automake libtool pkg-config swig subversion libboost-all-dev libusb-dev libhidapi-dev libdc1394-22-dev libgphoto2-dev libfreeimage-dev libopencv-dev python python-numpy python3 python3-numpy git maven ant libmsgpack-dev openjdk-8-jdk libusb-1.0.0-dev gphoto2 libstring-shellquote-perl libterm-readline-gnu-perl
 
 # fix for libhidapi not being detected by mm config scripts
 sudo ln -sv /usr/lib/"$(uname -m)"-linux-gnu/libhidapi-libusb.so /usr/lib/"$(uanme -m)"-linux-gnu/libhidapi.so
