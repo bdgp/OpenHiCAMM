@@ -40,7 +40,7 @@ print join(' ','mkdir','-pv',shell_quote($libdir))."\n";
 opendir my $d, $appdir or die;
 for my $f (readdir($d)) {
   my $file = catdir($appdir, $f);
-  if (-f $file && -x $file && -B $file && $file !~ /^ImageJ-/) {
+  if (-f $file && -x $file && -B $file && basename($file) !~ /^ImageJ-|^fiji-/i) {
     my $destfile = catdir($libdir,basename($file));
     print join(' ','mv','-v',shell_quote($file),shell_quote($destfile))."\n";
     findlib($file, $destfile, $libdir);
