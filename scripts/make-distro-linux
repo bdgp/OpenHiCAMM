@@ -12,10 +12,10 @@ updatesite=micromanager-$arch
 
 source "$(dirname "$0")"/install-fiji-micromanager-linux
 
-cd "$fijidir"
 "$(dirname "$0")"/copy-libs-linux |bash -x
-rm -v lib* MMCorePy.py _MMCorePy.so mm/"$arch"/ImageJ-linux
+cd "$fijidir"
 mv -v mmimagej mm
+mv -v *.py mm/"$arch"
 
 # remove conflicting dependency
 rm -v plugins/Micro-Manager/scijava-common-*.jar
