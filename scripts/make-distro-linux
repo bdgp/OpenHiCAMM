@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 # make sure to add user to the dialout group: sudo usermod -a -G dialout "$USER"
 fijidir=$HOME/src/Fiji.app
-arch=linux64
+if [[ $(uname -ms) == 'Linux x86_64' ]]; then
+  arch=linux64
+elif [[ $(uname -ms) == 'Linux i686' ]]; then
+  arch=linux32
+else
+  arch=linux
+fi
 updatesite=micromanager-$arch
 
 source "$(dirname "$0")"/install-fiji-micromanager

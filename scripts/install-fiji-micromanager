@@ -6,6 +6,7 @@ set -eu
 # Configuration variables
 fijidir="${fijidir:-/Applications/Fiji.app}"
 port=4000
+patchdir=$(cd $(dirname "$0")/../patches && pwd)
 
 if [[ $(uname -s) == Darwin ]]; then
   # install dependencies on mac using homebrew
@@ -63,5 +64,13 @@ cd micromanager
 ./autogen.sh
 ./configure --enable-imagej-plugin="$fijidir" --with-ij-jar="$(echo "$fijidir"/jars/ij*.jar)"
 make fetchdeps
+# apply patches
+if [[ $(uname -ms) == 'Linux x86_64' ]]; then
+  patch -p1 <"$patchdir"/linux64-gphoto-setpaths.patch
+elif [[ $(uname -ms) == 'Linux i686' ]]; then
+  patch -p1 <"$patchdir"/linux32-gphoto-setpaths.patch
+elif [[ $(uname -s) == 'Darwin' ]]; then
+  patch -p1 <"$patchdir"/disable-disk-space-check.patch
+fi
 make -j
 make install
