@@ -21,4 +21,7 @@ plutil -convert xml1 "$fijidir"/Contents/Info.plist
 cd "$fijidir"
 # remove the ssh plugin to work around bug in imagej updater
 rm -v jars/imagej-plugins-uploader-ssh-*.jar
+# create update site
+java -jar ./jars/imagej-updater-*.jar add-update-site "$updatesite" http://fruitfly.org/openhicamm/"$updatesite" bbooth@sina.lbl.gov /www/fruitfly.org_80/www/htdocs/openhicamm/"$updatesite"
+# add files to update site
 ./Contents/MacOS/Imagej-macosx --update upload-complete-site --force --force-shadow "$updatesite"

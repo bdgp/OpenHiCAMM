@@ -22,4 +22,7 @@ rm -v plugins/Micro-Manager/scijava-common-*.jar
 
 # remove the ssh plugin to work around bug in imagej updater
 rm -v jars/imagej-plugins-uploader-ssh-*.jar
+# add the update site
+java -jar ./jars/imagej-updater-*.jar add-update-site "$updatesite" http://fruitfly.org/openhicamm/"$updatesite" bbooth@sina.lbl.gov /www/fruitfly.org_80/www/htdocs/openhicamm/"$updatesite"
+# upload the files to the update site
 java -jar ./jars/imagej-updater-*.jar upload-complete-site --force --force-shadow "$updatesite"

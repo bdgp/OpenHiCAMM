@@ -17,4 +17,7 @@ rsync -av MMCorePy.py MMCoreWrapDemo.py *.dll *.pyd OlympusIX3Control OlympusIX3
 cd "$fijidir"
 # remove the ssh plugin to work around bug in imagej updater
 rm -v jars/imagej-plugins-uploader-ssh-*.jar
+# create update site
+java -jar ./jars/imagej-updater-*.jar add-update-site "$updatesite" http://fruitfly.org/openhicamm/"$updatesite" bbooth@sina.lbl.gov /www/fruitfly.org_80/www/htdocs/openhicamm/"$updatesite"
+# add files to update site
 java -jar ./jars/imagej-updater-*.jar upload-complete-site --force --force-shadow "$updatesite"
