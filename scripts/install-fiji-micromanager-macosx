@@ -44,6 +44,6 @@ cd micromanager
 ./configure --enable-imagej-plugin="$fijidir" --with-ij-jar="$(echo "$fijidir"/jars/ij*.jar)"
 make fetchdeps
 # apply patches
-patch -p1 <"$patchdir"/disable-disk-space-check.patch
+patch -p0 <"$patchdir"/disable-disk-space-check.patch
 make -j
 make install

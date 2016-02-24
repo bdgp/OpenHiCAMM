@@ -41,6 +41,6 @@ cd micromanager
 ./configure --enable-imagej-plugin="$fijidir" --with-ij-jar="$(echo "$fijidir"/jars/ij*.jar)"
 make fetchdeps
 # apply patch
-patch -p1 <"$patchdir"/"$arch"-gphoto-setpaths.patch
+patch -p0 <"$patchdir"/"$arch"-gphoto-setpaths.patch
 make -j
 make install
