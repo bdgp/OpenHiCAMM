@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -eu
+# see https://www.micro-manager.org/wiki/Build_on_MacOS_X#Getting_Micro-Manager_source_code
+# and https://www.micro-manager.org/wiki/Download%20Micro-Manager_Latest%20Release
+
+# Configuration variables
+fijidir="${fijidir:-$PWD/Fiji.app}"
+port=4000
+patchdir=$(cd $(dirname "$0")/../patches && pwd)
+if [[ $(uname -m) == x86_64 ]]; then
+  arch=linux64
+elif [[ $(uname -m) == i686 ]]; then
+  arch=linux32
+else
+  echo "Unsupported architecture: $(uname -m)" >&2
+  exit 1
+fi
+
+# install dependencies on ubuntu:
+sudo apt-get install build-essential autoconf automake libtool pkg-config swig subversion libboost-all-dev libusb-dev libhidapi-dev libdc1394-22-dev libgphoto2-dev libfreeimage-dev libopencv-dev python python-numpy python3 python3-numpy git maven ant libmsgpack-dev openjdk-8-jdk libusb-1.0.0-dev gphoto2
+
+# fix for libhidapi not being detected by mm config scripts
+sudo ln -sv /usr/lib/"$(uname -m)"-linux-gnu/libhidapi-libusb.so /usr/lib/"$(uanme -m)"-linux-gnu/libhidapi.so
+
+# downlad and install fiji
+wget http://jenkins.imagej.net/job/Stable-Fiji-Java-8/lastSuccessfulBuild/artifact/fiji-"$arch".zip
+unzip fiji-"$arch".zip
+rm -v fiji-"$arch".zip
+
+#install micro-manager from source
+mkdir -pv micromanager
+cd micromanager
+svn --username guest --password guest checkout https://valelab.ucsf.edu/svn/micromanager2/trunk micromanager
+mkdir -pv 3rdpartypublic
+svn --username guest --password guest checkout https://valelab.ucsf.edu/svn/3rdpartypublic/classext 3rdpartypublic/classext
+cd micromanager
+./autogen.sh
+./configure --enable-imagej-plugin="$fijidir" --with-ij-jar="$(echo "$fijidir"/jars/ij*.jar)"
+make fetchdeps
+# apply patch
+patch -p1 <"$patchdir"/"$arch"-gphoto-setpaths.patch
+make -j
+make install
