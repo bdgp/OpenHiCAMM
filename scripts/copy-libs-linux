@@ -14,10 +14,10 @@ my $platform = $arch eq 'x86_64'? 'linux64' : $arch eq 'i686'? 'linux32' : 'linu
 
 # get hte list of libraries installed by ubuntu-desktop installer
 my $syslibs = "$platform.syslibs";
-if (!-e $syslibs) {
-  system(q(wget -q -O- http://cdimage.ubuntu.com/ubuntu-server/trusty/daily/current/trusty-server-amd64.manifest |perl -nle '/^(\\S+)/ && print $1' |xargs -n 1 dpkg -L 2>/dev/null |perl -nle 'm{^/lib/|^/usr/lib/} && m{/lib([^/]+).so[^/]*} && print $1' |sort |uniq | tee ).shell_quote($syslibs));
-  die "Error running syslibs command: ".($?>>8) if $?>>8;
-}
+#if (!-e $syslibs) {
+#  system(q(wget -q -O- http://cdimage.ubuntu.com/ubuntu-server/trusty/daily/current/trusty-server-amd64.manifest |perl -nle '/^(\\S+)/ && print $1' |xargs -n 1 dpkg -L 2>/dev/null |perl -nle 'm{^/lib/|^/usr/lib/} && m{/lib([^/]+).so[^/]*} && print $1' |sort |uniq | tee ).shell_quote($syslibs));
+#  die "Error running syslibs command: ".($?>>8) if $?>>8;
+#}
 my %syslibs;
 if (-e $syslibs) {
   %syslibs = map {chomp; ($_=>1)} do {local @ARGV = $syslibs; <>};
