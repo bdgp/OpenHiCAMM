@@ -8,7 +8,7 @@ use String::ShellQuote qw(shell_quote);
 use Cwd qw(abs_path getcwd);
 
 my $appdir='/Applications/Fiji.app';
-my $libdir=catdir($appdir, 'lib');
+my $libdir=catdir($appdir,'mm','macosx');
 my %gphotodir=(
   libgphoto2=>abs_path([glob('/usr/local/opt/libgphoto2/lib/libgphoto2/*')]->[0]),
   libgphoto2_port=>abs_path([glob('/usr/local/opt/libgphoto2/lib/libgphoto2_port/*')]->[0]),
@@ -22,6 +22,8 @@ opendir my $d, $appdir or die;
 for my $f (readdir($d)) {
   my $file = catdir($appdir, $f);
   if (-f $file && -x $file && -B $file) {
+    my $destfile = catdir($libdir,basename($file));
+    print join(' ','install','-v','-m','0755',shell_quote($file),shell_quote($destfile))."\n";
     findlib($file, $file, $libdir);
   }
 }
@@ -29,32 +31,29 @@ closedir $d;
 
 for my $dir (sort keys %gphotodir) {
   my $gphotodir = $gphotodir{$dir};
-  make_path(catdir($appdir,'libgphoto2',$dir), {error=>my $err});
+  make_path(catdir($libdir,'libgphoto2',$dir), {error=>my $err});
   die $err if $err;
-  print join(' ','mkdir','-pv',shell_quote(catdir($appdir,'libgphoto2',$dir)))."\n";
+  print join(' ','mkdir','-pv',shell_quote(catdir($libdir,'libgphoto2',$dir)))."\n";
 
   opendir my $d, $gphotodir or die;
   for my $f (readdir($d)) {
     my $file = catdir($gphotodir, $f);
     if ($file =~ /\.so$/ && -f $file) {
-      my $destfile = catdir($appdir,'libgphoto2',$dir,basename($file));
+      my $destfile = catdir($libdir,'libgphoto2',$dir,basename($file));
       print join(' ','install','-v','-m','0755',shell_quote($file),shell_quote($destfile))."\n";
       findlib($file, $destfile, $libdir);
     }
   }
   closedir $d;
 }
+print "defaults write "$appdir"/Contents/Info LSEnvironment -dict-add CAMLIBS mm/macosx/libgphoto2/libgphoto2 IOLIBS mm/macosx/libgphoto2/libgphoto2_port\n";
+print "plutil -convert xml1 "$appdir"/Contents/Info.plist\n";
 
 exit 0;
 
 sub findlib {
   my ($src, $dest, $libdest) = @_;
   print join(' ','install_name_tool','-id',shell_quote(catdir('@loader_path',basename($dest))), shell_quote($dest))."\n";
-
-  #my $libname = fileparse($dest,qr/\..*$/);
-  #if (exists($gphotodir{$libname})) {
-  #  print join(' ','perl','-i','-pe',shell_quote('s{'.$gphotodir{$libname}.'}{pack("Z'.length($gphotodir{$libname}).'", "'.catdir($libdir,$libname).'")}e'),shell_quote($dest))."\n";
-  #}
 
   my $otool = join(' ','otool','-L',shell_quote($src));
   my @libs = grep {!m(^\s*/System/Library/|^\s*/Library/|^\s*/usr/lib/)} map {/^\s+(\S+)/? $1: ()} split /\n/, qx($otool);
