@@ -11,6 +11,7 @@ my $appdir=catdir($ENV{HOME},'src','Fiji.app');
 my $arch = qx(uname -m);
 chomp $arch;
 my $platform = $arch eq 'x86_64'? 'linux64' : $arch eq 'i686'? 'linux32' : 'linux';
+$arch = 'i386' if $arch eq 'i686';
 
 # get hte list of libraries installed by ubuntu-desktop installer
 my $syslibs = "$platform.syslibs";
