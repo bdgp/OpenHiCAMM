@@ -27,10 +27,10 @@ Index: DeviceAdapters/SimpleCam/gphoto/SimpleCam.cpp
 +  if (!path.empty()) {
 +    std::string arch("linux64");
 +    size_t diridx = path.find_last_of("/\\");
-+    std::string camlibs = path.substr(0,diridx)+"mm/"+arch+"/libgphoto2/libgphoto2";
++    std::string camlibs = path.substr(0,diridx)+"/mm/"+arch+"/libgphoto2/libgphoto2";
 +    setenv("CAMLIBS", camlibs.c_str(), 0);
 +    std::cerr << "gphoto: CAMLIBS=" << camlibs << std::endl;
-+    std::string iolibs = path.substr(0,diridx) + "mm/"+arch+"/libgphoto2/libgphoto2_port";
++    std::string iolibs = path.substr(0,diridx) + "/mm/"+arch+"/libgphoto2/libgphoto2_port";
 +    setenv("IOLIBS", iolibs.c_str(), 0);
 +    std::cerr << "gphoto: IOLIBS=" << iolibs << std::endl;
 +  }
