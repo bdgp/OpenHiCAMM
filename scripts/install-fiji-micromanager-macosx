@@ -29,6 +29,7 @@ rm -v fiji-macosx.dmg
 # add remote debugging support to Info.plist
 cd "$fijidir"
 defaults write "$PWD"/Contents/Info fiji -dict-add JVMOptions "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$port"
+defaults write "$PWD"/Contents/Info LSEnvironment -dict-add CAMLIBS mm/macosx/libgphoto2/libgphoto2 IOLIBS mm/macosx/libgphoto2/libgphoto2_port
 plutil -convert xml1 Contents/Info.plist
 cd -
 

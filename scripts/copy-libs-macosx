@@ -23,8 +23,8 @@ for my $f (readdir($d)) {
   my $file = catdir($appdir, $f);
   if (-f $file && -x $file && -B $file) {
     my $destfile = catdir($libdir,basename($file));
-    print join(' ','install','-v','-m','0755',shell_quote($file),shell_quote($destfile))."\n";
     findlib($file, $file, $libdir);
+    print join(' ','mv','-v',shell_quote($file),shell_quote($destfile))."\n";
   }
 }
 closedir $d;
@@ -46,8 +46,8 @@ for my $dir (sort keys %gphotodir) {
   }
   closedir $d;
 }
-print "defaults write "$appdir"/Contents/Info LSEnvironment -dict-add CAMLIBS mm/macosx/libgphoto2/libgphoto2 IOLIBS mm/macosx/libgphoto2/libgphoto2_port\n";
-print "plutil -convert xml1 "$appdir"/Contents/Info.plist\n";
+print "defaults write ".shell_quote($appdir)."/Contents/Info LSEnvironment -dict-add CAMLIBS mm/macosx/libgphoto2/libgphoto2 IOLIBS mm/macosx/libgphoto2/libgphoto2_port\n";
+print "plutil -convert xml1 ".shell_quote($appdir)."/Contents/Info.plist\n";
 
 exit 0;
 

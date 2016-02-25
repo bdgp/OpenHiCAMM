@@ -5,11 +5,6 @@ fijidir=/Applications/Fiji.app
 arch=macosx
 updatesite=micromanager-"$arch"
 
-#updateurl=http://fruitfly.org/openhicamm/micromanager-macosx
-#updatessh=bbooth@sina.lbl.gov 
-#updatesshpath=/www/fruitfly.org_80/www/htdocs/openhicamm/micromanager-macosx
-#./Contents/MacOS/Imagej-macosx --update add-update-site "$updatesite" "$updateurl"  "$updatessh" "$updatesshpath"
-
 cd "$mmdir"
 mkdir -pv "$fijidir"/mm/"$arch"
 rsync -avR luts macros mmautofocus mmplugins plugins/Micro-Manager scripts "$fijidir"
