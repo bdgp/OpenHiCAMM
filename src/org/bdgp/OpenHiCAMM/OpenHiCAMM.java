@@ -30,7 +30,7 @@ import ij.IJ;
 
 
 public class OpenHiCAMM implements MMPlugin {
-	public static final String MMSLIDEMODULESDIR = "openhicamm_modules";
+	public static final String MMSLIDEMODULESDIR = "lib/openhicamm_modules";
 	private ScriptInterface app;
 	private WorkflowDialog dialog;
 	private static List<String> moduleNames = null;
