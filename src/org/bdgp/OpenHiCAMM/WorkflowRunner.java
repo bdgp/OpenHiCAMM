@@ -599,7 +599,7 @@ public class WorkflowRunner {
                     }
 
                     // Log some information on this workflow
-                    WorkflowRunner.this.logWorkflowInfo(startModuleId);
+                    //WorkflowRunner.this.logWorkflowInfo(startModuleId);
                     if (resume) logger.info("Scanning for previous tasks...");
 
                     // start the first task(s)
@@ -771,8 +771,9 @@ public class WorkflowRunner {
                     }
                     WorkflowRunner.this.logger.fine(String.format("%s: Finished running task", task.getName()));
                     WorkflowRunner.this.logger.info(String.format("%s: Setting task status to %s", task.getName(), status));
-                    task.setStatus(status);
             	}
+                task.setStatus(status);
+                taskStatus.update(task, "id");
 
                 // notify any task listeners
                 notifyTaskListeners(task);
@@ -780,49 +781,30 @@ public class WorkflowRunner {
                 String dispatchUUID = UUID.randomUUID().toString();
                 if (status == Status.SUCCESS) {
                     try {
-                    	// We need to update the status of this task AND flag the unprocessed child tasks that 
-                    	// will be ready to run. Both of these actions must be done in a single atomic DB
-                    	// operation to avoid race conditions. 
-                        // According to this thread from the HSQLDB maiiling list, HSQLDB dev Fred Toussi
-                        // says merge should work atomically, since the default concurrency model for HSQLDB
-                        // is 2PL:
-                        // http://sourceforge.net/p/hsqldb/discussion/73674/thread/d81672a3/
-                        // That's the only information on the atomicity of merge in HSQLDB I could find.
                         DatabaseConnection db = taskStatus.getConnectionSource().getReadWriteConnection();
+                        List<TaskDispatch> childTasks = taskDispatch.select(where("parentTaskId",task.getId()));
                         try {
-                            CompiledStatement compiledStatement = db.compileStatement(
-                                "merge into TASK using (\n"+
-                                "  select c.id,\n"+
-                                "    ?,\n"+
-                                "    case when c.status in ('NEW','DEFER')\n"+
-                                "    then cast('IN_PROGRESS' as longvarchar)\n"+
-                                "    else c.status end\n"+
-                                "  from TASK p\n"+
-                                "  join TASKDISPATCH td\n"+
-                                "    on p.id=td.parentTaskId\n"+
-                                "  join TASK c\n"+
-                                "    on c.id=td.taskId\n"+
-                                "  left join (TASKDISPATCH td2\n"+
-                                "      join TASK p2\n"+
-                                "        on p2.id=td2.parentTaskId)\n"+
-                                "    on c.id=td2.taskId\n"+
-                                "    and p2.id<>?\n"+
-                                "    and p2.status<>'SUCCESS'\n"+
-                                "  where c.status in ('NEW','DEFER','SUCCESS')\n"+
-                                "    and p2.id is null\n"+
-                                "    and p.id=?\n"+
-                                "  union all\n"+
-                                "  select p.id, p.dispatchUUID, cast('SUCCESS' as longvarchar)\n"+
-                                "  from TASK p\n"+
-                                "  where p.id=?) \n"+
-                                "  as t(id, dispatchUUID, status) on TASK.id=t.id\n"+
-                                "  when matched then update set TASK.dispatchUUID=t.dispatchUUID, TASK.status=t.status",
-                                StatementType.UPDATE, new FieldType[0], DatabaseConnection.DEFAULT_RESULT_FLAGS);
-                            compiledStatement.setObject(0, dispatchUUID, SqlType.LONG_STRING);
-                            compiledStatement.setObject(1, task.getId(), SqlType.INTEGER);
-                            compiledStatement.setObject(2, task.getId(), SqlType.INTEGER);
-                            compiledStatement.setObject(3, task.getId(), SqlType.INTEGER);
-                            compiledStatement.runUpdate();
+                            for (TaskDispatch td : childTasks) {
+                                CompiledStatement compiledStatement = db.compileStatement(
+                                    "update TASK set \n"+
+                                    "  dispatchUUID=?, \n"+
+                                    "  status=case when status in ('NEW','DEFER') \n"+
+                                    "              then cast('IN_PROGRESS' as longvarchar) \n"+
+                                    "              else status end \n"+
+                                    "where id=? \n"+
+                                    "  and dispatchUUID is null \n"+
+                                    "  and status in ('NEW','DEFER','SUCCESS') \n"+
+                                    "  and (select count(*) \n"+
+                                    "       from TASKDISPATCH td, TASK p \n"+
+                                    "       where td.parentTaskId=p.id \n"+
+                                    "         and td.taskId=? \n"+
+                                    "         and p.status<>'SUCCESS')=0",
+                                    StatementType.UPDATE, new FieldType[0], DatabaseConnection.DEFAULT_RESULT_FLAGS);
+                                compiledStatement.setObject(0, dispatchUUID, SqlType.LONG_STRING);
+                                compiledStatement.setObject(1, td.getTaskId(), SqlType.INTEGER);
+                                compiledStatement.setObject(2, td.getTaskId(), SqlType.INTEGER);
+                                compiledStatement.runUpdate();
+                            }
                         }
                         finally {
                             taskStatus.getConnectionSource().releaseConnection(db);
@@ -830,10 +812,6 @@ public class WorkflowRunner {
                     }
                     catch (SecurityException e) { throw new RuntimeException(e); }
                     catch (SQLException e) { throw new RuntimeException(e); }
-                }
-                else {
-                	// update the task status in the DB
-                	taskStatus.update(task, "id");
                 }
 
                 if (status == Status.SUCCESS && !pool.isShutdown()) {
