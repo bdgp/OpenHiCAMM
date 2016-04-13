@@ -72,11 +72,17 @@ public class WorkflowDialog extends JDialog {
 
     JLabel lblNumberOfThreads;
     boolean active = true;
+    boolean isDisposed = false;
     JButton btnViewReport;
     ReportDialog.Frame reportDialog;
+    
+    public boolean isDisposed() {
+        return isDisposed;
+    }
 
     public WorkflowDialog(Frame parentFrame, OpenHiCAMM mmslide) {
         super(parentFrame, "OpenHiCAMM");
+        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         this.mmslide = mmslide;
         
         directoryChooser = new JFileChooser();
@@ -332,6 +338,14 @@ public class WorkflowDialog extends JDialog {
         refresh();
     }
     
+    @Override public void dispose() {
+        if (workflowRunner != null) {
+            workflowRunner.shutdown();
+        }
+        workflowRunner = null;
+        isDisposed = true;
+    }
+    
     /**
      * Catch-all function to refresh the UI controls given the state of the dialog. This should be run whenever
      * a model state change is made that can change the UI state.
@@ -431,6 +445,9 @@ public class WorkflowDialog extends JDialog {
         Integer instanceId = workflowInstance.getSelectedIndex() < 0 ? null :
             Integer.parseInt(((String)workflowInstance.getItemAt(workflowInstance.getSelectedIndex())).replaceAll("^WF",""));
         if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getWorkflowInstance().getId()) || force) {
+            if (workflowRunner != null) {
+                workflowRunner.shutdown();
+            }
             workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, Level.INFO, mmslide);
 
             workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);

@@ -55,7 +55,10 @@ public class OpenHiCAMM implements MMPlugin {
 	 * The main app calls this method to remove the module window
 	 */
 	public void dispose() {
-		if (dialog != null) dialog.dispose();
+		if (dialog != null) {
+		    dialog.dispose();
+		    dialog = null;
+		}
 	}
 	
 	public WorkflowDialog getDialog() {
@@ -85,7 +88,7 @@ public class OpenHiCAMM implements MMPlugin {
         // open the slide workflow dialog
         SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
-            	if (dialog == null) dialog = new WorkflowDialog(IJ.getInstance(), OpenHiCAMM.this);
+            	if (dialog == null || dialog.isDisposed()) dialog = new WorkflowDialog(IJ.getInstance(), OpenHiCAMM.this);
                 //dialog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 dialog.pack();
                 dialog.setVisible(true);

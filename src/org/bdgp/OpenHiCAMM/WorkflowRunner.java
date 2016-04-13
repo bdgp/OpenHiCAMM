@@ -1093,4 +1093,11 @@ public class WorkflowRunner {
     public static void setInstance(WorkflowRunner workflowRunnerInstance) {
         WorkflowRunner.workflowRunnerInstance = workflowRunnerInstance;
     }
+    
+    public void shutdown() {
+        try {
+            this.workflowDb.getReadWriteConnection().executeStatement("shutdown", DatabaseConnection.DEFAULT_RESULT_FLAGS);
+        } 
+        catch (SQLException e) {throw new RuntimeException(e);}
+    }
 }
