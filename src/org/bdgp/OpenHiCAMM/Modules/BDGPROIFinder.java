@@ -143,12 +143,18 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
                         label, width, height, area, roi));
                 
                 // Draw the ROI rectangle
-                imp.setRoi((int)Math.floor(rt.getValue("BX", i)), 
-                        (int)Math.floor(rt.getValue("BY", i)), 
-                        (int)Math.floor(rt.getValue("Width", i)), 
-                        (int)Math.floor(rt.getValue("Height", i)));
-                IJ.setForegroundColor(255, 255, 0);
-                IJ.run(imp, "Draw", "");
+                try {
+                    imp.setRoi((int)Math.floor(rt.getValue("BX", i)), 
+                            (int)Math.floor(rt.getValue("BY", i)), 
+                            (int)Math.floor(rt.getValue("Width", i)), 
+                            (int)Math.floor(rt.getValue("Height", i)));
+                    IJ.setForegroundColor(255, 255, 0);
+                    IJ.run(imp, "Draw", "");
+                }
+                catch (Throwable e) { 
+                    // Sometimes this fails, but it's not really important, so ignore it
+                    logger.warning(String.format("Couldn't draw the ROI rectangle!: %s", e.getMessage()));
+                }
             }
             else {
                 if (area < minRoiArea) {
