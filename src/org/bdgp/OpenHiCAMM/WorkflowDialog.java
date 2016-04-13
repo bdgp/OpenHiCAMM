@@ -340,10 +340,23 @@ public class WorkflowDialog extends JDialog {
     
     @Override public void dispose() {
         if (workflowRunner != null) {
+            JDialog dialog = new JDialog();
+            dialog.setModal(true);
+            dialog.setContentPane(new JOptionPane(
+                "Shutting down the database, please wait...",
+                JOptionPane.INFORMATION_MESSAGE,
+                JOptionPane.DEFAULT_OPTION,
+                null, new Object[]{}, null));
+            dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+            dialog.pack();
+            dialog.setVisible(true);
+
             workflowRunner.shutdown();
+            dialog.dispose();
         }
         workflowRunner = null;
         isDisposed = true;
+        super.dispose();
     }
     
     /**
