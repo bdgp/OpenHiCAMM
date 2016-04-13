@@ -35,7 +35,7 @@ Index: DeviceAdapters/Prior/Prior.cpp
 -   if (ret != DEVICE_OK)
 -      return ret;
 +   int tries = 0;
-+   const int MAX_TRIES = 50;
++   const int MAX_TRIES = 10;
 +   while (tries++ < MAX_TRIES) {
 +       ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
 +       if (ret != DEVICE_OK) {
@@ -94,7 +94,7 @@ Index: DeviceAdapters/Prior/Prior.cpp
 -   if (ret != DEVICE_OK)
 -      return ret;
 +   int tries = 0;
-+   const int MAX_TRIES = 100;
++   const int MAX_TRIES = 10;
 +   while (tries++ < MAX_TRIES) {
 +       ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
 +       if (ret != DEVICE_OK) {
