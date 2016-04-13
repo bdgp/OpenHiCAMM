@@ -23,16 +23,16 @@ public class Task {
     			this.id, Util.escape(this.dispatchUUID), Util.escape(moduleId), status);
     }
     
-    @DatabaseField(generatedId=true,canBeNull=false)
+    @DatabaseField(generatedId=true,canBeNull=false,index=true)
     private int id;
 
     // This field is used by the workflow runner task dispatching logic to determine
     // which parent task should dispatch a child task in cases where a child task 
     // has multiple parent tasks.
-    @DatabaseField(canBeNull=true,dataType=DataType.LONG_STRING)
+    @DatabaseField(canBeNull=true,dataType=DataType.LONG_STRING,index=true)
     private String dispatchUUID;
     
-    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING)
+    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,index=true)
     private String moduleId;
     
     public static enum Status {ERROR, FAIL, SUCCESS, IN_PROGRESS, DEFER, NEW};
