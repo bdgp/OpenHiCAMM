@@ -561,8 +561,8 @@ public class WorkflowRunner {
                                 Status status = module.setTaskStatusOnResume(task);
                                 if (status != null) {
                                     task.setStatus(status);
-                                    WorkflowRunner.this.taskStatus.update(task, "id");
                                 }
+                                WorkflowRunner.this.taskStatus.update(task, "id");
                                 dispatch.addAll(WorkflowRunner.this.taskDispatch.select(where("parentTaskId", task.getId())));
                             }
                             tasks.clear();
