@@ -1,0 +1,110 @@
+Index: DeviceAdapters/Prior/Prior.cpp
+===================================================================
+--- DeviceAdapters/Prior/Prior.cpp	(revision 15982)
++++ DeviceAdapters/Prior/Prior.cpp	(working copy)
+@@ -984,27 +984,34 @@
+    command << "G," << x << "," << y;
+ 
+    // send command
+-   ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
+-   if (ret != DEVICE_OK)
+-      return ret;
++   int tries = 0;
++   const int MAX_TRIES = 50;
++   while (tries++ < MAX_TRIES) {
++       ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
++       if (ret != DEVICE_OK)
++           continue;
+ 
+-   // block/wait for acknowledge, or until we time out;
+-   std::string answer;
+-   ret = GetSerialAnswer(port_.c_str(), "\r", answer);
+-   if (ret != DEVICE_OK)
+-      return ret;
++       // block/wait for acknowledge, or until we time out;
++       std::string answer;
++       ret = GetSerialAnswer(port_.c_str(), "\r", answer);
++       if (ret != DEVICE_OK)
++           continue;
+ 
+-   if (answer.substr(0,1).compare("R") == 0)
+-   {
+-      return DEVICE_OK;
++       if (answer.substr(0,1).compare("R") == 0)
++       {
++           return DEVICE_OK;
++       }
++       else if (answer.substr(0, 1).compare("E") == 0 && answer.length() > 2)
++       {
++           int errNo = atoi(answer.substr(2).c_str());
++           ret = ERR_OFFSET + errNo;
++           continue;
++       }
++       else {
++           ret = ERR_UNRECOGNIZED_ANSWER;   
++       }
+    }
+-   else if (answer.substr(0, 1).compare("E") == 0 && answer.length() > 2)
+-   {
+-      int errNo = atoi(answer.substr(2).c_str());
+-      return ERR_OFFSET + errNo;
+-   }
+-
+-   return ERR_UNRECOGNIZED_ANSWER;   
++   return ret;
+ }
+  
+ int XYStage::SetRelativePositionSteps(long x, long y)
+@@ -1020,27 +1027,34 @@
+    command << "GR," << x << "," << y;
+ 
+    // send command
+-   ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
+-   if (ret != DEVICE_OK)
+-      return ret;
++   int tries = 0;
++   const int MAX_TRIES = 100;
++   while (tries++ < MAX_TRIES) {
++       ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
++       if (ret != DEVICE_OK)
++           continue;
+ 
+-   // block/wait for acknowledge, or until we time out;
+-   std::string answer;
+-   ret = GetSerialAnswer(port_.c_str(), "\r", answer);
+-   if (ret != DEVICE_OK)
+-      return ret;
++       // block/wait for acknowledge, or until we time out;
++       std::string answer;
++       ret = GetSerialAnswer(port_.c_str(), "\r", answer);
++       if (ret != DEVICE_OK)
++           continue;
+ 
+-   if (answer.substr(0,1).compare("R") == 0)
+-   {
+-      return DEVICE_OK;
++       if (answer.substr(0,1).compare("R") == 0)
++       {
++           return DEVICE_OK;
++       }
++       else if (answer.substr(0, 1).compare("E") == 0 && answer.length() > 2)
++       {
++           int errNo = atoi(answer.substr(2).c_str());
++           ret = ERR_OFFSET + errNo;
++           continue;
++       }
++       else {
++           ret = ERR_UNRECOGNIZED_ANSWER;
++       }
+    }
+-   else if (answer.substr(0, 1).compare("E") == 0 && answer.length() > 2)
+-   {
+-      int errNo = atoi(answer.substr(2).c_str());
+-      return ERR_OFFSET + errNo;
+-   }
+-
+-   return ERR_UNRECOGNIZED_ANSWER;   
++   return ret;   
+ }
+ 
+ int XYStage::GetPositionSteps(long& x, long& y)
