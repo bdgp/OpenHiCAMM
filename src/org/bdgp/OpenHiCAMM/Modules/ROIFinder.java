@@ -261,7 +261,23 @@ public abstract class ROIFinder implements Module, ImageLogger {
         Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
         Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
         logger.fine(String.format("%s: Using acquisition: %s", label, acquisition));
-        MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
+        int tries = 0;
+        final int MAX_TRIES = 30;
+        MMAcquisition mmacquisition = null;
+        while (tries++ < MAX_TRIES) {
+            try {
+                mmacquisition = acquisition.getAcquisition(acqDao);
+                if (mmacquisition != null) break;
+            }
+            catch (Throwable e) {
+                logger.warning(String.format("Could not open acquisition %s, trying again...", acquisition));
+            }
+            try { Thread.sleep(1000); } 
+            catch (InterruptedException e) { }
+        }
+        if (mmacquisition == null) {
+            throw new RuntimeException(String.format("Could not open acquisition %s!", acquisition));
+        }
 
         // Get the image cache object
         ImageCache imageCache = mmacquisition.getImageCache();
