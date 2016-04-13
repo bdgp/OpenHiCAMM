@@ -69,6 +69,8 @@ import org.micromanager.utils.MMSerializationException;
 
 import com.google.common.eventbus.Subscribe;
 
+import ij.WindowManager;
+
 import static org.bdgp.OpenHiCAMM.Util.where;
 
 public class SlideImager implements Module, ImageLogger {
@@ -303,6 +305,9 @@ public class SlideImager implements Module, ImageLogger {
                     tasks.put(imageLabelConf2.getValue(), tt);
             	}
             }
+            
+            // close all open ImageJ windows
+            WindowManager.closeAllWindows();
 
             // Start the acquisition engine. This runs asynchronously.
             try {
