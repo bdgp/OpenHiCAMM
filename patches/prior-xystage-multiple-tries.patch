@@ -2,7 +2,32 @@ Index: DeviceAdapters/Prior/Prior.cpp
 ===================================================================
 --- DeviceAdapters/Prior/Prior.cpp	(revision 15982)
 +++ DeviceAdapters/Prior/Prior.cpp	(working copy)
-@@ -984,27 +984,34 @@
+@@ -33,6 +33,15 @@
+ #include "../../MMDevice/ModuleInterface.h"
+ #include <sstream>
+ 
++#ifdef _WIN32
++#include <Windows.h>
++#define SLEEP(t) (Sleep(t))
++#else
++#include <unistd.h>
++#define SLEEP(t) (usleep(t)*1000)
++#endif
++#define SLEEP_TIME 500
++
+ const char* g_XYStageDeviceName = "XYStage";
+ const char* g_ZStageDeviceName = "ZStage";
+ const char* g_NanoStageDeviceName = "NanoScanZ";
+@@ -970,7 +979,7 @@
+ 
+    return false;
+ }
+- 
++
+ int XYStage::SetPositionSteps(long x, long y)
+ {
+    MMThreadGuard guard(lock_);
+@@ -984,27 +993,40 @@
     command << "G," << x << "," << y;
  
     // send command
@@ -13,8 +38,10 @@ Index: DeviceAdapters/Prior/Prior.cpp
 +   const int MAX_TRIES = 50;
 +   while (tries++ < MAX_TRIES) {
 +       ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
-+       if (ret != DEVICE_OK)
++       if (ret != DEVICE_OK) {
++           SLEEP(SLEEP_TIME);
 +           continue;
++       }
  
 -   // block/wait for acknowledge, or until we time out;
 -   std::string answer;
@@ -24,8 +51,10 @@ Index: DeviceAdapters/Prior/Prior.cpp
 +       // block/wait for acknowledge, or until we time out;
 +       std::string answer;
 +       ret = GetSerialAnswer(port_.c_str(), "\r", answer);
-+       if (ret != DEVICE_OK)
++       if (ret != DEVICE_OK) {
++           SLEEP(SLEEP_TIME);
 +           continue;
++       }
  
 -   if (answer.substr(0,1).compare("R") == 0)
 -   {
@@ -38,11 +67,13 @@ Index: DeviceAdapters/Prior/Prior.cpp
 +       {
 +           int errNo = atoi(answer.substr(2).c_str());
 +           ret = ERR_OFFSET + errNo;
++           SLEEP(SLEEP_TIME);
 +           continue;
 +       }
 +       else {
 +           ret = ERR_UNRECOGNIZED_ANSWER;   
 +       }
++       SLEEP(SLEEP_TIME);
     }
 -   else if (answer.substr(0, 1).compare("E") == 0 && answer.length() > 2)
 -   {
@@ -55,7 +86,7 @@ Index: DeviceAdapters/Prior/Prior.cpp
  }
   
  int XYStage::SetRelativePositionSteps(long x, long y)
-@@ -1020,27 +1027,34 @@
+@@ -1020,27 +1042,40 @@
     command << "GR," << x << "," << y;
  
     // send command
@@ -66,8 +97,10 @@ Index: DeviceAdapters/Prior/Prior.cpp
 +   const int MAX_TRIES = 100;
 +   while (tries++ < MAX_TRIES) {
 +       ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
-+       if (ret != DEVICE_OK)
++       if (ret != DEVICE_OK) {
++           SLEEP(SLEEP_TIME);
 +           continue;
++       }
  
 -   // block/wait for acknowledge, or until we time out;
 -   std::string answer;
@@ -77,8 +110,10 @@ Index: DeviceAdapters/Prior/Prior.cpp
 +       // block/wait for acknowledge, or until we time out;
 +       std::string answer;
 +       ret = GetSerialAnswer(port_.c_str(), "\r", answer);
-+       if (ret != DEVICE_OK)
++       if (ret != DEVICE_OK) {
++           SLEEP(SLEEP_TIME);
 +           continue;
++       }
  
 -   if (answer.substr(0,1).compare("R") == 0)
 -   {
@@ -91,11 +126,13 @@ Index: DeviceAdapters/Prior/Prior.cpp
 +       {
 +           int errNo = atoi(answer.substr(2).c_str());
 +           ret = ERR_OFFSET + errNo;
++           SLEEP(SLEEP_TIME);
 +           continue;
 +       }
 +       else {
 +           ret = ERR_UNRECOGNIZED_ANSWER;
 +       }
++       SLEEP(SLEEP_TIME);
     }
 -   else if (answer.substr(0, 1).compare("E") == 0 && answer.length() > 2)
 -   {
