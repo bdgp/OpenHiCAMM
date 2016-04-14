@@ -227,12 +227,28 @@ public class SlideImager implements Module, ImageLogger {
             final Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
             final Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
             final Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+            final Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
 
+            Date startAcquisition = new Date();
+
+            // get the slide ID from the config
+            if (!conf.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
+            final Integer slideId = new Integer(conf.get("slideId").getValue());
+            logger.info(String.format("Using slideId: %d", slideId));
+            // get the slide's experiment ID
+            Slide slide = slideId != null? slideDao.selectOne(where("id", slideId)) : null;
+            String experimentId = slide != null? slide.getExperimentId() : null;
+
+            // set the acquisition name
             // Set rootDir and acqName
             final String rootDir = new File(
                     workflowRunner.getWorkflowDir(), 
                     workflowRunner.getWorkflowInstance().getStorageLocation()).getPath();
-            String acqName = this.moduleId;
+            String acqName = String.format("acquisition_%s_%s%s%s", 
+                    new SimpleDateFormat("yyyyMMddHHmmss").format(startAcquisition), 
+                    this.moduleId, 
+                    slide != null? String.format("_%s", slide.getName()) : "",
+                    experimentId != null? String.format("_%s", experimentId.replaceAll("[\\/ :]+","_")) : "");
 
             CMMCore core = this.script.getMMCore();
             logger.fine(String.format("This task is the acquisition task")); 
@@ -260,11 +276,6 @@ public class SlideImager implements Module, ImageLogger {
                 }
             }
             
-            // get the slide ID from the config
-            if (!conf.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
-            final Integer slideId = new Integer(conf.get("slideId").getValue());
-            logger.info(String.format("Using slideId: %d", slideId));
-
             // build a map of imageLabel -> sibling task record
             final Dao<Task> taskDao = this.workflowRunner.getTaskStatus();
             Dao<TaskDispatch> taskDispatchDao = this.workflowRunner.getTaskDispatch();
@@ -313,7 +324,6 @@ public class SlideImager implements Module, ImageLogger {
             try {
                 EventManager.register(this);
                 
-                Date startAcquisition = new Date();
                 this.workflowRunner.getTaskConfig().insertOrUpdate(
                         new TaskConfig(new Integer(task.getId()).toString(), 
                                 "startAcquisition", 
