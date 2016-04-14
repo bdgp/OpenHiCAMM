@@ -270,7 +270,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
                 if (mmacquisition != null) break;
             }
             catch (Throwable e) {
-                logger.warning(String.format("Could not open acquisition %s, trying again...", acquisition));
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                logger.warning(String.format("Could not open acquisition %s, trying again...: \n%s", acquisition, sw.toString()));
             }
             try { Thread.sleep(1000); } 
             catch (InterruptedException e) { }
