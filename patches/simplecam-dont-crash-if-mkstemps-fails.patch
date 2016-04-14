@@ -1,0 +1,13 @@
+Index: SimpleCam.cpp
+===================================================================
+--- SimpleCam.cpp	(revision 15982)
++++ SimpleCam.cpp	(working copy)
+@@ -734,7 +734,7 @@
+       assert(sizeof(tempname) > imageFilename.size() + 1);
+       strcpy(tempname, imageFilename.c_str());
+       int len = mkstemps(tempname, strlen(camera_file_path.name)+1);
+-      assert(len >= 0);
++      if (!(len >= 0)) return "";
+       imageFilename = tempname;
+    }
+ 
