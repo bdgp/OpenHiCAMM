@@ -70,7 +70,7 @@ public class Acquisition {
                     return acquisition;
                 } 
                 catch (MMScriptException e1) {
-                    throw new RuntimeException(String.format("Could not open acquisition %s: %s", this, e1));
+                    throw new RuntimeException(String.format("Could not open acquisition %s: \n%s", this, e1));
                 }
             }
         }
