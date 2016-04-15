@@ -1,6 +1,8 @@
 package org.bdgp.OpenHiCAMM.DB;
 
 import java.io.File;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.Util;
@@ -70,7 +72,9 @@ public class Acquisition {
                     return acquisition;
                 } 
                 catch (MMScriptException e1) {
-                    throw new RuntimeException(String.format("Could not open acquisition %s: \n%s", this, e1));
+                    StringWriter sw = new StringWriter();
+                    e1.printStackTrace(new PrintWriter(sw));
+                    throw new RuntimeException(String.format("Could not open acquisition %s:\n%s", this, sw));
                 }
             }
         }
