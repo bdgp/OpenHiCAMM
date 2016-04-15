@@ -318,8 +318,11 @@ public class SlideImager implements Module, ImageLogger {
             	}
             }
             
-            // close all open ImageJ windows
-            WindowManager.closeAllWindows();
+            // close all open acquisition windows
+            for (String name : MMStudio.getInstance().getAcquisitionNames()) {
+                try { MMStudio.getInstance().closeAcquisitionWindow(name); } 
+                catch (MMScriptException e) { /* do nothing */ }
+            }
 
             // Start the acquisition engine. This runs asynchronously.
             try {
