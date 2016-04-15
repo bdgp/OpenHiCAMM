@@ -70,8 +70,6 @@ import org.micromanager.utils.MMSerializationException;
 
 import com.google.common.eventbus.Subscribe;
 
-import ij.WindowManager;
-
 import static org.bdgp.OpenHiCAMM.Util.where;
 
 public class SlideImager implements Module, ImageLogger {
