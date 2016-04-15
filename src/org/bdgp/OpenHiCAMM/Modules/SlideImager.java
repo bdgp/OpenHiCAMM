@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -1083,4 +1084,21 @@ public class SlideImager implements Module, ImageLogger {
         }
     }
 
+    public Status setTaskStatusOnResume(Task task) {
+        if (task.getStatus() != Status.SUCCESS) {
+            return Task.Status.NEW;
+        }
+        TaskConfig slideIdConf = this.workflowRunner.getTaskConfig().selectOne(where("id", task.getId()).and("key", "slideId"));
+        Integer slideId = slideIdConf != null? new Integer(slideIdConf.getValue()) : null;
+
+        List<Task> slideTasks = this.workflowRunner.getTaskStatus().select(where("moduleId", task.getModuleId()));
+        for (Task t : slideTasks) {
+            TaskConfig tc = this.workflowRunner.getTaskConfig().selectOne(where("id", t.getId()).and("key", "slideId"));
+            Integer si = tc != null? new Integer(tc.getValue()) : null;
+            if (Objects.equals(slideId, si) && t.getStatus() != Status.SUCCESS) {
+                return Status.NEW;
+            }
+        }
+        return null;
+    }
 }

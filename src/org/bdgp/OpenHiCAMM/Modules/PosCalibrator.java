@@ -385,10 +385,7 @@ public class PosCalibrator implements Module {
     }
 
     public Status setTaskStatusOnResume(Task task) {
-        if (task.getStatus() == Status.DEFER || 
-            task.getStatus() == Status.IN_PROGRESS ||
-            task.getStatus() == Status.ERROR) 
-        {
+        if (task.getStatus() != Status.SUCCESS) {
             return Status.NEW;
         }
         // try to find the parent slide loader task

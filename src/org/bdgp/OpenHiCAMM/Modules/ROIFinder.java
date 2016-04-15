@@ -471,4 +471,31 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
     @Override
     public void runInitialize() { }
+    
+    @Override
+    public Status setTaskStatusOnResume(Task task) {
+        if (task.getStatus() != Status.SUCCESS) {
+            return Task.Status.NEW;
+        }
+        List<TaskDispatch> tds = this.workflowRunner.getTaskDispatch().select(where("taskId", task.getId()));
+        while (!tds.isEmpty()) {
+            List<TaskDispatch> newTds = new ArrayList<>();
+            for (TaskDispatch td : tds) {
+                Task t = this.workflowRunner.getTaskStatus().selectOneOrDie(where("id", td.getParentTaskId()));
+                if (t.getStatus() != Status.SUCCESS) {
+                    return Status.NEW;
+                }
+                if (this.workflowRunner.getModuleConfig().selectOne(
+                        where("id", task.getModuleId()).
+                        and("key", "canImageSlides").
+                        and("value", "yes")) == null) 
+                {
+                    newTds.addAll(this.workflowRunner.getTaskDispatch().select(where("taskId", t.getId())));
+                }
+            }
+            tds.clear();
+            tds.addAll(newTds);
+        }
+        return null;
+    }
 }
