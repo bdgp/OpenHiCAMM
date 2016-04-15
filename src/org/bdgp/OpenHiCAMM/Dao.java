@@ -15,6 +15,7 @@ import com.j256.ormlite.stmt.UpdateBuilder;
 import com.j256.ormlite.stmt.Where;
 import com.j256.ormlite.table.DatabaseTableConfig;
 import com.j256.ormlite.table.TableUtils;
+
 import com.j256.ormlite.dao.BaseDaoImpl;
 
 /**

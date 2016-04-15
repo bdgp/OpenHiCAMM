@@ -575,8 +575,6 @@ public class WorkflowRunner {
                     WorkflowRunner.this.startTime = System.currentTimeMillis();
 
                     if (WorkflowRunner.this.resume) {
-                        // set all the tasks with status ERROR or DEFER to status NEW, since
-                        // we want to re-try these again.
                         logger.info("Updating task records...");
                         List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModuleId));
                         while (tasks.size() > 0) {
@@ -618,6 +616,7 @@ public class WorkflowRunner {
                     }
 
                     // call the runInitialize module method
+                    WorkflowRunner.this.logger.info("Calling runInitialize on all modules...");
                     WorkflowRunner.this.runInitialize(startModuleId);
 
                     // Notify the task listeners of the maximum task count

@@ -1085,51 +1085,60 @@ public class SlideImager implements Module, ImageLogger {
     }
 
     public Status setTaskStatusOnResume(Task task) {
-        if (task.getStatus() != Status.SUCCESS) {
-            return Task.Status.NEW;
-        }
-        // get this slide ID
-        TaskConfig slideIdConf = this.workflowRunner.getTaskConfig().selectOne(
-                where("id", task.getId()).
-                and("key", "slideId"));
-        Integer slideId = slideIdConf != null? new Integer(slideIdConf.getValue()) : null;
+    	TaskConfig imageLabelConf = this.workflowRunner.getTaskConfig().selectOne(
+    	        where("id", task.getId()).
+    	        and("key", "imageLabel"));
+    	if (imageLabelConf == null) throw new RuntimeException(String.format(
+    	        "Could not find imageLabel conf for task %s!", task));
+    	String imageLabel = imageLabelConf.getValue();
+        int[] indices = MDUtils.getIndices(imageLabel);
+        if (indices == null || indices.length < 4) throw new RuntimeException(String.format(
+                "Invalid indices parsed from imageLabel %s", imageLabel));
+        
+        if (indices[0] == 0 && indices[1] == 0 && indices[2] == 0 && indices[3] == 0) {
+            // get this slide ID
+            TaskConfig slideIdConf = this.workflowRunner.getTaskConfig().selectOne(
+                    where("id", task.getId()).
+                    and("key", "slideId"));
+            Integer slideId = slideIdConf != null? new Integer(slideIdConf.getValue()) : null;
 
-        // if this task has a slide ID
-        if (slideId != null) {
-            // get all tasks with same slide ID as this one
-            List<TaskConfig> sameSlideId = this.workflowRunner.getTaskConfig().select(
-                    where("key", "slideId").
-                    and("value", slideId));
-            List<Task> tasks = new ArrayList<>();
-            for (TaskConfig tc : sameSlideId) {
-                tasks.addAll(this.workflowRunner.getTaskStatus().select(where("id", tc.getId())));
-            }
-            for (Task t : tasks) {
-                if (task.getModuleId().equals(t.getModuleId()) && t.getStatus() != Status.SUCCESS) {
-                    for (Task t2 : tasks) {
-                        t2.setStatus(Status.NEW);
-                        this.workflowRunner.getTaskStatus().update(t2, "id");
+            // if this task has a slide ID
+            if (slideId != null) {
+                // get all tasks with same slide ID as this one
+                List<TaskConfig> sameSlideId = this.workflowRunner.getTaskConfig().select(
+                        where("key", "slideId").
+                        and("value", slideId));
+                List<Task> tasks = new ArrayList<>();
+                for (TaskConfig tc : sameSlideId) {
+                    tasks.addAll(this.workflowRunner.getTaskStatus().select(where("id", tc.getId())));
+                }
+                for (Task t : tasks) {
+                    if (task.getModuleId().equals(t.getModuleId()) && t.getStatus() != Status.SUCCESS) {
+                        for (Task t2 : tasks) {
+                            t2.setStatus(Status.NEW);
+                            this.workflowRunner.getTaskStatus().update(t2, "id");
+                        }
+                        return Status.NEW;
                     }
-                    return Status.NEW;
                 }
             }
-        }
-        else {
-            // get all tasks without a defined slide ID
-            List<Task> tasks = new ArrayList<>();
-            for (Task t : this.workflowRunner.getTaskStatus().select(where("moduleId", task.getModuleId()))) {
-                TaskConfig tc = this.workflowRunner.getTaskConfig().selectOne(
-                        where("id", t.getId()).
-                        and("key", "slideId"));
-                if (tc == null) tasks.add(t);
-            }
-            for (Task t : tasks) {
-                if (t.getStatus() != Status.SUCCESS) {
-                    for (Task t2 : tasks) {
-                        t2.setStatus(Status.NEW);
-                        this.workflowRunner.getTaskStatus().update(t2, "id");
+            else {
+                // get all tasks without a defined slide ID
+                List<Task> tasks = new ArrayList<>();
+                for (Task t : this.workflowRunner.getTaskStatus().select(where("moduleId", task.getModuleId()))) {
+                    TaskConfig tc = this.workflowRunner.getTaskConfig().selectOne(
+                            where("id", t.getId()).
+                            and("key", "slideId"));
+                    if (tc == null) tasks.add(t);
+                }
+                for (Task t : tasks) {
+                    if (t.getStatus() != Status.SUCCESS) {
+                        for (Task t2 : tasks) {
+                            t2.setStatus(Status.NEW);
+                            this.workflowRunner.getTaskStatus().update(t2, "id");
+                        }
+                        return Status.NEW;
                     }
-                    return Status.NEW;
                 }
             }
         }
