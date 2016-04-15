@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -518,6 +519,33 @@ public class WorkflowRunner {
             modules = childModules;
         }
         this.logger.info("");
+    }
+    
+    public void logTaskStatusSummary(String message) {
+        this.logger.info(message);
+        List<WorkflowModule> modules = new ArrayList<>();
+        WorkflowModule startModule = this.workflow.selectOneOrDie(where("id", this.startModuleId));
+        modules.add(startModule);
+        while (!modules.isEmpty()) {
+            List<WorkflowModule> newModules = new ArrayList<>();
+            for (WorkflowModule module : modules) {
+                Integer oldSlideId = null;
+                List<Task> tasks = this.taskStatus.select(where("moduleId", module.getId()));
+                Collections.sort(tasks, (a,b)->a.getId()-b.getId());
+                StringBuilder sb = new StringBuilder();
+                for (Task task : tasks) {
+                    TaskConfig slideIdConf = this.taskConfig.selectOne(where("id",task.getId()).and("key", "slideId"));
+                    Integer slideId = slideIdConf != null? new Integer(slideIdConf.getValue()) : null;
+                    if (!Objects.equals(oldSlideId, slideId)) sb.append(slideId != null? String.format(" S%s:", slideId) : " ");
+                    sb.append(task.getStatus().toString().charAt(0));
+                    oldSlideId = slideId;
+                }
+                logger.info(String.format("    Module %s: %s", module.getId(), sb.toString()));
+                newModules.addAll(this.workflow.select(where("parentId", module.getId())));
+            }
+            modules.clear();
+            modules.addAll(newModules);
+        }
     }
 
     /**
