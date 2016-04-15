@@ -1100,20 +1100,35 @@ public class SlideImager implements Module, ImageLogger {
             List<TaskConfig> sameSlideId = this.workflowRunner.getTaskConfig().select(
                     where("key", "slideId").
                     and("value", slideId));
+            List<Task> tasks = new ArrayList<>();
             for (TaskConfig tc : sameSlideId) {
-                Task t = this.workflowRunner.getTaskStatus().selectOneOrDie(where("id", tc.getId()));
+                tasks.addAll(this.workflowRunner.getTaskStatus().select(where("id", tc.getId())));
+            }
+            for (Task t : tasks) {
                 if (task.getModuleId().equals(t.getModuleId()) && t.getStatus() != Status.SUCCESS) {
+                    for (Task t2 : tasks) {
+                        t2.setStatus(Status.NEW);
+                        this.workflowRunner.getTaskStatus().update(t2, "id");
+                    }
                     return Status.NEW;
                 }
             }
         }
         else {
             // get all tasks without a defined slide ID
+            List<Task> tasks = new ArrayList<>();
             for (Task t : this.workflowRunner.getTaskStatus().select(where("moduleId", task.getModuleId()))) {
                 TaskConfig tc = this.workflowRunner.getTaskConfig().selectOne(
                         where("id", t.getId()).
                         and("key", "slideId"));
-                if (tc == null && t.getStatus() != Status.SUCCESS) {
+                if (tc == null) tasks.add(t);
+            }
+            for (Task t : tasks) {
+                if (t.getStatus() != Status.SUCCESS) {
+                    for (Task t2 : tasks) {
+                        t2.setStatus(Status.NEW);
+                        this.workflowRunner.getTaskStatus().update(t2, "id");
+                    }
                     return Status.NEW;
                 }
             }
