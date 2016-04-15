@@ -15,7 +15,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -1089,15 +1088,34 @@ public class SlideImager implements Module, ImageLogger {
         if (task.getStatus() != Status.SUCCESS) {
             return Task.Status.NEW;
         }
-        TaskConfig slideIdConf = this.workflowRunner.getTaskConfig().selectOne(where("id", task.getId()).and("key", "slideId"));
+        // get this slide ID
+        TaskConfig slideIdConf = this.workflowRunner.getTaskConfig().selectOne(
+                where("id", task.getId()).
+                and("key", "slideId"));
         Integer slideId = slideIdConf != null? new Integer(slideIdConf.getValue()) : null;
 
-        List<Task> slideTasks = this.workflowRunner.getTaskStatus().select(where("moduleId", task.getModuleId()));
-        for (Task t : slideTasks) {
-            TaskConfig tc = this.workflowRunner.getTaskConfig().selectOne(where("id", t.getId()).and("key", "slideId"));
-            Integer si = tc != null? new Integer(tc.getValue()) : null;
-            if (Objects.equals(slideId, si) && t.getStatus() != Status.SUCCESS) {
-                return Status.NEW;
+        // if this task has a slide ID
+        if (slideId != null) {
+            // get all tasks with same slide ID as this one
+            List<TaskConfig> sameSlideId = this.workflowRunner.getTaskConfig().select(
+                    where("key", "slideId").
+                    and("value", slideId));
+            for (TaskConfig tc : sameSlideId) {
+                Task t = this.workflowRunner.getTaskStatus().selectOneOrDie(where("id", tc.getId()));
+                if (task.getModuleId().equals(t.getModuleId()) && t.getStatus() != Status.SUCCESS) {
+                    return Status.NEW;
+                }
+            }
+        }
+        else {
+            // get all tasks without a defined slide ID
+            for (Task t : this.workflowRunner.getTaskStatus().select(where("moduleId", task.getModuleId()))) {
+                TaskConfig tc = this.workflowRunner.getTaskConfig().selectOne(
+                        where("id", t.getId()).
+                        and("key", "slideId"));
+                if (tc == null && t.getStatus() != Status.SUCCESS) {
+                    return Status.NEW;
+                }
             }
         }
         return null;
