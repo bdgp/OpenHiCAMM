@@ -179,7 +179,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     	    
     	    // fill the set map and fields map
     	    for (FieldType field : this.tableInfo.getFieldTypes()) {
-    	        Object fieldValue = field.getFieldValueIfNotDefault(value);
+                Object fieldValue = field.extractRawJavaFieldValue(value);
                 set.put(field.getFieldName(), fieldValue);
     	    }
     	    // fill the where map
