@@ -1114,12 +1114,16 @@ public class SlideImager implements Module, ImageLogger {
                     tasks.addAll(this.workflowRunner.getTaskStatus().select(where("id", tc.getId())));
                 }
                 for (Task t : tasks) {
-                    if (task.getModuleId().equals(t.getModuleId()) && t.getStatus() != Status.SUCCESS) {
-                        for (Task t2 : tasks) {
-                            t2.setStatus(Status.NEW);
-                            this.workflowRunner.getTaskStatus().update(t2, "id");
+                    if (task.getModuleId().equals(t.getModuleId())) {
+                        if (t.getStatus() != Status.SUCCESS || 
+                            this.workflowRunner.getTaskConfig().selectOne(where("id", t.getId()).and("key", "imageId")) == null) 
+                        {
+                            for (Task t2 : tasks) {
+                                t2.setStatus(Status.NEW);
+                                this.workflowRunner.getTaskStatus().update(t2, "id");
+                            }
+                            return Status.NEW;
                         }
-                        return Status.NEW;
                     }
                 }
             }
