@@ -43,15 +43,18 @@ public class Acquisition {
             MMStudio mmstudio = MMStudio.getInstance();
             synchronized (mmstudio) {
                 try {
-                    MMAcquisition acquisition = mmstudio.getAcquisitionWithName(this.name);
-                    JSONObject summaryMetadata = acquisition.getImageCache().getSummaryMetadata();
-                    if (summaryMetadata != null &&
-                        summaryMetadata.has("Directory") && 
-                        summaryMetadata.get("Directory").toString().equals(this.directory) &&
-                        summaryMetadata.has("Prefix") &&
-                        summaryMetadata.get("Prefix").toString().equals(this.prefix))
-                    {
-                        return acquisition;
+                    for (String acqName : mmstudio.getAcquisitionNames()) {
+                        MMAcquisition acquisition = mmstudio.getAcquisitionWithName(acqName);
+                        JSONObject summaryMetadata = acquisition.getImageCache().getSummaryMetadata();
+                        if (summaryMetadata != null &&
+                            summaryMetadata.has("Directory") && 
+                            summaryMetadata.get("Directory").toString().equals(this.directory) &&
+                            summaryMetadata.has("Prefix") &&
+                            summaryMetadata.get("Prefix").toString().equals(this.prefix))
+                        {
+                            this.name = acqName;
+                            return acquisition;
+                        }
                     }
                 } 
                 catch (JSONException e) {throw new RuntimeException(e);}
