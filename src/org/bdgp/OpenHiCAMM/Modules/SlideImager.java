@@ -218,8 +218,8 @@ public class SlideImager implements Module, ImageLogger {
             final PositionList posList = this.loadPositionList(conf, logger);
 
             final VerboseSummary verboseSummary = getVerboseSummary();
-            logger.info(String.format("Verbose summary:%n"));
-            for (String line : verboseSummary.summary.split("\n")) workflowRunner.getLogger().info(line);
+            logger.info(String.format("Verbose summary:"));
+            for (String line : verboseSummary.summary.split("\n")) workflowRunner.getLogger().info(String.format("    %s", line));
             final int totalImages = verboseSummary.channels * verboseSummary.slices * verboseSummary.frames * verboseSummary.positions;
 
             // Get Dao objects ready for use
@@ -403,7 +403,7 @@ public class SlideImager implements Module, ImageLogger {
                                 // create the image record
                                 Image image = new Image(slideId, acquisition, indices[0], indices[1], indices[2], indices[3]);
                                 imageDao.insertOrUpdate(image,"acquisitionId","channel","slice","frame","position");
-                                logger.fine(String.format("Inserted/Updated image: %s", image));
+                                logger.info(String.format("Inserted/Updated image: %s", image));
                                 imageDao.reload(image, "acquisitionId","channel","slice","frame","position");
 
                                 // Store the Image ID as a Task Config variable
@@ -413,7 +413,7 @@ public class SlideImager implements Module, ImageLogger {
                                         new Integer(image.getId()).toString());
                                 taskConfigDao.insertOrUpdate(imageId,"id","key");
                                 conf.put("imageId", imageId);
-                                logger.fine(String.format("Inserted/Updated imageId config: %s", imageId));
+                                logger.info(String.format("Inserted/Updated imageId config: %s", imageId));
                                 
                                 // eagerly run the Slide Imager task in order to dispatch downstream processing
                                 logger.fine(String.format("Eagerly dispatching sibling task: %s", dispatchTask));
@@ -549,7 +549,7 @@ public class SlideImager implements Module, ImageLogger {
                     // Insert/Update image DB record
                     Image image = new Image(slideId, acquisition, idx[0], idx[1], idx[2], idx[3]);
                     imageDao.insertOrUpdate(image,"acquisitionId","channel","slice","frame","position");
-                    logger.fine(String.format("Inserted image: %s", image));
+                    logger.info(String.format("Inserted image: %s", image));
                     imageDao.reload(image, "acquisitionId","channel","slice","frame","position");
                     
                     // Store the Image ID as a Task Config variable
@@ -559,7 +559,7 @@ public class SlideImager implements Module, ImageLogger {
                             new Integer(image.getId()).toString());
                     taskConfigDao.insertOrUpdate(imageId,"id","key");
                     conf.put("imageId", imageId);
-                    logger.fine(String.format("Inserted/Updated imageId config: %s", imageId));
+                    logger.info(String.format("Inserted/Updated imageId config: %s", imageId));
                 }
             }
             finally {
@@ -786,8 +786,8 @@ public class SlideImager implements Module, ImageLogger {
 
             // get the total images
             VerboseSummary verboseSummary = getVerboseSummary();
-            workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Verbose summary:%n", this.moduleId));
-            for (String line : verboseSummary.summary.split("\n")) workflowRunner.getLogger().fine(line);
+            workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Verbose summary:", this.moduleId));
+            for (String line : verboseSummary.summary.split("\n")) workflowRunner.getLogger().fine(String.format("    %s", line));
         
             int totalImages = verboseSummary.channels * verboseSummary.slices * verboseSummary.frames * verboseSummary.positions;
             workflowRunner.getLogger().fine(String.format("%s: getTotalImages: Will create %d images", 
