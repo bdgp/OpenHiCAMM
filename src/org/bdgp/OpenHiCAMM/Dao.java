@@ -157,9 +157,8 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     
     @Override
     public int update(T value) {
-        if (!fields.containsKey("id")) throw new RuntimeException(String.format(
-                "Implied update key \"id\" not found in record %s!", value));
-        return this.update(value, "id");
+        try { return super.update(value); } 
+        catch (SQLException e) {throw new RuntimeException(e);}
     }
 	
     /**
@@ -179,8 +178,10 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     	    
     	    // fill the set map and fields map
     	    for (FieldType field : this.tableInfo.getFieldTypes()) {
-                Object fieldValue = field.extractRawJavaFieldValue(value);
-                set.put(field.getFieldName(), fieldValue);
+    	        Object fieldValue = field.getFieldValueIfNotDefault(value);
+                if (fieldValue != null) {
+                    set.put(field.getFieldName(), fieldValue);
+                }
     	    }
     	    // fill the where map
     	    for (String w : where) {

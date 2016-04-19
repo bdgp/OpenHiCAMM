@@ -50,6 +50,7 @@ import com.j256.ormlite.stmt.StatementBuilder.StatementType;
 import com.j256.ormlite.support.CompiledStatement;
 import com.j256.ormlite.support.DatabaseConnection;
 
+import static org.bdgp.OpenHiCAMM.Util.set;
 import static org.bdgp.OpenHiCAMM.Util.where;
 
 public class WorkflowRunner {
@@ -580,8 +581,6 @@ public class WorkflowRunner {
                         while (tasks.size() > 0) {
                             List<TaskDispatch> dispatch = new ArrayList<TaskDispatch>();
                             for (Task task : tasks) {
-                                task.setDispatchUUID(null);
-
                                 Module module = moduleInstances.get(task.getModuleId());
                                 if (module == null) throw new RuntimeException(String.format(
                                         "Unknown module: %s", task.getModuleId()));
@@ -589,7 +588,10 @@ public class WorkflowRunner {
                                 if (status != null) {
                                     task.setStatus(status);
                                 }
-                                WorkflowRunner.this.taskStatus.update(task, "id");
+                                WorkflowRunner.this.taskStatus.update(
+                                        set("dispatchUUID", null).
+                                        and("status", task.getStatus()), 
+                                        where("id", task.getId()));
                                 dispatch.addAll(WorkflowRunner.this.taskDispatch.select(where("parentTaskId", task.getId())));
                             }
                             tasks.clear();
