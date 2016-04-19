@@ -1111,19 +1111,19 @@ public class SlideImager implements Module, ImageLogger {
                         and("value", slideId));
                 List<Task> tasks = new ArrayList<>();
                 for (TaskConfig tc : sameSlideId) {
-                    tasks.addAll(this.workflowRunner.getTaskStatus().select(where("id", tc.getId())));
+                    tasks.addAll(this.workflowRunner.getTaskStatus().select(
+                            where("id", tc.getId()).
+                            and("moduleId", task.getModuleId())));
                 }
                 for (Task t : tasks) {
-                    if (task.getModuleId().equals(t.getModuleId())) {
-                        if (t.getStatus() != Status.SUCCESS || 
-                            this.workflowRunner.getTaskConfig().selectOne(where("id", t.getId()).and("key", "imageId")) == null) 
-                        {
-                            for (Task t2 : tasks) {
-                                t2.setStatus(Status.NEW);
-                                this.workflowRunner.getTaskStatus().update(t2, "id");
-                            }
-                            return Status.NEW;
+                    if (t.getStatus() != Status.SUCCESS || 
+                        this.workflowRunner.getTaskConfig().selectOne(where("id", t.getId()).and("key", "imageId")) == null) 
+                    {
+                        for (Task t2 : tasks) {
+                            t2.setStatus(Status.NEW);
+                            this.workflowRunner.getTaskStatus().update(t2, "id");
                         }
+                        return Status.NEW;
                     }
                 }
             }
