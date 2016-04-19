@@ -219,7 +219,7 @@ public class SlideImager implements Module, ImageLogger {
 
             final VerboseSummary verboseSummary = getVerboseSummary();
             logger.info(String.format("Verbose summary:%n"));
-            for (String line : verboseSummary.summary.split("\n")) workflowRunner.getLogger().info(String.format("%s%n", line));
+            for (String line : verboseSummary.summary.split("\n")) workflowRunner.getLogger().info(line);
             final int totalImages = verboseSummary.channels * verboseSummary.slices * verboseSummary.frames * verboseSummary.positions;
 
             // Get Dao objects ready for use
@@ -787,7 +787,7 @@ public class SlideImager implements Module, ImageLogger {
             // get the total images
             VerboseSummary verboseSummary = getVerboseSummary();
             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Verbose summary:%n", this.moduleId));
-            for (String line : verboseSummary.summary.split("\n")) workflowRunner.getLogger().fine(String.format("%s%n", line));
+            for (String line : verboseSummary.summary.split("\n")) workflowRunner.getLogger().fine(line);
         
             int totalImages = verboseSummary.channels * verboseSummary.slices * verboseSummary.frames * verboseSummary.positions;
             workflowRunner.getLogger().fine(String.format("%s: getTotalImages: Will create %d images", 
