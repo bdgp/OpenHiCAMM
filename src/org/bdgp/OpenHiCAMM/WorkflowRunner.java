@@ -548,6 +548,34 @@ public class WorkflowRunner {
             modules.addAll(newModules);
         }
     }
+    
+    private int updateTaskRecordsOnResume(Task task) {
+        Module module = moduleInstances.get(task.getModuleId());
+        if (module == null) throw new RuntimeException(String.format(
+                "Unknown module: %s", task.getModuleId()));
+        int updatedTasks = 0;
+        Status status = module.setTaskStatusOnResume(task);
+        if (status != null) {
+            task.setStatus(status);
+            this.taskStatus.update(task, "id");
+            ++updatedTasks;
+        }
+        List<TaskDispatch> dispatch = taskDispatch.select(where("parentTaskId", task.getId()));
+        List<Task> tasks = new ArrayList<>();
+        for (TaskDispatch td : dispatch) {
+            tasks.addAll(this.taskStatus.select(where("id", td.getTaskId())));
+        }
+        tasks.sort((a,b)->a.getId()-b.getId());
+        for (Task t : tasks) {
+            updatedTasks += this.updateTaskRecordsOnResume(t);
+        }
+        if (updatedTasks > 0) {
+            this.taskStatus.update(
+                    set("dispatchUUID", null), 
+                    where("id", task.getId()));
+        }
+        return updatedTasks;
+    }
 
     /**
      * Start the workflow runner
@@ -575,29 +603,13 @@ public class WorkflowRunner {
                     WorkflowRunner.this.isStopped = false;
                     WorkflowRunner.this.startTime = System.currentTimeMillis();
 
+                    int taskCount = 0;
                     if (WorkflowRunner.this.resume) {
                         logger.info("Updating task records...");
                         List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModuleId));
-                        while (tasks.size() > 0) {
-                            List<TaskDispatch> dispatch = new ArrayList<TaskDispatch>();
-                            for (Task task : tasks) {
-                                WorkflowRunner.this.taskStatus.update(
-                                        set("dispatchUUID", null),
-                                        where("id", task.getId()));
-                                Module module = moduleInstances.get(task.getModuleId());
-                                if (module == null) throw new RuntimeException(String.format(
-                                        "Unknown module: %s", task.getModuleId()));
-                                Status status = module.setTaskStatusOnResume(task);
-                                if (status != null) {
-                                    task.setStatus(status);
-                                    WorkflowRunner.this.taskStatus.update(task, "id");
-                                }
-                                dispatch.addAll(WorkflowRunner.this.taskDispatch.select(where("parentTaskId", task.getId())));
-                            }
-                            tasks.clear();
-                            for (TaskDispatch td : dispatch) {
-                                tasks.addAll(WorkflowRunner.this.taskStatus.select(where("id", td.getTaskId())));
-                            }
+                        tasks.sort((a,b)->a.getId()-b.getId());
+                        for (Task t : tasks) {
+                            taskCount += updateTaskRecordsOnResume(t);
                         }
                     }
                     else {
@@ -615,6 +627,7 @@ public class WorkflowRunner {
                         WorkflowRunner.this.getModuleConfig().delete(
                                 where("id", startModuleId).
                                 and("key", "duration"));
+                        taskCount = getTaskCount(startModuleId);
                     }
 
                     // call the runInitialize module method
@@ -623,7 +636,6 @@ public class WorkflowRunner {
 
                     // Notify the task listeners of the maximum task count
                     for (TaskListener listener : taskListeners) {
-                        int taskCount = getTaskCount(startModuleId);
                         listener.taskCount(taskCount);
                         listener.startTime(startTime);
                         //listener.debug(String.format("Set task count: %d", taskCount));
@@ -666,7 +678,6 @@ public class WorkflowRunner {
                     }
                     
                     // Wait until all tasks have completed
-                    int taskCount = getTaskCount(startModuleId);
                     while (WorkflowRunner.this.notifiedTasks.size() < taskCount) {
                         Thread.sleep(1000);
                     }
