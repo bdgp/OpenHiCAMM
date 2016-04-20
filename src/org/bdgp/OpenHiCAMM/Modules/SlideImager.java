@@ -69,6 +69,7 @@ import org.micromanager.utils.MMSerializationException;
 
 import com.google.common.eventbus.Subscribe;
 
+import static org.bdgp.OpenHiCAMM.Util.set;
 import static org.bdgp.OpenHiCAMM.Util.where;
 
 public class SlideImager implements Module, ImageLogger {
@@ -403,7 +404,7 @@ public class SlideImager implements Module, ImageLogger {
                                 // create the image record
                                 Image image = new Image(slideId, acquisition, indices[0], indices[1], indices[2], indices[3]);
                                 imageDao.insertOrUpdate(image,"acquisitionId","channel","slice","frame","position");
-                                logger.info(String.format("Inserted/Updated image: %s", image));
+                                logger.fine(String.format("Inserted/Updated image: %s", image));
                                 imageDao.reload(image, "acquisitionId","channel","slice","frame","position");
 
                                 // Store the Image ID as a Task Config variable
@@ -413,7 +414,7 @@ public class SlideImager implements Module, ImageLogger {
                                         new Integer(image.getId()).toString());
                                 taskConfigDao.insertOrUpdate(imageId,"id","key");
                                 conf.put("imageId", imageId);
-                                logger.info(String.format("Inserted/Updated imageId config: %s", imageId));
+                                logger.fine(String.format("Inserted/Updated imageId config: %s", imageId));
                                 
                                 // eagerly run the Slide Imager task in order to dispatch downstream processing
                                 logger.fine(String.format("Eagerly dispatching sibling task: %s", dispatchTask));
@@ -549,7 +550,7 @@ public class SlideImager implements Module, ImageLogger {
                     // Insert/Update image DB record
                     Image image = new Image(slideId, acquisition, idx[0], idx[1], idx[2], idx[3]);
                     imageDao.insertOrUpdate(image,"acquisitionId","channel","slice","frame","position");
-                    logger.info(String.format("Inserted image: %s", image));
+                    logger.fine(String.format("Inserted image: %s", image));
                     imageDao.reload(image, "acquisitionId","channel","slice","frame","position");
                     
                     // Store the Image ID as a Task Config variable
@@ -559,7 +560,7 @@ public class SlideImager implements Module, ImageLogger {
                             new Integer(image.getId()).toString());
                     taskConfigDao.insertOrUpdate(imageId,"id","key");
                     conf.put("imageId", imageId);
-                    logger.info(String.format("Inserted/Updated imageId config: %s", imageId));
+                    logger.fine(String.format("Inserted/Updated imageId config: %s", imageId));
                 }
             }
             finally {
@@ -1120,8 +1121,10 @@ public class SlideImager implements Module, ImageLogger {
                         this.workflowRunner.getTaskConfig().selectOne(where("id", t.getId()).and("key", "imageId")) == null) 
                     {
                         for (Task t2 : tasks) {
-                            t2.setStatus(Status.NEW);
-                            this.workflowRunner.getTaskStatus().update(t2, "id");
+                            this.workflowRunner.getTaskStatus().update(
+                                    set("status", Status.NEW).
+                                    and("dispatchUUID", null), 
+                                    where("id", t2.getId()));
                         }
                         return Status.NEW;
                     }
@@ -1139,14 +1142,16 @@ public class SlideImager implements Module, ImageLogger {
                 for (Task t : tasks) {
                     if (t.getStatus() != Status.SUCCESS) {
                         for (Task t2 : tasks) {
-                            t2.setStatus(Status.NEW);
-                            this.workflowRunner.getTaskStatus().update(t2, "id");
+                            this.workflowRunner.getTaskStatus().update(
+                                    set("status", Status.NEW).
+                                    and("dispatchUUID", null), 
+                                    where("id", t2.getId()));
                         }
                         return Status.NEW;
                     }
                 }
             }
         }
-        return null;
+        return task.getDispatchUUID() == null? task.getStatus() : null;
     }
 }
