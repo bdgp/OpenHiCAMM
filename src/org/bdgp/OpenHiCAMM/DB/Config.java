@@ -35,7 +35,7 @@ public class Config {
     @DatabaseField(canBeNull=false,uniqueCombo=true,dataType=DataType.LONG_STRING, index=true)
     private String key;
     
-    @DatabaseField(canBeNull=true,dataType=DataType.LONG_STRING)
+    @DatabaseField(canBeNull=true,dataType=DataType.LONG_STRING, index=true)
     private String value;
     
     // The object field can store any object as part of the configuration, but 
