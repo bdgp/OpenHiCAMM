@@ -73,8 +73,8 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
     public double ADAPTIVE_DIST_DIFF = 20.0;
     public double SIZE_FIRST = 10.0;//
     public int NUM_FIRST = 20; // +/- #of snapshot
-    public double SIZE_SECOND = 3.3;
-    public int NUM_SECOND = 3;
+    public double SIZE_SECOND = 1.0;
+    public int NUM_SECOND = 10;
     public double THRES = 0.02;
     public double CROP_SIZE = 0.2; 
     public String CHANNEL="";
