@@ -230,15 +230,27 @@ public class Tag {
 	public void print() {
 	    Writer writer = new BufferedWriter(new OutputStreamWriter(System.out)); 
 	    this.write(writer);
+	    try { writer.flush(); } 
+	    catch (IOException e) { }
 	}
 	
 	public void write(String file) {
-	    try { this.write(new PrintWriter(file)); } 
+	    try { 
+	        PrintWriter pw = new PrintWriter(file);
+	        this.write(pw); 
+	        pw.flush();
+	        pw.close();
+        } 
 	    catch (FileNotFoundException e) {throw new RuntimeException(e);}
 	}
 
 	public void write(File file) {
-	    try { this.write(new PrintWriter(file)); } 
+	    try {
+	        PrintWriter pw = new PrintWriter(file);
+	        this.write(pw);
+	        pw.flush();
+	        pw.close();
+	    } 
 	    catch (FileNotFoundException e) {throw new RuntimeException(e);}
 	}
 
