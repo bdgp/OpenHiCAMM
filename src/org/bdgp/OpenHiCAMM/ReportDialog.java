@@ -96,6 +96,8 @@ public class ReportDialog {
         JSObject jsobj = (JSObject) webEngine.executeScript("window");
         jsobj.setMember("report", report);
         jsobj.setMember("workflowReport", report);
+        jsobj.setMember("webEngine", webEngine);
+        jsobj.setMember("reportDialog", this);
         
         try{
             // get the time the workflow completed running
