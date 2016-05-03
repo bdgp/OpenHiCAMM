@@ -38,6 +38,7 @@ import org.bdgp.OpenHiCAMM.DB.Acquisition;
 import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.Image;
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
+import org.bdgp.OpenHiCAMM.DB.PoolSlide;
 import org.bdgp.OpenHiCAMM.DB.Slide;
 import org.bdgp.OpenHiCAMM.DB.SlidePosList;
 import org.bdgp.OpenHiCAMM.DB.Task;
@@ -238,6 +239,13 @@ public class SlideImager implements Module, ImageLogger {
             // get the slide's experiment ID
             Slide slide = slideId != null? slideDao.selectOne(where("id", slideId)) : null;
             String experimentId = slide != null? slide.getExperimentId() : null;
+            
+            // get the poolSlide record if it exists
+            Dao<PoolSlide> poolSlideDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);
+            PoolSlide poolSlide = null;
+            if (conf.containsKey("loadPoolSlideId")) {
+                poolSlide = poolSlideDao.selectOneOrDie(where("id", new Integer(conf.get("loadPoolSlideId").getValue())));
+            }
 
             // set the acquisition name
             // Set rootDir and acqName
@@ -247,6 +255,7 @@ public class SlideImager implements Module, ImageLogger {
             String acqName = String.format("acquisition_%s_%s%s%s", 
                     new SimpleDateFormat("yyyyMMddHHmmss").format(startAcquisition), 
                     this.moduleId, 
+                    poolSlide != null? String.format("_C%dS%02d", poolSlide.getCartridgePosition(), poolSlide.getSlidePosition()) : "",
                     slide != null? String.format("_%s", slide.getName()) : "",
                     experimentId != null? String.format("_%s", experimentId.replaceAll("[\\/ :]+","_")) : "");
 
