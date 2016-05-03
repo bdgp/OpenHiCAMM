@@ -303,8 +303,6 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
             }
             if (bestDist == null) throw new RuntimeException("baseDist is outside of min/max range!");
 
-            // TODO: remove hard-coded NUM_SECOND
-            NUM_SECOND = 10;
             baseDist = bestDist - SIZE_SECOND * NUM_SECOND;
             core_.setPosition(core_.getFocusDevice(), baseDist);
             Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
