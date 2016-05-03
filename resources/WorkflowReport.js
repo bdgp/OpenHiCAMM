@@ -3,7 +3,7 @@ $(document).ready(function() {
     $.fn.maphilight.defaults.strokeColor = '000000';
 	$('.map').maphilight();
 
-    // javascript hack to fix anchor links not working in WebView
+    // javascript hack to fix anchor name links not working in WebView
 	$('a[href*=#],area[href*=#]').click(function(e) {
 		var hash = this.href.substr(this.href.indexOf('#'));
 		var target = $('[name=\'' + hash.slice(1) +'\']');
@@ -11,6 +11,13 @@ $(document).ready(function() {
 			$('html,body').animate({scrollTop: target.offset().top }, 500);
 			return false;
 		}
+	});
+	
+	// another javascript hack to fix links not working in web view
+	$('a:not(a[href*=#])').click(function(e) {
+		if (webEngine) webEngine.load(this.href);
+		window.location.href = this.href;
+		return true;
 	});
 	
 	// show stage coordinates in tooltip
