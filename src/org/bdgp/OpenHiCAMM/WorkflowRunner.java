@@ -647,6 +647,7 @@ public class WorkflowRunner {
 
                     // start the first task(s)
                     List<Task> start = taskStatus.select(where("moduleId",startModuleId));
+                    Collections.sort(start, (a,b)->a.getId()-b.getId());
                     List<Future<Status>> futures = new ArrayList<Future<Status>>();
                     for (Task t : start) {
                         Future<Status> future = run(t, inheritedTaskConfig);
