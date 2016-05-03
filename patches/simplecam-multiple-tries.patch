@@ -1,0 +1,118 @@
+Index: SimpleCam.cpp
+===================================================================
+--- SimpleCam.cpp	(revision 15982)
++++ SimpleCam.cpp	(working copy)
+@@ -37,6 +37,15 @@
+ #include <sys/stat.h>
+ #endif // __APPLE__
+ 
++#ifdef _WIN32
++#include <Windows.h>
++#define SLEEP(t) (Sleep(t))
++#else
++#include <unistd.h>
++#define SLEEP(t) (usleep(t)*1000)
++#endif
++#define SLEEP_TIME 1000
++
+ using namespace std;
+ 
+ CSimpleCam::CSimpleCam()
+@@ -722,48 +731,61 @@
+    }
+ 
+    int rc = GP_OK;
+-   if (rc >= GP_OK)
+-      rc = gp_camera_capture(camera_, GP_CAPTURE_IMAGE, &camera_file_path, context_);
++   int tries = 0;
++   const int MAX_TRIES = 10;
++   while (tries++ < MAX_TRIES) {
++       if (rc >= GP_OK)
++          rc = gp_camera_capture(camera_, GP_CAPTURE_IMAGE, &camera_file_path, context_);
+ 
+-   if (rc >= GP_OK)
+-   {
+-      /* create temporary file with same suffix as on-camera file */
+-      char tempname[4096];
+-      imageFilename = "/tmp/capture_XXXXXX_";
+-      imageFilename = imageFilename + camera_file_path.name;
+-      assert(sizeof(tempname) > imageFilename.size() + 1);
+-      strcpy(tempname, imageFilename.c_str());
+-      int len = mkstemps(tempname, strlen(camera_file_path.name)+1);
+-      assert(len >= 0);
+-      imageFilename = tempname;
+-   }
++       if (rc >= GP_OK)
++       {
++          /* create temporary file with same suffix as on-camera file */
++          char tempname[4096];
++          imageFilename = "/tmp/capture_XXXXXX_";
++          imageFilename = imageFilename + camera_file_path.name;
++          assert(sizeof(tempname) > imageFilename.size() + 1);
++          strcpy(tempname, imageFilename.c_str());
++          int len = mkstemps(tempname, strlen(camera_file_path.name)+1);
++          if (!(len >= 0)) return "";
++          imageFilename = tempname;
++       }
+ 
+-   // Create local file "imageFilename"
+-   int fdesc; /* file descriptor */
+-   if (rc >= GP_OK)
+-   {
+-      rc = open(imageFilename.c_str(), O_CREAT | O_WRONLY, 0644);
+-      fdesc = rc;
+-   }
+-   
+-   if (rc >= GP_OK)
+-      rc = gp_file_new_from_fd(&camera_file, fdesc);
++       // Create local file "imageFilename"
++       int fdesc; /* file descriptor */
++       if (rc >= GP_OK)
++       {
++          rc = open(imageFilename.c_str(), O_CREAT | O_WRONLY, 0644);
++          fdesc = rc;
++       }
++       
++       if (rc >= GP_OK)
++          rc = gp_file_new_from_fd(&camera_file, fdesc);
+ 
+-   // Download image from camera to imageFilename
+-   if (rc >= GP_OK)
+-      rc = gp_camera_file_get(camera_, camera_file_path.folder, camera_file_path.name, GP_FILE_TYPE_NORMAL, camera_file, context_);
++       // Download image from camera to imageFilename
++       if (rc >= GP_OK)
++          rc = gp_camera_file_get(camera_, camera_file_path.folder, camera_file_path.name, GP_FILE_TYPE_NORMAL, camera_file, context_);
+ 
+-   // Delete image on camera
+-   if (rc >= GP_OK)
+-      rc = gp_camera_file_delete(camera_, camera_file_path.folder, camera_file_path.name, context_);
++       // Delete image on camera
++       if (rc >= GP_OK)
++          rc = gp_camera_file_delete(camera_, camera_file_path.folder, camera_file_path.name, context_);
+ 
+-   if (rc >= GP_OK)
+-      rc = gp_file_free(camera_file);
++       if (rc >= GP_OK)
++          rc = gp_file_free(camera_file);
+ 
+-   if (rc >= GP_OK)
+-      return imageFilename; 
+-   else 
+-      return "";
++       if (rc >= GP_OK)
++          return imageFilename; 
++       else  {
++          SLEEP(SLEEP_TIME);
++          gp_camera_exit(camera_, context_);
++          rc = gp_camera_init(camera_, context_);
++#ifdef __APPLE__
++          if (rc < GP_OK)
++              gp_log(GP_LOG_ERROR, "SimpleCam", "Perhaps you forgot to kill the Mac OS X PTP daemon after switching on the camera, but before running the program?");
++#endif
++          SLEEP(SLEEP_TIME);
++       }
++   }
++   return "";
+ }
+ 
+ 
