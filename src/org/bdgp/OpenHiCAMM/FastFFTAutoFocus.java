@@ -180,6 +180,19 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
             core_.waitForSystem();
             //core_.waitForDevice(core_.getShutterDevice());
             
+            IJ.log("Autofocus Properties:");
+            IJ.log(String.format("%s = %s", KEY_SIZE_FIRST, SIZE_FIRST));
+            IJ.log(String.format("%s = %s", KEY_NUM_FIRST, NUM_FIRST));
+            IJ.log(String.format("%s = %s", KEY_SIZE_SECOND, SIZE_SECOND));
+            IJ.log(String.format("%s = %s", KEY_NUM_SECOND, NUM_SECOND));
+            IJ.log(String.format("%s = %s", KEY_THRES, THRES));
+            IJ.log(String.format("%s = %s", KEY_CROP_SIZE, CROP_SIZE));
+            IJ.log(String.format("%s = %s", KEY_CHANNEL, CHANNEL));
+            IJ.log(String.format("%s = %s", KEY_MIN_AUTOFOCUS, minAutoFocus));
+            IJ.log(String.format("%s = %s", KEY_MAX_AUTOFOCUS, maxAutoFocus));
+            IJ.log(String.format("%s = %s", "liveMode", liveMode));
+            IJ.log("");
+
             //
             // Inserted by Stephan Preibisch
             //
@@ -255,7 +268,8 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
             }
 
             baseDist = curDist - SIZE_FIRST * NUM_FIRST; //-30
-            core_.setPosition(core_.getFocusDevice(), baseDist);
+            core_.setPosition(core_.getFocusDevice(), Math.min(Math.max(minAutoFocus, baseDist), maxAutoFocus));
+            core_.setPosition(core_.getFocusDevice(), Math.max(minAutoFocus, baseDist));
             core_.waitForDevice(core_.getFocusDevice());
             Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
 
@@ -304,7 +318,8 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
             if (bestDist == null) throw new RuntimeException("baseDist is outside of min/max range!");
 
             baseDist = bestDist - SIZE_SECOND * NUM_SECOND;
-            core_.setPosition(core_.getFocusDevice(), baseDist);
+
+            core_.setPosition(core_.getFocusDevice(), Math.min(Math.max(minAutoFocus, baseDist), maxAutoFocus));
             Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
 
             //bestSh = 0;
@@ -372,7 +387,7 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
 
             if (bestDist != null) {
                 if (verbose_) IJ.log(String.format("*** FOUND BEST bestDist: %.5f, bestSh: %.5f", bestDist, bestSh));
-                core_.setPosition(core_.getFocusDevice(), bestDist);
+                core_.setPosition(core_.getFocusDevice(), Math.min(Math.max(minAutoFocus, bestDist), maxAutoFocus));
                 core_.waitForDevice(core_.getFocusDevice());
             }
             Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
