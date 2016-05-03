@@ -8,6 +8,7 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.JButton;
 
@@ -17,6 +18,8 @@ import org.bdgp.OpenHiCAMM.WorkflowRunner;
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.micromanager.dialogs.AcqControlDlg;
+
+import mmcorej.CMMCore;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -28,6 +31,8 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 import javax.swing.JSpinner;
 import javax.swing.JRadioButton;
 import javax.swing.ButtonGroup;
+import java.awt.event.ItemListener;
+import java.awt.event.ItemEvent;
 
 @SuppressWarnings("serial")
 public class SlideImagerDialog extends JPanel {
@@ -36,19 +41,23 @@ public class SlideImagerDialog extends JPanel {
 	JTextField posListText;
 	JComboBox<String> moduleId;
     DoubleSpinner pixelSize;
+    DoubleSpinner initialZPos;
     JSpinner dummyImageCount;
     
     JRadioButton invertXAxisYes;
     JRadioButton invertXAxisNo;
     JRadioButton invertYAxisYes;
     JRadioButton invertYAxisNo;
+    JRadioButton setInitZPosNo;
+    JRadioButton setInitZPosYes;
 
 	public static final double DEFAULT_PIXEL_SIZE_UM = 0.48;
 	private final ButtonGroup invertXAxisGroup = new ButtonGroup();
 	private final ButtonGroup invertYAxisGroup = new ButtonGroup();
+	private final ButtonGroup setInitZPosGrp = new ButtonGroup();
 	
 	public SlideImagerDialog(final AcqControlDlg acqControlDlg, final WorkflowRunner workflowRunner) {
-		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][][][][]"));
+		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][][][][][]"));
 		
 		JButton btnShowAcquisitionDialog = new JButton("Show Acquisition Dialog");
 		if (acqControlDlg == null) {
@@ -145,11 +154,6 @@ public class SlideImagerDialog extends JPanel {
         JLabel lblInvertXAxis = new JLabel("Invert X axis? ");
         add(lblInvertXAxis, "flowx,cell 0 9");
         
-        invertXAxisYes = new JRadioButton("Yes");
-        invertXAxisGroup.add(invertXAxisYes);
-        invertXAxisYes.setSelected(true);
-        add(invertXAxisYes, "cell 0 9");
-        
         invertXAxisNo = new JRadioButton("No");
         invertXAxisGroup.add(invertXAxisNo);
         add(invertXAxisNo, "cell 0 9");
@@ -157,14 +161,86 @@ public class SlideImagerDialog extends JPanel {
         JLabel lblInvertYAxis = new JLabel("Invert Y axis? ");
         add(lblInvertYAxis, "flowx,cell 0 10");
         
+        invertYAxisNo = new JRadioButton("No");
+        invertYAxisGroup.add(invertYAxisNo);
+        add(invertYAxisNo, "cell 0 10");
+        
+        JLabel lblSetInitialZ = new JLabel("Set Initial Z Axis Position:");
+        add(lblSetInitialZ, "flowx,cell 0 11");
+        
+        setInitZPosNo = new JRadioButton("No");
+        setInitZPosNo.setSelected(true);
+        setInitZPosGrp.add(setInitZPosNo);
+        add(setInitZPosNo, "cell 0 11");
+        
+        setInitZPosYes = new JRadioButton("Yes");
+        setInitZPosGrp.add(setInitZPosYes);
+        add(setInitZPosYes, "cell 0 11");
+        
+        initialZPos = new DoubleSpinner();
+        initialZPos.setEnabled(false);
+        add(initialZPos, "cell 0 11");
+        CMMCore mmcore = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
+        String focusDevice = mmcore.getFocusDevice();
+        try { initialZPos.setValue(new Double(mmcore.getPosition(focusDevice))); } 
+        catch (Exception e1) {throw new RuntimeException(e1);}
+        
+        JButton btnSetPosition = new JButton("Read From Device");
+        btnSetPosition.setEnabled(false);
+        btnSetPosition.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                try { initialZPos.setValue(new Double(mmcore.getPosition(focusDevice))); } 
+                catch (Exception e1) {throw new RuntimeException(e1);}
+            }
+        });
+        add(btnSetPosition, "cell 0 11");
+        
+        JButton btnGoToPosition = new JButton("Go To Position");
+        btnGoToPosition.setEnabled(false);
+        btnGoToPosition.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (JOptionPane.showConfirmDialog(null, 
+                        "Warning: Moving the Z Axis is a potentially dangerous operation!\n"+
+                        "Setting the Z Axis incorrectly could damage the objective!\n"+
+                        "Are you sure you want to proceed?", 
+                        "WARNING", 
+                        JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
+                {
+                    try { mmcore.setPosition(mmcore.getFocusDevice(), (Double)initialZPos.getValue()); } 
+                    catch (Exception e1) {throw new RuntimeException(e1);}
+                }
+            }
+        });
+        add(btnGoToPosition, "cell 0 11");
+        
+        setInitZPosNo.addItemListener(new ItemListener() {
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    initialZPos.setEnabled(false);
+                    btnGoToPosition.setEnabled(false);
+                    btnSetPosition.setEnabled(false);
+                }
+            }
+        });
+        setInitZPosYes.addItemListener(new ItemListener() {
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    initialZPos.setEnabled(true);
+                    btnGoToPosition.setEnabled(true);
+                    btnSetPosition.setEnabled(true);
+                }
+            }
+        });
+
+        invertXAxisYes = new JRadioButton("Yes");
+        invertXAxisGroup.add(invertXAxisYes);
+        invertXAxisYes.setSelected(true);
+        add(invertXAxisYes, "cell 0 9");
+        
         invertYAxisYes = new JRadioButton("Yes");
         invertYAxisGroup.add(invertYAxisYes);
         invertYAxisYes.setSelected(true);
         add(invertYAxisYes, "cell 0 10");
-        
-        invertYAxisNo = new JRadioButton("No");
-        invertYAxisGroup.add(invertYAxisNo);
-        add(invertYAxisNo, "cell 0 10");
 	}
 
 }

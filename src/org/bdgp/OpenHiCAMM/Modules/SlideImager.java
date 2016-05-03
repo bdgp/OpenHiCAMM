@@ -264,6 +264,14 @@ public class SlideImager implements Module, ImageLogger {
             logger.info(String.format("Using rootDir: %s", rootDir)); 
             logger.info(String.format("Requesting to use acqName: %s", acqName)); 
             
+            // set the initial Z Position
+            if (conf.containsKey("initialZPos")) {
+                Double initialZPos = new Double(conf.get("initialZPos").getValue());
+                logger.info(String.format("Setting initial Z Position to: %.02f", initialZPos));
+                try { core.setPosition(core.getFocusDevice(), initialZPos); } 
+                catch (Exception e1) {throw new RuntimeException(e1);}
+            }
+            
             // Move stage to starting position and take some dummy pictures to adjust the camera
             if (conf.containsKey("dummyImageCount") && 
                 posList.getNumberOfPositions() > 0) 
@@ -636,7 +644,10 @@ public class SlideImager implements Module, ImageLogger {
                 else if (slideImagerDialog.invertYAxisNo.isSelected()) {
                 	configs.add(new Config(moduleId, "invertYAxis", "no"));
                 }
-
+                
+                if (slideImagerDialog.setInitZPosYes.isSelected()) {
+                    configs.add(new Config(moduleId, "initialZPos", slideImagerDialog.initialZPos.getValue().toString()));
+                }
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -688,7 +699,15 @@ public class SlideImager implements Module, ImageLogger {
                 		slideImagerDialog.invertYAxisNo.setSelected(true);
                 	}
                 }
-
+                
+                if (conf.containsKey("initialZPos")) {
+                    slideImagerDialog.setInitZPosYes.setSelected(true);
+                    slideImagerDialog.initialZPos.setValue(new Double(conf.get("initialZPos").getValue()));
+                }
+                else {
+                    slideImagerDialog.setInitZPosNo.setSelected(true);
+                    slideImagerDialog.initialZPos.setValue(new Double(0.0));
+                }
                 return slideImagerDialog;
             }
             @Override
