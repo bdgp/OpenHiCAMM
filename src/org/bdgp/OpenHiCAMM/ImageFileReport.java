@@ -4,6 +4,7 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
 import org.micromanager.utils.MDUtils;
 
 import ij.IJ;
+import javafx.scene.web.WebEngine;
 import mmcorej.TaggedImage;
 
 import org.bdgp.OpenHiCAMM.DB.Acquisition;
@@ -21,15 +22,21 @@ import static org.bdgp.OpenHiCAMM.Tag.T.*;
 
 public class ImageFileReport implements Report {
     WorkflowRunner workflowRunner;
+    WebEngine webEngine;
+    String reportDir;
+    String reportIndex;
 
     public ImageFileReport() { }
 
-    @Override public void initialize(WorkflowRunner workflowRunner) {
+    @Override public void initialize(WorkflowRunner workflowRunner, WebEngine webEngine, String reportDir, String reportIndex) {
         this.workflowRunner = workflowRunner;
+        this.reportIndex = reportIndex;
+        this.webEngine = webEngine;
+        this.reportDir = reportDir;
     }
 
     @Override
-    public void runReport(String reportDir, String reportIndex) {
+    public void runReport() {
         Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
         Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
 

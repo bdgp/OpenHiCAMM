@@ -15,7 +15,7 @@ $(document).ready(function() {
 	
 	// another javascript hack to fix links not working in web view
 	$('a:not(a[href*=#])').click(function(e) {
-		if (webEngine) webEngine.load(this.href);
+		if (report) report.goToURL(this.href);
 		window.location.href = this.href;
 		return true;
 	});

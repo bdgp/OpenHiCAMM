@@ -68,12 +68,12 @@ public class ReportDialog {
     @FXML void selectButtonPressed(ActionEvent event) {
         String reportName = selectReport.getSelectionModel().getSelectedItem();
         if (reportName != null && !reportName.equals("- Select a report -")) {
-            try {
-                Report report = (Report)Class.forName(reportName).newInstance();
-                report.initialize(this.workflowRunner);
-                runReport(report);
-            } 
-            catch (InstantiationException|IllegalAccessException|ClassNotFoundException e) {throw new RuntimeException(e);}
+            Report report;
+            try { report = (Report)Class.forName(reportName).newInstance(); } 
+            catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) { 
+                throw new RuntimeException(e); 
+            }
+            runReport(report);
         }
     }
 
@@ -96,7 +96,6 @@ public class ReportDialog {
         JSObject jsobj = (JSObject) webEngine.executeScript("window");
         jsobj.setMember("report", report);
         jsobj.setMember("workflowReport", report);
-        jsobj.setMember("webEngine", webEngine);
         jsobj.setMember("reportDialog", this);
         
         try{
@@ -129,6 +128,7 @@ public class ReportDialog {
             reportDir.mkdirs();
             File reportIndex = new File(reportDir, "index.html");
 
+            report.initialize(this.workflowRunner, webEngine, reportDir.getPath(), reportIndex.getPath());
             if (reportIndex.exists()) {
                 String html = new String(Files.readAllBytes(Paths.get(reportIndex.getPath())));
                 Platform.runLater(()->{
@@ -150,7 +150,7 @@ public class ReportDialog {
                 if (result.get() == ButtonType.YES) {
                     new Thread(()->{
                         log("Generating report for %s", reportName);
-                        report.runReport(reportDir.getPath(), reportIndex.getName());
+                        report.runReport();
                         if (reportIndex.exists()) {
                             try {
                                 String html = new String(Files.readAllBytes(Paths.get(reportIndex.getPath())));

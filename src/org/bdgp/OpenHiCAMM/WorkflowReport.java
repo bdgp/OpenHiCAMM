@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
@@ -70,6 +72,7 @@ import ij.gui.Overlay;
 import ij.gui.Roi;
 import ij.process.Blitter;
 import ij.process.ImageProcessor;
+import javafx.scene.web.WebEngine;
 import mmcorej.CMMCore;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
@@ -81,6 +84,9 @@ public class WorkflowReport implements Report {
     public static final boolean DEBUG=true;
 
     private WorkflowRunner workflowRunner;
+    private WebEngine webEngine;
+    private String reportDir;
+    private String reportIndex;
     private Integer prevPoolSlideId;
     private Map<String,Boolean> isLoaderInitialized;
 
@@ -94,13 +100,16 @@ public class WorkflowReport implements Report {
         }
     }
     
-    @Override public void initialize(WorkflowRunner workflowRunner) {
+    @Override public void initialize(WorkflowRunner workflowRunner, WebEngine webEngine, String reportDir, String reportIndex) {
         this.workflowRunner = workflowRunner;
+        this.webEngine = webEngine;
+        this.reportDir = reportDir;
+        this.reportIndex = reportIndex;
         isLoaderInitialized = new HashMap<String,Boolean>();
     }
     
     @Override
-    public void runReport(String reportDir, String reportIndex) {
+    public void runReport() {
         Dao<Pool> poolDao = this.workflowRunner.getInstanceDb().table(Pool.class);
         Dao<PoolSlide> psDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);
 
@@ -182,6 +191,9 @@ public class WorkflowReport implements Report {
                         });
                         runnables.put(reportFile, ()->{
                             log("Calling runReport(startModule=%s, poolSlide=null, loaderModuleId=null)", slideImager);
+                            P().with(()->{
+                                A("Back to Index Page").attr("href", this.reportIndex);
+                            });
                             runReport(slideImager, null, null);
                         });
                     }
@@ -1035,6 +1047,12 @@ public class WorkflowReport implements Report {
         //log("called showImageFile(imagePath=%s)", imagePath);
         ImagePlus imp = new ImagePlus(imagePath);
         imp.show();
+    }
+    
+    public void goToURL(String url) {
+        try { url = Paths.get(this.reportDir).resolve(url).toUri().toURL().toString(); } 
+        catch (MalformedURLException e) {throw new RuntimeException(e);}
+        this.webEngine.load(url);
     }
     
     public void checkPosCalibration(
