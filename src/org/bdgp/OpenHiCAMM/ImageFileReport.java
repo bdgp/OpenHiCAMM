@@ -84,6 +84,6 @@ public class ImageFileReport implements Report {
                     
                 });
             });
-        }).write(new File(reportDir, reportIndex));
+        }).write(reportIndex);
     }
 }
