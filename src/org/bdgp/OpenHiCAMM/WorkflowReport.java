@@ -191,9 +191,6 @@ public class WorkflowReport implements Report {
                         });
                         runnables.put(reportFile, ()->{
                             log("Calling runReport(startModule=%s, poolSlide=null, loaderModuleId=null)", slideImager);
-                            P().with(()->{
-                                A("Back to Index Page").attr("href", this.reportIndex);
-                            });
                             runReport(slideImager, null, null);
                         });
                     }
@@ -321,6 +318,10 @@ public class WorkflowReport implements Report {
                     poolSlide.getPoolId(), 
                     poolSlide.getCartridgePosition(), 
                     poolSlide.getSlidePosition());
+
+            P().with(()->{
+                A("Back to Index Page").attr("href", this.reportIndex);
+            });
             A().attr("name", String.format("report-%s-PS%s", startModule.getId(), poolSlide.getId()));
             H1().text(title);
             log("title = %s", title);
