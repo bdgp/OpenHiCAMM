@@ -126,11 +126,12 @@ public class ReportDialog {
                     "reports"),
                     reportName);
             reportDir.mkdirs();
-            File reportIndex = new File(reportDir, "index.html");
+            String reportIndex = "index.html";
 
-            report.initialize(this.workflowRunner, webEngine, reportDir.getPath(), reportIndex.getPath());
-            if (reportIndex.exists()) {
-                String html = new String(Files.readAllBytes(Paths.get(reportIndex.getPath())));
+            report.initialize(this.workflowRunner, webEngine, reportDir.getPath(), reportIndex);
+            File reportIndexFile = new File(reportDir, reportIndex);
+            if (reportIndexFile.exists()) {
+                String html = new String(Files.readAllBytes(Paths.get(reportIndexFile.getPath())));
                 Platform.runLater(()->{
                     webEngine.loadContent(html);
                 });
@@ -138,7 +139,7 @@ public class ReportDialog {
 
             // if the report file's timestamp is older than the workflow run time,
             // it needs to be regenerated
-            if (workflowRunTime == null || !reportIndex.exists() || reportIndex.lastModified() <= workflowRunTime) {
+            if (workflowRunTime == null || !reportIndexFile.exists() || reportIndexFile.lastModified() <= workflowRunTime) {
                 Alert alert = new Alert(AlertType.CONFIRMATION);
                 alert.setTitle(String.format("Report %s", reportName));
                 alert.setHeaderText(String.format("Report %s is outdated.", reportName));
@@ -151,9 +152,9 @@ public class ReportDialog {
                     new Thread(()->{
                         log("Generating report for %s", reportName);
                         report.runReport();
-                        if (reportIndex.exists()) {
+                        if (reportIndexFile.exists()) {
                             try {
-                                String html = new String(Files.readAllBytes(Paths.get(reportIndex.getPath())));
+                                String html = new String(Files.readAllBytes(Paths.get(reportIndexFile.getPath())));
                                 Platform.runLater(()->{
                                     webEngine.loadContent(html);
                                 });

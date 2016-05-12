@@ -235,7 +235,7 @@ public class WorkflowReport implements Report {
         }
 
         // write the index last
-        index.write(reportIndex);
+        index.write(new File(this.reportDir, this.reportIndex));
     }
 
     private void runReport(WorkflowModule startModule, PoolSlide poolSlide, String loaderModuleId) {
