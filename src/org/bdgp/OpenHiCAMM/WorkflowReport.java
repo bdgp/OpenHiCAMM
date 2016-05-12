@@ -188,7 +188,7 @@ public class WorkflowReport implements Report {
                             }
                             loaderModuleId = loaderModule.getParentId();
                         }
-                        String reportFile = String.format("report%03d.html", reportCounter[0]++); 
+                        String reportFile = String.format("report%03d.%s.html", reportCounter[0]++, slideImager.getId()); 
                         P().with(()->{
                             A(String.format("Module %s", slideImager)).
                                 attr("href", reportFile);
