@@ -165,8 +165,12 @@ public class WorkflowReport implements Report {
                                     List<PoolSlide> pss = psDao.select(where("poolId", pool.getId()));
                                     if (!pss.isEmpty()) {
                                         for (PoolSlide ps : pss) {
-                                            String reportFile = String.format("report%03d.cartridge%d.pos%02d.slide%05d.html", 
-                                                        reportCounter[0]++, ps.getCartridgePosition(), ps.getSlidePosition(), ps.getSlideId());
+                                            String reportFile = String.format("report%03d.%s.cartridge%d.pos%02d.slide%05d.html", 
+                                                        reportCounter[0]++, 
+                                                        slideImager.getId(),
+                                                        ps.getCartridgePosition(), ps
+                                                        .getSlidePosition(), 
+                                                        ps.getSlideId());
                                             P().with(()->{
                                                 A(String.format("Module %s, Slide %s", slideImager, ps)).
                                                     attr("href", reportFile);
