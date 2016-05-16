@@ -30,6 +30,7 @@ import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.TaskConfig;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
+import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
@@ -62,16 +63,16 @@ public class ImageStitcher implements Module, ImageLogger {
     private static final boolean DEBUG_MODE = false;
 
     WorkflowRunner workflowRunner;
-    String moduleId;
+    WorkflowModule workflowModule;
 
     @Override
-    public void initialize(WorkflowRunner workflowRunner, String moduleId) {
+    public void initialize(WorkflowRunner workflowRunner, WorkflowModule workflowModule) {
         this.workflowRunner = workflowRunner;
-        this.moduleId = moduleId;
+        this.workflowModule = workflowModule;
 
         // set initial configs
         workflowRunner.getModuleConfig().insertOrUpdate(
-                new ModuleConfig(this.moduleId, "canStitchImages", "yes"), 
+                new ModuleConfig(this.workflowModule.getId(), "canStitchImages", "yes"), 
                 "id", "key");
     }
     
@@ -155,7 +156,7 @@ public class ImageStitcher implements Module, ImageLogger {
         fileSaver.saveAsTiff(imageFile.getPath());
         
         // write a task configuration for the stitched image location
-        TaskConfig imageFileConf = new TaskConfig(new Integer(task.getId()).toString(), 
+        TaskConfig imageFileConf = new TaskConfig(task.getId(),
                 "stitchedImageFile", imageFile.getPath());
         taskConfigDao.insertOrUpdate(imageFileConf, "id", "key");
     	
@@ -510,19 +511,19 @@ public class ImageStitcher implements Module, ImageLogger {
             File stitchedGroupFolder = new File(stitchedFolder, stitchGroup);
             
             // insert the task record
-            Task task = new Task(this.moduleId, Status.NEW);
+            Task task = new Task(this.workflowModule.getId(), Status.NEW);
             taskDao.insert(task);
             tasks.add(task);
             
             // add the stitchedFolder task config
             TaskConfig stitchedFolderConf = new TaskConfig(
-                    new Integer(task.getId()).toString(), 
+                    task.getId(),
                     "stitchedFolder", stitchedGroupFolder.toString());
             taskConfigDao.insert(stitchedFolderConf);
 
             // add the stitchGroup task config
             TaskConfig stitchGroupConf = new TaskConfig(
-                    new Integer(task.getId()).toString(), 
+                    task.getId(),
                     "stitchGroup", stitchGroup);
             taskConfigDao.insert(stitchGroupConf);
 
@@ -532,7 +533,7 @@ public class ImageStitcher implements Module, ImageLogger {
                 stitchTaskIds.put(stitchTask.getId());
             }
             TaskConfig stitchTaskIdsConf = new TaskConfig(
-                    new Integer(task.getId()).toString(), 
+                    task.getId(),
                     "stitchTaskIds", stitchTaskIds.toString());
             taskConfigDao.insert(stitchTaskIdsConf);
                 

@@ -13,7 +13,7 @@ import com.j256.ormlite.table.DatabaseTable;
 @DatabaseTable
 public class Task {
     public Task() {}
-    public Task(String moduleId, Status status) {
+    public Task(Integer moduleId, Status status) {
        this.moduleId = moduleId;
        this.status = status;
     }
@@ -33,7 +33,7 @@ public class Task {
     private String dispatchUUID;
     
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,index=true)
-    private String moduleId;
+    private Integer moduleId;
     
     public static enum Status {ERROR, FAIL, SUCCESS, IN_PROGRESS, DEFER, NEW};
     
@@ -49,7 +49,7 @@ public class Task {
     public Status getStatus() {
         return status;
     }
-    public String getModuleId() {
+    public Integer getModuleId() {
         return moduleId;
     }
     public void setStatus(Status status) {

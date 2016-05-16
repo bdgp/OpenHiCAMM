@@ -8,6 +8,7 @@ import org.bdgp.OpenHiCAMM.WorkflowRunner;
 import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
+import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 
 /**
  * Interface for workflow modules.
@@ -18,7 +19,7 @@ public interface Module {
     /**
      * Initialize this module instance.
      */
-    public void initialize(WorkflowRunner workflow, String moduleId);
+    public void initialize(WorkflowRunner workflow, WorkflowModule workflowModule);
 
     /**
      * Run the module configuration dialog and return the configuration.

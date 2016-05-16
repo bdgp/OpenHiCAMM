@@ -12,8 +12,8 @@ import com.j256.ormlite.table.DatabaseTable;
 public class SlidePosList {
     @DatabaseField(generatedId=true) 
     private int id;
-    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,uniqueCombo=true) 
-    private String moduleId;
+    @DatabaseField(canBeNull=false,uniqueCombo=true) 
+    private Integer moduleId;
     @DatabaseField(canBeNull=true,uniqueCombo=true) 
     private Integer taskId;
     @DatabaseField(canBeNull=false,uniqueCombo=true) 
@@ -23,13 +23,13 @@ public class SlidePosList {
     private PositionList positionList;
 
     public SlidePosList() {}
-    public SlidePosList(String moduleId, Integer slideId, Integer taskId, PositionList positionList) {
+    public SlidePosList(Integer moduleId, Integer slideId, Integer taskId, PositionList positionList) {
     	this.moduleId = moduleId;
     	this.slideId = slideId;
     	this.taskId = taskId;
         setPositionList(positionList);
     }
-    public SlidePosList(String moduleId, Integer slideId, Integer taskId, String posList) {
+    public SlidePosList(Integer moduleId, Integer slideId, Integer taskId, String posList) {
     	this.moduleId = moduleId;
     	this.slideId = slideId;
     	this.taskId = taskId;
@@ -47,7 +47,7 @@ public class SlidePosList {
         this.posList = posList;
     }
     public int getId() { return this.id; }
-    public String getModuleId() { return this.moduleId; }
+    public Integer getModuleId() { return this.moduleId; }
     public Integer getTaskId() { return this.taskId; }
     public String getPosList() { return this.posList; }
     public PositionList getPositionList() { return this.positionList; }

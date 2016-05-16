@@ -17,6 +17,7 @@ import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JTree;
+import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
@@ -39,7 +40,7 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 @SuppressWarnings("serial")
 public class WorkflowDesignerDialog extends JDialog {
 	private JTree treeForModules;
-	private WorkflowModule treeRoot;
+	private WorkflowModuleNode treeRoot;
 	private JButton btnPlus;
 	private JButton btnMinus;
 	private JTextField moduleName;
@@ -56,7 +57,7 @@ public class WorkflowDesignerDialog extends JDialog {
             public void windowClosing(final WindowEvent e) { }
         });
 
-		treeRoot = new WorkflowModule();
+		treeRoot = new WorkflowModuleNode();
 		treeRoot.setUserObject("Start");
 		
         setTitle("Slide imaging workflow");
@@ -100,20 +101,21 @@ public class WorkflowDesignerDialog extends JDialog {
 		btnPlus.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
 		        TreePath path = treeForModules.getSelectionPath();
-		        WorkflowModule parent = path != null
-		                ? (WorkflowModule) path.getLastPathComponent()
+		        WorkflowModuleNode parentNode = path != null
+		                ? (WorkflowModuleNode) path.getLastPathComponent()
 		                : treeRoot;
 		                
 		        WorkflowModule module = new WorkflowModule(
 		                (String)moduleName.getText(), 
 		                (String)moduleList.getSelectedItem(),
-		                parent.getId());
+		                parentNode.getWorkflowModule() != null? parentNode.getWorkflowModule().getId() : null);
 		        
 		        DefaultTreeModel model = (DefaultTreeModel) treeForModules.getModel();
-		        model.insertNodeInto(module, parent, parent.getChildCount());
+		        WorkflowModuleNode moduleNode = new WorkflowModuleNode(module);
+		        model.insertNodeInto(moduleNode, parentNode, parentNode.getChildCount());
 		        
 		        // expand the tree
-		        treeForModules.makeVisible(new TreePath(module.getPath()));
+		        treeForModules.makeVisible(new TreePath(moduleNode.getPath()));
 		        
 		        moduleName.setText(chooseModuleName((String)moduleList.getSelectedItem()));
 		    }
@@ -148,12 +150,12 @@ public class WorkflowDesignerDialog extends JDialog {
 		    public void actionPerformed(ActionEvent e) {
 		        TreePath path = treeForModules.getSelectionPath();
 		        if (path != null) {
-		            WorkflowModule module = (WorkflowModule) path.getLastPathComponent();
-		            if (module != treeRoot) {
+		            WorkflowModuleNode moduleNode = (WorkflowModuleNode) path.getLastPathComponent();
+		            if (moduleNode != treeRoot) {
         	            DefaultTreeModel model = (DefaultTreeModel) (treeForModules.getModel());
-        	            WorkflowModule parent = (WorkflowModule) module.getParent();
-        	            model.removeNodeFromParent(module);
-        	            treeForModules.makeVisible(new TreePath(parent.getPath()));
+        	            WorkflowModuleNode parentNode = (WorkflowModuleNode) moduleNode.getParent();
+        	            model.removeNodeFromParent(moduleNode);
+        	            treeForModules.makeVisible(new TreePath(parentNode.getPath()));
         	            
         	            moduleName.setText(
         	                    chooseModuleName((String)moduleList.getSelectedItem()));
@@ -175,13 +177,15 @@ public class WorkflowDesignerDialog extends JDialog {
 	            // create the WorkflowModule records
 	            int priority = 1;
 	            for (@SuppressWarnings("unchecked")
-                    Enumeration<WorkflowModule> enum_=treeRoot.breadthFirstEnumeration(); 
+                    Enumeration<WorkflowModuleNode> enum_=treeRoot.breadthFirstEnumeration(); 
                     enum_.hasMoreElements();) 
 	            {
-	                WorkflowModule node = enum_.nextElement();
+	                WorkflowModuleNode node = enum_.nextElement();
 	                if (node != treeRoot) {
-	                    node.setPriority(priority);
-                        wf.insert(node);
+	                    if (node.getWorkflowModule() != null) {
+	                        node.getWorkflowModule().setPriority(priority);
+                            wf.insert(node.getWorkflowModule());
+	                    }
                         ++priority;
 	                }
 	            }
@@ -192,19 +196,23 @@ public class WorkflowDesignerDialog extends JDialog {
 		// Populate the tree model
         Dao<WorkflowModule> wf = connection.table(WorkflowModule.class);
         DefaultTreeModel model = (DefaultTreeModel) treeForModules.getModel();
-		List<WorkflowModule> modules = new ArrayList<WorkflowModule>();
-		modules.add(treeRoot);
-		while (modules.size() > 0) {
-		    List<WorkflowModule> nextModules = new ArrayList<WorkflowModule>();
-		    for (WorkflowModule module : modules) {
-        		List<WorkflowModule> childModules = wf.select(where("parentId",module.getId()));
+		List<WorkflowModuleNode> moduleNodes = new ArrayList<WorkflowModuleNode>();
+		moduleNodes.add(treeRoot);
+		while (moduleNodes.size() > 0) {
+		    List<WorkflowModuleNode> nextModuleNodes = new ArrayList<WorkflowModuleNode>();
+		    for (WorkflowModuleNode moduleNode : moduleNodes) {
+        		List<WorkflowModule> childModules = wf.select(
+        		        where("parentId", 
+        		                moduleNode.getWorkflowModule() != null? 
+                                    moduleNode.getWorkflowModule().getId() : null));
         		for (WorkflowModule child : childModules) {
-    		        model.insertNodeInto(child, module, module.getChildCount());
-    	            treeForModules.makeVisible(new TreePath(child.getPath()));
+        		    WorkflowModuleNode childNode = new WorkflowModuleNode(child);
+    		        model.insertNodeInto(childNode, moduleNode, moduleNode.getChildCount());
+    	            treeForModules.makeVisible(new TreePath(childNode.getPath()));
+    	            nextModuleNodes.add(childNode);
         		}
-        		nextModules.addAll(childModules);
 		    }
-		    modules = nextModules;
+		    moduleNodes = nextModuleNodes;
 		}
 		
 		setEnabledControls();
@@ -215,7 +223,7 @@ public class WorkflowDesignerDialog extends JDialog {
 	    // of the input fields.
 	    btnPlus.setEnabled(
 	            moduleList.getSelectedItem() != null &&
-	            !moduleIdExists(moduleName.getText()));
+	            !moduleNameExists(moduleName.getText()));
         btnMinus.setEnabled(treeForModules.getSelectionCount()>0);
 	}
 	
@@ -239,7 +247,7 @@ public class WorkflowDesignerDialog extends JDialog {
     	    if (m.find() && m.groupCount() > 0) {
     	        String name = m.group(1);
     	        int ext = 1;
-    	        while (moduleIdExists(name+(ext>1 ? ext : ""))) {
+    	        while (moduleNameExists(name+(ext>1 ? ext : ""))) {
     	            ++ext;
     	        }
     	        name = name+(ext>1 ? ext : "");
@@ -253,16 +261,28 @@ public class WorkflowDesignerDialog extends JDialog {
 	 * @return whether or not the given module name already exists in the 
 	 * workflow.
 	 */
-	private boolean moduleIdExists(String moduleName) {
+	private boolean moduleNameExists(String moduleName) {
 	    for (@SuppressWarnings("unchecked")
     	    Enumeration<WorkflowModule> enum_=treeRoot.breadthFirstEnumeration(); 
             enum_.hasMoreElements();) 
 	    {
 	        WorkflowModule node = enum_.nextElement();
-	        if (moduleName != null && moduleName.equals(node.getId())) {
+	        if (moduleName != null && moduleName.equals(node.getName())) {
 	            return true;
 	        }
 	    }
 	    return false;
+	}
+	
+	public static class WorkflowModuleNode extends DefaultMutableTreeNode {
+	    public WorkflowModule workflowModule;
+
+        public WorkflowModuleNode() { }
+        public WorkflowModuleNode(WorkflowModule workflowModule) {
+            this.workflowModule = workflowModule;
+        }
+        public WorkflowModule getWorkflowModule() {
+            return this.workflowModule;
+        }
 	}
 }

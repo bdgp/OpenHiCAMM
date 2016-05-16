@@ -59,7 +59,7 @@ public class ROIFinderDialog extends JPanel {
                 Logger logger = Logger.create(null, "ROIFinder Test", null);
                 Image image = new Image();
                 Map<String,Config> config = new HashMap<String,Config>();
-                config.put("minRoiArea", new Config(roiFinder.moduleId, 
+                config.put("minRoiArea", new Config(roiFinder.workflowModule.getId(), 
                         "minRoiArea", new Double((Double)minRoiArea.getValue()).toString()));
                 roiFinder.process(image, taggedImage, logger, imageLogRunner, config);
                 imageLogRunner.display();

@@ -22,6 +22,7 @@ import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.TaskConfig;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
+import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.json.JSONException;
@@ -39,15 +40,15 @@ import mmcorej.TaggedImage;
 import static org.bdgp.OpenHiCAMM.Util.where;
 
 public class PosCalibrator implements Module {
-    String moduleId;
+    WorkflowModule workflowModule;
     WorkflowRunner workflow;
 
-    @Override public void initialize(WorkflowRunner workflow, String moduleId) {
+    @Override public void initialize(WorkflowRunner workflow, WorkflowModule workflowModule) {
         this.workflow = workflow;
-        this.moduleId = moduleId;
+        this.workflowModule = workflowModule;
         
         workflow.getModuleConfig().insertOrUpdate(
-                new ModuleConfig(this.moduleId, "canProduceROIs", "yes"), 
+                new ModuleConfig(this.workflowModule.getId(), "canProduceROIs", "yes"), 
                 "id", "key");
     }
 
@@ -56,13 +57,13 @@ public class PosCalibrator implements Module {
         return new Configuration() {
             @Override public Config[] retrieve() {
                 List<Config> configs = new ArrayList<Config>();
-                configs.add(new Config(moduleId, 
+                configs.add(new Config(workflowModule.getId(), 
                         "refSlideImagerModule", 
                         dialog.refSlideImagerModule.getSelectedItem().toString()));
-                configs.add(new Config(moduleId, 
+                configs.add(new Config(workflowModule.getId(), 
                         "compareSlideImagerModule", 
                         dialog.compareSlideImagerModule.getSelectedItem().toString()));
-                configs.add(new Config(moduleId, 
+                configs.add(new Config(workflowModule.getId(), 
                         "roiFinderModule", 
                         dialog.roiFinderModule.getSelectedItem().toString()));
                 return configs.toArray(new Config[]{});
@@ -86,18 +87,18 @@ public class PosCalibrator implements Module {
             @Override public ValidationError[] validate() {
                 List<ValidationError> errors = new ArrayList<ValidationError>();
                 if (dialog.refSlideImagerModule.getSelectedIndex() == 0) {
-                    errors.add(new ValidationError(moduleId, "No reference slide imager module selected!"));
+                    errors.add(new ValidationError(workflowModule.getName(), "No reference slide imager module selected!"));
                 }
                 if (dialog.compareSlideImagerModule.getSelectedIndex() == 0) {
-                    errors.add(new ValidationError(moduleId, "No comparison slide imager module selected!"));
+                    errors.add(new ValidationError(workflowModule.getName(), "No comparison slide imager module selected!"));
                 }
                 if (dialog.refSlideImagerModule.getSelectedItem() != null && 
                     dialog.refSlideImagerModule.getSelectedItem().equals(dialog.compareSlideImagerModule.getSelectedItem())) 
                 {
-                    errors.add(new ValidationError(moduleId, "Reference and comparison imagers cannot be the same!"));
+                    errors.add(new ValidationError(workflowModule.getName(), "Reference and comparison imagers cannot be the same!"));
                 }
                 if (dialog.roiFinderModule.getSelectedIndex() == 0) {
-                    errors.add(new ValidationError(moduleId, "No ROI finder module selected!"));
+                    errors.add(new ValidationError(workflowModule.getName(), "No ROI finder module selected!"));
                 }
                 return errors.toArray(new ValidationError[]{});
             }};
@@ -108,7 +109,7 @@ public class PosCalibrator implements Module {
 
         List<Task> tasks = new ArrayList<Task>();
         for (Task parentTask : parentTasks.size()>0? parentTasks.toArray(new Task[]{}) : new Task[]{null}) {
-            Task task = new Task(this.moduleId, Status.NEW);
+            Task task = new Task(this.workflowModule.getId(), Status.NEW);
             workflow.getTaskStatus().insert(task);
             tasks.add(task);
             
@@ -121,21 +122,23 @@ public class PosCalibrator implements Module {
                         and("key", "slideId"));
                 if (slideIdConf != null) {
                     this.workflow.getTaskConfig().insert(new TaskConfig(
-                            new Integer(task.getId()).toString(), "slideId", slideIdConf.getValue()));
+                            task.getId(), "slideId", slideIdConf.getValue()));
                 }
 
                 // get the position lists
                 Config roiFinderModuleConf = this.workflow.getModuleConfig().selectOne(
-                        where("id", this.moduleId).
+                        where("id", this.workflowModule.getId()).
                         and("key","roiFinderModule"));
                 if (roiFinderModuleConf == null) throw new RuntimeException("Config roiFinderModule not found!");
+                WorkflowModule roiFinderModule = this.workflow.getWorkflow().selectOneOrDie(
+                        where("name", roiFinderModuleConf.getValue()));
                 List<SlidePosList> slidePosLists = slidePosListDao.select(
-                        where("moduleId", roiFinderModuleConf.getValue()).
+                        where("moduleId", roiFinderModule.getId()).
                         and("slideId", new Integer(slideIdConf.getValue())));
                 
                 // remove old slide pos lists
                 slidePosListDao.delete(
-                        where("moduleId", this.moduleId).
+                        where("moduleId", this.workflowModule.getId()).
                         and("slideId", new Integer(slideIdConf.getValue())));
 
                 // save the original X and Y positions as property values
@@ -155,7 +158,7 @@ public class PosCalibrator implements Module {
                     posList.setPositions(msps);
 
                     // store the translated position list into the database
-                    SlidePosList slidePosList = new SlidePosList(this.moduleId, spl.getSlideId(), null, posList);
+                    SlidePosList slidePosList = new SlidePosList(this.workflowModule.getId(), spl.getSlideId(), null, posList);
                     slidePosListDao.insert(slidePosList);
                 }
             }
@@ -179,8 +182,10 @@ public class PosCalibrator implements Module {
         Config refSlideImagerModuleConf = config.get("refSlideImagerModule");
         if (refSlideImagerModuleConf == null) throw new RuntimeException("Config refSlideImagerModule not found!");
         Map<ImagePlus,Point2D.Double> refImages = new LinkedHashMap<>();
+        WorkflowModule refSlideImagerModule = this.workflow.getWorkflow().selectOneOrDie(
+                where("name",refSlideImagerModuleConf.getValue()));
         List<Task> refTasks = workflow.getTaskStatus().select(
-                where("moduleId", refSlideImagerModuleConf.getValue()));
+                where("moduleId", refSlideImagerModule.getId()));
         for (Task t : refTasks) {
             TaskConfig refSlideIdConf = workflow.getTaskConfig().selectOne(
                     where("id", t.getId()).
@@ -217,9 +222,11 @@ public class PosCalibrator implements Module {
         // get the comparison image(s) from the comparison module
         Config compareSlideImagerModuleConf = config.get("compareSlideImagerModule");
         if (compareSlideImagerModuleConf == null) throw new RuntimeException("Config compareSlideImagerModule not found!");
+        WorkflowModule compareSlideImagerModule = this.workflow.getWorkflow().selectOneOrDie(
+                where("name", compareSlideImagerModuleConf.getValue()));
         Map<ImagePlus,Point2D.Double> compareImages = new LinkedHashMap<>();
         List<Task> compareTasks = workflow.getTaskStatus().select(
-                where("moduleId", compareSlideImagerModuleConf.getValue()));
+                where("moduleId", compareSlideImagerModule.getId()));
         for (Task t : compareTasks) {
             TaskConfig compareSlideIdConf = workflow.getTaskConfig().selectOne(
                     where("id", t.getId()).
@@ -273,31 +280,31 @@ public class PosCalibrator implements Module {
         
         // convert between image coordinates and stage coordinates
         ModuleConfig pixelSizeConf = workflow.getModuleConfig().selectOne(
-                where("id", refSlideImagerModuleConf.getValue()).
+                where("id", refSlideImagerModule.getId()).
                 and("key", "pixelSize"));
         if (pixelSizeConf == null) throw new RuntimeException("pixelSize conf not found for ref imager!");
         Double pixelSize = new Double(pixelSizeConf.getValue());
 
         ModuleConfig hiResPixelSizeConf = workflow.getModuleConfig().selectOne(
-                where("id", compareSlideImagerModuleConf.getValue()).
+                where("id", compareSlideImagerModule.getId()).
                 and("key", "pixelSize"));
         if (hiResPixelSizeConf == null) throw new RuntimeException("hires pixelSize conf not found for compare imager!");
         Double hiResPixelSize = new Double(hiResPixelSizeConf.getValue());
 
         ModuleConfig invertXAxisConf = workflow.getModuleConfig().selectOne(
-                where("id", refSlideImagerModuleConf.getValue()).
+                where("id", refSlideImagerModule.getId()).
                 and("key", "invertXAxis"));
         if (invertXAxisConf == null) throw new RuntimeException("invertXAxis conf not found for ref imager!");
         ModuleConfig invertXAxisConf2 = workflow.getModuleConfig().selectOne(
-                where("id", compareSlideImagerModuleConf.getValue()).
+                where("id", compareSlideImagerModule.getId()).
                 and("key", "invertXAxis"));
         if (invertXAxisConf2 == null) throw new RuntimeException("invertXAxis conf not found for compare imager!");
         ModuleConfig invertYAxisConf = workflow.getModuleConfig().selectOne(
-                where("id", refSlideImagerModuleConf.getValue()).
+                where("id", refSlideImagerModule.getId()).
                 and("key", "invertYAxis"));
         if (invertYAxisConf == null) throw new RuntimeException("invertYAxis conf not found for ref imager!");
         ModuleConfig invertYAxisConf2 = workflow.getModuleConfig().selectOne(
-                where("id", compareSlideImagerModuleConf.getValue()).
+                where("id", compareSlideImagerModule.getId()).
                 and("key", "invertYAxis"));
         if (invertYAxisConf2 == null) throw new RuntimeException("invertYAxis conf not found for compare imager!");
         
@@ -341,15 +348,15 @@ public class PosCalibrator implements Module {
         logger.info(String.format("Computed stage translation: %s", translateStage));
         // store translated stage coordinates as task config
         this.workflow.getTaskConfig().insertOrUpdate(
-                new TaskConfig(new Integer(task.getId()).toString(), 
+                new TaskConfig(task.getId(),
                         "translateStageX", new Double(translateStage.getX()).toString()), "id", "key");
         this.workflow.getTaskConfig().insertOrUpdate(
-                new TaskConfig(new Integer(task.getId()).toString(), 
+                new TaskConfig(task.getId(),
                         "translateStageY", new Double(translateStage.getY()).toString()), "id", "key");
 
         // get the position lists
         List<SlidePosList> slidePosLists = slidePosListDao.select(
-                where("moduleId", this.moduleId).
+                where("moduleId", this.workflowModule.getId()).
                 and("slideId", new Integer(slideIdConf.getValue())));
         
         // apply the translation matrix to the position list to derive a new position list

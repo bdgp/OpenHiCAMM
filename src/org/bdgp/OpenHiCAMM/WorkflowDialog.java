@@ -187,6 +187,7 @@ public class WorkflowDialog extends JDialog {
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                     WorkflowDialog.this, 
                     configurations, 
+                    workflowRunner.getWorkflowDb().table(WorkflowModule.class),
                     workflowRunner.getInstanceDb().table(ModuleConfig.class),
                     workflowRunner.getWorkflowDb().table(ModuleConfig.class));
                 config.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -204,6 +205,7 @@ public class WorkflowDialog extends JDialog {
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                     WorkflowDialog.this, 
                     configurations, 
+                    workflowRunner.getWorkflowDb().table(WorkflowModule.class),
                     workflowRunner.getInstanceDb().table(ModuleConfig.class),
                     workflowRunner.getWorkflowDb().table(ModuleConfig.class));
                 config.storeConfiguration();
@@ -235,6 +237,7 @@ public class WorkflowDialog extends JDialog {
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                     WorkflowDialog.this, 
                     configurations, 
+                    workflowRunner.getWorkflowDb().table(WorkflowModule.class),
                     workflowRunner.getInstanceDb().table(ModuleConfig.class),
                     workflowRunner.getWorkflowDb().table(ModuleConfig.class));
                 config.storeConfiguration();
@@ -384,7 +387,7 @@ public class WorkflowDialog extends JDialog {
                 Collections.sort(ms, (a,b)->a.getPriority().compareTo(b.getPriority()));
                 for (WorkflowModule module : ms) {
                     if (module.getParentId() == null) {
-                        startModules.add(module.getId());
+                        startModules.add(module.getName());
                     }
                 }
 

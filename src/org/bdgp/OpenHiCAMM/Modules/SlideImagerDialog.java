@@ -39,7 +39,7 @@ public class SlideImagerDialog extends JPanel {
 	private static final int DEFAULT_DUMMY_IMAGE_COUNT = 3;
     JTextField acqSettingsText;
 	JTextField posListText;
-	JComboBox<String> moduleId;
+	JComboBox<String> moduleName;
     DoubleSpinner pixelSize;
     DoubleSpinner initialZPos;
     JSpinner dummyImageCount;
@@ -118,9 +118,9 @@ public class SlideImagerDialog extends JPanel {
 		this.add(lblPositionListDb, "cell 0 5");
 		
         // Populate the module ID drop-down list        
-        moduleId = new JComboBox<String>();
-        List<String> moduleIds = new ArrayList<String>();
-        moduleIds.add("- Select -");
+        moduleName = new JComboBox<String>();
+        List<String> moduleNames = new ArrayList<String>();
+        moduleNames.add("- Select -");
         Dao<WorkflowModule> modules = workflowRunner.getWorkflowDb().table(WorkflowModule.class);
         Dao<ModuleConfig> moduleConfigDao = workflowRunner.getInstanceDb().table(ModuleConfig.class);
         for (WorkflowModule module : modules.select()) {
@@ -129,13 +129,13 @@ public class SlideImagerDialog extends JPanel {
                     and("key", "canProduceROIs").
                     and("value", "yes"));
             if (moduleConfigs.size() > 0) {
-                moduleIds.add(module.getId());
+                moduleNames.add(module.getName());
             }
         }
-        Collections.sort(moduleIds);
-        moduleId.setModel(new DefaultComboBoxModel<String>(moduleIds.toArray(new String[0])));
-        moduleId.setEnabled(true);
-        this.add(moduleId, "cell 0 6,growx");
+        Collections.sort(moduleNames);
+        moduleName.setModel(new DefaultComboBoxModel<String>(moduleNames.toArray(new String[0])));
+        moduleName.setEnabled(true);
+        this.add(moduleName, "cell 0 6,growx");
         
         JLabel lblTakeSeveralDummy = new JLabel("How many dummy adjustment images to take?");
         add(lblTakeSeveralDummy, "flowx,cell 0 7");

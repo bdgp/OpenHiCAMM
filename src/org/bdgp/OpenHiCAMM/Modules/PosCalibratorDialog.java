@@ -39,7 +39,8 @@ public class PosCalibratorDialog extends JPanel {
         List<String> canImageSlides = new ArrayList<String>();
         canImageSlides.add("- Select -");
         for (ModuleConfig mc : workflowRunner.getModuleConfig().select(where("key","canImageSlides"))) {
-            canImageSlides.add(mc.getId());
+            WorkflowModule wm = workflowRunner.getWorkflow().selectOneOrDie(where("id", mc.getId()));
+            canImageSlides.add(wm.getName());
         }
         Collections.sort(canImageSlides);
         refSlideImagerModule.setModel(new DefaultComboBoxModel<String>(canImageSlides.toArray(new String[]{})));
@@ -65,8 +66,8 @@ public class PosCalibratorDialog extends JPanel {
         canProduceROIs.add("- Select -");
         for (ModuleConfig mc : workflowRunner.getModuleConfig().select(where("key","canProduceROIs"))) {
             WorkflowModule wm = workflowRunner.getWorkflow().selectOneOrDie(where("id", mc.getId()));
-            if (!wm.getModuleName().equals(PosCalibrator.class.getName())) {
-                canProduceROIs.add(mc.getId());
+            if (!wm.getClassName().equals(PosCalibrator.class.getName())) {
+                canProduceROIs.add(wm.getName());
             }
         }
         Collections.sort(canProduceROIs);

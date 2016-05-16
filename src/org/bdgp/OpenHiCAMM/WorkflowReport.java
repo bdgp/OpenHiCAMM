@@ -88,7 +88,7 @@ public class WorkflowReport implements Report {
     private String reportDir;
     private String reportIndex;
     private Integer prevPoolSlideId;
-    private Map<String,Boolean> isLoaderInitialized;
+    private Map<Integer,Boolean> isLoaderInitialized;
 
     public void jsLog(String message) {
         IJ.log(String.format("[WorkflowReport:js] %s", message));
@@ -105,7 +105,7 @@ public class WorkflowReport implements Report {
         this.webEngine = webEngine;
         this.reportDir = reportDir;
         this.reportIndex = reportIndex;
-        isLoaderInitialized = new HashMap<String,Boolean>();
+        isLoaderInitialized = new HashMap<Integer,Boolean>();
     }
     
     @Override
@@ -144,10 +144,10 @@ public class WorkflowReport implements Report {
                     log("Working on slideImager: %s", slideImager);
                     if (workflowRunner.getModuleConfig().selectOne(
                             where("id", slideImager.getId()).
-                            and("key", "posListModuleId")) == null) 
+                            and("key", "posListModule")) == null) 
                     {
                        // get the loader module
-                        String loaderModuleId = slideImager.getParentId();
+                        Integer loaderModuleId = slideImager.getParentId();
                         while (loaderModuleId != null) {
                             WorkflowModule loaderModule = this.workflowRunner.getWorkflow().selectOneOrDie(
                                     where("id", loaderModuleId));
@@ -167,7 +167,7 @@ public class WorkflowReport implements Report {
                                         for (PoolSlide ps : pss) {
                                             String reportFile = String.format("report%03d.%s.cartridge%d.pos%02d.slide%05d.html", 
                                                         reportCounter[0]++, 
-                                                        slideImager.getId(),
+                                                        slideImager.getName(),
                                                         ps.getCartridgePosition(), ps
                                                         .getSlidePosition(), 
                                                         ps.getSlideId());
@@ -175,11 +175,12 @@ public class WorkflowReport implements Report {
                                                 A(String.format("Module %s, Slide %s", slideImager, ps)).
                                                     attr("href", reportFile);
                                             });
-                                            String loaderModuleId_ = loaderModuleId;
+                                            Integer loaderModuleId_ = loaderModuleId;
                                             runnables.put(reportFile, ()->{
                                                 log("Calling runReport(startModule=%s, poolSlide=%s, loaderModuleId=%s)", 
                                                         slideImager, ps, loaderModuleId_);
-                                                runReport(slideImager, ps, loaderModuleId_);
+                                                WorkflowModule lm = this.workflowRunner.getWorkflow().selectOneOrDie(where("id", loaderModuleId_));
+                                                runReport(slideImager, ps, lm);
                                             });
                                         }
                                         continue SLIDE_IMAGERS;
@@ -188,7 +189,7 @@ public class WorkflowReport implements Report {
                             }
                             loaderModuleId = loaderModule.getParentId();
                         }
-                        String reportFile = String.format("report%03d.%s.html", reportCounter[0]++, slideImager.getId()); 
+                        String reportFile = String.format("report%03d.%s.html", reportCounter[0]++, slideImager.getName()); 
                         P().with(()->{
                             A(String.format("Module %s", slideImager)).
                                 attr("href", reportFile);
@@ -242,7 +243,7 @@ public class WorkflowReport implements Report {
         index.write(new File(this.reportDir, this.reportIndex));
     }
 
-    private void runReport(WorkflowModule startModule, PoolSlide poolSlide, String loaderModuleId) {
+    private void runReport(WorkflowModule startModule, PoolSlide poolSlide, WorkflowModule loaderModule) {
         log("Called runReport(startModule=%s, poolSlide=%s)", startModule, poolSlide);
 
         Dao<Slide> slideDao = this.workflowRunner.getInstanceDb().table(Slide.class);
@@ -252,7 +253,7 @@ public class WorkflowReport implements Report {
         Dao<SlidePosList> slidePosListDao = this.workflowRunner.getInstanceDb().table(SlidePosList.class);
         
         // get a ROI ID -> moduleId(s) mapping from the slideposlist
-        Map<Integer, Set<String>> roiModules = new HashMap<>();
+        Map<Integer, Set<Integer>> roiModules = new HashMap<>();
         for (SlidePosList spl : slidePosListDao.select()) {
             if (spl.getModuleId() != null) {
                 PositionList posList = spl.getPositionList();
@@ -278,28 +279,30 @@ public class WorkflowReport implements Report {
                     and("key", "imageId"));
             if (imageIdConf != null) {
                 for (ROI roi : roiDao.select(where("imageId", imageIdConf.getValue()))) {
-                    Set<String> roiModuleSet = roiModules.get(roi.getId());
+                    Set<Integer> roiModuleSet = roiModules.get(roi.getId());
                     if (roiModuleSet == null) {
                         log(String.format("No ROI modules found for ROI %s!", roi));
                     }
                     else {
-                        for (String roiModuleId : roiModuleSet) {
+                        for (Integer roiModuleId : roiModuleSet) {
                             WorkflowModule roiModule = this.workflowRunner.getWorkflow().selectOne(where("id", roiModuleId));
                             if (roiModule != null) {
-                                for (ModuleConfig posListModuleIdConf : this.workflowRunner.getModuleConfig().select(
-                                        where("key", "posListModuleId").
-                                        and("value", roiModule.getId()))) 
+                                for (ModuleConfig posListModuleConf : this.workflowRunner.getModuleConfig().select(
+                                        where("key", "posListModule").
+                                        and("value", roiModule.getName()))) 
                                 {
+                                    WorkflowModule posListModule = this.workflowRunner.getWorkflow().selectOneOrDie(
+                                            where("name", posListModuleConf.getValue()));
                                     if (this.workflowRunner.getModuleConfig().selectOne(
-                                            where("id", posListModuleIdConf.getId()).
+                                            where("id", posListModule.getId()).
                                             and("key", "canImageSlides").
                                             and("value", "yes")) != null) 
                                     {
                                         WorkflowModule imagerModule = this.workflowRunner.getWorkflow().selectOne(
-                                                where("id", posListModuleIdConf.getId()));
+                                                where("id", posListModuleConf.getId()));
                                         if (imagerModule != null) {
-                                            if (!roiImagers.containsKey(roiModule.getId())) roiImagers.put(roiModule.getId(), new HashSet<>());
-                                            roiImagers.get(roiModule.getId()).add(imagerModule.getId());
+                                            if (!roiImagers.containsKey(roiModule.getName())) roiImagers.put(roiModule.getName(), new HashSet<>());
+                                            roiImagers.get(roiModule.getName()).add(imagerModule.getName());
                                         }
                                     }
                                 }
@@ -317,7 +320,7 @@ public class WorkflowReport implements Report {
             slide = slideDao.selectOneOrDie(where("id", poolSlide.getSlideId()));
             slideName = slide.getName();
             String title = String.format("SlideImager %s, Slide %s, Pool %d, Cartridge %d, Slide Position %d", 
-                    startModule.getId(), 
+                    startModule.getName(), 
                     slide.getName(), 
                     poolSlide.getPoolId(), 
                     poolSlide.getCartridgePosition(), 
@@ -326,15 +329,15 @@ public class WorkflowReport implements Report {
             P().with(()->{
                 A("Back to Index Page").attr("href", this.reportIndex);
             });
-            A().attr("name", String.format("report-%s-PS%s", startModule.getId(), poolSlide.getId()));
+            A().attr("name", String.format("report-%s-PS%s", startModule.getName(), poolSlide.getId()));
             H1().text(title);
             log("title = %s", title);
         }
         else {
             slide = null;
             slideName = "slide";
-            String title = String.format("SlideImager %s", startModule.getId());
-            A().attr("name", String.format("report-%s", startModule.getId()));
+            String title = String.format("SlideImager %s", startModule.getName());
+            A().attr("name", String.format("report-%s", startModule.getName()));
             H1().text(title);
             log("title = %s", title);
         }
@@ -421,7 +424,7 @@ public class WorkflowReport implements Report {
             ImagePlus slideThumb = NewImage.createRGBImage("slideThumb", SLIDE_PREVIEW_WIDTH, slidePreviewHeight, 1, NewImage.FILL_WHITE);
             Map<Integer,Roi> imageRois = new LinkedHashMap<Integer,Roi>();
             List<Roi> roiRois = new ArrayList<Roi>();
-            Map().attr("name",String.format("map-%s-%s", startModule.getId(), slideName)).with(()->{
+            Map().attr("name",String.format("map-%s-%s", startModule.getName(), slideName)).with(()->{
                 // TODO: parallelize
                 for (Task task : imageTasks) {
                     Config imageIdConf = this.workflowRunner.getTaskConfig().selectOne(
@@ -521,7 +524,7 @@ public class WorkflowReport implements Report {
                     Base64.getMimeEncoder().encodeToString(baos.toByteArray()))).
                     attr("width", slideThumb.getWidth()).
                     attr("height", slideThumb.getHeight()).
-                    attr("usemap", String.format("#map-%s-%s", startModule.getId(), slideName)).
+                    attr("usemap", String.format("#map-%s-%s", startModule.getName(), slideName)).
                     attr("class","map stageCoords").
                     attr("data-min-x", minX - imageWidth / 2.0 * pixelSize * (invertXAxis? -1.0 : 1.0)).
                     attr("data-max-x", maxX + imageWidth / 2.0 * pixelSize * (invertXAxis? -1.0 : 1.0)).
@@ -632,7 +635,7 @@ public class WorkflowReport implements Report {
                                     log("gridScaleFactor = %f, gridPreviewHeight = %d", gridScaleFactor, gridPreviewHeight);
 
                                     ImagePlus roiGridThumb = NewImage.createRGBImage(
-                                            String.format("roiGridThumb-%s-ROI%d", imager.getId(), roi.getId()), 
+                                            String.format("roiGridThumb-%s-ROI%d", imager.getName(), roi.getId()), 
                                             ROI_GRID_PREVIEW_WIDTH, 
                                             gridPreviewHeight, 
                                             1, 
@@ -688,8 +691,8 @@ public class WorkflowReport implements Report {
                                                             P().with(()->{
                                                                 A().attr("href", "#").
                                                                     attr("onclick", 
-                                                                        String.format("report.goToPosition(\"%s\",%d,%f,%f)", 
-                                                                                Util.escapeJavaStyleString(loaderModuleId),
+                                                                        String.format("report.goToPosition(%d,%d,%f,%f)", 
+                                                                                loaderModule.getId(),
                                                                                 poolSlide != null? poolSlide.getId() : -1, 
                                                                                         xPos_, 
                                                                                         yPos_)).
@@ -700,8 +703,8 @@ public class WorkflowReport implements Report {
                                                             if (poolSlide != null) {
                                                                 P().with(()->{
                                                                     A().attr("href", "#").
-                                                                        attr("onclick", String.format("report.returnSlide(\"%s\")",
-                                                                                Util.escapeJavaStyleString(loaderModuleId))).
+                                                                        attr("onclick", String.format("report.returnSlide(%d)",
+                                                                                loaderModule.getId())).
                                                                         text("Return slide to loader");
                                                                 });
                                                             }
@@ -742,7 +745,7 @@ public class WorkflowReport implements Report {
                                                     });
                                                     Td().with(()->{
                                                         List<Runnable> makeLinks = new ArrayList<>();
-                                                        Map().attr("name", String.format("map-roi-%s-ROI%d", imager.getId(), roi.getId())).with(()->{
+                                                        Map().attr("name", String.format("map-roi-%s-ROI%d", imager.getName(), roi.getId())).with(()->{
                                                             for (Task imagerTask : imagerTaskEntry.getValue()) {
                                                                 Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
                                                                         where("id", new Integer(imagerTask.getId()).toString()).and("key", "imageId"));
@@ -824,7 +827,7 @@ public class WorkflowReport implements Report {
                                                                 attr("data-max-x", maxX2 + imageWidth2 / 2.0 * hiResPixelSize * (invertXAxis? -1.0 : 1.0)).
                                                                 attr("data-min-y", minY2 - imageHeight2 / 2.0 * hiResPixelSize * (invertYAxis? -1.0 : 1.0)).
                                                                 attr("data-max-y", maxY2 + imageHeight2 / 2.0 * hiResPixelSize * (invertYAxis? -1.0 : 1.0)).
-                                                                attr("usemap", String.format("#map-roi-%s-ROI%d", imager.getId(), roi.getId()));
+                                                                attr("usemap", String.format("#map-roi-%s-ROI%d", imager.getName(), roi.getId()));
                                                         
                                                         for (Runnable r : makeLinks) {
                                                             r.run();
@@ -903,7 +906,7 @@ public class WorkflowReport implements Report {
         imp.show();
     }
     
-    public void goToPosition(String loaderModuleId, int poolSlideId, double xPos, double yPos) {
+    public void goToPosition(Integer loaderModuleId, int poolSlideId, double xPos, double yPos) {
         synchronized(this) {
             Dao<PoolSlide> poolSlideDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);
             PoolSlide poolSlide = poolSlideId > 0? poolSlideDao.selectOne(where("id", poolSlideId)) : null;
@@ -912,7 +915,7 @@ public class WorkflowReport implements Report {
                 Double xPos_ = xPos;
                 Double yPos_ = yPos;
                 PoolSlide poolSlide_ = poolSlide;
-                String loaderModuleId_ = loaderModuleId;
+                Integer loaderModuleId_ = loaderModuleId;
                 Integer poolSlideId_ = poolSlideId;
                 Integer cartridgePosition = poolSlide_.getCartridgePosition();
                 Integer slidePosition = poolSlide_.getSlidePosition();
@@ -931,7 +934,7 @@ public class WorkflowReport implements Report {
                         if (poolSlideId_ > 0 && loaderModuleId_ != null && this.prevPoolSlideId != poolSlideId_) {
                             WorkflowModule loaderModule = this.workflowRunner.getWorkflow().selectOneOrDie(
                                     where("id", loaderModuleId_));
-                            Module module = this.workflowRunner.getModuleInstances().get(loaderModule.getId());
+                            Module module = this.workflowRunner.getModuleInstances().get(loaderModule.getName());
                             if (module == null) throw new RuntimeException(String.format("Could not find instance for module %s!", loaderModule));
 
                             // init loader and scan for slides
@@ -1012,7 +1015,7 @@ public class WorkflowReport implements Report {
         }
     }
     
-    public void returnSlide(String loaderModuleId) {
+    public void returnSlide(Integer loaderModuleId) {
         synchronized(this) {
             if (this.prevPoolSlideId != null) {
                 SwingUtilities.invokeLater(()->{
@@ -1024,7 +1027,7 @@ public class WorkflowReport implements Report {
                         new Thread(()->{
                             WorkflowModule loaderModule = this.workflowRunner.getWorkflow().selectOneOrDie(
                                     where("id", loaderModuleId));
-                            Module module = this.workflowRunner.getModuleInstances().get(loaderModule.getId());
+                            Module module = this.workflowRunner.getModuleInstances().get(loaderModule.getName());
                             if (module == null) throw new RuntimeException(String.format("Could not find instance for module %s!", loaderModule));
                             
                             Dao<PoolSlide> poolSlideDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);

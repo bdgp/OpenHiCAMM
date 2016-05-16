@@ -20,6 +20,7 @@ import javax.swing.JTabbedPane;
 
 import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
+import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 
 import java.awt.event.ActionListener;
@@ -34,18 +35,21 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 public class WorkflowConfigurationDialog extends JDialog {
 	JDialog parent;
 	Map<String,Configuration> configurations;
+	Dao<WorkflowModule> wmDao;
 	Dao<ModuleConfig> config;
 	Dao<ModuleConfig> defaultConfig;
 	
     public WorkflowConfigurationDialog(
             JDialog parent, 
             final Map<String,Configuration> configurations, 
+            final Dao<WorkflowModule> wmDao,
             final Dao<ModuleConfig> config,
             final Dao<ModuleConfig> defaultConfig)
     {
 	    super(parent, "Module Configuration", Dialog.ModalityType.DOCUMENT_MODAL);
 	    this.parent = parent;
 	    this.configurations = configurations;
+	    this.wmDao = wmDao;
 	    this.config = config;
 	    this.defaultConfig = defaultConfig;
 
@@ -155,8 +159,9 @@ public class WorkflowConfigurationDialog extends JDialog {
         for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
             Config[] configs = entry.getValue().retrieve();
             if (configs != null) {
+                WorkflowModule wm = wmDao.selectOneOrDie(where("name",entry.getKey()));
                 for (Config c : configs) {
-                    ModuleConfig setId = new ModuleConfig(entry.getKey(), c.getKey(), c.getValue());
+                    ModuleConfig setId = new ModuleConfig(wm.getId(), c.getKey(), c.getValue());
                     config.insertOrUpdate(setId,"id","key");
                     defaultConfig.insertOrUpdate(setId,"id","key");
                 }

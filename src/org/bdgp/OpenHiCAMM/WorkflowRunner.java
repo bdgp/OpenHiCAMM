@@ -96,7 +96,7 @@ public class WorkflowRunner {
     private Logger.LogFileHandler logFileHandler;
     private boolean resume;
     private Long startTime;
-    private String startModuleId;
+    private WorkflowModule startModule;
     
     public static final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     
@@ -158,7 +158,7 @@ public class WorkflowRunner {
         this.mmslide = mmslide;
         this.isStopped = true;
         this.startTime = null;
-        this.startModuleId = null;
+        this.startModule = null;
         
         // instantiate the workflow module object instances
         this.moduleInstances = new HashMap<String,Module>();
@@ -167,8 +167,8 @@ public class WorkflowRunner {
         // set the logLabelLength
         this.logLabelLength = 14;
         for (WorkflowModule w : workflow.select()) {
-            if (this.logLabelLength < w.getId().length()+7) {
-                this.logLabelLength = w.getId().length()+7;
+            if (this.logLabelLength < w.getName().length()+7) {
+                this.logLabelLength = w.getName().length()+7;
             }
         }
 
@@ -205,14 +205,14 @@ public class WorkflowRunner {
             }
             // Make sure all modules implement Module
             if (!Module.class.isAssignableFrom(w.getModule())) {
-                throw new RuntimeException("First module "+w.getModuleName()
+                throw new RuntimeException("First module "+w.getClassName()
                         +" in Workflow does not inherit the Module interface.");
             }
             // Instantiate the module instances and put them in a hash
             try { 
                 Module m = w.getModule().newInstance();
-                m.initialize(this, w.getId());
-                moduleInstances.put(w.getId(), m); 
+                m.initialize(this, w);
+                moduleInstances.put(w.getName(), m); 
             } 
             catch (InstantiationException e) {throw new RuntimeException(e);} 
             catch (IllegalAccessException e) {throw new RuntimeException(e);}
@@ -275,7 +275,7 @@ public class WorkflowRunner {
         }
         
     	List<Task> childTasks = new ArrayList<Task>();
-        Module m = this.moduleInstances.get(module.getId());
+        Module m = this.moduleInstances.get(module.getName());
         childTasks = m.createTaskRecords(tasks != null? tasks : new ArrayList<Task>(), moduleConfig, logger);
         List<WorkflowModule> modules = workflow.select(
         		where("parentId",module != null? module.getId() : null));
@@ -290,7 +290,7 @@ public class WorkflowRunner {
         runInitialize(module);
     }
     public void runInitialize(WorkflowModule module) {
-        Module m = this.moduleInstances.get(module.getId());
+        Module m = this.moduleInstances.get(module.getName());
         // If there are any new/in-progress tasks, then call runInitialize()
         List<Task> newTasks = new ArrayList<Task>();
         newTasks.addAll(this.getTaskStatus().select(where("moduleId", module.getId()).and("status", Status.NEW)));
@@ -347,18 +347,18 @@ public class WorkflowRunner {
         // Log the workflow module info
         this.logger.info("Workflow Modules:");
         List<WorkflowModule> modules = this.workflow.select(where("id",startModuleId));
-        Map<String,String> labels = new HashMap<String,String>();
+        Map<Integer,String> labels = new HashMap<Integer,String>();
         GraphEasy graph = new GraphEasy();
         while (modules.size() > 0) {
             Collections.sort(modules, new Comparator<WorkflowModule>() {
                 @Override public int compare(WorkflowModule a, WorkflowModule b) {
-                    return a.getModuleName().compareTo(b.getModuleName());
+                    return a.getClassName().compareTo(b.getClassName());
                 }});
             List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
             for (WorkflowModule module : modules) {
-                Module m = moduleInstances.get(module.getId());
+                Module m = moduleInstances.get(module.getName());
                 if (m == null) {
-                    throw new RuntimeException("No instantiated module found with ID: "+module.getId());
+                    throw new RuntimeException("No instantiated module found with ID: "+module.getName());
                 }
                 // print workflow module info
                 this.logger.info(String.format("    %s", module.toString(true)));
@@ -396,7 +396,7 @@ public class WorkflowRunner {
                     }
                 }
                 // build a workflow graph
-                String label = String.format("%s:%s", module.getId(), m.getTaskType());
+                String label = String.format("%s:%s", module.getName(), m.getTaskType());
                 labels.put(module.getId(), label);
                 if (module.getParentId() != null) {
                     graph.addEdge(labels.get(module.getParentId()), label);
@@ -484,7 +484,7 @@ public class WorkflowRunner {
         while (modules.size() > 0) {
             Collections.sort(modules, new Comparator<WorkflowModule>() {
                 @Override public int compare(WorkflowModule a, WorkflowModule b) {
-                    return a.getModuleName().compareTo(b.getModuleName());
+                    return a.getClassName().compareTo(b.getClassName());
                 }});
 
             List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
@@ -506,7 +506,7 @@ public class WorkflowRunner {
                     }});
                 for (Status status : sortedStats) {
                     this.logger.info(String.format("Module %s: Status %s: %d / %d tasks (%.02f%%)",
-                            Util.escape(module.getId()), 
+                            Util.escape(module.getName()), 
                             status, 
                             stats.get(status), 
                             tasks.size(),
@@ -525,7 +525,7 @@ public class WorkflowRunner {
     public void logTaskStatusSummary(String message) {
         this.logger.info(message);
         List<WorkflowModule> modules = new ArrayList<>();
-        WorkflowModule startModule = this.workflow.selectOneOrDie(where("id", this.startModuleId));
+        WorkflowModule startModule = this.workflow.selectOneOrDie(where("id", this.startModule.getId()));
         modules.add(startModule);
         while (!modules.isEmpty()) {
             List<WorkflowModule> newModules = new ArrayList<>();
@@ -541,7 +541,7 @@ public class WorkflowRunner {
                     sb.append(task.getStatus().toString().charAt(0));
                     oldSlideId = slideId;
                 }
-                logger.info(String.format("    Module %s: %s", module.getId(), sb.toString()));
+                logger.info(String.format("    Module %s: %s", module.getName(), sb.toString()));
                 newModules.addAll(this.workflow.select(where("parentId", module.getId())));
             }
             modules.clear();
@@ -579,18 +579,18 @@ public class WorkflowRunner {
 
     /**
      * Start the workflow runner
-     * @param startModuleId The starting module
+     * @param startModuleName The starting module
      * @param resume Should we resume a previous run?
      * @param inheritedTaskConfig Inherited task configuration. Can be null.
      * @return
      */
     public Future<Status> run(
-            final String startModuleId, 
+            final String startModuleName, 
             final Map<String,Config> inheritedTaskConfig,
             final boolean resume) 
     {
         this.resume = resume;
-        this.startModuleId = startModuleId;
+        this.startModule = this.workflow.selectOneOrDie(where("name", startModuleName));
         this.pool = Executors.newFixedThreadPool(this.maxThreads+1);
         this.notifiedTasks.clear();
         Future<Status> future = pool.submit(new Callable<Status>() {
@@ -606,7 +606,7 @@ public class WorkflowRunner {
                     int taskCount = 0;
                     if (WorkflowRunner.this.resume) {
                         logger.info("Updating task records...");
-                        List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModuleId));
+                        List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModuleName));
                         tasks.sort((a,b)->a.getId()-b.getId());
                         for (Task t : tasks) {
                             taskCount += updateTaskRecordsOnResume(t);
@@ -615,24 +615,24 @@ public class WorkflowRunner {
                     else {
                         // delete and re-create the task records
                         logger.info("Creating task records...");
-                        WorkflowRunner.this.deleteTaskRecords(startModuleId);
-                        WorkflowRunner.this.createTaskRecords(startModuleId);
+                        WorkflowRunner.this.deleteTaskRecords(startModuleName);
+                        WorkflowRunner.this.createTaskRecords(startModuleName);
                         
                         String startTimestamp = dateFormat.format(new Date(WorkflowRunner.this.startTime)); 
                         WorkflowRunner.this.getModuleConfig().insertOrUpdate(
-                                new ModuleConfig(startModuleId, "startTime", startTimestamp), "id","key");
+                                new ModuleConfig(startModule.getId(), "startTime", startTimestamp), "id","key");
                         WorkflowRunner.this.getModuleConfig().delete(
-                                where("id", startModuleId).
+                                where("id", startModuleName).
                                 and("key", "endTime"));
                         WorkflowRunner.this.getModuleConfig().delete(
-                                where("id", startModuleId).
+                                where("id", startModuleName).
                                 and("key", "duration"));
-                        taskCount = getTaskCount(startModuleId);
+                        taskCount = getTaskCount(startModuleName);
                     }
 
                     // call the runInitialize module method
                     WorkflowRunner.this.logger.info("Calling runInitialize on all modules...");
-                    WorkflowRunner.this.runInitialize(startModuleId);
+                    WorkflowRunner.this.runInitialize(startModuleName);
 
                     // Notify the task listeners of the maximum task count
                     for (TaskListener listener : taskListeners) {
@@ -646,7 +646,7 @@ public class WorkflowRunner {
                     if (resume) logger.info("Scanning for previous tasks...");
 
                     // start the first task(s)
-                    List<Task> start = taskStatus.select(where("moduleId",startModuleId));
+                    List<Task> start = taskStatus.select(where("moduleId",startModuleName));
                     Collections.sort(start, (a,b)->a.getId()-b.getId());
                     List<Future<Status>> futures = new ArrayList<Future<Status>>();
                     for (Task t : start) {
@@ -685,7 +685,7 @@ public class WorkflowRunner {
 
                     // Coalesce all the statuses
                     List<Status> statuses = new ArrayList<Status>();
-                    List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModuleId));
+                    List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModuleName));
                     while (tasks.size() > 0) {
                         List<TaskDispatch> dispatch = new ArrayList<TaskDispatch>();
                         for (Task task : tasks) {
@@ -702,12 +702,12 @@ public class WorkflowRunner {
                     long endTime = System.currentTimeMillis();
                     String endTimestamp = dateFormat.format(new Date(endTime)); 
                     WorkflowRunner.this.getModuleConfig().insertOrUpdate(
-                            new ModuleConfig(startModuleId, "endTime", endTimestamp), "id","key");
+                            new ModuleConfig(startModule.getId(), "endTime", endTimestamp), "id","key");
                     WorkflowRunner.this.getModuleConfig().insertOrUpdate(
-                            new ModuleConfig(startModuleId, "duration", new Long(endTime - startTime).toString()), "id","key");
+                            new ModuleConfig(startModule.getId(), "duration", new Long(endTime - startTime).toString()), "id","key");
 
                     // Display a summary of all the task statuses
-                    logTaskSummary(startModuleId);
+                    logTaskSummary(startModuleName);
                     
                     logElapsedTime(startTime, endTime);
 
@@ -758,9 +758,9 @@ public class WorkflowRunner {
                 where("id",task.getModuleId()));
         
         // get an instance of the module
-        final Module taskModule = moduleInstances.get(module.getId());
+        final Module taskModule = moduleInstances.get(module.getName());
         if (taskModule == null) {
-            throw new RuntimeException("No instantiated module found with ID: "+module.getId());
+            throw new RuntimeException("No instantiated module found with ID: "+module.getName());
         }
                 
         // merge the task and module configuration
@@ -989,13 +989,13 @@ public class WorkflowRunner {
         long endTime = System.currentTimeMillis();
         String endTimestamp = dateFormat.format(new Date(endTime)); 
         WorkflowRunner.this.getModuleConfig().insertOrUpdate(
-                new ModuleConfig(startModuleId, "endTime", endTimestamp), "id","key");
+                new ModuleConfig(startModule.getId(), "endTime", endTimestamp), "id","key");
         WorkflowRunner.this.getModuleConfig().insertOrUpdate(
-                new ModuleConfig(startModuleId, "duration", new Long(endTime - startTime).toString()), "id","key");
+                new ModuleConfig(startModule.getId(), "duration", new Long(endTime - startTime).toString()), "id","key");
 
 
         // Log a summary
-        logTaskSummary(this.startModuleId);
+        logTaskSummary(this.startModule.getName());
 
         logElapsedTime(this.startTime, endTime);
 
@@ -1121,8 +1121,8 @@ public class WorkflowRunner {
             Collections.sort(ms, (a,b)->a.getPriority().compareTo(b.getPriority()));
     		List<WorkflowModule> newms = new ArrayList<WorkflowModule>();
     		for (WorkflowModule m : ms) {
-                Module module = this.moduleInstances.get(m.getId());
-                configurations.put(m.getId(), module.configure());
+                Module module = this.moduleInstances.get(m.getName());
+                configurations.put(m.getName(), module.configure());
     			newms.addAll(modules.select(where("parentId",m.getId())));
     		}
     		ms = newms;

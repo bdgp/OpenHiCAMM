@@ -39,19 +39,19 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 
 public abstract class PostProcessor implements Module, ImageLogger {
     protected WorkflowRunner workflowRunner;
-    protected String moduleId;
+    protected WorkflowModule workflowModule;
     protected ScriptInterface script;
 
     @Override
-    public void initialize(WorkflowRunner workflowRunner, String moduleId) {
+    public void initialize(WorkflowRunner workflowRunner, WorkflowModule workflowModule) {
         this.workflowRunner = workflowRunner;
-        this.moduleId = moduleId;
+        this.workflowModule = workflowModule;
         OpenHiCAMM mmslide = workflowRunner.getOpenHiCAMM();
         this.script = mmslide.getApp();
         
         // set initial configs
         workflowRunner.getModuleConfig().insertOrUpdate(
-                new ModuleConfig(this.moduleId, "canPostProcess", "yes"), 
+                new ModuleConfig(this.workflowModule.getId(), "canPostProcess", "yes"), 
                 "id", "key");
     }
 
@@ -161,22 +161,22 @@ public abstract class PostProcessor implements Module, ImageLogger {
 
     @Override
     public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
-        WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",moduleId));
+        WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",workflowModule.getId()));
         List<Task> tasks = new ArrayList<Task>();
         if (module.getParentId() != null) {
             for (Task parentTask : parentTasks) {
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: attaching to parent Task: %s",
-            			this.moduleId, parentTask));
-                Task task = new Task(moduleId, Status.NEW);
+            			this.workflowModule.getId(), parentTask));
+                Task task = new Task(workflowModule.getId(), Status.NEW);
                 workflowRunner.getTaskStatus().insert(task);
                 tasks.add(task);
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created new task record: %s",
-            			this.moduleId, task));
+            			this.workflowModule.getId(), task));
                 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
                 workflowRunner.getTaskDispatch().insert(dispatch);
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created new task dispatch record: %s",
-            			this.moduleId, dispatch));
+            			this.workflowModule.getId(), dispatch));
             }
         }
         return tasks;

@@ -53,19 +53,19 @@ import static org.bdgp.OpenHiCAMM.Util.where;
  */
 public abstract class ROIFinder implements Module, ImageLogger {
     protected WorkflowRunner workflowRunner;
-    protected String moduleId;
+    protected WorkflowModule workflowModule;
     protected ScriptInterface script;
 
     @Override
-    public void initialize(WorkflowRunner workflowRunner, String moduleId) {
+    public void initialize(WorkflowRunner workflowRunner, WorkflowModule workflowModule) {
         this.workflowRunner = workflowRunner;
-        this.moduleId = moduleId;
+        this.workflowModule = workflowModule;
         OpenHiCAMM mmslide = workflowRunner.getOpenHiCAMM();
         this.script = mmslide.getApp();
         
         // set initial configs
         workflowRunner.getModuleConfig().insertOrUpdate(
-                new ModuleConfig(this.moduleId, "canProduceROIs", "yes"), 
+                new ModuleConfig(this.workflowModule.getId(), "canProduceROIs", "yes"), 
                 "id", "key");
     }
 
@@ -228,14 +228,14 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			// First, delete any old slidepos and slideposlist records
 			logger.fine(String.format("Deleting old position lists"));
 			List<SlidePosList> oldSlidePosLists = slidePosListDao.select(
-					where("slideId",slide.getId()).and("moduleId",this.moduleId).and("taskId", task.getId()));
+					where("slideId",slide.getId()).and("moduleId",this.workflowModule.getId()).and("taskId", task.getId()));
 			for (SlidePosList oldSlidePosList : oldSlidePosLists) {
 				slidePosDao.delete(where("slidePosListId",oldSlidePosList.getId()));
 			}
-			slidePosListDao.delete(where("slideId",slide.getId()).and("moduleId",this.moduleId).and("taskId", task.getId()));
+			slidePosListDao.delete(where("slideId",slide.getId()).and("moduleId",this.workflowModule.getId()).and("taskId", task.getId()));
 
 			// Create/Update SlidePosList and SlidePos DB records
-			SlidePosList slidePosList = new SlidePosList(this.moduleId, slide.getId(), task.getId(), posList);
+			SlidePosList slidePosList = new SlidePosList(this.workflowModule.getId(), slide.getId(), task.getId(), posList);
 			slidePosListDao.insert(slidePosList);
 			logger.fine(String.format("%s: Created new SlidePosList: %s", label, slidePosList));
 
@@ -332,20 +332,20 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
             	Double hiResPixelSize = (Double)dialog.hiResPixelSize.getValue();
             	if (hiResPixelSize != null) {
-            	    configs.add(new Config(ROIFinder.this.moduleId, "hiResPixelSize", hiResPixelSize.toString()));
+            	    configs.add(new Config(ROIFinder.this.workflowModule.getId(), "hiResPixelSize", hiResPixelSize.toString()));
             	}
 
             	Double minRoiArea = (Double)dialog.minRoiArea.getValue();
             	if (minRoiArea != null) {
-            	    configs.add(new Config(ROIFinder.this.moduleId, "minRoiArea", minRoiArea.toString()));
+            	    configs.add(new Config(ROIFinder.this.workflowModule.getId(), "minRoiArea", minRoiArea.toString()));
             	}
             	Double overlapPct = (Double)dialog.overlapPct.getValue();
             	if (overlapPct != null) {
-            	    configs.add(new Config(ROIFinder.this.moduleId, "overlapPct", overlapPct.toString()));
+            	    configs.add(new Config(ROIFinder.this.workflowModule.getId(), "overlapPct", overlapPct.toString()));
             	}
             	Double roiMarginPct = (Double)dialog.roiMarginPct.getValue();
             	if (roiMarginPct != null) {
-            	    configs.add(new Config(ROIFinder.this.moduleId, "roiMarginPct", roiMarginPct.toString()));
+            	    configs.add(new Config(ROIFinder.this.workflowModule.getId(), "roiMarginPct", roiMarginPct.toString()));
             	}
                 return configs.toArray(new Config[0]);
             }
@@ -376,21 +376,21 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
             	Double hiResPixelSize = (Double)dialog.hiResPixelSize.getValue();
             	if (hiResPixelSize == null || hiResPixelSize == 0.0) {
-            	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for hiResPixelSize"));
+            	    errors.add(new ValidationError(ROIFinder.this.workflowModule.getName(), "Please enter a nonzero value for hiResPixelSize"));
             	}
 
             	Double minRoiArea = (Double)dialog.minRoiArea.getValue();
             	if (minRoiArea == null || minRoiArea == 0.0) {
-            	    errors.add(new ValidationError(ROIFinder.this.moduleId, "Please enter a nonzero value for Min ROI Area"));
+            	    errors.add(new ValidationError(ROIFinder.this.workflowModule.getName(), "Please enter a nonzero value for Min ROI Area"));
             	}
             	Double overlapPct = (Double)dialog.overlapPct.getValue();
             	if (overlapPct == null || overlapPct < 0.0 || overlapPct > 100.0) {
-            	    errors.add(new ValidationError(ROIFinder.this.moduleId, 
+            	    errors.add(new ValidationError(ROIFinder.this.workflowModule.getName(), 
             	            "Please enter a value between 0 and 100 for Tile Percent Overlap"));
             	}
             	Double roiMarginPct = (Double)dialog.roiMarginPct.getValue();
             	if (roiMarginPct == null || roiMarginPct < 0.0 || roiMarginPct > 100.0) {
-            	    errors.add(new ValidationError(ROIFinder.this.moduleId, 
+            	    errors.add(new ValidationError(ROIFinder.this.workflowModule.getName(), 
             	            "Please enter a value between 0 and 100 for ROI Margin Percent"));
             	}
                 return errors.toArray(new ValidationError[0]);
@@ -400,22 +400,22 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
     @Override
     public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
-        WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",moduleId));
+        WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",this.workflowModule.getId()));
         List<Task> tasks = new ArrayList<Task>();
         if (module.getParentId() != null) {
             for (Task parentTask : parentTasks) {
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: attaching to parent Task: %s",
-            			this.moduleId, parentTask));
-                Task task = new Task(moduleId, Status.NEW);
+            			this.workflowModule.getName(), parentTask));
+                Task task = new Task(workflowModule.getId(), Status.NEW);
                 workflowRunner.getTaskStatus().insert(task);
                 tasks.add(task);
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created new task record: %s",
-            			this.moduleId, task));
+            			this.workflowModule.getName(), task));
                 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
                 workflowRunner.getTaskDispatch().insert(dispatch);
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created new task dispatch record: %s",
-            			this.moduleId, dispatch));
+            			this.workflowModule.getName(), dispatch));
             }
         }
         return tasks;
