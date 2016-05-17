@@ -175,6 +175,9 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
         		}
         		String header = headerBuilder.toString().replaceAll("'","''");
         		dao.executeRaw("SET TABLE \""+tablename+"\" SOURCE HEADER '"+header+"'");
+        		
+        		// update any generated sequence ID values
+        		dao.updateSequence();
     		}
     		return dao;
 	    }

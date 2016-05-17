@@ -125,7 +125,6 @@ public class WorkflowRunner {
         }
         this.workflowDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath());
         Dao<WorkflowModule> workflow = this.workflowDb.file(WorkflowModule.class, new File(workflowDirectory, "Workflow.txt").getPath());
-        workflow.updateSequence();
         
         // set the workflow directory
         this.workflowInstance = this.workflowDb.table(WorkflowInstance.class);
