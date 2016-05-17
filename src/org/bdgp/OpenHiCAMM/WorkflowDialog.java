@@ -13,7 +13,6 @@ import javax.swing.JComboBox;
 import javax.swing.SwingUtilities;
 
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
-import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.WorkflowInstance;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
@@ -187,9 +186,9 @@ public class WorkflowDialog extends JDialog {
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                     WorkflowDialog.this, 
                     configurations, 
-                    workflowRunner.getWorkflowDb().table(WorkflowModule.class),
-                    workflowRunner.getInstanceDb().table(ModuleConfig.class),
-                    workflowRunner.getWorkflowDb().table(ModuleConfig.class));
+                    workflowRunner.getWorkflow(),
+                    workflowRunner.getModuleConfig(),
+                    workflowRunner.getDefaultModuleConfig());
                 config.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 config.pack();
                 config.setVisible(true);
@@ -205,9 +204,9 @@ public class WorkflowDialog extends JDialog {
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                     WorkflowDialog.this, 
                     configurations, 
-                    workflowRunner.getWorkflowDb().table(WorkflowModule.class),
-                    workflowRunner.getInstanceDb().table(ModuleConfig.class),
-                    workflowRunner.getWorkflowDb().table(ModuleConfig.class));
+                    workflowRunner.getWorkflow(),
+                    workflowRunner.getModuleConfig(),
+                    workflowRunner.getDefaultModuleConfig());
                 config.storeConfiguration();
                 if (config.validateConfiguration()) {
                 	start(false);
@@ -237,9 +236,9 @@ public class WorkflowDialog extends JDialog {
                 WorkflowConfigurationDialog config = new WorkflowConfigurationDialog(
                     WorkflowDialog.this, 
                     configurations, 
-                    workflowRunner.getWorkflowDb().table(WorkflowModule.class),
-                    workflowRunner.getInstanceDb().table(ModuleConfig.class),
-                    workflowRunner.getWorkflowDb().table(ModuleConfig.class));
+                    workflowRunner.getWorkflow(),
+                    workflowRunner.getModuleConfig(),
+                    workflowRunner.getDefaultModuleConfig());
                 config.storeConfiguration();
                 if (config.validateConfiguration()) {
                 	start(true);
@@ -382,7 +381,8 @@ public class WorkflowDialog extends JDialog {
                 Connection workflowDb = Connection.get(
                         new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
                 // get list of starting modules
-                Dao<WorkflowModule> modules = workflowDb.table(WorkflowModule.class);
+                Dao<WorkflowModule> modules = workflowDb.file(WorkflowModule.class, new File(workflowDir.getText(), "Workflow.txt").getPath());
+                modules.updateSequence();
                 List<WorkflowModule> ms = modules.select();
                 Collections.sort(ms, (a,b)->a.getPriority().compareTo(b.getPriority()));
                 for (WorkflowModule module : ms) {

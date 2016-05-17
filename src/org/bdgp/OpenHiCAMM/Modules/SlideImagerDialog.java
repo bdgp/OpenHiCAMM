@@ -121,8 +121,8 @@ public class SlideImagerDialog extends JPanel {
         moduleName = new JComboBox<String>();
         List<String> moduleNames = new ArrayList<String>();
         moduleNames.add("- Select -");
-        Dao<WorkflowModule> modules = workflowRunner.getWorkflowDb().table(WorkflowModule.class);
-        Dao<ModuleConfig> moduleConfigDao = workflowRunner.getInstanceDb().table(ModuleConfig.class);
+        Dao<WorkflowModule> modules = workflowRunner.getWorkflow();
+        Dao<ModuleConfig> moduleConfigDao = workflowRunner.getModuleConfig();
         for (WorkflowModule module : modules.select()) {
             List<ModuleConfig> moduleConfigs = moduleConfigDao.select(
                     where("id", module.getId()).

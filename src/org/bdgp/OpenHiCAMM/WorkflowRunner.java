@@ -69,6 +69,7 @@ public class WorkflowRunner {
     
     private Dao<WorkflowModule> workflow;
     private Dao<ModuleConfig> moduleConfig;
+    private Dao<ModuleConfig> defaultModuleConfig;
     private Dao<WorkflowInstance> workflowInstance;
     private Dao<TaskDispatch> taskDispatch;
     private Dao<TaskConfig> taskConfig;
@@ -123,7 +124,8 @@ public class WorkflowRunner {
             throw new RuntimeException("Directory "+workflowDirectory+" is not a valid directory.");
         }
         this.workflowDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath());
-        Dao<WorkflowModule> workflow = this.workflowDb.table(WorkflowModule.class);
+        Dao<WorkflowModule> workflow = this.workflowDb.file(WorkflowModule.class, new File(workflowDirectory, "Workflow.txt").getPath());
+        workflow.updateSequence();
         
         // set the workflow directory
         this.workflowInstance = this.workflowDb.table(WorkflowInstance.class);
@@ -149,7 +151,8 @@ public class WorkflowRunner {
         this.pool = Executors.newFixedThreadPool(this.maxThreads+1);
 
 		// initialize various Dao's for convenience
-        this.moduleConfig = this.instanceDb.table(ModuleConfig.class);
+        this.moduleConfig = this.instanceDb.file(ModuleConfig.class, new File(this.instancePath, "ModuleConfig.txt").getPath());
+        this.defaultModuleConfig = this.workflowDb.file(ModuleConfig.class, new File(this.instancePath, "DefaultModuleConfig.txt").getPath());
         this.taskConfig = this.instanceDb.table(TaskConfig.class);
         this.taskStatus = this.instanceDb.table(Task.class);
         this.taskDispatch = this.instanceDb.table(TaskDispatch.class);
@@ -179,7 +182,7 @@ public class WorkflowRunner {
             for (ModuleConfig mc : configs) {
                 keySet.add(mc.getKey());
             }
-            List<ModuleConfig> defaultConfigs = this.workflowDb.table(ModuleConfig.class).select(where("id", w.getId()));
+            List<ModuleConfig> defaultConfigs = this.defaultModuleConfig.select(where("id", w.getId()));
             for (ModuleConfig dc : defaultConfigs) {
                 if (!keySet.contains(dc.getKey())) this.moduleConfig.insertOrUpdate(dc,"id","key");
             }
@@ -1024,6 +1027,7 @@ public class WorkflowRunner {
     // Various getters/setters
     public Dao<WorkflowModule> getWorkflow() { return workflow; }
     public Dao<ModuleConfig> getModuleConfig() { return moduleConfig; }
+    public Dao<ModuleConfig> getDefaultModuleConfig() { return defaultModuleConfig; }
     public Dao<WorkflowInstance> getWorkflowInstanceDao() { return workflowInstance; }
     public Level getLogLevel() { return logLevel; }
     public void setLogLevel(Level logLevel) { this.logLevel = logLevel; }
@@ -1114,7 +1118,7 @@ public class WorkflowRunner {
     public Map<String,Configuration> getConfigurations() {
     	// get list of JPanels and load them with the configuration interfaces
     	Map<String,Configuration> configurations = new LinkedHashMap<String,Configuration>();
-    	Dao<WorkflowModule> modules = this.getWorkflowDb().table(WorkflowModule.class);
+    	Dao<WorkflowModule> modules = this.getWorkflow();
     	List<WorkflowModule> ms = modules.select(where("parentId", null));
 
     	while (ms.size() > 0) {

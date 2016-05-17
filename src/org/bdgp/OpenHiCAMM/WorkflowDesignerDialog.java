@@ -171,7 +171,8 @@ public class WorkflowDesignerDialog extends JDialog {
 		getContentPane().add(doneButton, "cell 1 2,alignx trailing");
 		doneButton.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
-	            Dao<WorkflowModule> wf = connection.table(WorkflowModule.class);
+	            Dao<WorkflowModule> wf = connection.file(WorkflowModule.class, new File(workflowDirectory, "Workflow.txt").getPath());
+                wf.updateSequence();
 		        // clear the workflow
 	            wf.delete();
 	            // create the WorkflowModule records
@@ -194,7 +195,8 @@ public class WorkflowDesignerDialog extends JDialog {
 	    });
 		
 		// Populate the tree model
-        Dao<WorkflowModule> wf = connection.table(WorkflowModule.class);
+        Dao<WorkflowModule> wf = connection.file(WorkflowModule.class, new File(workflowDirectory, "Workflow.txt").getPath());
+        wf.updateSequence();
         DefaultTreeModel model = (DefaultTreeModel) treeForModules.getModel();
 		List<WorkflowModuleNode> moduleNodes = new ArrayList<WorkflowModuleNode>();
 		moduleNodes.add(treeRoot);

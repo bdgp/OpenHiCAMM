@@ -218,6 +218,17 @@ public class Connection extends JdbcConnectionSource {
         } 
         catch (SQLException e) {throw new RuntimeException(e);}
     }
+
+    public <T> Dao<T> file(Class<T> class_, String filename) {
+        try {
+            DatabaseTableConfig<T> tableConfig = DatabaseTableConfig.fromClass(this, class_);
+            if (tableConfig == null) {
+                throw new RuntimeException("Could not get table config for class "+class_.getName());
+            }
+            return Dao.getFile(class_, this, tableConfig.getTableName(), filename);
+        }
+        catch (SQLException e) {throw new RuntimeException(e);}
+    }
 	
 	public void createSchema(String schema) {
 	    try {

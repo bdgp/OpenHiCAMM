@@ -757,8 +757,8 @@ public class SlideImager implements Module, ImageLogger {
     @Override
     public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
         Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
-        Dao<ModuleConfig> moduleConfig = workflowRunner.getInstanceDb().table(ModuleConfig.class);
-        Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
+        Dao<ModuleConfig> moduleConfig = workflowRunner.getModuleConfig();
+        Dao<TaskConfig> taskConfigDao = workflowRunner.getTaskConfig();
 
         // Load all the module configuration into a HashMap
         Map<String,Config> conf = new HashMap<String,Config>();

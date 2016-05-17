@@ -1,5 +1,6 @@
 package org.bdgp.OpenHiCAMM;
 
+import java.io.File;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -13,10 +14,12 @@ import com.j256.ormlite.stmt.QueryBuilder;
 import com.j256.ormlite.stmt.SelectArg;
 import com.j256.ormlite.stmt.UpdateBuilder;
 import com.j256.ormlite.stmt.Where;
+import com.j256.ormlite.support.DatabaseConnection;
 import com.j256.ormlite.table.DatabaseTableConfig;
 import com.j256.ormlite.table.TableUtils;
 
 import com.j256.ormlite.dao.BaseDaoImpl;
+import com.j256.ormlite.db.DatabaseType;
 
 /**
  * Extend the ORMlite Dao to use improved update methods, and add a
@@ -99,6 +102,97 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     		return dao;
 	    }
 	    catch (SQLException e) { throw new RuntimeException(e); }
+    }
+
+	/**
+	 * Return a DAO instance for a CSV file.
+	 * 
+	 * @param class_ The class to wrap
+	 * @param dir The directory to store the CSV file
+	 * @param filename The file name of the CSV file
+	 * @return A DAO instance
+	 * @throws SQLException
+	 */
+	public static synchronized <T> Dao<T> getFile(Class<T> class_, Connection connection, String tablename, String filename) 
+	{
+	    try {
+    		File file = new File(filename);
+    		
+    		// get the table configuration
+    		DatabaseTableConfig<T> tableConfig = DatabaseTableConfig.fromClass(
+    		        connection, class_);
+    		tableConfig.setTableName(tablename);
+
+            // make sure all the column names are uppercased
+            if (connection.getDatabaseType().isEntityNamesMustBeUpCase()) {
+                FieldType[] fieldTypes = tableConfig.getFieldTypes(connection.getDatabaseType());
+                for (int i=0; i<fieldTypes.length; ++i) {
+                    FieldType ft = fieldTypes[i];
+                    DatabaseFieldConfig fieldConfig = DatabaseFieldConfig.fromField(
+                            connection.getDatabaseType(), 
+                            ft.getTableName(), 
+                            ft.getField());
+                    if (fieldConfig != null) {
+                        fieldConfig.setColumnName(ft.getColumnName().toUpperCase());
+                        fieldTypes[i] = new FieldType(connection, ft.getTableName(), ft.getField(), fieldConfig, class_);
+                    }
+                }
+            }
+
+    		Dao<T> dao = new Dao<T>(connection, tableConfig);
+    		
+    		// create the table if it doesn't already exist
+    		if (!dao.isTableExists()) {
+    		    // make sure the parent directories exist
+    		    File dir = file.getParentFile();
+    		    if (dir != null && !(dir.exists() && dir.isDirectory())) {
+            		if (!dir.mkdirs() || !(dir.exists() && dir.isDirectory())) {
+            		    throw new SQLException("Could not create directory "+dir.getPath());
+            		}
+    		    }
+    		    // call CREATE TEXT TABLE
+        		List<String> create = TableUtils.getCreateTableStatements(connection, tableConfig);
+        		for (String c: create) {
+        		    dao.executeRaw(c.replaceFirst("^CREATE TABLE ","CREATE TEXT TABLE "));
+        		}
+        		
+        		// call SET TABLE
+        		if (file.getPath().matches("[;\\]")) {
+        		    throw new SQLException("Invalid characters in filename: "+file.getPath());
+        		}
+        		String sourceName = file.getPath().replaceAll("\"","\"\"");
+
+                final String options = "fs=\\t;encoding=UTF-8;quoted=true;cache_rows=10000;cache_size=2000;ignore_first=true";
+        		String source = sourceName+';'+options;
+        		dao.executeRaw("SET TABLE \""+tablename+"\" SOURCE \""+source+"\"");
+        		
+        		// build the header string
+        		StringBuilder headerBuilder = new StringBuilder();
+        		List<DatabaseFieldConfig> fields = tableConfig.getFieldConfigs();
+        		for (int i=0; i<fields.size(); ++i) {
+        		    headerBuilder.append(fields.get(i).getFieldName());
+        		    if (i != fields.size()-1) headerBuilder.append("\t");
+        		}
+        		String header = headerBuilder.toString().replaceAll("'","''");
+        		dao.executeRaw("SET TABLE \""+tablename+"\" SOURCE HEADER '"+header+"'");
+    		}
+    		return dao;
+	    }
+	    catch (SQLException e) { throw new RuntimeException(e); }
+    }
+	
+	/**
+	 * Return a DAO instance for a database table.
+	 * 
+	 * @param class_ The class to wrap
+	 * @param connection The database connection
+	 * @param tablename The name of the table to access
+	 * @return A DAO instance
+	 * @throws SQLException
+	 */
+	public static synchronized <T> Dao<T> getTable(Class<T> class_, String dbPath, String tablename) 
+	{
+        return getTable(class_, Connection.get(dbPath), tablename);
     }
 	
 	@Override
@@ -402,6 +496,27 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
     }
     public static <T> T one(List<T> list) {
         return one(list, null, null);
+    }
+    
+    /**
+     * Update sequence values for all generated id fields in a table.
+     */
+    public void updateSequence() {
+        DatabaseType databaseType = connection.getDatabaseType();
+        for (Map.Entry<String,FieldType> entry : fields.entrySet()) {
+            FieldType fieldType = entry.getValue();
+            if (fieldType.isGeneratedId()) {
+                String sequenceName = databaseType.generateIdSequenceName(this.getTableInfo().getTableName(), fieldType);
+                try {
+                    long restart = this.queryRawValue(String.format("select max(\"%s\") from \"%s\"", 
+                            fieldType.getColumnName(), 
+                            this.getTableInfo().getTableName()));
+                    connection.getReadWriteConnection().executeStatement(String.format("alter sequence \"%s\" restart with %d", 
+                            sequenceName, restart+1), DatabaseConnection.DEFAULT_RESULT_FLAGS);
+                }
+                catch (SQLException e) {throw new RuntimeException(e);}
+            }
+        }
     }
 }
 
