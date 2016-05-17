@@ -2,7 +2,9 @@ package org.bdgp.OpenHiCAMM;
 
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.awt.Dialog;
@@ -169,32 +171,13 @@ public class WorkflowDesignerDialog extends JDialog {
 		
 		JButton doneButton = new JButton("Done");
 		getContentPane().add(doneButton, "cell 1 2,alignx trailing");
-		doneButton.addActionListener(new ActionListener() {
-		    public void actionPerformed(ActionEvent e) {
-	            Dao<WorkflowModule> wf = connection.file(WorkflowModule.class, new File(workflowDirectory, "Workflow.txt").getPath());
-		        // clear the workflow
-	            wf.delete();
-	            // create the WorkflowModule records
-	            int priority = 1;
-	            for (@SuppressWarnings("unchecked")
-                    Enumeration<WorkflowModuleNode> enum_=treeRoot.breadthFirstEnumeration(); 
-                    enum_.hasMoreElements();) 
-	            {
-	                WorkflowModuleNode node = enum_.nextElement();
-	                if (node != treeRoot) {
-	                    if (node.getWorkflowModule() != null) {
-	                        node.getWorkflowModule().setPriority(priority);
-                            wf.insert(node.getWorkflowModule());
-	                    }
-                        ++priority;
-	                }
-	            }
-	            WorkflowDesignerDialog.this.dispose();
-            }
-	    });
-		
+
 		// Populate the tree model
         Dao<WorkflowModule> wf = connection.file(WorkflowModule.class, new File(workflowDirectory, "Workflow.txt").getPath());
+        Map<String,Integer> idMapping = new HashMap<>();
+        for (WorkflowModule wm : wf.select()) {
+            idMapping.put(wm.getName(), wm.getId());
+        }
         DefaultTreeModel model = (DefaultTreeModel) treeForModules.getModel();
 		List<WorkflowModuleNode> moduleNodes = new ArrayList<WorkflowModuleNode>();
 		moduleNodes.add(treeRoot);
@@ -215,6 +198,34 @@ public class WorkflowDesignerDialog extends JDialog {
 		    moduleNodes = nextModuleNodes;
 		}
 		
+		doneButton.addActionListener(new ActionListener() {
+		    public void actionPerformed(ActionEvent e) {
+		        // clear the workflow
+	            Dao<WorkflowModule> wf = connection.file(WorkflowModule.class, new File(workflowDirectory, "Workflow.txt").getPath());
+	            wf.delete();
+	            // create the WorkflowModule records
+	            int priority = 1;
+	            for (@SuppressWarnings("unchecked")
+                    Enumeration<WorkflowModuleNode> enum_=treeRoot.breadthFirstEnumeration(); 
+                    enum_.hasMoreElements();) 
+	            {
+	                WorkflowModuleNode node = enum_.nextElement();
+	                if (node != treeRoot) {
+	                    if (node.getWorkflowModule() != null) {
+	                        node.getWorkflowModule().setPriority(priority);
+	                        if (idMapping.containsKey(node.getWorkflowModule().getName())) {
+	                            node.getWorkflowModule().setId(idMapping.get(node.getWorkflowModule().getName()));
+	                        }
+                            wf.insert(node.getWorkflowModule());
+	                    }
+                        ++priority;
+	                }
+	            }
+	            wf.updateSequence();
+	            WorkflowDesignerDialog.this.dispose();
+            }
+	    });
+		
 		setEnabledControls();
 	}
 	
@@ -225,15 +236,6 @@ public class WorkflowDesignerDialog extends JDialog {
 	            moduleList.getSelectedItem() != null &&
 	            !moduleNameExists(moduleName.getText()));
         btnMinus.setEnabled(treeForModules.getSelectionCount()>0);
-	}
-	
-	public WorkflowModule getSelectedModule() {
-    	TreePath path = treeForModules.getSelectionPath();
-    	if (path != null) {
-    	    WorkflowModule module = (WorkflowModule) path.getLastPathComponent();
-    	    return module;
-    	}
-    	return null;
 	}
 	
 	/**
@@ -263,11 +265,12 @@ public class WorkflowDesignerDialog extends JDialog {
 	 */
 	private boolean moduleNameExists(String moduleName) {
 	    for (@SuppressWarnings("unchecked")
-    	    Enumeration<WorkflowModule> enum_=treeRoot.breadthFirstEnumeration(); 
+    	    Enumeration<WorkflowModuleNode> enum_=treeRoot.breadthFirstEnumeration(); 
             enum_.hasMoreElements();) 
 	    {
-	        WorkflowModule node = enum_.nextElement();
-	        if (moduleName != null && moduleName.equals(node.getName())) {
+	        WorkflowModuleNode node = enum_.nextElement();
+	        if (moduleName != null && node.getWorkflowModule() != null && moduleName.equals(node.getWorkflowModule().getName())) 
+	        {
 	            return true;
 	        }
 	    }
