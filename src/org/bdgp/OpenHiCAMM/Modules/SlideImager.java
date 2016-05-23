@@ -310,7 +310,7 @@ public class SlideImager implements Module, ImageLogger {
                 for (TaskDispatch t : tds) {
                 	Task tt = taskDao.selectOneOrDie(where("id", t.getTaskId()));
                 	TaskConfig imageLabelConf2 = taskConfigDao.selectOneOrDie(
-                			where("id", new Integer(tt.getId()).toString()).
+                			where("id", tt.getId()).
                 			and("key", "imageLabel"));
                     tasks.put(imageLabelConf2.getValue(), tt);
                 }
@@ -323,7 +323,7 @@ public class SlideImager implements Module, ImageLogger {
                     }});
             	for (Task tt : tts) {
                 	TaskConfig imageLabelConf2 = taskConfigDao.selectOneOrDie(
-                			where("id", new Integer(tt.getId()).toString()).
+                			where("id", tt.getId()).
                 			and("key", "imageLabel"));
                     tasks.put(imageLabelConf2.getValue(), tt);
             	}
@@ -424,7 +424,7 @@ public class SlideImager implements Module, ImageLogger {
                                 // Make sure the position name of this image's metadata matches what we expected
                                 // from the Task configuration.
                                 TaskConfig positionNameConf = taskConfigDao.selectOneOrDie(
-                                        where("id", new Integer(dispatchTask.getId()).toString()).and("key", "positionName"));
+                                        where("id", dispatchTask.getId()).and("key", "positionName"));
                                 if (!positionName.equals(positionNameConf.getValue())) {
                                     throw new RuntimeException(String.format(
                                             "Position name mismatch! TaskConfig=%s, MDUtils.getPositionName=%s",
@@ -569,7 +569,7 @@ public class SlideImager implements Module, ImageLogger {
                         // Make sure the position name of this image's metadata matches what we expected
                         // from the Task configuration.
                         TaskConfig positionNameConf = taskConfigDao.selectOneOrDie(
-                                where("id", new Integer(t.getId()).toString()).and("key", "positionName"));
+                                where("id", t.getId()).and("key", "positionName"));
                         if (!positionName.equals(positionNameConf.getValue())) {
                             throw new RuntimeException(String.format(
                                     "Position name mismatch! TaskConfig=%s, MDUtils.getPositionName=%s",
@@ -779,7 +779,7 @@ public class SlideImager implements Module, ImageLogger {
         	// get the parent task configuration
         	Map<String,TaskConfig> parentTaskConf = new HashMap<String,TaskConfig>();
         	if (parentTask != null) {
-                for (TaskConfig c : taskConfigDao.select(where("id",new Integer(parentTask.getId()).toString()))) {
+                for (TaskConfig c : taskConfigDao.select(where("id",parentTask.getId()))) {
                     parentTaskConf.put(c.getKey(), c);
                     workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Using task config: %s", 
                             this.workflowModule.getName(), c));

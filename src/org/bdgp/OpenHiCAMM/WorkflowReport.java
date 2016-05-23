@@ -428,7 +428,7 @@ public class WorkflowReport implements Report {
                 // TODO: parallelize
                 for (Task task : imageTasks) {
                     Config imageIdConf = this.workflowRunner.getTaskConfig().selectOne(
-                            where("id", new Integer(task.getId()).toString()).and("key", "imageId"));
+                            where("id", task.getId()).and("key", "imageId"));
                     if (imageIdConf != null) {
                         MultiStagePosition msp = getMsp(task);
 
@@ -536,7 +536,7 @@ public class WorkflowReport implements Report {
             // TODO: parallelize
             for (Task task : imageTasks) {
                 Config imageIdConf = this.workflowRunner.getTaskConfig().selectOne(
-                        where("id", new Integer(task.getId()).toString()).and("key", "imageId"));
+                        where("id", task.getId()).and("key", "imageId"));
                 if (imageIdConf != null) {
                     Image image = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf.getValue())));
 
@@ -556,9 +556,9 @@ public class WorkflowReport implements Report {
                         // go through each attached SlideImager and look for MSP's with an ROI property
                         // that matches this ROI's ID.
                         for (Map.Entry<String, Set<String>> entry : roiImagers.entrySet()) {
-                            for (String imagerModuleId : entry.getValue()) {
+                            for (String imagerModuleName : entry.getValue()) {
                                 WorkflowModule imager = this.workflowRunner.getWorkflow().selectOneOrDie(
-                                        where("id", imagerModuleId));
+                                        where("name", imagerModuleName));
                                 // get the hires pixel size for this imager
                                 Config hiResPixelSizeConf = this.workflowRunner.getModuleConfig().selectOne(where("id", imager.getId()).and("key","pixelSize"));
                                 Double hiResPixelSize = hiResPixelSizeConf != null? new Double(hiResPixelSizeConf.getValue()) : ROIFinderDialog.DEFAULT_HIRES_PIXEL_SIZE_UM;
@@ -670,7 +670,7 @@ public class WorkflowReport implements Report {
                                                         for (Task imagerTask : imagerTaskEntry.getValue()) {
                                                             MultiStagePosition imagerMsp = getMsp(imagerTask);
                                                             Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
-                                                                    where("id", new Integer(imagerTask.getId()).toString()).and("key", "imageId"));
+                                                                    where("id", imagerTask.getId()).and("key", "imageId"));
                                                             if (imageIdConf2 != null) {
                                                                 for (int i=0; i<imagerMsp.size(); ++i) {
                                                                     StagePosition sp = imagerMsp.get(i);
@@ -748,7 +748,7 @@ public class WorkflowReport implements Report {
                                                         Map().attr("name", String.format("map-roi-%s-ROI%d", imager.getName(), roi.getId())).with(()->{
                                                             for (Task imagerTask : imagerTaskEntry.getValue()) {
                                                                 Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
-                                                                        where("id", new Integer(imagerTask.getId()).toString()).and("key", "imageId"));
+                                                                        where("id", imagerTask.getId()).and("key", "imageId"));
                                                                 if (imageIdConf2 != null) {
                                                                     MultiStagePosition imagerMsp = getMsp(imagerTask);
 
@@ -853,7 +853,7 @@ public class WorkflowReport implements Report {
                                                         for (Task stitcherTask : stitcherTasks) {
                                                             log("Working on stitcher task: %s", stitcherTask);
                                                             Config stitchedImageFile = this.workflowRunner.getTaskConfig().selectOne(
-                                                                    where("id", new Integer(stitcherTask.getId()).toString()).and("key", "stitchedImageFile"));
+                                                                    where("id", stitcherTask.getId()).and("key", "stitchedImageFile"));
                                                             log("stitchedImageFile = %s", stitchedImageFile.getValue());
                                                             if (stitchedImageFile != null && new File(stitchedImageFile.getValue()).exists()) {
                                                                 // Get a thumbnail of the image

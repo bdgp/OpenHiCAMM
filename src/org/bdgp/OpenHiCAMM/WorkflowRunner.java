@@ -246,8 +246,8 @@ public class WorkflowRunner {
             this.deleteTaskRecords(m);
         }
     }
-    public void deleteTaskRecords(String moduleId) {
-        WorkflowModule module = this.workflow.selectOneOrDie(where("id",moduleId));
+    public void deleteTaskRecords(String moduleName) {
+        WorkflowModule module = this.workflow.selectOneOrDie(where("name",moduleName));
         this.deleteTaskRecords(module);
     }
     public void deleteTaskRecords(WorkflowModule module) {
@@ -260,15 +260,15 @@ public class WorkflowRunner {
         // Delete task dispatch and config records
         List<Task> tasks = taskStatus.select(where("moduleId",module.getId()));
         for (Task task : tasks) {
-            taskConfig.delete(where("id",new Integer(task.getId()).toString()));
+            taskConfig.delete(where("id",task.getId()));
             taskDispatch.delete(where("taskId",task.getId()));
         }
         // Then delete task records
         taskStatus.delete(where("moduleId",module.getId()));
     }
     
-    public void createTaskRecords(String moduleId) {
-        WorkflowModule module = this.workflow.selectOneOrDie(where("id",moduleId));
+    public void createTaskRecords(String moduleName) {
+        WorkflowModule module = this.workflow.selectOneOrDie(where("name",moduleName));
         createTaskRecords(module, new ArrayList<Task>(), new HashMap<String,Config>(), this.logger);
     }
     public void createTaskRecords(WorkflowModule module, List<Task> tasks, Map<String,Config> configs, Logger logger) {
@@ -291,8 +291,8 @@ public class WorkflowRunner {
         }
     }
     
-    public void runInitialize(String moduleId) {
-        WorkflowModule module = this.workflow.selectOneOrDie(where("id",moduleId));
+    public void runInitialize(String moduleName) {
+        WorkflowModule module = this.workflow.selectOneOrDie(where("name",moduleName));
         runInitialize(module);
     }
     public void runInitialize(WorkflowModule module) {
@@ -338,7 +338,7 @@ public class WorkflowRunner {
         return this.logger;
     }
     
-    public void logWorkflowInfo(String startModuleId) {
+    public void logWorkflowInfo(String startModuleName) {
         // log some info on this workflow
         this.logger.info(
                 String.format("Running workflow instance: %s",
@@ -352,7 +352,7 @@ public class WorkflowRunner {
         
         // Log the workflow module info
         this.logger.info("Workflow Modules:");
-        List<WorkflowModule> modules = this.workflow.select(where("id",startModuleId));
+        List<WorkflowModule> modules = this.workflow.select(where("name",startModuleName));
         Map<Integer,String> labels = new HashMap<Integer,String>();
         GraphEasy graph = new GraphEasy();
         while (modules.size() > 0) {
@@ -392,7 +392,7 @@ public class WorkflowRunner {
                 for (Task task : tasks) {
                     this.logger.info(String.format("    %s", task));
                     // Print the task configs for the task
-                    List<TaskConfig> taskConfigs = this.taskConfig.select(where("id", new Integer(task.getId()).toString()));
+                    List<TaskConfig> taskConfigs = this.taskConfig.select(where("id", task.getId()));
                     Collections.sort(taskConfigs, new Comparator<TaskConfig>() {
                         @Override public int compare(TaskConfig a, TaskConfig b) {
                             return new Integer(a.getId()).intValue()-new Integer(b.getId()).intValue();
@@ -420,13 +420,14 @@ public class WorkflowRunner {
         }
         
         // draw the task dispatch graph
-        // drawTaskDispatchGraph(startModuleId);
+        // drawTaskDispatchGraph(startModuleName);
     }
     
-    public void drawTaskDispatchGraph(String startModuleId) {
+    public void drawTaskDispatchGraph(String startModuleName) {
         // Draw the task dispatch graph
         // Start with all tasks associated with the start module ID
-        List<Task> tasks = this.taskStatus.select(where("moduleId", startModuleId));
+        WorkflowModule startModule = this.workflow.selectOneOrDie(where("name", startModuleName));
+        List<Task> tasks = this.taskStatus.select(where("moduleId", startModule.getId()));
         List<TaskDispatch> dispatches = new ArrayList<TaskDispatch>();
         GraphEasy taskGraph = new GraphEasy();
         // Add all task dispatches associated with the first set of tasks
@@ -482,8 +483,8 @@ public class WorkflowRunner {
     /**
      * Display a summary of all the task statuses
      */
-    private void logTaskSummary(String startModuleId) {
-        List<WorkflowModule> modules = this.workflow.select(where("id",startModuleId));
+    private void logTaskSummary(String startModuleName) {
+        List<WorkflowModule> modules = this.workflow.select(where("name",startModuleName));
         this.logger.info("");
         this.logger.info("Task Status Summary:");
         this.logger.info("====================");
@@ -612,7 +613,7 @@ public class WorkflowRunner {
                     int taskCount = 0;
                     if (WorkflowRunner.this.resume) {
                         logger.info("Updating task records...");
-                        List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModuleName));
+                        List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModule.getId()));
                         tasks.sort((a,b)->a.getId()-b.getId());
                         for (Task t : tasks) {
                             taskCount += updateTaskRecordsOnResume(t);
@@ -628,10 +629,10 @@ public class WorkflowRunner {
                         WorkflowRunner.this.getModuleConfig().insertOrUpdate(
                                 new ModuleConfig(startModule.getId(), "startTime", startTimestamp), "id","key");
                         WorkflowRunner.this.getModuleConfig().delete(
-                                where("id", startModuleName).
+                                where("id", startModule.getId()).
                                 and("key", "endTime"));
                         WorkflowRunner.this.getModuleConfig().delete(
-                                where("id", startModuleName).
+                                where("id", startModule.getId()).
                                 and("key", "duration"));
                         taskCount = getTaskCount(startModuleName);
                     }
@@ -648,11 +649,11 @@ public class WorkflowRunner {
                     }
 
                     // Log some information on this workflow
-                    //WorkflowRunner.this.logWorkflowInfo(startModuleId);
+                    //WorkflowRunner.this.logWorkflowInfo(startModuleName);
                     if (resume) logger.info("Scanning for previous tasks...");
 
                     // start the first task(s)
-                    List<Task> start = taskStatus.select(where("moduleId",startModuleName));
+                    List<Task> start = taskStatus.select(where("moduleId",startModule.getId()));
                     Collections.sort(start, (a,b)->a.getId()-b.getId());
                     List<Future<Status>> futures = new ArrayList<Future<Status>>();
                     for (Task t : start) {
@@ -691,7 +692,7 @@ public class WorkflowRunner {
 
                     // Coalesce all the statuses
                     List<Status> statuses = new ArrayList<Status>();
-                    List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModuleName));
+                    List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModule.getId()));
                     while (tasks.size() > 0) {
                         List<TaskDispatch> dispatch = new ArrayList<TaskDispatch>();
                         for (Task task : tasks) {
@@ -941,10 +942,10 @@ public class WorkflowRunner {
         return future;
     }
     
-    public int getTaskCount(String startModuleId) {
+    public int getTaskCount(String startModuleName) {
         // Get the set of tasks that will be run using this the start module ID
         final Set<Task> tasks = new HashSet<Task>();
-        List<WorkflowModule> modules = this.getWorkflow().select(where("id",startModuleId));
+        List<WorkflowModule> modules = this.getWorkflow().select(where("name",startModuleName));
         while (modules.size() > 0) {
             Collections.sort(modules, (a,b)->a.getPriority().compareTo(b.getPriority()));
             List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
@@ -1077,7 +1078,7 @@ public class WorkflowRunner {
         for (ModuleConfig mc : moduleConfigs) {
             config.put(mc.getKey(), mc);
         }
-        List<TaskConfig> taskConfigs = this.getTaskConfig().select(where("id", new Integer(task.getId()).toString()));
+        List<TaskConfig> taskConfigs = this.getTaskConfig().select(where("id", task.getId()));
         for (TaskConfig tc : taskConfigs) {
             config.put(tc.getKey(), tc);
         }
