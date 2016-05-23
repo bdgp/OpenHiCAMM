@@ -18,19 +18,19 @@ import com.j256.ormlite.table.DatabaseTable;
 @DatabaseTable
 public class Config {
     public Config() {}
-    public Config(Integer id, String key, String value) {
+    public Config(int id, String key, String value) {
         this.id = id;
         this.key = key;
         this.value = value;
     }
-    public Config(Integer id, String key, String value, Object object) {
+    public Config(int id, String key, String value, Object object) {
         this.id = id;
         this.key = key;
         this.value = value;
         this.object = object;
     }
-    @DatabaseField(canBeNull=false,uniqueCombo=true,dataType=DataType.LONG_STRING, index=true)
-    private Integer id;
+    @DatabaseField(canBeNull=false,uniqueCombo=true,index=true)
+    private int id;
     
     @DatabaseField(canBeNull=false,uniqueCombo=true,dataType=DataType.LONG_STRING, index=true)
     private String key;
@@ -43,7 +43,7 @@ public class Config {
     // parent tasks to child tasks.
     private Object object;
     
-    public Integer getId() {
+    public int getId() {
         return id;
     }
     public String getKey() {

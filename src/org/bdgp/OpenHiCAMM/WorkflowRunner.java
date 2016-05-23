@@ -61,6 +61,10 @@ public class WorkflowRunner {
     public static final String WORKFLOW_DB = "workflow.db";
     public static final String LOG_FILE = "workflow.log";
     
+    public static final String MODULECONFIG_FILE = "ModuleConfig.txt";
+    public static final String DEFAULT_MODULECONFIG_FILE = "DefaultModuleConfig.txt";
+    public static final String WORKFLOW_FILE = "Workflow.txt";
+
     private Connection workflowDb;
     private Connection instanceDb;
     
@@ -124,7 +128,7 @@ public class WorkflowRunner {
             throw new RuntimeException("Directory "+workflowDirectory+" is not a valid directory.");
         }
         this.workflowDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath());
-        Dao<WorkflowModule> workflow = this.workflowDb.file(WorkflowModule.class, new File(workflowDirectory, "Workflow.txt").getPath());
+        Dao<WorkflowModule> workflow = this.workflowDb.file(WorkflowModule.class, new File(WORKFLOW_FILE).getPath());
         
         // set the workflow directory
         this.workflowInstance = this.workflowDb.table(WorkflowInstance.class);
@@ -150,8 +154,8 @@ public class WorkflowRunner {
         this.pool = Executors.newFixedThreadPool(this.maxThreads+1);
 
 		// initialize various Dao's for convenience
-        this.moduleConfig = this.instanceDb.file(ModuleConfig.class, new File(this.instancePath, "ModuleConfig.txt").getPath());
-        this.defaultModuleConfig = this.workflowDb.file(ModuleConfig.class, new File(this.instancePath, "DefaultModuleConfig.txt").getPath());
+        this.moduleConfig = this.instanceDb.file(ModuleConfig.class, new File(this.instance.getStorageLocation(), MODULECONFIG_FILE).getPath());
+        this.defaultModuleConfig = this.workflowDb.file(ModuleConfig.class, new File(DEFAULT_MODULECONFIG_FILE).getPath());
         this.taskConfig = this.instanceDb.table(TaskConfig.class);
         this.taskStatus = this.instanceDb.table(Task.class);
         this.taskDispatch = this.instanceDb.table(TaskDispatch.class);
@@ -374,7 +378,7 @@ public class WorkflowRunner {
                 List<ModuleConfig> configs = this.moduleConfig.select(where("id", module.getId()));
                 Collections.sort(configs, new Comparator<ModuleConfig>() {
                     @Override public int compare(ModuleConfig a, ModuleConfig b) {
-                        return a.getId().compareTo(b.getId());
+                        return a.getId()-b.getId();
                     }});
                 for (ModuleConfig config : configs) {
                     this.logger.info(String.format("        %s", config));

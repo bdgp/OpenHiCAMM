@@ -5,6 +5,7 @@ import java.awt.Dialog;
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -57,10 +58,17 @@ public class WorkflowConfigurationDialog extends JDialog {
 	    final WorkflowConfigurationDialog thisDialog = this;
         getContentPane().setLayout(new MigLayout("", "[grow][]", "[grow][]"));
         
+        // make a workflowmodule name -> id lookup 
+        Map<String,Integer> name2id = new HashMap<>();
+        for (WorkflowModule wm : this.wmDao.select()) {
+            name2id.put(wm.getName(), wm.getId());
+        }
+        
         final JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
         for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
-            List<ModuleConfig> configs = config.select(where("id",entry.getKey()));
-            List<ModuleConfig> defaultConfigs = defaultConfig.select(where("id",entry.getKey()));
+            Integer moduleId = name2id.get(entry.getKey());
+            List<ModuleConfig> configs = config.select(where("id",moduleId));
+            List<ModuleConfig> defaultConfigs = defaultConfig.select(where("id",moduleId));
             
             // Add default configs to the module configuration if no instance configs
             // were given for the key.

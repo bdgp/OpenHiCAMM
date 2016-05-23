@@ -72,14 +72,17 @@ public class WorkflowModule {
     public Class<Module> getModule() {
         return module;
     }
+
     public Integer getParentId() {
         return parentId;
     }
-    
+    public void setParentId(Integer parentId) {
+        this.parentId = parentId;
+    }
+
     public Integer getPriority() {
         return this.priority;
     }
-    
     public void setPriority(Integer priority) {
         this.priority = priority;
     }

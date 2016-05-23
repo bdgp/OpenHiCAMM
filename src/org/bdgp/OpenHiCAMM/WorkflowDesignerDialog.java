@@ -173,7 +173,7 @@ public class WorkflowDesignerDialog extends JDialog {
 		getContentPane().add(doneButton, "cell 1 2,alignx trailing");
 
 		// Populate the tree model
-        Dao<WorkflowModule> wf = connection.file(WorkflowModule.class, new File(workflowDirectory, "Workflow.txt").getPath());
+        Dao<WorkflowModule> wf = connection.file(WorkflowModule.class, new File(WorkflowRunner.WORKFLOW_FILE).getPath());
         Map<String,Integer> idMapping = new HashMap<>();
         for (WorkflowModule wm : wf.select()) {
             idMapping.put(wm.getName(), wm.getId());
@@ -201,7 +201,7 @@ public class WorkflowDesignerDialog extends JDialog {
 		doneButton.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
 		        // clear the workflow
-	            Dao<WorkflowModule> wf = connection.file(WorkflowModule.class, new File(workflowDirectory, "Workflow.txt").getPath());
+	            Dao<WorkflowModule> wf = connection.file(WorkflowModule.class, new File(WorkflowRunner.WORKFLOW_FILE).getPath());
 	            wf.delete();
 	            // create the WorkflowModule records
 	            int priority = 1;
@@ -215,6 +215,12 @@ public class WorkflowDesignerDialog extends JDialog {
 	                        node.getWorkflowModule().setPriority(priority);
 	                        if (idMapping.containsKey(node.getWorkflowModule().getName())) {
 	                            node.getWorkflowModule().setId(idMapping.get(node.getWorkflowModule().getName()));
+	                        }
+	                        if (node.getParent() != null && ((WorkflowModuleNode)node.getParent()).getWorkflowModule() != null) {
+                                node.getWorkflowModule().setParentId(((WorkflowModuleNode)node.getParent()).getWorkflowModule().getId());
+	                        }
+	                        else {
+                                node.getWorkflowModule().setParentId(null);
 	                        }
                             wf.insert(node.getWorkflowModule());
 	                    }
@@ -278,11 +284,12 @@ public class WorkflowDesignerDialog extends JDialog {
 	}
 	
 	public static class WorkflowModuleNode extends DefaultMutableTreeNode {
-	    public WorkflowModule workflowModule;
+	    private WorkflowModule workflowModule;
 
         public WorkflowModuleNode() { }
         public WorkflowModuleNode(WorkflowModule workflowModule) {
             this.workflowModule = workflowModule;
+            this.setUserObject(workflowModule.getName());
         }
         public WorkflowModule getWorkflowModule() {
             return this.workflowModule;

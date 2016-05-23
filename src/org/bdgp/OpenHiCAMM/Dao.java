@@ -157,7 +157,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
         		}
         		
         		// call SET TABLE
-        		if (file.getPath().matches("[;\\]")) {
+        		if (file.getPath().matches("[;\\\\]")) {
         		    throw new SQLException("Invalid characters in filename: "+file.getPath());
         		}
         		String sourceName = file.getPath().replaceAll("\"","\"\"");
@@ -168,12 +168,19 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
         		
         		// build the header string
         		StringBuilder headerBuilder = new StringBuilder();
-        		List<DatabaseFieldConfig> fields = tableConfig.getFieldConfigs();
-        		for (int i=0; i<fields.size(); ++i) {
-        		    headerBuilder.append(fields.get(i).getFieldName());
-        		    if (i != fields.size()-1) headerBuilder.append("\t");
-        		}
-        		String header = headerBuilder.toString().replaceAll("'","''");
+                FieldType[] fieldTypes = tableConfig.getFieldTypes(connection.getDatabaseType());
+                for (int i=0; i<fieldTypes.length; ++i) {
+                    FieldType ft = fieldTypes[i];
+                    DatabaseFieldConfig fieldConfig = DatabaseFieldConfig.fromField(
+                            connection.getDatabaseType(), 
+                            ft.getTableName(), 
+                            ft.getField());
+                    if (fieldConfig != null) {
+                        headerBuilder.append(fieldConfig.getFieldName());
+                        headerBuilder.append("\t");
+                    }
+                }
+        		String header = headerBuilder.toString().replaceAll("\t$","").replaceAll("'","''");
         		dao.executeRaw("SET TABLE \""+tablename+"\" SOURCE HEADER '"+header+"'");
         		
         		// update any generated sequence ID values
