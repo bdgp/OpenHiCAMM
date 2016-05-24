@@ -505,7 +505,7 @@ public class WorkflowReport implements Report {
                                    (int)Math.floor(roi.getXBase()+roi.getFloatWidth()), 
                                    (int)Math.floor(roi.getYBase()+roi.getFloatHeight()))).
                            //attr("title", roi.getName()).
-                           attr("href", String.format("javascript:report.showImage(%d)", new Integer(roi.getProperty("id"))));
+                           attr("onClick", String.format("report.showImage(%d)", new Integer(roi.getProperty("id"))));
                 }
                 // now draw the ROI rois in red
                 for (Roi roiRoi : roiRois) {
@@ -687,8 +687,8 @@ public class WorkflowReport implements Report {
                                                             Double xPos_ = xPos / posCount;
                                                             Double yPos_ = yPos / posCount;
                                                             P().with(()->{
-                                                                A().attr("href", 
-                                                                        String.format("javascript:report.goToPosition(%d,%d,%f,%f)", 
+                                                                A().attr("onClick", 
+                                                                        String.format("report.goToPosition(%d,%d,%f,%f)", 
                                                                                 loaderModule.getId(),
                                                                                 poolSlide != null? poolSlide.getId() : -1, 
                                                                                         xPos_, 
@@ -699,7 +699,7 @@ public class WorkflowReport implements Report {
                                                             // add another link to put the slide back
                                                             if (poolSlide != null) {
                                                                 P().with(()->{
-                                                                    A().attr("href", String.format("javascript:report.returnSlide(%d)",
+                                                                    A().attr("onClick", String.format("report.returnSlide(%d)",
                                                                                 loaderModule.getId())).
                                                                         text("Return slide to loader");
                                                                 });
@@ -727,7 +727,7 @@ public class WorkflowReport implements Report {
                                                             try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                             catch (IOException e) {throw new RuntimeException(e);}
                                                             ImagePlus imp_ = imp;
-                                                            A().attr("href", String.format("javascript:report.showImage(%d)", image.getId())).
+                                                            A().attr("onClick", String.format("report.showImage(%d)", image.getId())).
                                                                 with(()->{
                                                                     Img().attr("src", String.format("data:image/jpg;base64,%s", 
                                                                                 Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
@@ -789,11 +789,11 @@ public class WorkflowReport implements Report {
                                                                                         (int)Math.floor(tileRoi.getXBase()+tileRoi.getFloatWidth()),
                                                                                         (int)Math.floor(tileRoi.getYBase()+tileRoi.getFloatHeight()))).
                                                                                 attr("title", image2.getName()).
-                                                                                attr("href", String.format("javascript:report.showImage(%d)", image2.getId()));
+                                                                                attr("onClick", String.format("report.showImage(%d)", image2.getId()));
                                                                         
                                                                         makeLinks.add(()->{
                                                                             P().with(()->{
-                                                                                A().attr("href",String.format("javascript:report.checkPosCalibration(%d,%d,%f,%f,%f,%f,%f,%f,%f,%f)",
+                                                                                A().attr("onClick",String.format("report.checkPosCalibration(%d,%d,%f,%f,%f,%f,%f,%f,%f,%f)",
                                                                                         image.getId(), 
                                                                                         image2.getId(), 
                                                                                         pixelSize,
@@ -872,7 +872,7 @@ public class WorkflowReport implements Report {
                                                                 ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                                                                 try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                                 catch (IOException e) {throw new RuntimeException(e);}
-                                                                A().attr("href", String.format("javascript:report.showImageFile(\"%s\")",  
+                                                                A().attr("onClick", String.format("report.showImageFile(\"%s\")",  
                                                                             Util.escapeJavaStyleString(stitchedImageFile.getValue()))).
                                                                     with(()->{
                                                                         Img().attr("src", String.format("data:image/jpg;base64,%s", 
