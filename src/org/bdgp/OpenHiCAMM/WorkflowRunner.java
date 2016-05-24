@@ -443,11 +443,11 @@ public class WorkflowRunner {
         		Task parentTask = this.taskStatus.selectOneOrDie(where("id", td.getParentTaskId()));
                 Module parentModule = this.moduleInstances.get(parentTask.getModuleId());
                 String parentLabel = String.format("%s:%s:%s", 
-                		parentTask.getName(), parentTask.getStatus(), parentModule.getTaskType());
+                		parentTask.getName(workflow), parentTask.getStatus(), parentModule.getTaskType());
                 // Get the child task label
         		Task task = this.taskStatus.selectOneOrDie(where("id", td.getTaskId()));
                 Module module = this.moduleInstances.get(task.getModuleId());
-                String label = String.format("%s:%s:%s", task.getName(), task.getStatus(), module.getTaskType());
+                String label = String.format("%s:%s:%s", task.getName(workflow), task.getStatus(), module.getTaskType());
                 // Add the edge and record the tasks as being visited
         		taskGraph.addEdge(parentLabel, label);
         		seen.add(parentTask);
@@ -462,7 +462,7 @@ public class WorkflowRunner {
         	// If the task was never included in an edge, then display it as a singleton task
         	if (!seen.contains(task)) {
                 Module module = this.moduleInstances.get(task.getModuleId());
-                String label = String.format("%s:%s:%s", task.getName(), task.getStatus(), module.getTaskType());
+                String label = String.format("%s:%s:%s", task.getName(workflow), task.getStatus(), module.getTaskType());
         		taskGraph.addEdge(label);
         		seen.add(task);
         	}
@@ -665,14 +665,14 @@ public class WorkflowRunner {
                             try { status = future.get(); }
                             catch (InterruptedException e) {
                                 WorkflowRunner.this.logger.severe(String.format(
-                                        "Top-level task %s was interrupted, setting status to DEFER", t.getName()));
+                                        "Top-level task %s was interrupted, setting status to DEFER", t.getName(workflow)));
                                 status = Status.DEFER;
                             } 
                             catch (ExecutionException e) {throw new RuntimeException(e);} 
                             if (status != Status.SUCCESS && status != Status.DEFER) {
                                 WorkflowRunner.this.logger.severe(String.format(
                                         "Top-level task %s returned status %s, not running successive sibling tasks",
-                                        t.getName(), status));
+                                        t.getName(workflow), status));
                                 break;
                             }
                         }
@@ -759,7 +759,7 @@ public class WorkflowRunner {
             final Task task, 
             final Map<String,Config> inheritedTaskConfig) 
     {
-    	this.logger.fine(String.format("%s: running task %s", task.getName(), task));
+    	this.logger.fine(String.format("%s: running task %s", task.getName(workflow), task));
 
         final WorkflowModule module = this.workflow.selectOneOrDie(
                 where("id",task.getModuleId()));
@@ -775,18 +775,18 @@ public class WorkflowRunner {
         List<ModuleConfig> moduleConfigs = moduleConfig.select(where("id",task.getModuleId()));
         for (ModuleConfig moduleConfig : moduleConfigs) {
             configs.add(moduleConfig);
-            this.logger.fine(String.format("%s: using module config: %s", task.getName(), moduleConfig));
+            this.logger.fine(String.format("%s: using module config: %s", task.getName(workflow), moduleConfig));
         }
         if (inheritedTaskConfig != null) {
             for (Map.Entry<String,Config> entry : inheritedTaskConfig.entrySet()) {
                 configs.add(entry.getValue());
-                this.logger.fine(String.format("%s: using inherited task config: %s", task.getName(), entry.getValue()));
+                this.logger.fine(String.format("%s: using inherited task config: %s", task.getName(workflow), entry.getValue()));
             }
         }
         List<TaskConfig> taskConfigs = taskConfig.select(where("id",task.getId()));
         for (TaskConfig tc : taskConfigs) {
         	configs.add(tc);
-            this.logger.fine(String.format("%s: using task config: %s", task.getName(), tc));
+            this.logger.fine(String.format("%s: using task config: %s", task.getName(workflow), tc));
         }
         final Map<String,Config> config = Config.merge(configs);
         
@@ -798,12 +798,12 @@ public class WorkflowRunner {
             	
             	if (WorkflowRunner.this.isStopped == true) return status;
                 WorkflowRunner.this.logger.fine(String.format(
-                        "%s: Previous status was: %s", task.getName(), status));
+                        "%s: Previous status was: %s", task.getName(workflow), status));
 
             	if (status == Status.NEW || status == Status.IN_PROGRESS) {
                     // run the task
-                    WorkflowRunner.this.logger.info(String.format("%s: Running task", task.getName()));
-                    Logger taskLogger = WorkflowRunner.this.makeLogger(task.getName());
+                    WorkflowRunner.this.logger.info(String.format("%s: Running task", task.getName(workflow)));
+                    Logger taskLogger = WorkflowRunner.this.makeLogger(task.getName(workflow));
                     try {
                         status = taskModule.run(task, config, taskLogger);
                     } 
@@ -812,15 +812,15 @@ public class WorkflowRunner {
                         StringWriter sw = new StringWriter();
                         e.printStackTrace(new PrintWriter(sw));
                         WorkflowRunner.this.logger.severe(String.format("%s: Error reported during task:%n%s", 
-                                task.getName(), sw.toString()));
+                                task.getName(workflow), sw.toString()));
                         status = Status.ERROR;
                     }
                     finally {
-                        WorkflowRunner.this.logger.fine(String.format("%s: Calling cleanup", task.getName()));
+                        WorkflowRunner.this.logger.fine(String.format("%s: Calling cleanup", task.getName(workflow)));
                         taskModule.cleanup(task, config, taskLogger); 
                     }
-                    WorkflowRunner.this.logger.fine(String.format("%s: Finished running task", task.getName()));
-                    WorkflowRunner.this.logger.info(String.format("%s: Setting task status to %s", task.getName(), status));
+                    WorkflowRunner.this.logger.fine(String.format("%s: Finished running task", task.getName(workflow)));
+                    WorkflowRunner.this.logger.info(String.format("%s: Setting task status to %s", task.getName(workflow), status));
             	}
                 task.setStatus(status);
                 taskStatus.update(task, "id");
@@ -879,17 +879,17 @@ public class WorkflowRunner {
                     // enqueue the child tasks
                     for (Task childTask : childTasks) {
                         WorkflowRunner.this.logger.fine(String.format("%s: Dispatching child task: %s", 
-                                task.getName(), childTask.toString()));
+                                task.getName(workflow), childTask.toString()));
                         Future<Status> future = run(childTask, config);
                         WorkflowRunner.this.logger.fine(String.format("%s: Returned from dispatch of child task: %s", 
-                                task.getName(), childTask.toString()));
+                                task.getName(workflow), childTask.toString()));
 
                         // If a serial task fails, don't run the successive sibling tasks
                         Module.TaskType childTaskType = WorkflowRunner.this.moduleInstances.get(childTask.getModuleId()).getTaskType();
                         if (childTaskType == Module.TaskType.SERIAL && future.isCancelled()) {
                             WorkflowRunner.this.logger.severe(String.format(
                                     "Child task %s was cancelled, not running successive sibling tasks",
-                                    childTask.getName()));
+                                    childTask.getName(workflow)));
                             // update the status of the cancelled task to ERROR
                             childTask.setStatus(Status.ERROR);
                             WorkflowRunner.this.getTaskStatus().update(childTask,"id");
@@ -903,13 +903,13 @@ public class WorkflowRunner {
                             catch (InterruptedException e) {
                                 WorkflowRunner.this.logger.severe(String.format(
                                         "Child task %s was interrupted",
-                                        childTask.getName()));
+                                        childTask.getName(workflow)));
                             } 
                             catch (ExecutionException e) {throw new RuntimeException(e);}
                             if (s != null && s != Task.Status.SUCCESS && s != Task.Status.DEFER) {
                                 WorkflowRunner.this.logger.severe(String.format(
                                         "Child task %s returned status %s, not running successive sibling tasks",
-                                        childTask.getName(), s));
+                                        childTask.getName(workflow), s));
                                 // notify the task listeners
                                 notifyTaskListeners(childTask);
                                 break;
@@ -918,7 +918,7 @@ public class WorkflowRunner {
                     }
                 }
 
-                WorkflowRunner.this.logger.fine(String.format("%s: Returning status: %s", task.getName(), status));
+                WorkflowRunner.this.logger.fine(String.format("%s: Returning status: %s", task.getName(workflow), status));
                 return status;
             }
         };
@@ -927,13 +927,13 @@ public class WorkflowRunner {
         // Serial tasks get run immediately
         if (taskModule.getTaskType() == Module.TaskType.SERIAL) {
             FutureTask<Status> futureTask = new FutureTask<Status>(callable);
-            this.logger.fine(String.format("%s: Starting serial task", task.getName()));
+            this.logger.fine(String.format("%s: Starting serial task", task.getName(workflow)));
             futureTask.run();
             future = futureTask;
         }
         // Parallel tasks get put in the task pool
         else if (taskModule.getTaskType() == Module.TaskType.PARALLEL) {
-            this.logger.fine(String.format("%s: Submitting parallel task", task.getName()));
+            this.logger.fine(String.format("%s: Submitting parallel task", task.getName(workflow)));
             future = pool.submit(callable);
         }
         else {

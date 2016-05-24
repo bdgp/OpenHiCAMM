@@ -105,12 +105,12 @@ public class ImageStitcher implements Module, ImageLogger {
     @Override
     public Status run(Task task, Map<String,Config> config, Logger logger) {
     	Dao<TaskConfig> taskConfigDao = this.workflowRunner.getTaskConfig();
-    	logger.fine(String.format("Running task %s: %s", task.getName(), task));
+    	logger.fine(String.format("Running task %s: %s", task.getName(this.workflowRunner.getWorkflow()), task));
     	
     	// get the stitch group name
     	Config stitchGroupConf = config.get("stitchGroup");
     	if (stitchGroupConf == null) throw new RuntimeException(String.format(
-    	        "%s: stitchGroup config not found!", task.getName()));
+    	        "%s: stitchGroup config not found!", task.getName(this.workflowRunner.getWorkflow())));
     	String stitchGroup = stitchGroupConf.getValue();
     	logger.fine(String.format("Stitching group: %s", stitchGroup));
 
@@ -122,7 +122,7 @@ public class ImageStitcher implements Module, ImageLogger {
     	// get the stitched folder
     	Config stitchedFolderConf = config.get("stitchedFolder");
     	if (stitchedFolderConf == null) throw new RuntimeException(String.format(
-    	        "%s: stitchedFolder config not found!", task.getName()));
+    	        "%s: stitchedFolder config not found!", task.getName(this.workflowRunner.getWorkflow())));
     	File stitchedFolder = new File(stitchedFolderConf.getValue());
     	logger.fine(String.format("Stitched folder: %s", stitchedFolder));
     	stitchedFolder.mkdirs();
@@ -178,14 +178,14 @@ public class ImageStitcher implements Module, ImageLogger {
     	// get the stitch group name
     	Config stitchGroupConf = config.get("stitchGroup");
     	if (stitchGroupConf == null) throw new RuntimeException(String.format(
-    	        "%s: stitchGroup config not found!", task.getName()));
+    	        "%s: stitchGroup config not found!", task.getName(this.workflowRunner.getWorkflow())));
     	String stitchGroup = stitchGroupConf.getValue();
     	logger.fine(String.format("Stitching group: %s", stitchGroup));
     	
     	// get the list of stitch task IDs
     	Config stitchTaskIdsConf = config.get("stitchTaskIds");
     	if (stitchTaskIdsConf == null) throw new RuntimeException(String.format(
-    	        "%s: stitchTaskIds config not found!", task.getName()));
+    	        "%s: stitchTaskIds config not found!", task.getName(this.workflowRunner.getWorkflow())));
     	// get the list of stitch task IDs from the JSON array
     	List<Integer> stitchTaskIds = new ArrayList<Integer>();
     	try {
@@ -211,7 +211,7 @@ public class ImageStitcher implements Module, ImageLogger {
             Task stitchTask = this.workflowRunner.getTaskStatus().selectOne(where("id", stitchTaskId));
             if (stitchTask == null) throw new RuntimeException(String.format(
                     "%s: Stitch task with ID %d not found in database!", 
-                    task.getName(), stitchTaskId));
+                    task.getName(this.workflowRunner.getWorkflow()), stitchTaskId));
             
             // get the task config for each stitch task
             List<TaskConfig> taskConfigs = this.workflowRunner.getTaskConfig().select(where("id", stitchTask.getId()));
@@ -575,10 +575,10 @@ public class ImageStitcher implements Module, ImageLogger {
         List<ImageLogRecord> imageLogRecords = new ArrayList<ImageLogRecord>();
 
         // Add an image logger instance to the workflow runner for this module
-        imageLogRecords.add(new ImageLogRecord(task.getName(), task.getName(),
+        imageLogRecords.add(new ImageLogRecord(task.getName(this.workflowRunner.getWorkflow()), task.getName(this.workflowRunner.getWorkflow()),
                 new FutureTask<ImageLogRunner>(new Callable<ImageLogRunner>() {
             @Override public ImageLogRunner call() throws Exception {
-                ImageLogRunner imageLogRunner = new ImageLogRunner(task.getName());
+                ImageLogRunner imageLogRunner = new ImageLogRunner(task.getName(workflowRunner.getWorkflow()));
                 ImageStitcher.this.process(task, config, logger, imageLogRunner);
                 return imageLogRunner;
             }

@@ -1028,7 +1028,7 @@ public class SlideImager implements Module, ImageLogger {
         List<ImageLogRecord> imageLogRecords = new ArrayList<ImageLogRecord>();
 
         // Add an image logger instance to the workflow runner for this module
-        imageLogRecords.add(new ImageLogRecord(task.getName(), task.getName(),
+        imageLogRecords.add(new ImageLogRecord(task.getName(workflowRunner.getWorkflow()), task.getName(workflowRunner.getWorkflow()),
                 new FutureTask<ImageLogRunner>(new Callable<ImageLogRunner>() {
             @Override public ImageLogRunner call() throws Exception {
                 // Get the Image record
@@ -1054,7 +1054,7 @@ public class SlideImager implements Module, ImageLogger {
                     TaggedImage taggedImage = image.getImage(imageCache);
                     logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
 
-                    ImageLogRunner imageLogRunner = new ImageLogRunner(task.getName());
+                    ImageLogRunner imageLogRunner = new ImageLogRunner(task.getName(workflowRunner.getWorkflow()));
                     imageLogRunner.addImage(taggedImage, "The image");
                     return imageLogRunner;
                 }

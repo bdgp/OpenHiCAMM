@@ -1,10 +1,13 @@
 package org.bdgp.OpenHiCAMM.DB;
 
+import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.Util;
 
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
+
+import static org.bdgp.OpenHiCAMM.Util.where;
 
 /**
  * Task metadata storage. For each task instance, store the
@@ -19,7 +22,7 @@ public class Task {
     }
     public String toString() {
     	return String.format("%s(id=%d, dispatchUUID=%s, moduleId=%s, status=%s)", 
-    			this.getName(), 
+    			this.getClass().getSimpleName(),
     			this.id, Util.escape(this.dispatchUUID), moduleId, status);
     }
     
@@ -58,8 +61,9 @@ public class Task {
     public void setDispatchUUID(String dispatchUUID) {
         this.dispatchUUID = dispatchUUID;
     }
-    public String getName() { 
-        return String.format("M%02d.T%05d",this.moduleId,this.id); 
+    public String getName(Dao<WorkflowModule> wmDao) { 
+        WorkflowModule wm = wmDao.selectOneOrDie(where("id", this.moduleId));
+        return String.format("%s.T%05d",wm.getName(),this.id); 
     }
     @Override
     public int hashCode() {
