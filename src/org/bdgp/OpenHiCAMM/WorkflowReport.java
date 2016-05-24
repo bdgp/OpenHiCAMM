@@ -505,7 +505,7 @@ public class WorkflowReport implements Report {
                                    (int)Math.floor(roi.getXBase()+roi.getFloatWidth()), 
                                    (int)Math.floor(roi.getYBase()+roi.getFloatHeight()))).
                            //attr("title", roi.getName()).
-                           attr("onclick", String.format("report.showImage(%d)", new Integer(roi.getProperty("id"))));
+                           attr("href", String.format("javascript:report.showImage(%d)", new Integer(roi.getProperty("id"))));
                 }
                 // now draw the ROI rois in red
                 for (Roi roiRoi : roiRois) {
@@ -687,9 +687,8 @@ public class WorkflowReport implements Report {
                                                             Double xPos_ = xPos / posCount;
                                                             Double yPos_ = yPos / posCount;
                                                             P().with(()->{
-                                                                A().attr("href", "#").
-                                                                    attr("onclick", 
-                                                                        String.format("report.goToPosition(%d,%d,%f,%f)", 
+                                                                A().attr("href", 
+                                                                        String.format("javascript:report.goToPosition(%d,%d,%f,%f)", 
                                                                                 loaderModule.getId(),
                                                                                 poolSlide != null? poolSlide.getId() : -1, 
                                                                                         xPos_, 
@@ -700,8 +699,7 @@ public class WorkflowReport implements Report {
                                                             // add another link to put the slide back
                                                             if (poolSlide != null) {
                                                                 P().with(()->{
-                                                                    A().attr("href", "#").
-                                                                        attr("onclick", String.format("report.returnSlide(%d)",
+                                                                    A().attr("href", String.format("javascript:report.returnSlide(%d)",
                                                                                 loaderModule.getId())).
                                                                         text("Return slide to loader");
                                                                 });
@@ -728,17 +726,20 @@ public class WorkflowReport implements Report {
                                                             ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                                                             try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                             catch (IOException e) {throw new RuntimeException(e);}
-                                                            Img().attr("src", String.format("data:image/jpg;base64,%s", 
-                                                                        Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
-                                                                    attr("width", imp.getWidth()).
-                                                                    attr("height", imp.getHeight()).
-                                                                    attr("data-min-x", msp.getX() + (roi.getX1() - (imp.getWidth() / 2.0)) * pixelSize * (invertXAxis? -1.0 : 1.0)).
-                                                                    attr("data-max-x", msp.getX() + (roi.getX2() - (imp.getWidth() / 2.0)) * pixelSize * (invertXAxis? -1.0 : 1.0)).
-                                                                    attr("data-min-y", msp.getY() + (roi.getY1() - (imp.getHeight() / 2.0)) * pixelSize * (invertYAxis? -1.0 : 1.0)).
-                                                                    attr("data-max-y", msp.getY() + (roi.getY2() - (imp.getHeight() / 2.0)) * pixelSize * (invertYAxis? -1.0 : 1.0)).
-                                                                    //attr("title", roi.toString()).
-                                                                    attr("class", "stageCoords").
-                                                                    attr("onclick", String.format("report.showImage(%d)", image.getId()));
+                                                            ImagePlus imp_ = imp;
+                                                            A().attr("href", String.format("javascript:report.showImage(%d)", image.getId())).
+                                                                with(()->{
+                                                                    Img().attr("src", String.format("data:image/jpg;base64,%s", 
+                                                                                Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
+                                                                            attr("width", imp_.getWidth()).
+                                                                            attr("height", imp_.getHeight()).
+                                                                            attr("data-min-x", msp.getX() + (roi.getX1() - (imp_.getWidth() / 2.0)) * pixelSize * (invertXAxis? -1.0 : 1.0)).
+                                                                            attr("data-max-x", msp.getX() + (roi.getX2() - (imp_.getWidth() / 2.0)) * pixelSize * (invertXAxis? -1.0 : 1.0)).
+                                                                            attr("data-min-y", msp.getY() + (roi.getY1() - (imp_.getHeight() / 2.0)) * pixelSize * (invertYAxis? -1.0 : 1.0)).
+                                                                            attr("data-max-y", msp.getY() + (roi.getY2() - (imp_.getHeight() / 2.0)) * pixelSize * (invertYAxis? -1.0 : 1.0)).
+                                                                            //attr("title", roi.toString()).
+                                                                            attr("class", "stageCoords");
+                                                                    });
                                                         }
                                                     });
                                                     Td().with(()->{
@@ -788,11 +789,11 @@ public class WorkflowReport implements Report {
                                                                                         (int)Math.floor(tileRoi.getXBase()+tileRoi.getFloatWidth()),
                                                                                         (int)Math.floor(tileRoi.getYBase()+tileRoi.getFloatHeight()))).
                                                                                 attr("title", image2.getName()).
-                                                                                attr("onclick", String.format("report.showImage(%d)", image2.getId()));
+                                                                                attr("href", String.format("javascript:report.showImage(%d)", image2.getId()));
                                                                         
                                                                         makeLinks.add(()->{
                                                                             P().with(()->{
-                                                                                A().attr("onclick",String.format("report.checkPosCalibration(%d,%d,%f,%f,%f,%f,%f,%f,%f,%f)",
+                                                                                A().attr("href",String.format("javascript:report.checkPosCalibration(%d,%d,%f,%f,%f,%f,%f,%f,%f,%f)",
                                                                                         image.getId(), 
                                                                                         image2.getId(), 
                                                                                         pixelSize,
@@ -803,7 +804,6 @@ public class WorkflowReport implements Report {
                                                                                         msp.getY(),
                                                                                         imagerMsp.getX(), 
                                                                                         imagerMsp.getY())).
-                                                                                    attr("href","#").
                                                                                     text(String.format("Check pos calibration for image %s", image2.getName()));
                                                                             });
                                                                         });
@@ -872,13 +872,15 @@ public class WorkflowReport implements Report {
                                                                 ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                                                                 try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                                 catch (IOException e) {throw new RuntimeException(e);}
-                                                                Img().attr("src", String.format("data:image/jpg;base64,%s", 
-                                                                            Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
-                                                                        attr("width", imp.getWidth()).
-                                                                        attr("height", imp.getHeight()).
-                                                                        attr("title", stitchedImageFile.getValue()).
-                                                                        attr("onclick", String.format("report.showImageFile(\"%s\")",  
-                                                                                Util.escapeJavaStyleString(stitchedImageFile.getValue())));
+                                                                A().attr("href", String.format("javascript:report.showImageFile(\"%s\")",  
+                                                                            Util.escapeJavaStyleString(stitchedImageFile.getValue()))).
+                                                                    with(()->{
+                                                                        Img().attr("src", String.format("data:image/jpg;base64,%s", 
+                                                                                    Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
+                                                                                attr("width", imp.getWidth()).
+                                                                                attr("height", imp.getHeight()).
+                                                                                attr("title", stitchedImageFile.getValue());
+                                                                    });
                                                             }
                                                         }
                                                     });
