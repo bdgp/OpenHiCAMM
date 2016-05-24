@@ -213,12 +213,31 @@ public class SlideImagerDialog extends JPanel {
         });
         add(btnGoToPosition, "cell 0 11");
         
+        JButton btnGoToOrigin = new JButton("Go To Origin");
+        btnGoToOrigin.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (JOptionPane.showConfirmDialog(null, 
+                        "Warning: Moving the Z Axis is a potentially dangerous operation!\n"+
+                        "Setting the Z Axis incorrectly could damage the objective!\n"+
+                        "Are you sure you want to proceed?", 
+                        "WARNING", 
+                        JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
+                {
+                    try { mmcore.setPosition(mmcore.getFocusDevice(), 0.0); } 
+                    catch (Exception e1) {throw new RuntimeException(e1);}
+                }
+            }
+        });
+        btnGoToOrigin.setEnabled(false);
+        add(btnGoToOrigin, "cell 0 11");
+
         setInitZPosNo.addItemListener(new ItemListener() {
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
                     initialZPos.setEnabled(false);
                     btnGoToPosition.setEnabled(false);
                     btnSetPosition.setEnabled(false);
+                    btnGoToOrigin.setEnabled(false);
                 }
             }
         });
@@ -228,6 +247,7 @@ public class SlideImagerDialog extends JPanel {
                     initialZPos.setEnabled(true);
                     btnGoToPosition.setEnabled(true);
                     btnSetPosition.setEnabled(true);
+                    btnGoToOrigin.setEnabled(true);
                 }
             }
         });
@@ -241,6 +261,7 @@ public class SlideImagerDialog extends JPanel {
         invertYAxisGroup.add(invertYAxisYes);
         invertYAxisYes.setSelected(true);
         add(invertYAxisYes, "cell 0 10");
+        
 	}
 
 }
