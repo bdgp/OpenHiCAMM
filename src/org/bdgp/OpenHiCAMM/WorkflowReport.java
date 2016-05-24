@@ -934,7 +934,7 @@ public class WorkflowReport implements Report {
                         if (poolSlideId_ > 0 && loaderModuleId_ != null && this.prevPoolSlideId != poolSlideId_) {
                             WorkflowModule loaderModule = this.workflowRunner.getWorkflow().selectOneOrDie(
                                     where("id", loaderModuleId_));
-                            Module module = this.workflowRunner.getModuleInstances().get(loaderModule.getName());
+                            Module module = this.workflowRunner.getModuleInstances().get(loaderModule.getId());
                             if (module == null) throw new RuntimeException(String.format("Could not find instance for module %s!", loaderModule));
 
                             // init loader and scan for slides
@@ -1027,7 +1027,7 @@ public class WorkflowReport implements Report {
                         new Thread(()->{
                             WorkflowModule loaderModule = this.workflowRunner.getWorkflow().selectOneOrDie(
                                     where("id", loaderModuleId));
-                            Module module = this.workflowRunner.getModuleInstances().get(loaderModule.getName());
+                            Module module = this.workflowRunner.getModuleInstances().get(loaderModule.getId());
                             if (module == null) throw new RuntimeException(String.format("Could not find instance for module %s!", loaderModule));
                             
                             Dao<PoolSlide> poolSlideDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);

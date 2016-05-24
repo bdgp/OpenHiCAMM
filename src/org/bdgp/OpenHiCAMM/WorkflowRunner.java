@@ -79,7 +79,7 @@ public class WorkflowRunner {
     private Dao<TaskConfig> taskConfig;
     private Dao<Task> taskStatus;
     
-    private Map<String,Module> moduleInstances;
+    private Map<Integer,Module> moduleInstances;
     
     private List<Handler> logHandlers;
     private Level logLevel;
@@ -167,7 +167,7 @@ public class WorkflowRunner {
         this.startModule = null;
         
         // instantiate the workflow module object instances
-        this.moduleInstances = new HashMap<String,Module>();
+        this.moduleInstances = new HashMap<Integer,Module>();
         this.loadModuleInstances();
         
         // set the logLabelLength
@@ -218,7 +218,7 @@ public class WorkflowRunner {
             try { 
                 Module m = w.getModule().newInstance();
                 m.initialize(this, w);
-                moduleInstances.put(w.getName(), m); 
+                moduleInstances.put(w.getId(), m); 
             } 
             catch (InstantiationException e) {throw new RuntimeException(e);} 
             catch (IllegalAccessException e) {throw new RuntimeException(e);}
@@ -281,7 +281,7 @@ public class WorkflowRunner {
         }
         
     	List<Task> childTasks = new ArrayList<Task>();
-        Module m = this.moduleInstances.get(module.getName());
+        Module m = this.moduleInstances.get(module.getId());
         childTasks = m.createTaskRecords(tasks != null? tasks : new ArrayList<Task>(), moduleConfig, logger);
         List<WorkflowModule> modules = workflow.select(
         		where("parentId",module != null? module.getId() : null));
@@ -296,7 +296,7 @@ public class WorkflowRunner {
         runInitialize(module);
     }
     public void runInitialize(WorkflowModule module) {
-        Module m = this.moduleInstances.get(module.getName());
+        Module m = this.moduleInstances.get(module.getId());
         // If there are any new/in-progress tasks, then call runInitialize()
         List<Task> newTasks = new ArrayList<Task>();
         newTasks.addAll(this.getTaskStatus().select(where("moduleId", module.getId()).and("status", Status.NEW)));
@@ -362,7 +362,7 @@ public class WorkflowRunner {
                 }});
             List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
             for (WorkflowModule module : modules) {
-                Module m = moduleInstances.get(module.getName());
+                Module m = moduleInstances.get(module.getId());
                 if (m == null) {
                     throw new RuntimeException("No instantiated module found with ID: "+module.getName());
                 }
@@ -765,7 +765,7 @@ public class WorkflowRunner {
                 where("id",task.getModuleId()));
         
         // get an instance of the module
-        final Module taskModule = moduleInstances.get(module.getName());
+        final Module taskModule = moduleInstances.get(module.getId());
         if (taskModule == null) {
             throw new RuntimeException("No instantiated module found with ID: "+module.getName());
         }
@@ -1044,7 +1044,7 @@ public class WorkflowRunner {
     public File getWorkflowDir() { return workflowDirectory; }
     public Connection getInstanceDb() { return instanceDb; }
     public OpenHiCAMM getOpenHiCAMM() { return mmslide; }
-    public Map<String,Module> getModuleInstances() { return moduleInstances; }
+    public Map<Integer,Module> getModuleInstances() { return moduleInstances; }
     
     public void addTaskListener(TaskListener listener) {
         taskListeners.add(listener);
@@ -1129,7 +1129,7 @@ public class WorkflowRunner {
             Collections.sort(ms, (a,b)->a.getPriority().compareTo(b.getPriority()));
     		List<WorkflowModule> newms = new ArrayList<WorkflowModule>();
     		for (WorkflowModule m : ms) {
-                Module module = this.moduleInstances.get(m.getName());
+                Module module = this.moduleInstances.get(m.getId());
                 configurations.put(m.getName(), module.configure());
     			newms.addAll(modules.select(where("parentId",m.getId())));
     		}
