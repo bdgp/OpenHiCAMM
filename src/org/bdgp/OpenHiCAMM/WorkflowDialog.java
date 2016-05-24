@@ -116,9 +116,10 @@ public class WorkflowDialog extends JDialog {
 
                     // Set resume button enabled/disabled
                     if (startModule.getModel() != null) {
-                        String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
-                        if (startModuleId != null) {
-                            List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
+                        String startModuleName = (String)startModule.getItemAt(startModule.getSelectedIndex());
+                        if (startModuleName != null) {
+                            WorkflowModule startModule = workflowRunner.getWorkflow().selectOneOrDie(where("name", startModuleName));
+                            List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModule.getId()));
                             btnResume.setEnabled(tasks.size() > 0);
                         }
                         else {
@@ -390,16 +391,16 @@ public class WorkflowDialog extends JDialog {
                     }
                 }
 
-                String startModuleId = null;
+                String startModuleName = null;
                 if (startModule.getModel() != null) {
-                    startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
+                    startModuleName = (String)startModule.getItemAt(startModule.getSelectedIndex());
                 }
                 startModule.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
-                if (startModuleId == null && startModules.size() > 0) {
-                	startModuleId = startModules.get(0);
+                if (startModuleName == null && startModules.size() > 0) {
+                	startModuleName = startModules.get(0);
                 }
-                if (startModuleId != null) {
-                    startModule.setSelectedItem(startModuleId);
+                if (startModuleName != null) {
+                    startModule.setSelectedItem(startModuleName);
                 }
                 startModule.setEnabled(true);
                 
@@ -425,11 +426,12 @@ public class WorkflowDialog extends JDialog {
                     startButton.setEnabled(true);
                     btnCreateNewInstance.setEnabled(true);
 
-                    if (startModuleId != null && workflowRunner != null) {
+                    if (startModuleName != null && workflowRunner != null) {
                         // If there are any tasks with status not equal to SUCCESS or FAIL, then enable
                         // the resume button.
                         btnResume.setEnabled(false);
-                        List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
+                        WorkflowModule startModule = workflowRunner.getWorkflow().selectOneOrDie(where("name", startModuleName));
+                        List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModule.getId()));
                         CHECK_TASK_STATUSES:
                         while (tasks.size() > 0) {
                             List<TaskDispatch> tds = new ArrayList<TaskDispatch>();
@@ -488,10 +490,11 @@ public class WorkflowDialog extends JDialog {
         initWorkflowRunner(false);
         this.workflowRunner.setMaxThreads((Integer)numThreads.getValue());
         // Get the selected start module
-        final String startModuleId = (String)startModule.getItemAt(startModule.getSelectedIndex());
+        final String startModuleName = (String)startModule.getItemAt(startModule.getSelectedIndex());
         
         if (!resume) {
-            List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModuleId));
+            WorkflowModule startModule = workflowRunner.getWorkflow().selectOneOrDie(where("name", startModuleName));
+            List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModule.getId()));
             if (tasks.size() > 0) {
                 if (JOptionPane.showConfirmDialog(null, 
                         "There is existing run status data in the database. \n"+
@@ -524,6 +527,6 @@ public class WorkflowDialog extends JDialog {
             }});
 
         // Start the workflow runner
-        workflowRunner.run(startModuleId, null, resume);
+        workflowRunner.run(startModuleName, null, resume);
     }
 }

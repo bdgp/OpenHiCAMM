@@ -20,7 +20,7 @@ public class Task {
     public String toString() {
     	return String.format("%s(id=%d, dispatchUUID=%s, moduleId=%s, status=%s)", 
     			this.getName(), 
-    			this.id, Util.escape(this.dispatchUUID), Util.escape(moduleId), status);
+    			this.id, Util.escape(this.dispatchUUID), moduleId, status);
     }
     
     @DatabaseField(generatedId=true,canBeNull=false,index=true)
@@ -32,8 +32,8 @@ public class Task {
     @DatabaseField(canBeNull=true,dataType=DataType.LONG_STRING,index=true)
     private String dispatchUUID;
     
-    @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING,index=true)
-    private Integer moduleId;
+    @DatabaseField(canBeNull=false,index=true)
+    private int moduleId;
     
     public static enum Status {ERROR, FAIL, SUCCESS, IN_PROGRESS, DEFER, NEW};
     
@@ -49,7 +49,7 @@ public class Task {
     public Status getStatus() {
         return status;
     }
-    public Integer getModuleId() {
+    public int getModuleId() {
         return moduleId;
     }
     public void setStatus(Status status) {
@@ -59,16 +59,16 @@ public class Task {
         this.dispatchUUID = dispatchUUID;
     }
     public String getName() { 
-        return String.format("%s.T%05d",this.moduleId,this.id); 
+        return String.format("M%02d.T%05d",this.moduleId,this.id); 
     }
-
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + id;
         result = prime * result
-                + ((moduleId == null) ? 0 : moduleId.hashCode());
+                + ((dispatchUUID == null) ? 0 : dispatchUUID.hashCode());
+        result = prime * result + id;
+        result = prime * result + moduleId;
         result = prime * result + ((status == null) ? 0 : status.hashCode());
         return result;
     }
@@ -81,15 +81,18 @@ public class Task {
         if (getClass() != obj.getClass())
             return false;
         Task other = (Task) obj;
+        if (dispatchUUID == null) {
+            if (other.dispatchUUID != null)
+                return false;
+        } else if (!dispatchUUID.equals(other.dispatchUUID))
+            return false;
         if (id != other.id)
             return false;
-        if (moduleId == null) {
-            if (other.moduleId != null)
-                return false;
-        } else if (!moduleId.equals(other.moduleId))
+        if (moduleId != other.moduleId)
             return false;
         if (status != other.status)
             return false;
         return true;
     }
+
 };
