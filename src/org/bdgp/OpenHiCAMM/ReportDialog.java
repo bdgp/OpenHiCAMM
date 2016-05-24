@@ -16,6 +16,10 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
 
 import ij.IJ;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.concurrent.Worker;
+import javafx.concurrent.Worker.State;
 import javafx.embed.swing.JFXPanel;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -93,10 +97,14 @@ public class ReportDialog {
 
     public void runReport(Report report) {
         WebEngine webEngine = webView.getEngine();
-        JSObject jsobj = (JSObject) webEngine.executeScript("window");
-        jsobj.setMember("report", report);
-        jsobj.setMember("workflowReport", report);
-        jsobj.setMember("reportDialog", this);
+        webEngine.getLoadWorker().stateProperty().addListener(new ChangeListener<Worker.State>() {
+            @Override public void changed(ObservableValue<? extends State> ov, State t, State t1) {
+                if (t1 == Worker.State.SUCCEEDED) {
+                    JSObject jsobj = (JSObject) webEngine.executeScript("window");
+                    jsobj.setMember("report", report);
+                }
+            }
+        });
         
         try{
             // get the time the workflow completed running
