@@ -172,7 +172,7 @@ public class WorkflowReport implements Report {
                                                         .getSlidePosition(), 
                                                         ps.getSlideId());
                                             P().with(()->{
-                                                A(String.format("Module %s, Slide %s", slideImager, ps)).
+                                                A(String.format("Module %s, Slide %s", slideImager.getName(), ps)).
                                                     attr("href", reportFile);
                                             });
                                             Integer loaderModuleId_ = loaderModuleId;

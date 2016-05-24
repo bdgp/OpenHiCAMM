@@ -367,7 +367,7 @@ public class WorkflowRunner {
                     throw new RuntimeException("No instantiated module found with ID: "+module.getName());
                 }
                 // print workflow module info
-                this.logger.info(String.format("    %s", module.toString(true)));
+                this.logger.info(String.format("    %s", module.toString()));
                 this.logger.info(String.format(
                         "    %s(title=%s, description=%s, type=%s)", 
                         m.getClass().getSimpleName(),

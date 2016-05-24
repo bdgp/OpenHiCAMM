@@ -87,8 +87,7 @@ public class WorkflowModule {
         this.priority = priority;
     }
     
-    public String toString(boolean all) {
-    	if (!all) return this.toString();
+    public String toString() {
     	return String.format("%s(id=%d, name=%s, className=%s, parentId=%s)",
     			this.getClass().getSimpleName(),
     			this.id,
