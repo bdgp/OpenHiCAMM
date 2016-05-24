@@ -270,7 +270,7 @@ public class WorkflowReport implements Report {
         
         // get the associated hi res slide imager modules for each ROI finder module
         // ROIFinder module ID -> List of associated imager module IDs
-        Map<String,Set<String>> roiImagers = new HashMap<>();
+        Map<String,Set<String>> roiImagers = new HashMap<>(); 
         for (Task task : workflowRunner.getTaskStatus().select(
                 where("moduleId", startModule.getId()))) 
         {
@@ -291,10 +291,8 @@ public class WorkflowReport implements Report {
                                         where("key", "posListModule").
                                         and("value", roiModule.getName()))) 
                                 {
-                                    WorkflowModule posListModule = this.workflowRunner.getWorkflow().selectOneOrDie(
-                                            where("name", posListModuleConf.getValue()));
                                     if (this.workflowRunner.getModuleConfig().selectOne(
-                                            where("id", posListModule.getId()).
+                                            where("id", posListModuleConf.getId()).
                                             and("key", "canImageSlides").
                                             and("value", "yes")) != null) 
                                     {
