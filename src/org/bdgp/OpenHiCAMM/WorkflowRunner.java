@@ -22,10 +22,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -84,7 +85,7 @@ public class WorkflowRunner {
     private List<Handler> logHandlers;
     private Level logLevel;
     
-    private ExecutorService pool;
+    private ThreadPoolExecutor executor;
     private int maxThreads;
     
     private List<TaskListener> taskListeners;
@@ -151,7 +152,7 @@ public class WorkflowRunner {
         
         // set the number of cores to use in the thread pool
         this.maxThreads = Runtime.getRuntime().availableProcessors();
-        this.pool = Executors.newFixedThreadPool(this.maxThreads+1);
+        this.executor = new ThreadPoolExecutor(this.maxThreads+1, this.maxThreads+1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 
 		// initialize various Dao's for convenience
         this.moduleConfig = this.instanceDb.file(ModuleConfig.class, new File(this.instance.getStorageLocation(), MODULECONFIG_FILE).getPath());
@@ -598,9 +599,9 @@ public class WorkflowRunner {
     {
         this.resume = resume;
         this.startModule = this.workflow.selectOneOrDie(where("name", startModuleName));
-        this.pool = Executors.newFixedThreadPool(this.maxThreads+1);
+        this.executor = new ThreadPoolExecutor(this.maxThreads+1, this.maxThreads+1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
         this.notifiedTasks.clear();
-        Future<Status> future = pool.submit(new Callable<Status>() {
+        Future<Status> future = executor.submit(new Callable<Status>() {
             @Override
             public Status call() {
             	try {
@@ -610,13 +611,12 @@ public class WorkflowRunner {
                     WorkflowRunner.this.isStopped = false;
                     WorkflowRunner.this.startTime = System.currentTimeMillis();
 
-                    int taskCount = 0;
                     if (WorkflowRunner.this.resume) {
                         logger.info("Updating task records...");
                         List<Task> tasks = WorkflowRunner.this.taskStatus.select(where("moduleId",startModule.getId()));
                         tasks.sort((a,b)->a.getId()-b.getId());
                         for (Task t : tasks) {
-                            taskCount += updateTaskRecordsOnResume(t);
+                            updateTaskRecordsOnResume(t);
                         }
                     }
                     else {
@@ -634,8 +634,8 @@ public class WorkflowRunner {
                         WorkflowRunner.this.getModuleConfig().delete(
                                 where("id", startModule.getId()).
                                 and("key", "duration"));
-                        taskCount = getTaskCount(startModuleName);
                     }
+                    int taskCount = getTaskCount(startModuleName, false);
 
                     // call the runInitialize module method
                     WorkflowRunner.this.logger.info("Calling runInitialize on all modules...");
@@ -686,9 +686,11 @@ public class WorkflowRunner {
                     }
                     
                     // Wait until all tasks have completed
-                    while (WorkflowRunner.this.notifiedTasks.size() < taskCount) {
+                    while (!WorkflowRunner.this.executor.getQueue().isEmpty()) {
                         Thread.sleep(1000);
                     }
+                    // Make sure task listeners have been notified of all tasks
+                    getTaskCount(startModuleName, true);
 
                     // Coalesce all the statuses
                     List<Status> statuses = new ArrayList<Status>();
@@ -864,7 +866,7 @@ public class WorkflowRunner {
                     catch (SQLException e) { throw new RuntimeException(e); }
                 }
 
-                if (status == Status.SUCCESS && !pool.isShutdown()) {
+                if (status == Status.SUCCESS && !executor.isShutdown()) {
                     // get the child tasks to be dispatched by this task using the dispatch UUID
                     WorkflowRunner.this.logger.fine(String.format("dispatchUUID=%s", dispatchUUID));
                     List<Task> childTasks = taskStatus.select(where("dispatchUUID", dispatchUUID));
@@ -934,7 +936,7 @@ public class WorkflowRunner {
         // Parallel tasks get put in the task pool
         else if (taskModule.getTaskType() == Module.TaskType.PARALLEL) {
             this.logger.fine(String.format("%s: Submitting parallel task", task.getName(workflow)));
-            future = pool.submit(callable);
+            future = executor.submit(callable);
         }
         else {
             throw new RuntimeException("Unknown task type: "+taskModule.getTaskType());
@@ -942,20 +944,35 @@ public class WorkflowRunner {
         return future;
     }
     
-    public int getTaskCount(String startModuleName) {
+    public int getTaskCount(String startModuleName, boolean notify) {
         // Get the set of tasks that will be run using this the start module ID
-        final Set<Task> tasks = new HashSet<Task>();
-        List<WorkflowModule> modules = this.getWorkflow().select(where("name",startModuleName));
-        while (modules.size() > 0) {
-            Collections.sort(modules, (a,b)->a.getPriority().compareTo(b.getPriority()));
-            List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
-            for (WorkflowModule module : modules) {
-                tasks.addAll(this.getTaskStatus().select(where("moduleId",module.getId())));
-                childModules.addAll(this.getWorkflow().select(where("parentId",module.getId())));
+        List<Task> tasks = this.getTaskStatus().select(
+                where("moduleId",startModule.getId()).
+                and("dispatchUUID", null));
+        Set<Task> totalTasks = new HashSet<>();
+        while (tasks.size() > 0) {
+            List<Task> childTasks = new ArrayList<>();
+            for (Task t : tasks) {
+                if (!totalTasks.contains(t)) {
+                    totalTasks.add(t);
+                    if (t.getStatus() != Status.FAIL) {
+                        for (TaskDispatch td : this.getTaskDispatch().select(where("parentTaskId", t.getId()))) {
+                            Task ct = this.getTaskStatus().selectOneOrDie(where("id", td.getTaskId()));
+                            if (ct.getDispatchUUID() == null) {
+                                childTasks.add(ct);
+                            }
+                        }
+                    }
+                }
             }
-            modules = childModules;
+            tasks = childTasks;
         }
-        return tasks.size();
+        if (notify) {
+            for (Task t : totalTasks) {
+                notifyTaskListeners(t);
+            }
+        }
+        return totalTasks.size();
     }
 
     private void notifyTaskListeners(Task task) {
@@ -991,7 +1008,7 @@ public class WorkflowRunner {
             //listener.debug("Called stop()");
             listener.stopped();
         }
-        List<Runnable> runnables = pool.shutdownNow();
+        List<Runnable> runnables = executor.shutdownNow();
 
         long endTime = System.currentTimeMillis();
         String endTimestamp = dateFormat.format(new Date(endTime)); 
