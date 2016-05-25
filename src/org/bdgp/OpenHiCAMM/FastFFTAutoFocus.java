@@ -78,8 +78,7 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
     public double THRES = 0.02;
     public double CROP_SIZE = 0.2; 
     public String CHANNEL="";
-    public double WAIT_FOR_DEVICE_THRESHOLD = 1.0;
-    public int WAIT_FOR_DEVICE_SLEEP = 100;
+    public int WAIT_FOR_DEVICE_SLEEP = 1000;
 
     private double indx = 0; //snapshot show new window iff indx = 1
 
@@ -95,9 +94,6 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
     // variables for skipping autofocus every acquisition
     public int skipCounter = -1;
     public static final int MAX_SKIP = 25;
-    
-    // XXX: remove me
-//    private int imageNum=0;
     
     Double minAutoFocus;
     Double maxAutoFocus;
@@ -213,7 +209,7 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
     //
                 if (verbose_) IJ.log("Setting Binning to 4....");
                 core_.setProperty(core_.getCameraDevice(), "Binning", "4");
-    //
+                
                 if (verbose_) IJ.log("Setting Camera to 8bit ...");
                 core_.setProperty(core_.getCameraDevice(), "PixelType", "Grayscale");
             }
@@ -226,52 +222,10 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
                 core_.startContinuousSequenceAcquisition(0);
             }
 
-            // XXX: remove me
-//            {   double bestDist = 0.0, bestScore = 0.0;
-//                long startTime = new Date().getTime();
-//                for (int i = -100; i <= 100; i += 2) {
-//                    core_.setPosition(core_.getFocusDevice(), (double)i);
-//                    Double curDist = core_.getPosition(), lastDist = null;
-//                    while (!curDist.equals(lastDist)) {
-//                        lastDist = curDist;
-//                        curDist = core_.getPosition();
-//                        Thread.sleep(25);
-//                    }
-//                    snapSingleImage();
-//                    double score = computeScore(ipCurrent_);
-//                    if (bestScore < score) {
-//                        bestScore = score;
-//                        bestDist = i;
-//                    }
-//                    IJ.log(String.format("FastFFT\tscore\t%s\t%s\t%s", imageNum, i, score));
-//                }
-//                core_.stopSequenceAcquisition();
-//                core_.setPosition(core_.getFocusDevice(), bestDist);
-//                Double curDist = core_.getPosition(), lastDist = null;
-//                while (!curDist.equals(lastDist)) {
-//                    lastDist = curDist;
-//                    curDist = core_.getPosition();
-//                    Thread.sleep(25);
-//                }
-//                IJ.log(String.format("FastFFT\tcurDist\t%s\t%s", imageNum, core_.getPosition(core_.getFocusDevice())));
-//                IJ.log(String.format("FastFFT\tbest_score\t%s\t%s\t%s", imageNum, bestDist, bestScore));
-//                IJ.log(String.format("FastFFT\ttime\t%s\t%s", imageNum++, new Date().getTime()-startTime));
-//                if (true) return;
-//            }
-
             //set z-distance to the lowest z-distance of the stack
-            final int MAX_TRIES = 10;
-            int tries = 0;
-            while (tries < MAX_TRIES) {
-                try { curDist = core_.getPosition(core_.getFocusDevice()); break; }
-                catch (Throwable e) { Thread.sleep(WAIT_FOR_DEVICE_SLEEP); ++tries; }
-            }
-
+            curDist = getPosition();
             baseDist = curDist - SIZE_FIRST * NUM_FIRST; //-30
-            core_.setPosition(core_.getFocusDevice(), Math.min(Math.max(minAutoFocus, baseDist), maxAutoFocus));
-            core_.setPosition(core_.getFocusDevice(), Math.max(minAutoFocus, baseDist));
-            core_.waitForDevice(core_.getFocusDevice());
-            Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
+            curDist = setPosition(Math.min(Math.max(minAutoFocus, baseDist), maxAutoFocus));
 
             //
             // End of insertion
@@ -283,16 +237,11 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
                 if (minAutoFocus == null || maxAutoFocus == null || 
                     (minAutoFocus <= baseDist + i * SIZE_FIRST && baseDist + i * SIZE_FIRST <= maxAutoFocus)) 
                 {
-                    core_.setPosition(core_.getFocusDevice(), baseDist + i * SIZE_FIRST);
-                    core_.waitForDevice(core_.getFocusDevice());
-                    Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
+                    curDist = setPosition(baseDist + i * SIZE_FIRST);
 
                     // indx =1;
                     snapSingleImage();
                     // indx =0;
-
-                    try { curDist = core_.getPosition(core_.getFocusDevice()); }
-                    catch (Throwable e) { Thread.sleep(WAIT_FOR_DEVICE_SLEEP); continue; }
 
                     ////curSh = sharpNess(ipCurrent_);
                     //curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
@@ -319,8 +268,7 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
 
             baseDist = bestDist - SIZE_SECOND * NUM_SECOND;
 
-            core_.setPosition(core_.getFocusDevice(), Math.min(Math.max(minAutoFocus, baseDist), maxAutoFocus));
-            Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
+            curDist = setPosition(Math.min(Math.max(minAutoFocus, baseDist), maxAutoFocus));
 
             //bestSh = 0;
 
@@ -330,16 +278,11 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
                 if (minAutoFocus == null || maxAutoFocus == null || 
                     (minAutoFocus <= baseDist + i * SIZE_SECOND && baseDist + i * SIZE_SECOND <= maxAutoFocus)) 
                 {
-                    core_.setPosition(core_.getFocusDevice(), baseDist + i * SIZE_SECOND);
-                    core_.waitForDevice(core_.getFocusDevice());
-                    Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
+                    curDist = setPosition(baseDist + i * SIZE_SECOND);
 
                     // indx =1;
                     snapSingleImage();
                     // indx =0;
-
-                    try { curDist = core_.getPosition(core_.getFocusDevice()); }
-                    catch (Throwable e) { Thread.sleep(WAIT_FOR_DEVICE_SLEEP); continue; }
 
                     //curSh = sharpNess(ipCurrent_);
                     //curSh = computeFFT(ipCurrent_, 10, 15, 0.75);
@@ -387,10 +330,8 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
 
             if (bestDist != null) {
                 if (verbose_) IJ.log(String.format("*** FOUND BEST bestDist: %.5f, bestSh: %.5f", bestDist, bestSh));
-                core_.setPosition(core_.getFocusDevice(), Math.min(Math.max(minAutoFocus, bestDist), maxAutoFocus));
-                core_.waitForDevice(core_.getFocusDevice());
+                curDist = setPosition(Math.min(Math.max(minAutoFocus, bestDist), maxAutoFocus));
             }
-            Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
 
             // indx =1;
             //if (verbose_) snapSingleImage();
@@ -409,6 +350,64 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
             IJ.error(sw.toString());
             e.printStackTrace();
         }
+    }
+    
+    public double getPosition() {
+        int tries = 0;
+        final int MAX_TRIES = 15;
+        Double lastPosition = null;
+        final double EPSILON = 0.0001;
+        while (tries++ < MAX_TRIES) {
+            try {
+                core_.waitForDevice(core_.getFocusDevice());
+                Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
+                double currentPosition = core_.getPosition(core_.getFocusDevice());
+                if (lastPosition != null && Math.abs(currentPosition-lastPosition) < EPSILON) {
+                    return currentPosition;
+                }
+                lastPosition = currentPosition;
+            }
+            catch (Throwable e) { 
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                IJ.log(sw.toString());
+            }
+        }
+        if (lastPosition == null) {
+            throw new RuntimeException(String.format("Could not get Z-axis position!"));
+        }
+        IJ.log(String.format("Could not get reliable Z-axis position!: %.02f", lastPosition));
+        return lastPosition;
+    }
+    
+    public double setPosition(double position) {
+        final double MAX_DIFFERENCE = 1.0;
+        Double currentPosition = null;
+        int tries = 0;
+        final int MAX_TRIES = 15;
+        while (tries++ < MAX_TRIES) {
+            try {
+                core_.setPosition(core_.getFocusDevice(), position);
+                core_.waitForDevice(core_.getFocusDevice());
+                Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
+                currentPosition = core_.getPosition(core_.getFocusDevice());
+                if (Math.abs(currentPosition - position) <= MAX_DIFFERENCE) {
+                    return currentPosition;
+                }
+            }
+            catch (Throwable e) { 
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                IJ.log(sw.toString());
+            }
+        } 
+        if (currentPosition == null) {
+            throw new RuntimeException(String.format("Could not get Z-axis position!"));
+        }
+        if (Math.abs(currentPosition - position) > MAX_DIFFERENCE) {
+            IJ.log(String.format("Could not set Z-axis position to %.02f, current position is %.02f!", position, currentPosition));
+        }
+        return currentPosition.doubleValue();
     }
 
     public FloatArray2D ImageToFloatArray(ImageProcessor ip)
