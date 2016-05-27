@@ -1146,6 +1146,7 @@ public class WorkflowRunner {
     
     public void shutdown() {
         try {
+            this.instanceDb.getReadWriteConnection().executeStatement("shutdown", DatabaseConnection.DEFAULT_RESULT_FLAGS);
             this.workflowDb.getReadWriteConnection().executeStatement("shutdown", DatabaseConnection.DEFAULT_RESULT_FLAGS);
         } 
         catch (SQLException e) {throw new RuntimeException(e);}
