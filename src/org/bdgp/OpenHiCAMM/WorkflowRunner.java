@@ -141,7 +141,7 @@ public class WorkflowRunner {
                         workflowInstance.selectOneOrDie(where("id",instanceId));
         this.instancePath = new File(this.workflowDirectory, this.instance.getStorageLocation()).getPath();
         this.instanceDbName = String.format("%s.db", this.instance.getName());
-        this.instanceDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath(), this.instance.getName());
+        this.instanceDb = Connection.get(new File(new File(workflowDirectory, WORKFLOW_DB), instanceDbName).getPath());
         
         // init the notified tasks set
         this.notifiedTasks = new HashSet<Task>();
