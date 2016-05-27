@@ -65,6 +65,7 @@ public class WorkflowRunner {
     public static final String MODULECONFIG_FILE = "ModuleConfig.txt";
     public static final String DEFAULT_MODULECONFIG_FILE = "DefaultModuleConfig.txt";
     public static final String WORKFLOW_FILE = "Workflow.txt";
+    public static final String WORKFLOWINSTANCE_FILE = "WorkflowInstance.txt";
 
     private Connection workflowDb;
     private Connection instanceDb;
@@ -129,10 +130,10 @@ public class WorkflowRunner {
             throw new RuntimeException("Directory "+workflowDirectory+" is not a valid directory.");
         }
         this.workflowDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath());
-        Dao<WorkflowModule> workflow = this.workflowDb.file(WorkflowModule.class, new File(WORKFLOW_FILE).getPath());
+        Dao<WorkflowModule> workflow = this.workflowDb.file(WorkflowModule.class, WORKFLOW_FILE);
         
         // set the workflow directory
-        this.workflowInstance = this.workflowDb.table(WorkflowInstance.class);
+        this.workflowInstance = this.workflowDb.file(WorkflowInstance.class, WORKFLOWINSTANCE_FILE);
         this.workflowDirectory = workflowDirectory;
         this.workflow = workflow;
 
@@ -1024,25 +1025,6 @@ public class WorkflowRunner {
         logElapsedTime(this.startTime, endTime);
 
         return runnables;
-    }
-    
-    /**
-     * Get a list of the instance ids from the workflow instance file inside
-     * a workflow directory.
-     * @param workflowDirectory
-     * @return
-     */
-    public static List<Integer> getInstanceIds(String workflowDirectory) {
-        List<Integer> instanceIds = new ArrayList<Integer>();
-        Connection workflowDb = Connection.get(new File(workflowDirectory, WORKFLOW_DB).getPath());
-        if (workflowDb != null) {
-            Dao<WorkflowInstance> workflowInstance = workflowDb.table(WorkflowInstance.class);
-            for (WorkflowInstance instance : workflowInstance.select()) {
-                instanceIds.add(instance.getId());
-            }
-            Collections.sort(instanceIds);
-        }
-        return instanceIds;
     }
     
     // Various getters/setters
