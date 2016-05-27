@@ -276,6 +276,7 @@ public class WorkflowDialog extends JDialog {
             	if (!active) return;
                 if (WorkflowDialog.this.workflowRunner != null) {
                     WorkflowDialog.this.workflowRunner.getWorkflowDb().startDatabaseManager();
+                    WorkflowDialog.this.workflowRunner.getInstanceDb().startDatabaseManager();
                 }
                 refresh();
             }
