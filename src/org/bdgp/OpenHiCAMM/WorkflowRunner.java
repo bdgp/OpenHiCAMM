@@ -142,7 +142,7 @@ public class WorkflowRunner {
                         workflowInstance.selectOneOrDie(where("id",instanceId));
         this.instancePath = new File(this.workflowDirectory, this.instance.getStorageLocation()).getPath();
         this.instanceDbName = String.format("%s.db", this.instance.getName());
-        this.instanceDb = Connection.get(new File(new File(workflowDirectory, WORKFLOW_DB), instanceDbName).getPath());
+        this.instanceDb = Connection.get(new File(workflowDirectory, new File(this.instance.getStorageLocation(), instanceDbName).getPath()).getPath());
         
         // init the notified tasks set
         this.notifiedTasks = new HashSet<Task>();
@@ -156,8 +156,8 @@ public class WorkflowRunner {
         this.executor = new ThreadPoolExecutor(this.maxThreads+1, this.maxThreads+1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 
 		// initialize various Dao's for convenience
-        this.moduleConfig = this.instanceDb.file(ModuleConfig.class, new File(this.instance.getStorageLocation(), MODULECONFIG_FILE).getPath());
-        this.defaultModuleConfig = this.workflowDb.file(ModuleConfig.class, new File(DEFAULT_MODULECONFIG_FILE).getPath());
+        this.moduleConfig = this.instanceDb.file(ModuleConfig.class, MODULECONFIG_FILE);
+        this.defaultModuleConfig = this.workflowDb.file(ModuleConfig.class, DEFAULT_MODULECONFIG_FILE);
         this.taskConfig = this.instanceDb.table(TaskConfig.class);
         this.taskStatus = this.instanceDb.table(Task.class);
         this.taskDispatch = this.instanceDb.table(TaskDispatch.class);
