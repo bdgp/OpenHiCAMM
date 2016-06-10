@@ -1,5 +1,3 @@
-set schema wf00001;
-
 select *
 from task l,
   taskconfig lsl,
