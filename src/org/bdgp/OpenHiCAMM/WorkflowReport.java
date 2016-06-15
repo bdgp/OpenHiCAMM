@@ -11,6 +11,8 @@ import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.nio.file.Paths;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
@@ -70,6 +72,7 @@ import ij.gui.ImageRoi;
 import ij.gui.NewImage;
 import ij.gui.Overlay;
 import ij.gui.Roi;
+import ij.io.FileSaver;
 import ij.process.Blitter;
 import ij.process.ImageProcessor;
 import javafx.scene.web.WebEngine;
@@ -129,6 +132,7 @@ public class WorkflowReport implements Report {
                     Script().raw(Resources.toString(Resources.getResource("bootstrap.min.js"), Charsets.UTF_8));
                     Script().raw(Resources.toString(Resources.getResource("jquery.maphilight.js"), Charsets.UTF_8));
                     Script().raw(Resources.toString(Resources.getResource("jquery.powertip.min.js"), Charsets.UTF_8));
+                    Script().raw(Resources.toString(Resources.getResource("notify.min.js"), Charsets.UTF_8));
                     Script().raw(Resources.toString(Resources.getResource("WorkflowReport.js"), Charsets.UTF_8));
                 } 
                 catch (Exception e) {throw new RuntimeException(e);}
@@ -222,6 +226,7 @@ public class WorkflowReport implements Report {
                             Script().raw(Resources.toString(Resources.getResource("bootstrap.min.js"), Charsets.UTF_8));
                             Script().raw(Resources.toString(Resources.getResource("jquery.maphilight.js"), Charsets.UTF_8));
                             Script().raw(Resources.toString(Resources.getResource("jquery.powertip.min.js"), Charsets.UTF_8));
+                            Script().raw(Resources.toString(Resources.getResource("notify.min.js"), Charsets.UTF_8));
                             Script().raw(Resources.toString(Resources.getResource("WorkflowReport.js"), Charsets.UTF_8));
                         } 
                         catch (Exception e) {throw new RuntimeException(e);}
@@ -372,6 +377,27 @@ public class WorkflowReport implements Report {
         imageTasks.clear();
         imageTasks.addAll(imageTaskPosIdx.values());
         log("imageTasks = %s", imageTasks);
+        
+        final String acquisitionTime;
+        if (!imageTasks.isEmpty()) {
+            Config acquisitionTimeConf = this.workflowRunner.getTaskConfig().selectOne(
+                    where("id", imageTasks.get(0).getId()).
+                    and("key", "acquisitionTime"));
+            if (acquisitionTimeConf != null) {
+                try {
+                    acquisitionTime = new SimpleDateFormat("yyyyMMddHHmmss").format(
+                            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").parse(
+                                    acquisitionTimeConf.getValue()));
+                } 
+                catch (ParseException e) { throw new RuntimeException(e); }
+            }
+            else {
+                acquisitionTime = null;
+            }
+        }
+        else {
+            acquisitionTime = null;
+        }
 
         // determine the bounds of the stage coordinates
         Double minX_ = null, minY_ = null, maxX = null, maxY = null; 
@@ -648,6 +674,7 @@ public class WorkflowReport implements Report {
                                                 Th().text("Source ROI Cutout");
                                                 Th().text("Tiled ROI Images");
                                                 Th().text("Stitched ROI Image");
+                                                Th().text("Curation");
                                             });
                                         });
                                         Tbody().with(()->{
@@ -831,6 +858,7 @@ public class WorkflowReport implements Report {
                                                             r.run();
                                                         }
                                                     });
+                                                    List<String> stitchedImageFiles = new ArrayList<>();
                                                     Td().with(()->{
                                                         // get the downstream stitcher tasks
                                                         Set<Task> stitcherTasks = new HashSet<Task>();
@@ -854,6 +882,7 @@ public class WorkflowReport implements Report {
                                                                     where("id", stitcherTask.getId()).and("key", "stitchedImageFile"));
                                                             log("stitchedImageFile = %s", stitchedImageFile.getValue());
                                                             if (stitchedImageFile != null && new File(stitchedImageFile.getValue()).exists()) {
+                                                                stitchedImageFiles.add(stitchedImageFile.getValue());
                                                                 // Get a thumbnail of the image
                                                                 ImagePlus imp = new ImagePlus(stitchedImageFile.getValue());
                                                                 log("stitchedImage width = %d, height = %d", imp.getWidth(), imp.getHeight());
@@ -883,6 +912,37 @@ public class WorkflowReport implements Report {
                                                                     });
                                                             }
                                                         }
+                                                    });
+                                                    // Curation buttons
+                                                    String[] orientations = new String[]{"lateral","ventral","dorsal"};
+                                                    String[] stages = new String[]{"1-3","4-6","7-8","9-10","11-12","13-16"};
+                                                    String experimentId = slide != null? slide.getExperimentId().replaceAll("[\\/ :]+","_") :
+                                                        acquisitionTime != null? acquisitionTime : 
+                                                        "slide";
+                                                    Td().with(()->{
+                                                        Table().with(()->{
+                                                            Tbody().with(()->{
+                                                                for (String orientation : orientations) {
+                                                                    Tr().with(()->{
+                                                                        for (String stage : stages) {
+                                                                            Td().with(()->{
+                                                                                StringBuilder sb = new StringBuilder();
+                                                                                for (String stitchedImageFile : stitchedImageFiles) {
+                                                                                    sb.append(String.format("report.curate(\"%s\",\"%s\",\"%s\",\"%s\"); ", 
+                                                                                            Util.escapeJavaStyleString(stitchedImageFile),
+                                                                                            Util.escapeJavaStyleString(experimentId), 
+                                                                                            Util.escapeJavaStyleString(orientation), 
+                                                                                            Util.escapeJavaStyleString(stage)));
+                                                                                }
+                                                                                Button(String.format("%s %s", orientation, stage)).
+                                                                                    attr("type","button").
+                                                                                    attr("onclick", sb.toString());
+                                                                            });
+                                                                        }
+                                                                    });
+                                                                }
+                                                            });
+                                                        });
                                                     });
                                                 });   
                                             }
@@ -1146,5 +1206,32 @@ public class WorkflowReport implements Report {
         catch (JSONException | MMSerializationException e) {throw new RuntimeException(e);}
         MultiStagePosition msp = posList.getPosition(0);
         return msp;
+    }
+    
+    /**
+     * If the user presses a curation button, copy and rename the stitched image into the curation folder.
+     * @param stitchedImagePath The path to the stitched image
+     * @param orientation The embryo's orientation
+     * @param stage Curated timepoint in hours
+     */
+    public void curate(String stitchedImagePath, String experimentId, String orientation, String stage) {
+        // /data/insitu_images/images/stage${stage}/lm(l|d|v)_${experiment_id}_${stage}.jpg
+        String imagesFolder = "/data/insitu_images/images";
+        String stageFolderName = String.format("stage%s",stage);
+        String fileName = String.format("lm%s_%s_%s.jpg", orientation.charAt(0), experimentId, stage);
+        String outputFile = Paths.get(imagesFolder, stageFolderName, fileName).toString();
+
+        ImagePlus imp = new ImagePlus(stitchedImagePath);
+        if (new FileSaver(imp).saveAsJpeg(outputFile)) {
+            this.webEngine.executeScript(String.format(
+                    "(function(f,d){$.notify('Image \"'+f+'\" was created in \"'+d+'\".','success')})(\"%s\",\"%s\")", 
+                    Util.escapeJavaStyleString(fileName),
+                    Util.escapeJavaStyleString(Paths.get(imagesFolder, stageFolderName).toString())));
+        }
+        else {
+            this.webEngine.executeScript(String.format(
+                    "(function(f){$.notify('Failed to write image \"'+f+'\"!','error')})(\"%s\")", 
+                    Util.escapeJavaStyleString(outputFile)));
+        }
     }
 }
