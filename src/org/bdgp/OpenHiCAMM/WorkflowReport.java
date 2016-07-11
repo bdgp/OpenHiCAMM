@@ -184,7 +184,7 @@ public class WorkflowReport implements Report {
                                                 log("Calling runReport(startModule=%s, poolSlide=%s, loaderModuleId=%s)", 
                                                         slideImager, ps, loaderModuleId_);
                                                 WorkflowModule lm = this.workflowRunner.getWorkflow().selectOneOrDie(where("id", loaderModuleId_));
-                                                runReport(slideImager, ps, lm);
+                                                runReport(slideImager, ps, lm, reportFile);
                                             });
                                         }
                                         continue SLIDE_IMAGERS;
@@ -200,7 +200,7 @@ public class WorkflowReport implements Report {
                         });
                         runnables.put(reportFile, ()->{
                             log("Calling runReport(startModule=%s, poolSlide=null, loaderModuleId=null)", slideImager);
-                            runReport(slideImager, null, null);
+                            runReport(slideImager, null, null, reportFile);
                         });
                     }
                 }
@@ -248,7 +248,7 @@ public class WorkflowReport implements Report {
         index.write(new File(this.reportDir, this.reportIndex));
     }
 
-    private void runReport(WorkflowModule startModule, PoolSlide poolSlide, WorkflowModule loaderModule) {
+    private void runReport(WorkflowModule startModule, PoolSlide poolSlide, WorkflowModule loaderModule, String reportFile) {
         log("Called runReport(startModule=%s, poolSlide=%s)", startModule, poolSlide);
 
         Dao<Slide> slideDao = this.workflowRunner.getInstanceDb().table(Slide.class);
@@ -751,6 +751,11 @@ public class WorkflowReport implements Report {
                                                                     roiPreviewHeight));
 
                                                             ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
+                                                            if (DEBUG) {
+                                                                String dirs = new File(reportDir, reportFile).getPath().replaceAll("\\.html$", "");
+                                                                new File(dirs).mkdirs();
+                                                                new FileSaver(imp).saveAsJpeg(new File(dirs, String.format("%s.roi_thumbnail.jpg", roi)).getPath());
+                                                            }
                                                             try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                             catch (IOException e) {throw new RuntimeException(e);}
                                                             ImagePlus imp_ = imp;
@@ -839,6 +844,11 @@ public class WorkflowReport implements Report {
                                                             }
                                                         });
 
+                                                        if (DEBUG) {
+                                                            String dirs = new File(reportDir, reportFile).getPath().replaceAll("\\.html$", "");
+                                                            new File(dirs).mkdirs();
+                                                            new FileSaver(roiGridThumb).saveAsJpeg(new File(dirs, String.format("%s.grid_thumbnail.jpg", roi)).getPath());
+                                                        }
                                                         // write the grid thumbnail as an embedded HTML image.
                                                         ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                                                         try { ImageIO.write(roiGridThumb.getBufferedImage(), "jpg", baos2); } 
@@ -897,6 +907,11 @@ public class WorkflowReport implements Report {
                                                                         stitchPreviewHeight));
                                                                 log("resized stitched image width=%d, height=%d", imp.getWidth(), imp.getHeight());
 
+                                                                if (DEBUG) {
+                                                                    String dirs = new File(reportDir, reportFile).getPath().replaceAll("\\.html$", "");
+                                                                    new File(dirs).mkdirs();
+                                                                    new FileSaver(imp).saveAsJpeg(new File(dirs, String.format("%s.stitched_thumbnail.jpg", roi)).getPath());
+                                                                }
                                                                 // write the stitched thumbnail as an embedded HTML image.
                                                                 ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                                                                 try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
