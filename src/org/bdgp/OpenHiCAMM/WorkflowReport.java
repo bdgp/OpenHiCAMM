@@ -143,13 +143,14 @@ public class WorkflowReport implements Report {
                         where("key","canImageSlides").
                         and("value", "yes"))) 
                 {
-                    WorkflowModule slideImager = this.workflowRunner.getWorkflow().selectOneOrDie(
+                    WorkflowModule slideImager = this.workflowRunner.getWorkflow().selectOne(
                             where("id", canImageSlides.getId()));
-                    log("Working on slideImager: %s", slideImager);
-                    if (workflowRunner.getModuleConfig().selectOne(
+                    if (slideImager != null && 
+                        workflowRunner.getModuleConfig().selectOne(
                             where("id", slideImager.getId()).
                             and("key", "posListModule")) == null) 
                     {
+                        log("Working on slideImager: %s", slideImager);
                        // get the loader module
                         Integer loaderModuleId = slideImager.getParentId();
                         while (loaderModuleId != null) {
@@ -754,7 +755,7 @@ public class WorkflowReport implements Report {
                                                             if (DEBUG) {
                                                                 String dirs = new File(reportDir, reportFile).getPath().replaceAll("\\.html$", "");
                                                                 new File(dirs).mkdirs();
-                                                                new FileSaver(imp).saveAsJpeg(new File(dirs, String.format("%s.roi_thumbnail.jpg", roi)).getPath());
+                                                                new FileSaver(imp).saveAsJpeg(new File(dirs, String.format("ROI%s.roi_thumbnail.jpg", roi.getId())).getPath());
                                                             }
                                                             try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                             catch (IOException e) {throw new RuntimeException(e);}
@@ -847,7 +848,7 @@ public class WorkflowReport implements Report {
                                                         if (DEBUG) {
                                                             String dirs = new File(reportDir, reportFile).getPath().replaceAll("\\.html$", "");
                                                             new File(dirs).mkdirs();
-                                                            new FileSaver(roiGridThumb).saveAsJpeg(new File(dirs, String.format("%s.grid_thumbnail.jpg", roi)).getPath());
+                                                            new FileSaver(roiGridThumb).saveAsJpeg(new File(dirs, String.format("ROI%s.grid_thumbnail.jpg", roi.getId())).getPath());
                                                         }
                                                         // write the grid thumbnail as an embedded HTML image.
                                                         ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
@@ -910,7 +911,7 @@ public class WorkflowReport implements Report {
                                                                 if (DEBUG) {
                                                                     String dirs = new File(reportDir, reportFile).getPath().replaceAll("\\.html$", "");
                                                                     new File(dirs).mkdirs();
-                                                                    new FileSaver(imp).saveAsJpeg(new File(dirs, String.format("%s.stitched_thumbnail.jpg", roi)).getPath());
+                                                                    new FileSaver(imp).saveAsJpeg(new File(dirs, String.format("ROI%s.stitched_thumbnail.jpg", roi.getId())).getPath());
                                                                 }
                                                                 // write the stitched thumbnail as an embedded HTML image.
                                                                 ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
