@@ -124,9 +124,16 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
 			int imageWidth = MDUtils.getWidth(taggedImage.tags);
 			int imageHeight = MDUtils.getHeight(taggedImage.tags);
+
+			Config XPositionUmConf = config.get("XPositionUm");
+			double x_stage = XPositionUmConf == null? 
+			        MDUtils.getXPositionUm(taggedImage.tags) : 
+                    new Double(XPositionUmConf.getValue());
 			
-			double x_stage = MDUtils.getXPositionUm(taggedImage.tags);
-			double y_stage = MDUtils.getYPositionUm(taggedImage.tags);
+			Config YPositionUmConf = config.get("YPositionUm");
+			double y_stage = YPositionUmConf == null?
+			        MDUtils.getYPositionUm(taggedImage.tags) :
+			        new Double(YPositionUmConf.getValue());
 			
 			// Delete any old ROI records
             Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
@@ -256,6 +263,12 @@ public abstract class ROIFinder implements Module, ImageLogger {
     
     public TaggedImage getTaggedImage(Image image, Logger logger) {
         String label = image.getLabel();
+
+        // if this image is not in an acquisition, then load it as a file
+        if (image.getAcquisitionId() == 0 && image.getPath() != null) {
+            TaggedImage taggedImage = image.getTaggedImage(null);
+            return taggedImage;
+        }
 
         // Initialize the acquisition
         Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
@@ -486,7 +499,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
                     return Status.NEW;
                 }
                 if (this.workflowRunner.getModuleConfig().selectOne(
-                        where("id", task.getModuleId()).
+                        where("id", t.getModuleId()).
                         and("key", "canImageSlides").
                         and("value", "yes")) == null) 
                 {

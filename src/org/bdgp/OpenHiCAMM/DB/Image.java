@@ -25,6 +25,7 @@ public class Image {
     @DatabaseField(canBeNull=false,uniqueCombo=true) private int slice;
     @DatabaseField(canBeNull=false,uniqueCombo=true) private int frame;
     @DatabaseField(canBeNull=false,uniqueCombo=true) private int position;
+    @DatabaseField(canBeNull=true) private String path;
     
     public Image() {}
     public Image (int slideId, Acquisition acquisition, int channel, int slice, int frame, int position) {
@@ -44,6 +45,14 @@ public class Image {
         this.position = position;
         this.acquisitionId = acquisitionId;
     }
+    public Image (String path, int slideId, int acquisitionId, int channel, int slice, int frame, int position) {
+        this(slideId, acquisitionId, channel, slice, frame, position);
+        this.path = path;
+    }
+    public Image (String path, int slideId) {
+        this(slideId, 0, 0, 0, 0, 0);
+        this.path = path;
+    }
     public int getId() {return this.id;}
     public String getName() {return String.format("I%05d", this.id);}
 
@@ -53,12 +62,17 @@ public class Image {
     public int getSlice() {return this.slice;}
     public int getFrame() {return this.frame;}
     public int getPosition() {return this.position;}
+    public String getPath() {return this.path;}
     
     public TaggedImage getImage(ImageCache imageCache) {
     	return imageCache.getImage(this.channel, this.slice, this.frame, this.position);
     }
 
     public TaggedImage getTaggedImage(Dao<Acquisition> acqDao) {
+        if (this.acquisitionId == 0) {
+            ImagePlus img = new ImagePlus(this.getPath());
+            return ImageUtils.makeTaggedImage(img.getProcessor());
+        }
         // Initialize the acquisition
         Acquisition acquisition = acqDao.selectOneOrDie(where("id",this.getAcquisitionId()));
         MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
@@ -74,6 +88,10 @@ public class Image {
     }
     
     public ImagePlus getImagePlus(Dao<Acquisition> acqDao) {
+        if (this.acquisitionId == 0) {
+            ImagePlus img = new ImagePlus(this.getPath());
+            return img;
+        }
         TaggedImage taggedImage = this.getTaggedImage(acqDao);
         ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
         ImagePlus imp = new ImagePlus(this.toString(), processor);
@@ -86,9 +104,10 @@ public class Image {
     
     public String toString() {
     	return String.format(
-    			"%s(id=%d, slideId=%d, channel=%d, slice=%d, frame=%d, position=%d, acquisitionId=%d)",
+    			"%s(id=%d, path=%s, slideId=%d, channel=%d, slice=%d, frame=%d, position=%d, acquisitionId=%d)",
     			this.getClass().getSimpleName(),
     			this.id,
+    			this.path,
     			this.slideId,
     			this.channel, 
     			this.slice,

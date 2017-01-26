@@ -1,0 +1,201 @@
+package org.bdgp.OpenHiCAMM.Modules;
+
+import javax.swing.JPanel;
+
+import net.miginfocom.swing.MigLayout;
+
+import javax.swing.JFileChooser;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JTextField;
+import javax.swing.JButton;
+
+import org.bdgp.OpenHiCAMM.DoubleSpinner;
+import org.bdgp.OpenHiCAMM.WorkflowRunner;
+
+import mmcorej.CMMCore;
+
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+
+import javax.swing.JRadioButton;
+import javax.swing.ButtonGroup;
+import java.awt.event.ItemListener;
+import java.awt.event.ItemEvent;
+
+@SuppressWarnings("serial")
+public class SlideSurveyorDialog extends JPanel {
+	JTextField posListText;
+    DoubleSpinner pixelSize;
+    DoubleSpinner initialZPos;
+    DoubleSpinner imageScaleFactor;
+    
+    JRadioButton invertXAxisYes;
+    JRadioButton invertXAxisNo;
+    JRadioButton invertYAxisYes;
+    JRadioButton invertYAxisNo;
+    JRadioButton setInitZPosNo;
+    JRadioButton setInitZPosYes;
+
+    // pixel size for the live view
+    // ((hirespxsize*fullwidth/livewidth) + (hirespxsize*fullheigth/liveheight)) / 2.0 = hireslivepxsize
+    // ((0.1253*4928/620) + (0.1253*3264/426)) / 2.0 = 0.962427
+	public static final double DEFAULT_PIXEL_SIZE_UM = 0.962427;
+	// feasible default image scaling factor
+	// 1.0 = 4.6 GB image size, 0.1 = 460 MB image size
+	public static final double DEFAULT_IMAGE_SCALE_FACTOR = 0.1;
+	private final ButtonGroup invertXAxisGroup = new ButtonGroup();
+	private final ButtonGroup invertYAxisGroup = new ButtonGroup();
+	private final ButtonGroup setInitZPosGrp = new ButtonGroup();
+	
+	public SlideSurveyorDialog(WorkflowRunner workflowRunner) {
+		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][]"));
+		
+		JLabel lblLoad = new JLabel("Load Position List From File");
+		this.add(lblLoad, "cell 0 0");
+		
+        final JFileChooser acqSettingsChooser = new JFileChooser();
+        acqSettingsChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+		posListText = new JTextField();
+		posListText.setEditable(false);
+		this.add(posListText, "flowx,cell 0 1,growx");
+		posListText.setColumns(10);
+		
+		final JFileChooser posListChooser = new JFileChooser();
+		posListChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+		JButton btnLoadPosList = new JButton("Select File");
+		btnLoadPosList.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+                if (posListChooser.showDialog(SlideSurveyorDialog.this,"Load Position List File") == JFileChooser.APPROVE_OPTION) {
+                    posListText.setText(posListChooser.getSelectedFile().getPath());
+                }
+			}
+		});
+		this.add(btnLoadPosList, "cell 0 1");
+		
+        JLabel lblPixelSize = new JLabel("Pixel Size: ");
+        add(lblPixelSize, "flowx,cell 0 2");
+        
+        pixelSize = new DoubleSpinner();
+        pixelSize.setValue(DEFAULT_PIXEL_SIZE_UM);
+        add(pixelSize, "cell 0 2");
+        
+        JLabel lblInvertXAxis = new JLabel("Invert X axis? ");
+        add(lblInvertXAxis, "flowx,cell 0 3");
+        
+        invertXAxisNo = new JRadioButton("No");
+        invertXAxisGroup.add(invertXAxisNo);
+        add(invertXAxisNo, "cell 0 3");
+        
+        JLabel lblInvertYAxis = new JLabel("Invert Y axis? ");
+        add(lblInvertYAxis, "flowx,cell 0 4");
+        
+        invertYAxisNo = new JRadioButton("No");
+        invertYAxisGroup.add(invertYAxisNo);
+        add(invertYAxisNo, "cell 0 4");
+        
+        JLabel lblSetInitialZ = new JLabel("Set Initial Z Axis Position:");
+        add(lblSetInitialZ, "flowx,cell 0 5");
+        
+        setInitZPosNo = new JRadioButton("No");
+        setInitZPosNo.setSelected(true);
+        setInitZPosGrp.add(setInitZPosNo);
+        add(setInitZPosNo, "cell 0 5");
+        
+        setInitZPosYes = new JRadioButton("Yes");
+        setInitZPosGrp.add(setInitZPosYes);
+        add(setInitZPosYes, "cell 0 5");
+        
+        initialZPos = new DoubleSpinner();
+        initialZPos.setEnabled(false);
+        add(initialZPos, "cell 0 5");
+        CMMCore mmcore = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
+        String focusDevice = mmcore.getFocusDevice();
+        try { initialZPos.setValue(new Double(mmcore.getPosition(focusDevice))); } 
+        catch (Exception e1) {throw new RuntimeException(e1);}
+        
+        JButton btnSetPosition = new JButton("Read From Device");
+        btnSetPosition.setEnabled(false);
+        btnSetPosition.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                try { initialZPos.setValue(new Double(mmcore.getPosition(focusDevice))); } 
+                catch (Exception e1) {throw new RuntimeException(e1);}
+            }
+        });
+        add(btnSetPosition, "cell 0 5");
+        
+        JButton btnGoToPosition = new JButton("Go To Position");
+        btnGoToPosition.setEnabled(false);
+        btnGoToPosition.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (JOptionPane.showConfirmDialog(null, 
+                        "Warning: Moving the Z Axis is a potentially dangerous operation!\n"+
+                        "Setting the Z Axis incorrectly could damage the objective!\n"+
+                        "Are you sure you want to proceed?", 
+                        "WARNING", 
+                        JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
+                {
+                    try { mmcore.setPosition(mmcore.getFocusDevice(), (Double)initialZPos.getValue()); } 
+                    catch (Exception e1) {throw new RuntimeException(e1);}
+                }
+            }
+        });
+        add(btnGoToPosition, "cell 0 5");
+        
+        JButton btnGoToOrigin = new JButton("Go To Origin");
+        btnGoToOrigin.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (JOptionPane.showConfirmDialog(null, 
+                        "Warning: Moving the Z Axis is a potentially dangerous operation!\n"+
+                        "Setting the Z Axis incorrectly could damage the objective!\n"+
+                        "Are you sure you want to proceed?", 
+                        "WARNING", 
+                        JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
+                {
+                    try { mmcore.setPosition(mmcore.getFocusDevice(), 0.0); } 
+                    catch (Exception e1) {throw new RuntimeException(e1);}
+                }
+            }
+        });
+        btnGoToOrigin.setEnabled(false);
+        add(btnGoToOrigin, "cell 0 5");
+
+        setInitZPosNo.addItemListener(new ItemListener() {
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    initialZPos.setEnabled(false);
+                    btnGoToPosition.setEnabled(false);
+                    btnSetPosition.setEnabled(false);
+                    btnGoToOrigin.setEnabled(false);
+                }
+            }
+        });
+        setInitZPosYes.addItemListener(new ItemListener() {
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    initialZPos.setEnabled(true);
+                    btnGoToPosition.setEnabled(true);
+                    btnSetPosition.setEnabled(true);
+                    btnGoToOrigin.setEnabled(true);
+                }
+            }
+        });
+
+        invertXAxisYes = new JRadioButton("Yes");
+        invertXAxisGroup.add(invertXAxisYes);
+        invertXAxisYes.setSelected(true);
+        add(invertXAxisYes, "cell 0 3");
+        
+        invertYAxisYes = new JRadioButton("Yes");
+        invertYAxisGroup.add(invertYAxisYes);
+        invertYAxisYes.setSelected(true);
+        add(invertYAxisYes, "cell 0 4");
+        
+        JLabel lblSetImageScale = new JLabel("Set Image Scale Factor (0.0 - 1.0):");
+        add(lblSetImageScale, "flowx,cell 0 6");
+        
+        imageScaleFactor = new DoubleSpinner();
+        imageScaleFactor.setValue(new Double(DEFAULT_IMAGE_SCALE_FACTOR));
+        add(imageScaleFactor, "cell 0 6");
+	}
+}

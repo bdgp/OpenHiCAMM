@@ -1067,7 +1067,7 @@ public class SlideImager implements Module, ImageLogger {
     @Override
     public void runInitialize() { }
     
-    public static void moveStage(String moduleId, CMMCore core, double x, double y, Logger logger) {
+    public static double[] moveStage(String moduleId, CMMCore core, double x, double y, Logger logger) {
     	core.setTimeoutMs(10000);
         String xyStage = core.getXYStageDevice();
 
@@ -1106,7 +1106,7 @@ public class SlideImager implements Module, ImageLogger {
                     startTime = System.nanoTime();
                     core.setXYPosition(xyStage, x, y);
                 }
-                Thread.sleep(500);
+                Thread.sleep(5);
             }
             
             // get the new stage position
@@ -1119,6 +1119,7 @@ public class SlideImager implements Module, ImageLogger {
             	throw new RuntimeException(String.format("%s: Stage moved to wrong coordinates: (%.2f,%.2f)",
             			moduleId, x_stage_new[0], y_stage_new[0]));
             }
+            return new double[]{x_stage_new[0], y_stage_new[0]};
 		} 
         catch (Throwable e) { 
         	StringWriter sw = new StringWriter();
