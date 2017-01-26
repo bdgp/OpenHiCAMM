@@ -35,7 +35,6 @@ import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
 import org.micromanager.events.EventManager;
 import org.micromanager.graph.MultiChannelHistograms;
-import org.micromanager.graph.SingleChannelHistogram;
 import org.micromanager.imagedisplay.VirtualAcquisitionDisplay;
 import org.micromanager.utils.ImageUtils;
 import org.micromanager.utils.MDUtils;
