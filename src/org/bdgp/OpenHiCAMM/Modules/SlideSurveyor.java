@@ -4,7 +4,9 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 
 import java.awt.Component;
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,14 +30,21 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.micromanager.MMStudio;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
+import org.micromanager.events.EventManager;
+import org.micromanager.graph.MultiChannelHistograms;
+import org.micromanager.graph.SingleChannelHistogram;
+import org.micromanager.imagedisplay.VirtualAcquisitionDisplay;
 import org.micromanager.utils.ImageUtils;
 import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMException;
+import org.micromanager.utils.MMScriptException;
 import org.micromanager.utils.MMSerializationException;
 
 import ij.ImagePlus;
+import ij.WindowManager;
 import ij.gui.NewImage;
 import ij.io.FileSaver;
 import ij.process.Blitter;
@@ -120,6 +129,8 @@ public class SlideSurveyor implements Module {
         Double minX = null, minY = null, maxX = null, maxY = null; 
         CMMCore core = this.workflowRunner.getOpenHiCAMM().getApp().getMMCore();
         try {
+            EventManager.register(this);
+
             if (core.isSequenceRunning()) {
                 core.stopSequenceAcquisition();
                 Thread.sleep(1000);
@@ -127,6 +138,19 @@ public class SlideSurveyor implements Module {
             // start live mode
             core.clearCircularBuffer();
             core.startContinuousSequenceAcquisition(0);
+            
+            // display the live mode GUI
+            MMStudio.getInstance().enableLiveMode(true);
+            
+            // attempt to fix the histogram scaling
+            VirtualAcquisitionDisplay display = VirtualAcquisitionDisplay.getDisplay(WindowManager.getCurrentImage());
+            if (display != null) {
+                if (MultiChannelHistograms.class.isAssignableFrom(display.getHistograms().getClass())) {
+                    MultiChannelHistograms mch = (MultiChannelHistograms)display.getHistograms();
+                    mch.fullScaleChannels();
+                    logger.info("Set histogram channels to full!");
+                }
+            }
 
             // determine the image width/height
             TaggedImage img0 = core.getLastTaggedImage();
@@ -161,13 +185,54 @@ public class SlideSurveyor implements Module {
             logger.fine(String.format("slidePreviewWidth = %d", slidePreviewWidth));
             int slidePreviewHeight = (int)Math.floor(scaleFactor * slideHeightPx);
             logger.fine(String.format("slidePreviewHeight = %d", slidePreviewHeight));
+            
+            // close all open acquisition windows
+            for (String name : MMStudio.getInstance().getAcquisitionNames()) {
+                try { MMStudio.getInstance().closeAcquisitionWindow(name); } 
+                catch (MMScriptException e) { /* do nothing */ }
+            }
+            
+            // set the initial Z Position
+            if (conf.containsKey("initialZPos")) {
+                Double initialZPos = new Double(conf.get("initialZPos").getValue());
+                logger.info(String.format("Setting initial Z Position to: %.02f", initialZPos));
+                String focusDevice = core.getFocusDevice();
+
+                final double EPSILON = 1.0;
+                try { 
+                    Double currentPos = core.getPosition(focusDevice);
+                    while (Math.abs(currentPos-initialZPos) > EPSILON) {
+                        core.setPosition(focusDevice, initialZPos); 
+                        core.waitForDevice(focusDevice);
+                        Thread.sleep(500);
+                        currentPos = core.getPosition(focusDevice);
+                    }
+                } 
+                catch (Exception e1) {throw new RuntimeException(e1);}
+            }
+
+            Date startAcquisition = new Date();
+            this.workflowRunner.getTaskConfig().insertOrUpdate(
+                    new TaskConfig(task.getId(),
+                            "startAcquisition", 
+                            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(startAcquisition)), 
+                    "id", "key");
+            
+            
+            logger.info(String.format("Now running the image acquisition sequence, please wait..."));
 
             // create the empty large slide image
             slideThumb = NewImage.createRGBImage(String.format("%s.%s.%s", workflowModule.getName(), task.getName(wmDao), slide.getName()), 
                     slidePreviewWidth, slidePreviewHeight, 1, NewImage.FILL_WHITE);
             
             // iterate through the position list, imaging using live mode to build up the large slide image
-            for (MultiStagePosition msp : positionList.getPositions()) {
+            for (int i=0; i<positionList.getNumberOfPositions(); ++i) {
+                MultiStagePosition msp = positionList.getPosition(i);
+
+                logger.info(String.format("Acquired survey image: Pos%s,%s [%d/%d images]", 
+                        msp.getX(), msp.getY(),
+                        i+1, positionList.getNumberOfPositions()));
+
                 // move the stage into position
                 double[] xy_stage = SlideImager.moveStage(this.workflowModule.getName(), core, msp.getX(), msp.getY(), logger);
                 double x_stage_new = xy_stage[0];
@@ -216,6 +281,11 @@ public class SlideSurveyor implements Module {
             throw new RuntimeException(e);
         } 
         finally {
+            EventManager.unregister(this);
+
+            // close the live mode GUI
+            MMStudio.getInstance().enableLiveMode(false);
+            // stop live mode
             try { core.stopSequenceAcquisition(); } 
             catch (Exception e) {throw new RuntimeException(e);}
         }
