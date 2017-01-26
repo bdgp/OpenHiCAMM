@@ -22,10 +22,11 @@ import java.awt.event.ActionEvent;
 public class ROIFinderDialog extends JPanel {
 	DoubleSpinner minRoiArea;
 
-	public static final double DEFAULT_MIN_ROI_AREA = 250000.0;
+	public static final double DEFAULT_MIN_ROI_AREA = 215.0;
 	public static final double DEFAULT_OVERLAP_PCT = 25.0;
 	public static final double DEFAULT_ROI_MARGIN_PCT = 2.0;
 	public static final double DEFAULT_HIRES_PIXEL_SIZE_UM = 0.1253;
+	public static final double DEFAULT_ROI_IMAGE_SCALE_FACTOR = 0.25;
 
 	private JLabel lblMinRoiArea;
 	private JButton btnRoiTest;
@@ -35,11 +36,13 @@ public class ROIFinderDialog extends JPanel {
 	DoubleSpinner overlapPct;
 	DoubleSpinner hiResPixelSize;
 	DoubleSpinner roiMarginPct;
+	private JLabel lblImageScaling;
+	DoubleSpinner roiImageScaleFactor;
 
 	public ROIFinderDialog(final ROIFinder roiFinder) {
-		this.setLayout(new MigLayout("", "[][grow]", "[][][][][]"));
+		this.setLayout(new MigLayout("", "[][grow]", "[][][][][][]"));
         
-        lblMinRoiArea = new JLabel("Min ROI Area");
+        lblMinRoiArea = new JLabel("Min ROI Area (um^2)");
         add(lblMinRoiArea, "cell 0 0");
         
         minRoiArea = new DoubleSpinner();
@@ -86,7 +89,14 @@ public class ROIFinderDialog extends JPanel {
         roiMarginPct = new DoubleSpinner();
         roiMarginPct.setValue(DEFAULT_ROI_MARGIN_PCT);
         add(roiMarginPct, "cell 1 3");
-        add(btnRoiTest, "cell 0 4");
+        
+        lblImageScaling = new JLabel("ROI Image Scale Factor (0.0-1.0):");
+        add(lblImageScaling, "cell 0 4");
+        
+        roiImageScaleFactor = new DoubleSpinner();
+        roiMarginPct.setValue(DEFAULT_ROI_IMAGE_SCALE_FACTOR);
+        add(roiImageScaleFactor, "cell 1 4");
+        add(btnRoiTest, "cell 0 5");
 	}
 	
 }

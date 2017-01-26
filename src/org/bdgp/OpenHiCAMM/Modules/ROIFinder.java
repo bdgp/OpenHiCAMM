@@ -101,7 +101,13 @@ public abstract class ROIFinder implements Module, ImageLogger {
         logger.fine(String.format("%s: Using slide: %s", label, slide));
         
     	try {
-			double pixelSize = new Double(config.get("pixelSize").getValue());
+    	    Config imageScaleFactorConf = config.get("imageScaleFactor");
+    	    double imageScaleFactor = imageScaleFactorConf != null? new Double(imageScaleFactorConf.getValue()) : 1.0;
+
+    	    Config pixelSizeConf = config.get("pixelSize");
+    	    if (pixelSizeConf == null) throw new RuntimeException("Config value pixelSize was not inherited!");
+			double pixelSize = new Double(pixelSizeConf.getValue());
+			pixelSize /= imageScaleFactor;
 			logger.fine(String.format("%s: Using pixelSize: %f", label, pixelSize));
 			
 			double hiResPixelSize = new Double(config.get("hiResPixelSize").getValue());
@@ -360,6 +366,10 @@ public abstract class ROIFinder implements Module, ImageLogger {
             	if (roiMarginPct != null) {
             	    configs.add(new Config(ROIFinder.this.workflowModule.getId(), "roiMarginPct", roiMarginPct.toString()));
             	}
+            	Double roiImageScaleFactor = (Double)dialog.roiImageScaleFactor.getValue();
+            	if (roiImageScaleFactor != null) {
+            	    configs.add(new Config(ROIFinder.this.workflowModule.getId(), "roiImageScaleFactor", roiImageScaleFactor.toString()));
+            	}
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -380,6 +390,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
             	}
             	if (confs.containsKey("roiMarginPct")) {
             	    dialog.roiMarginPct.setValue(new Double(confs.get("roiMarginPct").getValue()));
+            	}
+            	if (confs.containsKey("roiImageScaleFactor")) {
+            	    dialog.roiImageScaleFactor.setValue(new Double(confs.get("roiImageScaleFactor").getValue()));
             	}
                 return dialog;
             }
@@ -405,6 +418,11 @@ public abstract class ROIFinder implements Module, ImageLogger {
             	if (roiMarginPct == null || roiMarginPct < 0.0 || roiMarginPct > 100.0) {
             	    errors.add(new ValidationError(ROIFinder.this.workflowModule.getName(), 
             	            "Please enter a value between 0 and 100 for ROI Margin Percent"));
+            	}
+            	Double roiImageScaleFactor = (Double)dialog.roiImageScaleFactor.getValue();
+            	if (roiImageScaleFactor == null || roiImageScaleFactor <= 0.0) {
+            	    errors.add(new ValidationError(ROIFinder.this.workflowModule.getName(), 
+            	            "Please enter a value greater than 0.0 ROI Image Scale Factor"));
             	}
                 return errors.toArray(new ValidationError[0]);
             }

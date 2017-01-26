@@ -55,20 +55,37 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
         int w=imp.getWidth();
         int h=imp.getHeight();
         logger.fine(String.format("%s: Image dimensions: (%d,%d)", label, w, h));
-
-        // Resize to 1/4
-        double scale = 0.25;
-        logger.fine(String.format("%s: Resizing", label));
-        imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
-        imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
-                (int)Math.floor(imp.getWidth() * scale), 
-                (int)Math.floor(imp.getHeight() * scale)));
-        imageLog.addImage(imp, "Resizing");
         
-        // get the minRoiArea config value and re-scale it
+        Config roiImageScaleFactorConf = config.get("roiImageScaleFactor");
+        if (roiImageScaleFactorConf == null) throw new RuntimeException("Config value roiImageScaleFactor not found!");
+        Double roiImageScaleFactor = new Double(roiImageScaleFactorConf.getValue());
+
+        // Resize by roiImageScaleFactor
+        if (roiImageScaleFactor != 1.0) {
+            logger.fine(String.format("%s: Resizing", label));
+            imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
+            imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
+                    (int)Math.floor(imp.getWidth() * roiImageScaleFactor), 
+                    (int)Math.floor(imp.getHeight() * roiImageScaleFactor)));
+            imageLog.addImage(imp, "Resizing");
+        }
+        
+        Config imageScaleFactorConf = config.get("imageScaleFactor");
+        double imageScaleFactor = imageScaleFactorConf != null? new Double(imageScaleFactorConf.getValue()) : 1.0;
+
+        // get the pixel size config value and scale it by the image scale factor
+        Config pixelSizeConf = config.get("pixelSizeConf");
+        if (pixelSizeConf == null) throw new RuntimeException("pixelSize config value is missing!");
+        double pixelSize = new Double(pixelSizeConf.getValue());
+        pixelSize /= imageScaleFactor;
+        logger.fine(String.format("%s: Using pixelSize: %f", label, pixelSize));
+
+        // get the minRoiArea config value and scale it by the pixel size squared
         Config minRoiAreaConf = config.get("minRoiArea");
         if (minRoiAreaConf == null) throw new RuntimeException("minRoiArea config value is missing!");
         double minRoiArea = new Double(minRoiAreaConf.getValue());
+        minRoiArea /= pixelSize;
+        minRoiArea *= minRoiArea;
         logger.fine(String.format("%s: Using minRoiArea: %f", label, minRoiArea));
         
         // Find edges
@@ -117,11 +134,11 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
         // Get the objects and iterate through them
         logger.fine(String.format("ResultsTable Column Headings: %s", rt.getColumnHeadings()));
         for (int i=0; i < rt.getCounter(); i++) {
-            double area = rt.getValue("Area", i) / (scale*scale); // area of the object
-            double bx = rt.getValue("BX", i) / scale; // x of bounding box
-            double by = rt.getValue("BY", i) / scale; // y of bounding box
-            double width = rt.getValue("Width", i) / scale; // width of bounding box
-            double height = rt.getValue("Height", i) / scale; // height of bounding box
+            double area = rt.getValue("Area", i) / (roiImageScaleFactor*roiImageScaleFactor); // area of the object
+            double bx = rt.getValue("BX", i) / roiImageScaleFactor; // x of bounding box
+            double by = rt.getValue("BY", i) / roiImageScaleFactor; // y of bounding box
+            double width = rt.getValue("Width", i) / roiImageScaleFactor; // width of bounding box
+            double height = rt.getValue("Height", i) / roiImageScaleFactor; // height of bounding box
             logger.finest(String.format(
                     "Found object: area=%.2f, bx=%.2f, by=%.2f, width=%.2f, height=%.2f",
                     area, bx, by, width, height));
