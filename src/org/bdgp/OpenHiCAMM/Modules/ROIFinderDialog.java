@@ -94,7 +94,7 @@ public class ROIFinderDialog extends JPanel {
         add(lblImageScaling, "cell 0 4");
         
         roiImageScaleFactor = new DoubleSpinner();
-        roiMarginPct.setValue(DEFAULT_ROI_IMAGE_SCALE_FACTOR);
+        roiImageScaleFactor.setValue(DEFAULT_ROI_IMAGE_SCALE_FACTOR);
         add(roiImageScaleFactor, "cell 1 4");
         add(btnRoiTest, "cell 0 5");
 	}
