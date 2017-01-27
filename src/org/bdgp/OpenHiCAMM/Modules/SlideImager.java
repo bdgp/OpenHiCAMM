@@ -1164,6 +1164,14 @@ public class SlideImager implements Module, ImageLogger {
     }
 
     public Status setTaskStatusOnResume(Task task) {
+    	TaskConfig loadDynamicTaskRecordsConf = this.workflowRunner.getTaskConfig().selectOne(
+    	        where("id", task.getId()).
+    	        and("key", "loadDynamicTaskRecords").
+    	        and("value","yes"));
+    	if (loadDynamicTaskRecordsConf != null) {
+    	    return task.getStatus();
+    	}
+
     	TaskConfig imageLabelConf = this.workflowRunner.getTaskConfig().selectOne(
     	        where("id", task.getId()).
     	        and("key", "imageLabel"));
