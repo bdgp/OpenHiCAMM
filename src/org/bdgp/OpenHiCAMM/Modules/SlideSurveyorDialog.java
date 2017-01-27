@@ -12,6 +12,7 @@ import javax.swing.JButton;
 
 import org.bdgp.OpenHiCAMM.DoubleSpinner;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
+import org.micromanager.dialogs.AcqControlDlg;
 
 import mmcorej.CMMCore;
 
@@ -47,18 +48,31 @@ public class SlideSurveyorDialog extends JPanel {
 	private final ButtonGroup invertXAxisGroup = new ButtonGroup();
 	private final ButtonGroup invertYAxisGroup = new ButtonGroup();
 	private final ButtonGroup setInitZPosGrp = new ButtonGroup();
+	private JButton btnShowAcquisitionDialog;
 	
-	public SlideSurveyorDialog(WorkflowRunner workflowRunner) {
-		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][]"));
+	public SlideSurveyorDialog(AcqControlDlg acqControlDlg, WorkflowRunner workflowRunner) {
+		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][]"));
+		
+		btnShowAcquisitionDialog = new JButton("Show Acquisition Dialog");
+		btnShowAcquisitionDialog.addActionListener(new ActionListener() {
+		    public void actionPerformed(ActionEvent e) {
+	              if (acqControlDlg != null) {
+	                    acqControlDlg.setVisible(true);
+	                    acqControlDlg.toFront();
+	                    acqControlDlg.repaint();
+	                }
+		    }
+		});
+		add(btnShowAcquisitionDialog, "cell 0 0");
 		
 		JLabel lblLoad = new JLabel("Load Position List From File");
-		this.add(lblLoad, "cell 0 0");
+		this.add(lblLoad, "cell 0 1");
 		
         final JFileChooser acqSettingsChooser = new JFileChooser();
         acqSettingsChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
 		posListText = new JTextField();
 		posListText.setEditable(false);
-		this.add(posListText, "flowx,cell 0 1,growx");
+		this.add(posListText, "flowx,cell 0 2,growx");
 		posListText.setColumns(10);
 		
 		final JFileChooser posListChooser = new JFileChooser();
@@ -71,44 +85,44 @@ public class SlideSurveyorDialog extends JPanel {
                 }
 			}
 		});
-		this.add(btnLoadPosList, "cell 0 1");
+		this.add(btnLoadPosList, "cell 0 2");
 		
         JLabel lblPixelSize = new JLabel("Pixel Size: ");
-        add(lblPixelSize, "flowx,cell 0 2");
+        add(lblPixelSize, "flowx,cell 0 3");
         
         pixelSize = new DoubleSpinner();
         pixelSize.setValue(DEFAULT_PIXEL_SIZE_UM);
-        add(pixelSize, "cell 0 2");
+        add(pixelSize, "cell 0 3");
         
         JLabel lblInvertXAxis = new JLabel("Invert X axis? ");
-        add(lblInvertXAxis, "flowx,cell 0 3");
+        add(lblInvertXAxis, "flowx,cell 0 4");
         
         invertXAxisNo = new JRadioButton("No");
         invertXAxisGroup.add(invertXAxisNo);
-        add(invertXAxisNo, "cell 0 3");
+        add(invertXAxisNo, "cell 0 4");
         
         JLabel lblInvertYAxis = new JLabel("Invert Y axis? ");
-        add(lblInvertYAxis, "flowx,cell 0 4");
+        add(lblInvertYAxis, "flowx,cell 0 5");
         
         invertYAxisNo = new JRadioButton("No");
         invertYAxisGroup.add(invertYAxisNo);
-        add(invertYAxisNo, "cell 0 4");
+        add(invertYAxisNo, "cell 0 5");
         
         JLabel lblSetInitialZ = new JLabel("Set Initial Z Axis Position:");
-        add(lblSetInitialZ, "flowx,cell 0 5");
+        add(lblSetInitialZ, "flowx,cell 0 6");
         
         setInitZPosNo = new JRadioButton("No");
         setInitZPosNo.setSelected(true);
         setInitZPosGrp.add(setInitZPosNo);
-        add(setInitZPosNo, "cell 0 5");
+        add(setInitZPosNo, "cell 0 6");
         
         setInitZPosYes = new JRadioButton("Yes");
         setInitZPosGrp.add(setInitZPosYes);
-        add(setInitZPosYes, "cell 0 5");
+        add(setInitZPosYes, "cell 0 6");
         
         initialZPos = new DoubleSpinner();
         initialZPos.setEnabled(false);
-        add(initialZPos, "cell 0 5");
+        add(initialZPos, "cell 0 6");
         CMMCore mmcore = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
         String focusDevice = mmcore.getFocusDevice();
         try { initialZPos.setValue(new Double(mmcore.getPosition(focusDevice))); } 
@@ -122,7 +136,7 @@ public class SlideSurveyorDialog extends JPanel {
                 catch (Exception e1) {throw new RuntimeException(e1);}
             }
         });
-        add(btnSetPosition, "cell 0 5");
+        add(btnSetPosition, "cell 0 6");
         
         JButton btnGoToPosition = new JButton("Go To Position");
         btnGoToPosition.setEnabled(false);
@@ -140,7 +154,7 @@ public class SlideSurveyorDialog extends JPanel {
                 }
             }
         });
-        add(btnGoToPosition, "cell 0 5");
+        add(btnGoToPosition, "cell 0 6");
         
         JButton btnGoToOrigin = new JButton("Go To Origin");
         btnGoToOrigin.addActionListener(new ActionListener() {
@@ -158,7 +172,7 @@ public class SlideSurveyorDialog extends JPanel {
             }
         });
         btnGoToOrigin.setEnabled(false);
-        add(btnGoToOrigin, "cell 0 5");
+        add(btnGoToOrigin, "cell 0 6");
 
         setInitZPosNo.addItemListener(new ItemListener() {
             public void itemStateChanged(ItemEvent e) {
@@ -184,18 +198,18 @@ public class SlideSurveyorDialog extends JPanel {
         invertXAxisYes = new JRadioButton("Yes");
         invertXAxisGroup.add(invertXAxisYes);
         invertXAxisYes.setSelected(true);
-        add(invertXAxisYes, "cell 0 3");
+        add(invertXAxisYes, "cell 0 4");
         
         invertYAxisYes = new JRadioButton("Yes");
         invertYAxisGroup.add(invertYAxisYes);
         invertYAxisYes.setSelected(true);
-        add(invertYAxisYes, "cell 0 4");
+        add(invertYAxisYes, "cell 0 5");
         
         JLabel lblSetImageScale = new JLabel("Set Image Scale Factor (0.0 - 1.0):");
-        add(lblSetImageScale, "flowx,cell 0 6");
+        add(lblSetImageScale, "flowx,cell 0 7");
         
         imageScaleFactor = new DoubleSpinner();
         imageScaleFactor.setValue(new Double(DEFAULT_IMAGE_SCALE_FACTOR));
-        add(imageScaleFactor, "cell 0 6");
+        add(imageScaleFactor, "cell 0 7");
 	}
 }

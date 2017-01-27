@@ -51,7 +51,7 @@ public class SlideImagerDialog extends JPanel {
     JRadioButton setInitZPosNo;
     JRadioButton setInitZPosYes;
 
-	public static final double DEFAULT_PIXEL_SIZE_UM = 0.48;
+	public static final double DEFAULT_PIXEL_SIZE_UM = 0.1253;
 	private final ButtonGroup invertXAxisGroup = new ButtonGroup();
 	private final ButtonGroup invertYAxisGroup = new ButtonGroup();
 	private final ButtonGroup setInitZPosGrp = new ButtonGroup();
