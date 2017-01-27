@@ -829,7 +829,7 @@ public class SlideImager implements Module, ImageLogger {
             // If the position list is not yet loaded, then it will be determined at runtime.
             // We will add more task records when run() is called, since the position
             // list isn't ready yet.
-            PositionList positionList = loadPositionList(moduleConf, workflowRunner.getLogger());
+            PositionList positionList = loadPositionList(config, workflowRunner.getLogger());
             if (positionList == null) {
                 Task task = new Task(this.workflowModule.getId(), Status.NEW);
                 workflowRunner.getTaskStatus().insert(task);
