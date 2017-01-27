@@ -914,7 +914,7 @@ public class WorkflowRunner {
                                 WorkflowRunner.this.getTaskStatus().update(childTask,"id");
                                 // notify task listeners
                                 notifyTaskListeners(childTask);
-                                break;
+                                break CHILD_TASKS;
                             }
                             if (childTaskType == Module.TaskType.SERIAL && future.isDone()) {
                                 Status s = null;
