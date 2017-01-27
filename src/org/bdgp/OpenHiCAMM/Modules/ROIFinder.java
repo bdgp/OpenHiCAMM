@@ -31,6 +31,7 @@ import org.bdgp.OpenHiCAMM.DB.SlidePos;
 import org.bdgp.OpenHiCAMM.DB.SlidePosList;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
+import org.bdgp.OpenHiCAMM.DB.TaskConfig;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
@@ -99,6 +100,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
         Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
         Slide slide = slideDao.selectOneOrDie(where("id",image.getSlideId()));
         logger.fine(String.format("%s: Using slide: %s", label, slide));
+
+
         
     	try {
     	    Config imageScaleFactorConf = config.get("imageScaleFactor");
@@ -431,6 +434,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
     @Override
     public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
+        Dao<TaskConfig> taskConfigDao = workflowRunner.getTaskConfig();
+
         WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",this.workflowModule.getId()));
         List<Task> tasks = new ArrayList<Task>();
         if (module.getParentId() != null) {
@@ -442,7 +447,22 @@ public abstract class ROIFinder implements Module, ImageLogger {
                 tasks.add(task);
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created new task record: %s",
             			this.workflowModule.getName(), task));
-                
+            	
+            	// pass along the slideId conf to any child tasks
+            	TaskConfig slideIdConf = taskConfigDao.selectOne(
+            	        where("id",parentTask.getId()).
+            	        and("key", "slideId"));
+            	if (slideIdConf != null) {
+                    // create taskConfig record for the slide ID
+                    TaskConfig slideId = new TaskConfig(
+                            task.getId(),
+                            "slideId", 
+                            slideIdConf.getValue());
+                    taskConfigDao.insert(slideId);
+                    workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created task config: %s", 
+                            this.workflowModule.getName(), slideId));
+            	}
+
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
                 workflowRunner.getTaskDispatch().insert(dispatch);
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created new task dispatch record: %s",
