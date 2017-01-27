@@ -108,9 +108,9 @@ public class SlideSurveyor implements Module {
         Integer slideId = new Integer(slideIdConf.getValue());
         Slide slide = slideDao.selectOneOrDie(where("id", slideId));
 
-        Config scaleFactorConf = conf.get("scaleFactor");
-        if (scaleFactorConf == null) throw new RuntimeException("Undefined conf value for scaleFactor!");
-        Double scaleFactor = new Double(scaleFactorConf.getValue());
+        Config imageScaleFactorConf = conf.get("imageScaleFactor");
+        if (imageScaleFactorConf == null) throw new RuntimeException("Undefined conf value for scaleFactor!");
+        Double imageScaleFactor = new Double(imageScaleFactorConf.getValue());
         
         Config pixelSizeConf = conf.get("pixelSize");
         if (pixelSizeConf == null) throw new RuntimeException("Undefined conf value for pixelSize!");
@@ -179,10 +179,10 @@ public class SlideSurveyor implements Module {
             int slideHeightPx = (int)Math.floor(((maxY - minY) / pixelSize) + (double)imageHeight);
             logger.fine(String.format("slideWidthPx = %d, slideHeightPx = %d", slideWidthPx, slideHeightPx));
             
-            logger.fine(String.format("scaleFactor = %f", scaleFactor));
-            int slidePreviewWidth = (int)Math.floor(scaleFactor * slideWidthPx);
+            logger.fine(String.format("scaleFactor = %f", imageScaleFactor));
+            int slidePreviewWidth = (int)Math.floor(imageScaleFactor * slideWidthPx);
             logger.fine(String.format("slidePreviewWidth = %d", slidePreviewWidth));
-            int slidePreviewHeight = (int)Math.floor(scaleFactor * slideHeightPx);
+            int slidePreviewHeight = (int)Math.floor(imageScaleFactor * slideHeightPx);
             logger.fine(String.format("slidePreviewHeight = %d", slidePreviewHeight));
             
             // close all open acquisition windows
@@ -259,17 +259,17 @@ public class SlideSurveyor implements Module {
                 logger.fine(String.format("Image width: %d, height: %d", width, height));
                 imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
                 imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
-                        (int)Math.floor(imp.getWidth() * scaleFactor), 
-                        (int)Math.floor(imp.getHeight() * scaleFactor)));
+                        (int)Math.floor(imp.getWidth() * imageScaleFactor), 
+                        (int)Math.floor(imp.getHeight() * imageScaleFactor)));
                 logger.fine(String.format("Resized image width: %d, height: %d", imp.getWidth(), imp.getHeight()));
                 
                 int xloc = (int)Math.floor(((x_stage_new - minX) / pixelSize));
                 int xlocInvert = invertXAxis? slideWidthPx - (xloc + width) : xloc;
-                int xlocScale = (int)Math.floor(xlocInvert * scaleFactor);
+                int xlocScale = (int)Math.floor(xlocInvert * imageScaleFactor);
                 logger.fine(String.format("xloc = %d, xlocInvert = %d, xlocScale = %d", xloc, xlocInvert, xlocScale));
                 int yloc = (int)Math.floor(((y_stage_new - minY) / pixelSize));
                 int ylocInvert = invertYAxis? slideHeightPx - (yloc + height) : yloc;
-                int ylocScale = (int)Math.floor(ylocInvert * scaleFactor);
+                int ylocScale = (int)Math.floor(ylocInvert * imageScaleFactor);
                 logger.fine(String.format("yloc = %d, ylocInvert = %d, ylocScale = %d", yloc, ylocInvert, ylocScale));
 
                 // draw the thumbnail image
