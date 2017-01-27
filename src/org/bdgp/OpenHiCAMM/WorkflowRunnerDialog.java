@@ -144,7 +144,15 @@ public class WorkflowRunnerDialog extends JDialog {
                 });
 			}
             @Override
-            public void taskCount(int taskCount) {
+            public void addToTaskCount(int taskCount) {
+                WorkflowRunnerDialog.this.maxTasks += taskCount;
+                SwingUtilities.invokeLater(new Runnable() {
+                   @Override public void run() {
+                        progressBar.setMaximum(WorkflowRunnerDialog.this.maxTasks);
+                   }});
+            }
+            @Override
+            public void setTaskCount(int taskCount) {
                 WorkflowRunnerDialog.this.maxTasks = taskCount;
                 SwingUtilities.invokeLater(new Runnable() {
                    @Override public void run() {

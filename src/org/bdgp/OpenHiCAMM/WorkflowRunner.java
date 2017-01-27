@@ -644,7 +644,7 @@ public class WorkflowRunner {
 
                     // Notify the task listeners of the maximum task count
                     for (TaskListener listener : taskListeners) {
-                        listener.taskCount(taskCount);
+                        listener.setTaskCount(taskCount);
                         listener.startTime(startTime);
                         //listener.debug(String.format("Set task count: %d", taskCount));
                     }
@@ -654,27 +654,39 @@ public class WorkflowRunner {
                     if (resume) logger.info("Scanning for previous tasks...");
 
                     // start the first task(s)
+                    Set<Integer> alreadyDone = new HashSet<>();
                     List<Task> start = taskStatus.select(where("moduleId",startModule.getId()));
-                    Collections.sort(start, (a,b)->a.getId()-b.getId());
                     List<Future<Status>> futures = new ArrayList<Future<Status>>();
-                    for (Task t : start) {
-                        Future<Status> future = run(t, inheritedTaskConfig);
-                        futures.add(future);
-                        // If this is a serial task and it failed, don't run the successive sibling tasks
-                        if (WorkflowRunner.this.moduleInstances.get(t.getModuleId()).getTaskType() == Module.TaskType.SERIAL) {
-                        	Status status;
-                            try { status = future.get(); }
-                            catch (InterruptedException e) {
-                                WorkflowRunner.this.logger.severe(String.format(
-                                        "Top-level task %s was interrupted, setting status to DEFER", t.getName(workflow)));
-                                status = Status.DEFER;
-                            } 
-                            catch (ExecutionException e) {throw new RuntimeException(e);} 
-                            if (status != Status.SUCCESS && status != Status.DEFER) {
-                                WorkflowRunner.this.logger.severe(String.format(
-                                        "Top-level task %s returned status %s, not running successive sibling tasks",
-                                        t.getName(workflow), status));
-                                break;
+                    START:
+                    while (!start.isEmpty()) {
+                        Collections.sort(start, (a,b)->a.getId()-b.getId());
+                        for (Task t : start) {
+                            Future<Status> future = run(t, inheritedTaskConfig);
+                            futures.add(future);
+                            // If this is a serial task and it failed, don't run the successive sibling tasks
+                            if (WorkflowRunner.this.moduleInstances.get(t.getModuleId()).getTaskType() == Module.TaskType.SERIAL) {
+                                Status status;
+                                try { status = future.get(); }
+                                catch (InterruptedException e) {
+                                    WorkflowRunner.this.logger.severe(String.format(
+                                            "Top-level task %s was interrupted, setting status to DEFER", t.getName(workflow)));
+                                    status = Status.DEFER;
+                                } 
+                                catch (ExecutionException e) {throw new RuntimeException(e);} 
+                                alreadyDone.add(t.getId());
+
+                                if (status != Status.SUCCESS && status != Status.DEFER) {
+                                    WorkflowRunner.this.logger.severe(String.format(
+                                            "Top-level task %s returned status %s, not running successive sibling tasks",
+                                            t.getName(workflow), status));
+                                    break START;
+                                }
+                            }
+                        }
+                        start = taskStatus.select(where("moduleId",startModule.getId()));
+                        for (Task s : start) {
+                            if (alreadyDone.contains(s.getId())) {
+                                start.remove(s);
                             }
                         }
                     }
@@ -868,59 +880,74 @@ public class WorkflowRunner {
                 }
 
                 if (status == Status.SUCCESS && !executor.isShutdown()) {
-                    // get the child tasks to be dispatched by this task using the dispatch UUID
+                    // find all child tasks with the given dispatchUUID
+                    // keep trying in case new tasks were added at runtime
+                    // if not new tasks were added, stop trying
+                    // this will probably only work reliably for serial tasks.
+                    Set<Integer> alreadyDone = new HashSet<>();
                     WorkflowRunner.this.logger.fine(String.format("dispatchUUID=%s", dispatchUUID));
                     List<Task> childTasks = taskStatus.select(where("dispatchUUID", dispatchUUID));
-                    // Sort tasks by task ID
-                    Collections.sort(childTasks, new Comparator<Task>() {
-                        @Override public int compare(Task a, Task b) {
-                            return a.getId()-b.getId();
-                        }});
-                    WorkflowRunner.this.logger.fine(String.format("Found %d tasks with dispatchUUID=%s", 
-                            childTasks.size(), dispatchUUID));
+                    CHILD_TASKS:
+                    while (!childTasks.isEmpty()) {
+                        // Sort tasks by task ID
+                        Collections.sort(childTasks, (a,b)->a.getId()-b.getId());
+                        WorkflowRunner.this.logger.fine(String.format("Found %d tasks with dispatchUUID=%s", 
+                                childTasks.size(), dispatchUUID));
 
-                    // enqueue the child tasks
-                    for (Task childTask : childTasks) {
-                        WorkflowRunner.this.logger.fine(String.format("%s: Dispatching child task: %s", 
-                                task.getName(workflow), childTask.toString()));
-                        Future<Status> future = run(childTask, config);
-                        WorkflowRunner.this.logger.fine(String.format("%s: Returned from dispatch of child task: %s", 
-                                task.getName(workflow), childTask.toString()));
+                        // enqueue the child tasks
+                        for (Task childTask : childTasks) {
+                            WorkflowRunner.this.logger.fine(String.format("%s: Dispatching child task: %s", 
+                                    task.getName(workflow), childTask.toString()));
+                            Future<Status> future = run(childTask, config);
+                            WorkflowRunner.this.logger.fine(String.format("%s: Returned from dispatch of child task: %s", 
+                                    task.getName(workflow), childTask.toString()));
+                            alreadyDone.add(childTask.getId());
 
-                        // If a serial task fails, don't run the successive sibling tasks
-                        Module.TaskType childTaskType = WorkflowRunner.this.moduleInstances.get(childTask.getModuleId()).getTaskType();
-                        if (childTaskType == Module.TaskType.SERIAL && future.isCancelled()) {
-                            WorkflowRunner.this.logger.severe(String.format(
-                                    "Child task %s was cancelled, not running successive sibling tasks",
-                                    childTask.getName(workflow)));
-                            // update the status of the cancelled task to ERROR
-                            childTask.setStatus(Status.ERROR);
-                            WorkflowRunner.this.getTaskStatus().update(childTask,"id");
-                            // notify task listeners
-                            notifyTaskListeners(childTask);
-                            break;
-                        }
-                        if (childTaskType == Module.TaskType.SERIAL && future.isDone()) {
-                            Status s = null;
-                            try { s = future.get(); } 
-                            catch (InterruptedException e) {
+                            // If a serial task fails, don't run the successive sibling tasks
+                            Module.TaskType childTaskType = WorkflowRunner.this.moduleInstances.get(childTask.getModuleId()).getTaskType();
+                            if (childTaskType == Module.TaskType.SERIAL && future.isCancelled()) {
                                 WorkflowRunner.this.logger.severe(String.format(
-                                        "Child task %s was interrupted",
+                                        "Child task %s was cancelled, not running successive sibling tasks",
                                         childTask.getName(workflow)));
-                            } 
-                            catch (ExecutionException e) {throw new RuntimeException(e);}
-                            if (s != null && s != Task.Status.SUCCESS && s != Task.Status.DEFER) {
-                                WorkflowRunner.this.logger.severe(String.format(
-                                        "Child task %s returned status %s, not running successive sibling tasks",
-                                        childTask.getName(workflow), s));
-                                // notify the task listeners
+                                // update the status of the cancelled task to ERROR
+                                childTask.setStatus(Status.ERROR);
+                                WorkflowRunner.this.getTaskStatus().update(childTask,"id");
+                                // notify task listeners
                                 notifyTaskListeners(childTask);
                                 break;
+                            }
+                            if (childTaskType == Module.TaskType.SERIAL && future.isDone()) {
+                                Status s = null;
+                                try { s = future.get(); } 
+                                catch (InterruptedException e) {
+                                    WorkflowRunner.this.logger.severe(String.format(
+                                            "Child task %s was interrupted",
+                                            childTask.getName(workflow)));
+                                } 
+                                catch (ExecutionException e) {throw new RuntimeException(e);}
+                                if (s != null && s != Task.Status.SUCCESS && s != Task.Status.DEFER) {
+                                    WorkflowRunner.this.logger.severe(String.format(
+                                            "Child task %s returned status %s, not running successive sibling tasks",
+                                            childTask.getName(workflow), s));
+                                    // notify the task listeners
+                                    notifyTaskListeners(childTask);
+                                    break CHILD_TASKS;
+                                }
+                            }
+                        }
+                        childTasks = taskStatus.select(where("dispatchUUID", dispatchUUID));
+                        for (Task childTask : childTasks) {
+                            if (alreadyDone.contains(childTask.getId())) {
+                                childTasks.remove(childTask);
+                            }
+                        }
+                        if (!childTasks.isEmpty()) {
+                            for (TaskListener listener : taskListeners) {
+                                listener.addToTaskCount(childTasks.size());
                             }
                         }
                     }
                 }
-
                 WorkflowRunner.this.logger.fine(String.format("%s: Returning status: %s", task.getName(workflow), status));
                 return status;
             }

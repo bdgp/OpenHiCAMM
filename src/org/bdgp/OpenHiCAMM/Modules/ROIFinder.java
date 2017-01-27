@@ -435,6 +435,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
     @Override
     public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
         Dao<TaskConfig> taskConfigDao = workflowRunner.getTaskConfig();
+        Dao<SlidePosList> slidePosListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
+        Dao<SlidePos> slidePosDao = workflowRunner.getInstanceDb().table(SlidePos.class);
+        Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
 
         WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",this.workflowModule.getId()));
         List<Task> tasks = new ArrayList<Task>();
@@ -461,6 +464,18 @@ public abstract class ROIFinder implements Module, ImageLogger {
                     taskConfigDao.insert(slideId);
                     workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created task config: %s", 
                             this.workflowModule.getName(), slideId));
+                    
+                    // delete any old slidepos and slideposlist records
+                    Slide slide = slideDao.selectOneOrDie(where("id",new Integer(slideIdConf.getValue())));
+                    logger.fine(String.format("Deleting old position lists"));
+                    List<SlidePosList> oldSlidePosLists = slidePosListDao.select(
+                            where("slideId",slide.getId()).
+                            and("moduleId",this.workflowModule.getId()).
+                            and("taskId", task.getId()));
+                    for (SlidePosList oldSlidePosList : oldSlidePosLists) {
+                        slidePosDao.delete(where("slidePosListId",oldSlidePosList.getId()));
+                    }
+                    slidePosListDao.delete(where("slideId",slide.getId()).and("moduleId",this.workflowModule.getId()).and("taskId", task.getId()));
             	}
 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());

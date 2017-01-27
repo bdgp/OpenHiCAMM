@@ -110,7 +110,7 @@ public class SlideImager implements Module, ImageLogger {
      * Load the acquisition settings and get the position list from the DB
      * @param conf The module configuration
      * @param logger The logging module
-     * @return the position list
+     * @return the position list, or null if no position list was found
      */
     public PositionList loadPositionList(Map<String,Config> conf, Logger logger) {
         // first try to load a position list from the posListId conf
@@ -126,14 +126,11 @@ public class SlideImager implements Module, ImageLogger {
             List<SlidePosList> posLists = posListDao.select(
                     where("slideId", slideId).
                     and("moduleId", posListModule.getId()));
-            Collections.sort(posLists, new Comparator<SlidePosList>() {
-                @Override public int compare(SlidePosList a, SlidePosList b) {
-                    return a.getId()-b.getId();
-                }});
             if (posLists.isEmpty()) {
-                throw new RuntimeException("Position list from module \""+posListModuleConf.getValue()+"\" not found in database");
+                return null;
             }
             // Merge the list of PositionLists into a single positionList
+            Collections.sort(posLists, (a,b)->a.getId()-b.getId());
             positionList = posLists.get(0).getPositionList();
             for (int i=1; i<posLists.size(); ++i) {
                 SlidePosList spl = posLists.get(i);
@@ -197,11 +194,23 @@ public class SlideImager implements Module, ImageLogger {
     }
 
     @Override
-    public Status run(Task task, final Map<String,Config> conf, final Logger logger) {
+    public Status run(Task task, Map<String,Config> conf, Logger logger) {
     	logger.fine(String.format("Running task: %s", task));
     	for (Config c : conf.values()) {
     		logger.fine(String.format("Using configuration: %s", c));
     	}
+    	
+    	// if this is the loadDynamicTaskRecords task, then we need to dynamically create the task records now
+        Config loadDynamicTaskRecordsConf = conf.get("loadDynamicTaskRecords");
+        if (loadDynamicTaskRecordsConf != null && loadDynamicTaskRecordsConf.getValue().equals("yes")) {
+            List<Task> parentTasks = new ArrayList<>();
+            for (TaskDispatch td : this.workflowRunner.getTaskDispatch().select(where("taskId",task.getId()))) {
+                parentTasks.addAll(this.workflowRunner.getTaskStatus().select(where("id",td.getParentTaskId())));
+            }
+            conf.put("dispatchUUID", new Config(task.getId(), "dispatchUUID",task.getDispatchUUID()));
+            workflowRunner.createTaskRecords(this.workflowModule, parentTasks, conf, logger);
+            return Status.SUCCESS;
+        }
 
     	Config imageLabelConf = conf.get("imageLabel");
     	if (imageLabelConf == null) throw new RuntimeException(String.format(
@@ -220,24 +229,27 @@ public class SlideImager implements Module, ImageLogger {
             }
             
             // load the position list and acquistion settings
-            final PositionList posList = this.loadPositionList(conf, logger);
+            PositionList posList = this.loadPositionList(conf, logger);
+            if (posList == null) {
+                throw new RuntimeException("Could not load position list!");
+            }
 
-            final VerboseSummary verboseSummary = getVerboseSummary();
+            VerboseSummary verboseSummary = getVerboseSummary();
             logger.info(String.format("Verbose summary:"));
             for (String line : verboseSummary.summary.split("\n")) workflowRunner.getLogger().info(String.format("    %s", line));
-            final int totalImages = verboseSummary.channels * verboseSummary.slices * verboseSummary.frames * verboseSummary.positions;
+            int totalImages = verboseSummary.channels * verboseSummary.slices * verboseSummary.frames * verboseSummary.positions;
 
             // Get Dao objects ready for use
-            final Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
-            final Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
-            final Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-            final Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
+            Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
+            Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+            Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+            Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
 
             Date startAcquisition = new Date();
 
             // get the slide ID from the config
             if (!conf.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
-            final Integer slideId = new Integer(conf.get("slideId").getValue());
+            Integer slideId = new Integer(conf.get("slideId").getValue());
             logger.info(String.format("Using slideId: %d", slideId));
             // get the slide's experiment ID
             Slide slide = slideId != null? slideDao.selectOne(where("id", slideId)) : null;
@@ -252,7 +264,7 @@ public class SlideImager implements Module, ImageLogger {
 
             // set the acquisition name
             // Set rootDir and acqName
-            final String rootDir = new File(
+            String rootDir = new File(
                     workflowRunner.getWorkflowDir(), 
                     workflowRunner.getWorkflowInstance().getStorageLocation()).getPath();
             String acqName = String.format("acquisition_%s_%s%s%s", 
@@ -289,7 +301,7 @@ public class SlideImager implements Module, ImageLogger {
             }
             
             // build a map of imageLabel -> sibling task record
-            final Dao<Task> taskDao = this.workflowRunner.getTaskStatus();
+            Dao<Task> taskDao = this.workflowRunner.getTaskStatus();
             Dao<TaskDispatch> taskDispatchDao = this.workflowRunner.getTaskDispatch();
             List<TaskDispatch> tds = new ArrayList<>();
             for (Task t : taskDao.select(where("moduleId", this.workflowModule.getId()))) {
@@ -301,7 +313,7 @@ public class SlideImager implements Module, ImageLogger {
                     tds.addAll(taskDispatchDao.select(where("taskId", t.getId())));
                 }
             }
-            final Map<String,Task> tasks = new LinkedHashMap<String,Task>();
+            Map<String,Task> tasks = new LinkedHashMap<String,Task>();
             if (!tds.isEmpty()) {
                 Collections.sort(tds, new Comparator<TaskDispatch>() {
                     @Override public int compare(TaskDispatch a, TaskDispatch b) {
@@ -372,29 +384,29 @@ public class SlideImager implements Module, ImageLogger {
 
                 // get the prefix name and log it
                 JSONObject summaryMetadata = this.engine.getSummaryMetadata();
-                final String prefix;
+                String prefix;
                 try { prefix = summaryMetadata.getString("Prefix"); } 
                 catch (JSONException e) { throw new RuntimeException(e); }
                 logger.info(String.format("Acquisition was saved to root directory %s, prefix %s", 
                         Util.escape(rootDir), Util.escape(prefix)));
                 
                 // Write the acquisition record
-                final Acquisition acquisition = new Acquisition(returnAcqName, prefix, rootDir);
+                Acquisition acquisition = new Acquisition(returnAcqName, prefix, rootDir);
                 acqDao.insertOrUpdate(acquisition,"prefix","directory");
                 acqDao.reload(acquisition);
                 logger.info(String.format("Using acquisition record: %s", acquisition));
 
                 // add an image cache listener to eagerly kick off downstream processing after each image
                 // is received.
-                final ImageCache acqImageCache = this.engine.getImageCache();
+                ImageCache acqImageCache = this.engine.getImageCache();
                 acqImageCache.addImageCacheListener(new ImageCacheListener() {
-                    @Override public void imageReceived(final TaggedImage taggedImage) {
+                    @Override public void imageReceived(TaggedImage taggedImage) {
                         // Log how many images have been acquired so far
                         Set<String> taggedImages = new HashSet<String>(acqImageCache.imageKeys());
                         String label = MDUtils.getLabel(taggedImage.tags);
 
                         // Get the task record that should be eagerly dispatched.
-                        final Task dispatchTask = tasks.get(label);
+                        Task dispatchTask = tasks.get(label);
                         if (dispatchTask == null) throw new RuntimeException(String.format(
                                 "No SlideImager task was created for image with label %s!", label));
                         
@@ -761,9 +773,9 @@ public class SlideImager implements Module, ImageLogger {
         Dao<TaskConfig> taskConfigDao = workflowRunner.getTaskConfig();
 
         // Load all the module configuration into a HashMap
-        Map<String,Config> conf = new HashMap<String,Config>();
+        Map<String,Config> moduleConf = new HashMap<String,Config>();
         for (ModuleConfig c : moduleConfig.select(where("id",this.workflowModule.getId()))) {
-            conf.put(c.getKey(), c);
+            moduleConf.put(c.getKey(), c);
             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Using module config: %s", 
             		this.workflowModule.getName(), c));
         }
@@ -793,12 +805,9 @@ public class SlideImager implements Module, ImageLogger {
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Inherited slideId %s", this.workflowModule.getName(), parentTaskConf.get("slideId")));
             }
             // if posListModule is set, use the most recent slide
-            else if (conf.containsKey("posListModule")) {
+            else if (moduleConf.containsKey("posListModule")) {
                 List<Slide> slides = slideDao.select();
-                Collections.sort(slides, new Comparator<Slide>() {
-                    @Override public int compare(Slide a, Slide b) {
-                        return b.getId()-a.getId();
-                    }});
+                Collections.sort(slides, (a,b)->b.getId()-a.getId());
                 if (slides.size() > 0) {
                     slide = slides.get(0);
                 }
@@ -814,10 +823,29 @@ public class SlideImager implements Module, ImageLogger {
             	slideDao.reload(slide, "experimentId");
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created new slide: %s", this.workflowModule.getName(), slide.toString()));
             }
-            conf.put("slideId", new Config(this.workflowModule.getId(), "slideId", new Integer(slide.getId()).toString()));
+            config.put("slideId", new Config(this.workflowModule.getId(), "slideId", new Integer(slide.getId()).toString()));
 
-            // Load the position list and set the acquisition settings
-            PositionList positionList = loadPositionList(conf, workflowRunner.getLogger());
+            // Load the position list and set the acquisition settings.
+            // If the position list is not yet loaded, then it will be determined at runtime.
+            // We will add more task records when run() is called, since the position
+            // list isn't ready yet.
+            PositionList positionList = loadPositionList(moduleConf, workflowRunner.getLogger());
+            if (positionList == null) {
+                Task task = new Task(this.workflowModule.getId(), Status.NEW);
+                workflowRunner.getTaskStatus().insert(task);
+                
+                TaskConfig loadDynamicTaskRecordsConf = new TaskConfig(
+                        task.getId(),
+                        "loadDynamicTaskRecords", 
+                        "yes");
+                taskConfigDao.insert(loadDynamicTaskRecordsConf);
+
+                if (parentTask != null) {
+                    TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
+                    workflowRunner.getTaskDispatch().insert(dispatch);
+                }
+                continue;
+            }
             
             // count the number of ROIs
             Set<String> rois = new HashSet<>();
@@ -835,7 +863,10 @@ public class SlideImager implements Module, ImageLogger {
             int totalImages = verboseSummary.channels * verboseSummary.slices * verboseSummary.frames * verboseSummary.positions;
             workflowRunner.getLogger().fine(String.format("%s: getTotalImages: Will create %d images", 
                     this.workflowModule.getName(), totalImages));
-
+            
+            Config dispatchUUIDConf = config.get("dispatchUUID");
+            String dispatchUUID = dispatchUUIDConf != null? dispatchUUIDConf.getValue() : null;
+            
             // Create the task records
             for (int c=0; c<verboseSummary.channels; ++c) {
                 for (int s=0; s<verboseSummary.slices; ++s) {
@@ -843,6 +874,9 @@ public class SlideImager implements Module, ImageLogger {
                         for (int p=0; p<verboseSummary.positions; ++p) {
                             // Create task record
                             Task task = new Task(this.workflowModule.getId(), Status.NEW);
+                            // setting the dispatch UUID is required for dynamically created
+                            // tasks to be picked up by the workflow runner
+                            task.setDispatchUUID(dispatchUUID);
                             workflowRunner.getTaskStatus().insert(task);
                             tasks.add(task);
                             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created task record: %s", 
@@ -876,7 +910,7 @@ public class SlideImager implements Module, ImageLogger {
                                 TaskConfig mspConf = new TaskConfig(
                                         task.getId(), "MSP", mspJson);
                                 taskConfigDao.insert(mspConf);
-                                conf.put("MSP", mspConf);
+                                moduleConf.put("MSP", mspConf);
                                 workflowRunner.getLogger().fine(String.format(
                                         "Inserted MultiStagePosition config: %s", mspJson));
                             } 
@@ -889,7 +923,7 @@ public class SlideImager implements Module, ImageLogger {
                                 TaskConfig prop = new TaskConfig(
                                         task.getId(), propName, property);
                                 taskConfigDao.insert(prop);
-                                conf.put(property, prop);
+                                moduleConf.put(property, prop);
                                 workflowRunner.getLogger().fine(String.format(
                                         "Inserted MultiStagePosition config: %s", prop));
                             }
@@ -1024,7 +1058,7 @@ public class SlideImager implements Module, ImageLogger {
     @Override public void cleanup(Task task, Map<String,Config> config, Logger logger) { }
 
     @Override
-    public List<ImageLogRecord> logImages(final Task task, final Map<String,Config> config, final Logger logger) {
+    public List<ImageLogRecord> logImages(Task task, Map<String,Config> config, Logger logger) {
         List<ImageLogRecord> imageLogRecords = new ArrayList<ImageLogRecord>();
 
         // Add an image logger instance to the workflow runner for this module
@@ -1038,7 +1072,7 @@ public class SlideImager implements Module, ImageLogger {
 
                     logger.info(String.format("Using image ID: %d", imageId));
                     Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-                    final Image image = imageDao.selectOneOrDie(where("id",imageId));
+                    Image image = imageDao.selectOneOrDie(where("id",imageId));
                     logger.info(String.format("Using image: %s", image));
 
                     // Initialize the acquisition
