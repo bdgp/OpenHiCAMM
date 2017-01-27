@@ -11,11 +11,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.prefs.Preferences;
 
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.Logger;
-import org.bdgp.OpenHiCAMM.OpenHiCAMM;
 import org.bdgp.OpenHiCAMM.Util;
 import org.bdgp.OpenHiCAMM.ValidationError;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
@@ -32,13 +30,9 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.micromanager.MMOptions;
 import org.micromanager.MMStudio;
-import org.micromanager.acquisition.AcquisitionWrapperEngine;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
-import org.micromanager.api.ScriptInterface;
-import org.micromanager.dialogs.AcqControlDlg;
 import org.micromanager.events.EventManager;
 import org.micromanager.graph.MultiChannelHistograms;
 import org.micromanager.imagedisplay.VirtualAcquisitionDisplay;
@@ -62,25 +56,11 @@ public class SlideSurveyor implements Module {
 
 	WorkflowRunner workflowRunner;
     WorkflowModule workflowModule;
-    AcqControlDlg acqControlDlg;
-    ScriptInterface script;
-    AcquisitionWrapperEngine engine;
 
     @Override
     public void initialize(WorkflowRunner workflowRunner, WorkflowModule workflowModule) {
         this.workflowRunner = workflowRunner;
         this.workflowModule = workflowModule;
-
-        OpenHiCAMM openhicamm = workflowRunner.getOpenHiCAMM();
-        this.script = openhicamm.getApp();
-
-        Preferences prefs = Preferences.userNodeForPackage(this.script.getClass());
-        MMOptions options = new MMOptions();
-        options.loadSettings();
-        if (this.script != null) {
-            this.engine = MMStudio.getInstance().getAcquisitionEngine();
-            this.acqControlDlg = new AcqControlDlg(this.engine, prefs, this.script, options);
-        }
 
         // set initial configs
         workflowRunner.getModuleConfig().insertOrUpdate(
@@ -360,9 +340,7 @@ public class SlideSurveyor implements Module {
     @Override
     public Configuration configure() {
         return new Configuration() {
-            SlideSurveyorDialog slideSurveyorDialog = new SlideSurveyorDialog(
-                    SlideSurveyor.this.acqControlDlg, 
-                    SlideSurveyor.this.workflowRunner);
+            SlideSurveyorDialog slideSurveyorDialog = new SlideSurveyorDialog(SlideSurveyor.this.workflowRunner);
 
             @Override
             public Config[] retrieve() {

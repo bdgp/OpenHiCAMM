@@ -12,7 +12,7 @@ import javax.swing.JButton;
 
 import org.bdgp.OpenHiCAMM.DoubleSpinner;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
-import org.micromanager.dialogs.AcqControlDlg;
+import org.micromanager.MMStudio;
 
 import mmcorej.CMMCore;
 
@@ -50,17 +50,13 @@ public class SlideSurveyorDialog extends JPanel {
 	private final ButtonGroup setInitZPosGrp = new ButtonGroup();
 	private JButton btnShowAcquisitionDialog;
 	
-	public SlideSurveyorDialog(AcqControlDlg acqControlDlg, WorkflowRunner workflowRunner) {
+	public SlideSurveyorDialog(WorkflowRunner workflowRunner) {
 		this.setLayout(new MigLayout("", "[grow]", "[][][][][][][][]"));
 		
-		btnShowAcquisitionDialog = new JButton("Show Acquisition Dialog");
+		btnShowAcquisitionDialog = new JButton("Show XY Position Dialog");
 		btnShowAcquisitionDialog.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
-	              if (acqControlDlg != null) {
-	                    acqControlDlg.setVisible(true);
-	                    acqControlDlg.toFront();
-	                    acqControlDlg.repaint();
-	                }
+		        MMStudio.getInstance().showXYPositionList();
 		    }
 		});
 		add(btnShowAcquisitionDialog, "cell 0 0");
