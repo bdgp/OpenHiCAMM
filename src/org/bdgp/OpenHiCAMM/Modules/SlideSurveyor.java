@@ -33,9 +33,8 @@ import org.json.JSONObject;
 import org.micromanager.MMStudio;
 import org.micromanager.api.MultiStagePosition;
 import org.micromanager.api.PositionList;
-import org.micromanager.events.EventManager;
-import org.micromanager.graph.MultiChannelHistograms;
-import org.micromanager.imagedisplay.VirtualAcquisitionDisplay;
+//import org.micromanager.graph.MultiChannelHistograms;
+//import org.micromanager.imagedisplay.VirtualAcquisitionDisplay;
 import org.micromanager.utils.ImageUtils;
 import org.micromanager.utils.MDUtils;
 import org.micromanager.utils.MMException;
@@ -43,7 +42,7 @@ import org.micromanager.utils.MMScriptException;
 import org.micromanager.utils.MMSerializationException;
 
 import ij.ImagePlus;
-import ij.WindowManager;
+//import ij.WindowManager;
 import ij.gui.NewImage;
 import ij.io.FileSaver;
 import ij.process.Blitter;
@@ -128,28 +127,36 @@ public class SlideSurveyor implements Module {
         Double minX = null, minY = null, maxX = null, maxY = null; 
         CMMCore core = this.workflowRunner.getOpenHiCAMM().getApp().getMMCore();
         try {
-            EventManager.register(this);
-
             if (core.isSequenceRunning()) {
                 core.stopSequenceAcquisition();
                 Thread.sleep(1000);
             }
+
+            // close all open acquisition windows
+            for (String name : MMStudio.getInstance().getAcquisitionNames()) {
+                try { MMStudio.getInstance().closeAcquisitionWindow(name); } 
+                catch (MMScriptException e) { /* do nothing */ }
+            }
+            
             // start live mode
             core.clearCircularBuffer();
             core.startContinuousSequenceAcquisition(0);
             
             // display the live mode GUI
-            MMStudio.getInstance().enableLiveMode(true);
+            //MMStudio.getInstance().enableLiveMode(true);
             
             // attempt to fix the histogram scaling
-            VirtualAcquisitionDisplay display = VirtualAcquisitionDisplay.getDisplay(WindowManager.getCurrentImage());
-            if (display != null) {
-                if (MultiChannelHistograms.class.isAssignableFrom(display.getHistograms().getClass())) {
-                    MultiChannelHistograms mch = (MultiChannelHistograms)display.getHistograms();
-                    mch.fullScaleChannels();
-                    logger.info("Set histogram channels to full!");
-                }
-            }
+            //VirtualAcquisitionDisplay display = VirtualAcquisitionDisplay.getDisplay(WindowManager.getCurrentImage());
+            //if (display != null) {
+            //    if (MultiChannelHistograms.class.isAssignableFrom(display.getHistograms().getClass())) {
+            //        MultiChannelHistograms mch = (MultiChannelHistograms)display.getHistograms();
+            //        if (mch != null) {
+            //            try { mch.fullScaleChannels(); }
+            //            catch (Throwable e) { /* do nothing */ }
+            //            logger.info("Set histogram channels to full!");
+            //        }
+            //    }
+            //}
 
             // determine the image width/height
             TaggedImage img0 = core.getLastTaggedImage();
@@ -184,12 +191,6 @@ public class SlideSurveyor implements Module {
             logger.fine(String.format("slidePreviewWidth = %d", slidePreviewWidth));
             int slidePreviewHeight = (int)Math.floor(imageScaleFactor * slideHeightPx);
             logger.fine(String.format("slidePreviewHeight = %d", slidePreviewHeight));
-            
-            // close all open acquisition windows
-            for (String name : MMStudio.getInstance().getAcquisitionNames()) {
-                try { MMStudio.getInstance().closeAcquisitionWindow(name); } 
-                catch (MMScriptException e) { /* do nothing */ }
-            }
             
             // set the initial Z Position
             if (conf.containsKey("initialZPos")) {
@@ -228,8 +229,8 @@ public class SlideSurveyor implements Module {
             for (int i=0; i<positionList.getNumberOfPositions(); ++i) {
                 MultiStagePosition msp = positionList.getPosition(i);
 
-                logger.info(String.format("Acquired survey image: Pos%s,%s [%d/%d images]", 
-                        msp.getX(), msp.getY(),
+                logger.info(String.format("Acquired survey image: %s [%d/%d images]", 
+                        msp.getLabel(),
                         i+1, positionList.getNumberOfPositions()));
 
                 // move the stage into position
@@ -280,10 +281,9 @@ public class SlideSurveyor implements Module {
             throw new RuntimeException(e);
         } 
         finally {
-            EventManager.unregister(this);
-
             // close the live mode GUI
-            MMStudio.getInstance().enableLiveMode(false);
+            //MMStudio.getInstance().enableLiveMode(false);
+
             // stop live mode
             try { core.stopSequenceAcquisition(); } 
             catch (Exception e) {throw new RuntimeException(e);}

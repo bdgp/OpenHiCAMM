@@ -683,10 +683,11 @@ public class WorkflowRunner {
                                 }
                             }
                         }
-                        start = taskStatus.select(where("moduleId",startModule.getId()));
-                        for (Task s : start) {
-                            if (alreadyDone.contains(s.getId())) {
-                                start.remove(s);
+                        start.clear();
+                        List<Task> newStart = taskStatus.select(where("moduleId",startModule.getId()));
+                        for (Task s : newStart) {
+                            if (!alreadyDone.contains(s.getId())) {
+                                start.add(s);
                             }
                         }
                     }
@@ -935,10 +936,11 @@ public class WorkflowRunner {
                                 }
                             }
                         }
-                        childTasks = taskStatus.select(where("dispatchUUID", dispatchUUID));
-                        for (Task childTask : childTasks) {
-                            if (alreadyDone.contains(childTask.getId())) {
-                                childTasks.remove(childTask);
+                        childTasks.clear();
+                        List<Task> newChildTasks = taskStatus.select(where("dispatchUUID", dispatchUUID));
+                        for (Task childTask : newChildTasks) {
+                            if (!alreadyDone.contains(childTask.getId())) {
+                                childTasks.add(childTask);
                             }
                         }
                         if (!childTasks.isEmpty()) {
