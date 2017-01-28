@@ -218,8 +218,9 @@ public class SlideSurveyor implements Module {
                             new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(startAcquisition)), 
                     "id", "key");
             
-            
-            logger.info(String.format("Now running the image acquisition sequence, please wait..."));
+            logger.info(String.format("Now acquiring %s survey images for slide %s...", 
+                    positionList.getNumberOfPositions(),
+                    slide.getName()));
 
             // create the empty large slide image
             slideThumb = NewImage.createRGBImage(String.format("%s.%s.%s", workflowModule.getName(), task.getName(wmDao), slide.getName()), 
@@ -229,7 +230,7 @@ public class SlideSurveyor implements Module {
             for (int i=0; i<positionList.getNumberOfPositions(); ++i) {
                 MultiStagePosition msp = positionList.getPosition(i);
 
-                logger.info(String.format("Acquired survey image for slide %s: %s [%d/%d images]", 
+                logger.fine(String.format("Acquired survey image for slide %s: %s [%d/%d images]", 
                         slide.getName(),
                         msp.getLabel(),
                         i+1, positionList.getNumberOfPositions()));

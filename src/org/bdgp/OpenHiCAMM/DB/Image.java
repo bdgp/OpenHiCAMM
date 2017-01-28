@@ -20,11 +20,11 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 public class Image {
     @DatabaseField(generatedId=true, canBeNull=false) private int id;
     @DatabaseField(canBeNull=false) private int slideId;
-    @DatabaseField(canBeNull=false,uniqueCombo=true) private int acquisitionId;
-    @DatabaseField(canBeNull=false,uniqueCombo=true) private int channel;
-    @DatabaseField(canBeNull=false,uniqueCombo=true) private int slice;
-    @DatabaseField(canBeNull=false,uniqueCombo=true) private int frame;
-    @DatabaseField(canBeNull=false,uniqueCombo=true) private int position;
+    @DatabaseField(canBeNull=false) private int acquisitionId;
+    @DatabaseField(canBeNull=false) private int channel;
+    @DatabaseField(canBeNull=false) private int slice;
+    @DatabaseField(canBeNull=false) private int frame;
+    @DatabaseField(canBeNull=false) private int position;
     @DatabaseField(canBeNull=true) private String path;
     
     public Image() {}
