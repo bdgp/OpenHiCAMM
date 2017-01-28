@@ -229,7 +229,8 @@ public class SlideSurveyor implements Module {
             for (int i=0; i<positionList.getNumberOfPositions(); ++i) {
                 MultiStagePosition msp = positionList.getPosition(i);
 
-                logger.info(String.format("Acquired survey image: %s [%d/%d images]", 
+                logger.info(String.format("Acquired survey image for slide %s: %s [%d/%d images]", 
+                        slide.getName(),
                         msp.getLabel(),
                         i+1, positionList.getNumberOfPositions()));
 
