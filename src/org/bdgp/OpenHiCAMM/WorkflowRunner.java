@@ -639,6 +639,11 @@ public class WorkflowRunner {
                                 start.add(s);
                             }
                         }
+                        if (!start.isEmpty()) {
+                            for (TaskListener listener : taskListeners) {
+                                listener.addToTaskCount(start.size());
+                            }
+                        }
                     }
                     
                     // Force execute all the futures
