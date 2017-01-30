@@ -70,9 +70,9 @@ public class SlideSurveyor implements Module {
     @Override
     public Status run(Task task, final Map<String,Config> conf, final Logger logger) {
         Dao<WorkflowModule> wmDao = workflowRunner.getWorkflow();
-        Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
-        Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-        Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
+        Dao<Slide> slideDao = workflowRunner.getWorkflowDb().table(Slide.class);
+        Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
+        Dao<TaskConfig> taskConfigDao = workflowRunner.getWorkflowDb().table(TaskConfig.class);
 
     	logger.fine(String.format("Running task: %s", task));
     	for (Config c : conf.values()) {
@@ -317,9 +317,7 @@ public class SlideSurveyor implements Module {
     }
 
     private File createSurveyImageFolder() {
-        String rootDir = new File(
-                this.workflowRunner.getWorkflowDir(), 
-                this.workflowRunner.getWorkflowInstance().getStorageLocation()).getPath();
+        String rootDir = this.workflowRunner.getWorkflowDir().getPath();
         int count = 1;
         File stitchedFolder = new File(rootDir, String.format("%s_%d", SURVEY_IMAGE_DIRECTORY_PREFIX, count));
         while (!stitchedFolder.mkdirs()) {
@@ -454,7 +452,7 @@ public class SlideSurveyor implements Module {
     
     @Override
     public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
-        Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
+        Dao<Slide> slideDao = workflowRunner.getWorkflowDb().table(Slide.class);
         Dao<ModuleConfig> moduleConfig = workflowRunner.getModuleConfig();
         Dao<TaskConfig> taskConfigDao = workflowRunner.getTaskConfig();
 

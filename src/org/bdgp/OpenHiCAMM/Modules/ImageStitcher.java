@@ -197,8 +197,8 @@ public class ImageStitcher implements Module, ImageLogger {
     	}
     	catch (JSONException e) {throw new RuntimeException(e);}
 
-    	Dao<Image> imageDao = this.workflowRunner.getInstanceDb().table(Image.class);
-        Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+    	Dao<Image> imageDao = this.workflowRunner.getWorkflowDb().table(Image.class);
+        Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
 
         // Organize the tasks into a grid of TaskTiles
         Integer gridWidth = null;
@@ -548,9 +548,7 @@ public class ImageStitcher implements Module, ImageLogger {
     }
     
     private File createStitchedImageFolder() {
-        String rootDir = new File(
-                this.workflowRunner.getWorkflowDir(), 
-                this.workflowRunner.getWorkflowInstance().getStorageLocation()).getPath();
+        String rootDir = this.workflowRunner.getWorkflowDir().getPath();
         int count = 1;
         File stitchedFolder = new File(rootDir, String.format("%s_%d", STITCHED_IMAGE_DIRECTORY_PREFIX, count));
         while (!stitchedFolder.mkdirs()) {

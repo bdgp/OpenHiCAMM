@@ -119,7 +119,7 @@ public class SlideImager implements Module, ImageLogger {
         if (conf.containsKey("posListModule")) {
             // get a sorted list of all the SlidePosList records for the posListModuleId module
             Config posListModuleConf = conf.get("posListModule");
-            Dao<SlidePosList> posListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
+            Dao<SlidePosList> posListDao = workflowRunner.getWorkflowDb().table(SlidePosList.class);
             Integer slideId = new Integer(conf.get("slideId").getValue());
             WorkflowModule posListModule = this.workflowRunner.getWorkflow().selectOneOrDie(
                     where("name",posListModuleConf.getValue()));
@@ -240,10 +240,10 @@ public class SlideImager implements Module, ImageLogger {
             int totalImages = verboseSummary.channels * verboseSummary.slices * verboseSummary.frames * verboseSummary.positions;
 
             // Get Dao objects ready for use
-            Dao<TaskConfig> taskConfigDao = workflowRunner.getInstanceDb().table(TaskConfig.class);
-            Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
-            Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-            Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
+            Dao<TaskConfig> taskConfigDao = workflowRunner.getWorkflowDb().table(TaskConfig.class);
+            Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
+            Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
+            Dao<Slide> slideDao = workflowRunner.getWorkflowDb().table(Slide.class);
 
             Date startAcquisition = new Date();
 
@@ -256,7 +256,7 @@ public class SlideImager implements Module, ImageLogger {
             String experimentId = slide != null? slide.getExperimentId() : null;
             
             // get the poolSlide record if it exists
-            Dao<PoolSlide> poolSlideDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);
+            Dao<PoolSlide> poolSlideDao = this.workflowRunner.getWorkflowDb().table(PoolSlide.class);
             PoolSlide poolSlide = null;
             if (conf.containsKey("loadPoolSlideId")) {
                 poolSlide = poolSlideDao.selectOneOrDie(where("id", new Integer(conf.get("loadPoolSlideId").getValue())));
@@ -264,9 +264,7 @@ public class SlideImager implements Module, ImageLogger {
 
             // set the acquisition name
             // Set rootDir and acqName
-            String rootDir = new File(
-                    workflowRunner.getWorkflowDir(), 
-                    workflowRunner.getWorkflowInstance().getStorageLocation()).getPath();
+            String rootDir = workflowRunner.getWorkflowDir().getPath();
             String acqName = String.format("acquisition_%s_%s%s%s", 
                     new SimpleDateFormat("yyyyMMddHHmmss").format(startAcquisition), 
                     this.workflowModule.getName(), 
@@ -768,7 +766,7 @@ public class SlideImager implements Module, ImageLogger {
     
     @Override
     public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
-        Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
+        Dao<Slide> slideDao = workflowRunner.getWorkflowDb().table(Slide.class);
         Dao<ModuleConfig> moduleConfig = workflowRunner.getModuleConfig();
         Dao<TaskConfig> taskConfigDao = workflowRunner.getTaskConfig();
 
@@ -1071,12 +1069,12 @@ public class SlideImager implements Module, ImageLogger {
                     Integer imageId = new Integer(imageIdConf.getValue());
 
                     logger.info(String.format("Using image ID: %d", imageId));
-                    Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+                    Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
                     Image image = imageDao.selectOneOrDie(where("id",imageId));
                     logger.info(String.format("Using image: %s", image));
 
                     // Initialize the acquisition
-                    Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+                    Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
                     Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
                     logger.info(String.format("Using acquisition: %s", acquisition));
                     MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);

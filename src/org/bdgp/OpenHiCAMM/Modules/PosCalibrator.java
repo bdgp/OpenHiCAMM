@@ -105,7 +105,7 @@ public class PosCalibrator implements Module {
     }
 
     @Override public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
-        Dao<SlidePosList> slidePosListDao = workflow.getInstanceDb().table(SlidePosList.class);
+        Dao<SlidePosList> slidePosListDao = workflow.getWorkflowDb().table(SlidePosList.class);
 
         List<Task> tasks = new ArrayList<Task>();
         for (Task parentTask : parentTasks.size()>0? parentTasks.toArray(new Task[]{}) : new Task[]{null}) {
@@ -170,9 +170,9 @@ public class PosCalibrator implements Module {
     @Override public void runInitialize() { }
 
     @Override public Status run(Task task, Map<String, Config> config, Logger logger) {
-        Dao<Image> imageDao = workflow.getInstanceDb().table(Image.class);
-        Dao<Acquisition> acqDao = workflow.getInstanceDb().table(Acquisition.class);
-        Dao<SlidePosList> slidePosListDao = workflow.getInstanceDb().table(SlidePosList.class);
+        Dao<Image> imageDao = workflow.getWorkflowDb().table(Image.class);
+        Dao<Acquisition> acqDao = workflow.getWorkflowDb().table(Acquisition.class);
+        Dao<SlidePosList> slidePosListDao = workflow.getWorkflowDb().table(SlidePosList.class);
 
         // get the slide ID conf
         Config slideIdConf = config.get("slideId");

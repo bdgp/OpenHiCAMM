@@ -113,8 +113,8 @@ public class WorkflowReport implements Report {
     
     @Override
     public void runReport() {
-        Dao<Pool> poolDao = this.workflowRunner.getInstanceDb().table(Pool.class);
-        Dao<PoolSlide> psDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);
+        Dao<Pool> poolDao = this.workflowRunner.getWorkflowDb().table(Pool.class);
+        Dao<PoolSlide> psDao = this.workflowRunner.getWorkflowDb().table(PoolSlide.class);
 
         // Find SlideImager modules where there is no associated posListModuleId module config
         // This is the starting SlideImager module.
@@ -253,11 +253,11 @@ public class WorkflowReport implements Report {
     private void runReport(WorkflowModule startModule, PoolSlide poolSlide, WorkflowModule loaderModule, String reportFile) {
         log("Called runReport(startModule=%s, poolSlide=%s)", startModule, poolSlide);
 
-        Dao<Slide> slideDao = this.workflowRunner.getInstanceDb().table(Slide.class);
-        Dao<Image> imageDao = this.workflowRunner.getInstanceDb().table(Image.class);
-        Dao<Acquisition> acqDao = this.workflowRunner.getInstanceDb().table(Acquisition.class);
-        Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
-        Dao<SlidePosList> slidePosListDao = this.workflowRunner.getInstanceDb().table(SlidePosList.class);
+        Dao<Slide> slideDao = this.workflowRunner.getWorkflowDb().table(Slide.class);
+        Dao<Image> imageDao = this.workflowRunner.getWorkflowDb().table(Image.class);
+        Dao<Acquisition> acqDao = this.workflowRunner.getWorkflowDb().table(Acquisition.class);
+        Dao<ROI> roiDao = this.workflowRunner.getWorkflowDb().table(ROI.class);
+        Dao<SlidePosList> slidePosListDao = this.workflowRunner.getWorkflowDb().table(SlidePosList.class);
         
         // get a ROI ID -> moduleId(s) mapping from the slideposlist
         Map<Integer, Set<Integer>> roiModules = new HashMap<>();
@@ -976,8 +976,8 @@ public class WorkflowReport implements Report {
     
     public void showImage(int imageId) {
         //log("called showImage(imageId=%d)", imageId);
-        Dao<Image> imageDao = this.workflowRunner.getInstanceDb().table(Image.class);
-        Dao<Acquisition> acqDao = this.workflowRunner.getInstanceDb().table(Acquisition.class);
+        Dao<Image> imageDao = this.workflowRunner.getWorkflowDb().table(Image.class);
+        Dao<Acquisition> acqDao = this.workflowRunner.getWorkflowDb().table(Acquisition.class);
         Image image = imageDao.selectOneOrDie(where("id", imageId));
         ImagePlus imp = image.getImagePlus(acqDao);
         imp.show();
@@ -985,7 +985,7 @@ public class WorkflowReport implements Report {
     
     public void goToPosition(Integer loaderModuleId, int poolSlideId, double xPos, double yPos) {
         synchronized(this) {
-            Dao<PoolSlide> poolSlideDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);
+            Dao<PoolSlide> poolSlideDao = this.workflowRunner.getWorkflowDb().table(PoolSlide.class);
             PoolSlide poolSlide = poolSlideId > 0? poolSlideDao.selectOne(where("id", poolSlideId)) : null;
 
             SwingUtilities.invokeLater(()->{
@@ -1107,7 +1107,7 @@ public class WorkflowReport implements Report {
                             Module module = this.workflowRunner.getModuleInstances().get(loaderModule.getId());
                             if (module == null) throw new RuntimeException(String.format("Could not find instance for module %s!", loaderModule));
                             
-                            Dao<PoolSlide> poolSlideDao = this.workflowRunner.getInstanceDb().table(PoolSlide.class);
+                            Dao<PoolSlide> poolSlideDao = this.workflowRunner.getWorkflowDb().table(PoolSlide.class);
                             PoolSlide prevPoolSlide = poolSlideDao.selectOneOrDie(where("id", prevPoolSlideId));
                             try {
                                 Method unloadSlide = module.getClass().getDeclaredMethod("unloadSlide", PoolSlide.class);
@@ -1152,8 +1152,8 @@ public class WorkflowReport implements Report {
             double image2X,
             double image2Y) 
     {
-        Dao<Acquisition> acqDao = this.workflowRunner.getInstanceDb().table(Acquisition.class);
-        Dao<Image> imageDao = this.workflowRunner.getInstanceDb().table(Image.class);
+        Dao<Acquisition> acqDao = this.workflowRunner.getWorkflowDb().table(Acquisition.class);
+        Dao<Image> imageDao = this.workflowRunner.getWorkflowDb().table(Image.class);
         Image image1 = imageDao.selectOneOrDie(where("id", image1Id));
         ImagePlus imp1 = image1.getImagePlus(acqDao);
         Image image2 = imageDao.selectOneOrDie(where("id", image2Id));

@@ -66,7 +66,7 @@ public abstract class PostProcessor implements Module, ImageLogger {
     	Config imageIdConf = config.get("imageId");
     	if (imageIdConf == null) throw new RuntimeException("No imageId task configuration was set by the slide imager!");
         Integer imageId = new Integer(imageIdConf.getValue());
-        Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+        Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
         final Image image = imageDao.selectOneOrDie(where("id",imageId));
 
         // get the tagged image
@@ -82,7 +82,7 @@ public abstract class PostProcessor implements Module, ImageLogger {
         logger.fine(String.format("%s: Using image: %s", label, image));
         logger.fine(String.format("%s: Using image ID: %d", label, imageId));
         
-        Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
+        Dao<Slide> slideDao = workflowRunner.getWorkflowDb().table(Slide.class);
         Slide slide = slideDao.selectOneOrDie(where("id",image.getSlideId()));
         logger.fine(String.format("%s: Using slide: %s", label, slide));
 
@@ -93,7 +93,7 @@ public abstract class PostProcessor implements Module, ImageLogger {
         String label = image.getLabel();
 
         // Initialize the acquisition
-        Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+        Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
         Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
         logger.fine(String.format("%s: Using acquisition: %s", label, acquisition));
         MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
@@ -203,12 +203,12 @@ public abstract class PostProcessor implements Module, ImageLogger {
                     Integer imageId = new Integer(imageIdConf.getValue());
 
                     logger.info(String.format("Using image ID: %d", imageId));
-                    Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+                    Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
                     final Image image = imageDao.selectOneOrDie(where("id",imageId));
                     logger.info(String.format("Using image: %s", image));
 
                     // Initialize the acquisition
-                    Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+                    Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
                     Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
                     logger.info(String.format("Using acquisition: %s", acquisition));
                     MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);

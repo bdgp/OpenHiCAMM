@@ -81,7 +81,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
     	Config imageIdConf = config.get("imageId");
     	if (imageIdConf == null) throw new RuntimeException("No imageId task configuration was set by the slide imager!");
         Integer imageId = new Integer(imageIdConf.getValue());
-        Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+        Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
         final Image image = imageDao.selectOneOrDie(where("id",imageId));
 
         // get the tagged image
@@ -97,7 +97,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
         logger.fine(String.format("%s: Using image: %s", label, image));
         logger.fine(String.format("%s: Using image ID: %d", label, imageId));
         
-        Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
+        Dao<Slide> slideDao = workflowRunner.getWorkflowDb().table(Slide.class);
         Slide slide = slideDao.selectOneOrDie(where("id",image.getSlideId()));
         logger.fine(String.format("%s: Using slide: %s", label, slide));
 
@@ -145,7 +145,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			        new Double(YPositionUmConf.getValue());
 			
 			// Delete any old ROI records
-            Dao<ROI> roiDao = this.workflowRunner.getInstanceDb().table(ROI.class);
+            Dao<ROI> roiDao = this.workflowRunner.getWorkflowDb().table(ROI.class);
 			int deleted = roiDao.delete(where("imageId", imageId));
 			logger.fine(String.format("%s: Deleted %d old ROI records.", label, deleted));
 			
@@ -238,8 +238,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			    logger.info(String.format("%s: ROIFinder did not produce any positions for this image", label));
 			}
 
-			Dao<SlidePosList> slidePosListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
-            Dao<SlidePos> slidePosDao = workflowRunner.getInstanceDb().table(SlidePos.class);
+			Dao<SlidePosList> slidePosListDao = workflowRunner.getWorkflowDb().table(SlidePosList.class);
+            Dao<SlidePos> slidePosDao = workflowRunner.getWorkflowDb().table(SlidePos.class);
 
 			// First, delete any old slidepos and slideposlist records
 			logger.fine(String.format("Deleting old position lists"));
@@ -280,7 +280,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
         }
 
         // Initialize the acquisition
-        Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+        Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
         Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
         logger.fine(String.format("%s: Using acquisition: %s", label, acquisition));
         int tries = 0;
@@ -435,9 +435,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
     @Override
     public List<Task> createTaskRecords(List<Task> parentTasks, Map<String,Config> config, Logger logger) {
         Dao<TaskConfig> taskConfigDao = workflowRunner.getTaskConfig();
-        Dao<SlidePosList> slidePosListDao = workflowRunner.getInstanceDb().table(SlidePosList.class);
-        Dao<SlidePos> slidePosDao = workflowRunner.getInstanceDb().table(SlidePos.class);
-        Dao<Slide> slideDao = workflowRunner.getInstanceDb().table(Slide.class);
+        Dao<SlidePosList> slidePosListDao = workflowRunner.getWorkflowDb().table(SlidePosList.class);
+        Dao<SlidePos> slidePosDao = workflowRunner.getWorkflowDb().table(SlidePos.class);
+        Dao<Slide> slideDao = workflowRunner.getWorkflowDb().table(Slide.class);
 
         WorkflowModule module = workflowRunner.getWorkflow().selectOneOrDie(where("id",this.workflowModule.getId()));
         List<Task> tasks = new ArrayList<Task>();
@@ -508,12 +508,12 @@ public abstract class ROIFinder implements Module, ImageLogger {
                     Integer imageId = new Integer(imageIdConf.getValue());
 
                     logger.info(String.format("Using image ID: %d", imageId));
-                    Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
+                    Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
                     final Image image = imageDao.selectOneOrDie(where("id",imageId));
                     logger.info(String.format("Using image: %s", image));
 
                     // Initialize the acquisition
-                    Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+                    Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
                     Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
                     logger.info(String.format("Using acquisition: %s", acquisition));
                     MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);

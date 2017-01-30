@@ -6,10 +6,8 @@ import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.swing.JDialog;
 
@@ -38,21 +36,18 @@ public class WorkflowConfigurationDialog extends JDialog {
 	Map<String,Configuration> configurations;
 	Dao<WorkflowModule> wmDao;
 	Dao<ModuleConfig> config;
-	Dao<ModuleConfig> defaultConfig;
 	
     public WorkflowConfigurationDialog(
             JDialog parent, 
-            final Map<String,Configuration> configurations, 
-            final Dao<WorkflowModule> wmDao,
-            final Dao<ModuleConfig> config,
-            final Dao<ModuleConfig> defaultConfig)
+            Map<String,Configuration> configurations, 
+            Dao<WorkflowModule> wmDao,
+            Dao<ModuleConfig> config)
     {
 	    super(parent, "Module Configuration", Dialog.ModalityType.DOCUMENT_MODAL);
 	    this.parent = parent;
 	    this.configurations = configurations;
 	    this.wmDao = wmDao;
 	    this.config = config;
-	    this.defaultConfig = defaultConfig;
 
 	    this.setPreferredSize(new Dimension(1024,768));
 	    final WorkflowConfigurationDialog thisDialog = this;
@@ -68,19 +63,7 @@ public class WorkflowConfigurationDialog extends JDialog {
         for (Map.Entry<String,Configuration> entry : configurations.entrySet()) {
             Integer moduleId = name2id.get(entry.getKey());
             List<ModuleConfig> configs = config.select(where("id",moduleId));
-            List<ModuleConfig> defaultConfigs = defaultConfig.select(where("id",moduleId));
             
-            // Add default configs to the module configuration if no instance configs
-            // were given for the key.
-            Set<String> keySet = new HashSet<String>();
-            for (ModuleConfig mc : configs) {
-                keySet.add(mc.getKey());
-            }
-            for (ModuleConfig dc : defaultConfigs) {
-                if (!keySet.contains(dc.getKey())) {
-                    configs.add(dc);
-                }
-            }
             Component panel = entry.getValue().display(configs.toArray(new Config[0]));
             if (panel != null) {
                 tabbedPane.add(entry.getKey(), panel);
@@ -171,7 +154,6 @@ public class WorkflowConfigurationDialog extends JDialog {
                 for (Config c : configs) {
                     ModuleConfig setId = new ModuleConfig(wm.getId(), c.getKey(), c.getValue());
                     config.insertOrUpdate(setId,"id","key");
-                    defaultConfig.insertOrUpdate(setId,"id","key");
                 }
             }
         }

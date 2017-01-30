@@ -34,10 +34,12 @@ import java.util.logging.LogRecord;
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
 import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
+import org.bdgp.OpenHiCAMM.DB.Pool;
+import org.bdgp.OpenHiCAMM.DB.PoolSlide;
+import org.bdgp.OpenHiCAMM.DB.Slide;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.TaskConfig;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
-import org.bdgp.OpenHiCAMM.DB.WorkflowInstance;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
@@ -65,18 +67,13 @@ public class WorkflowRunner {
     public static final String MODULECONFIG_FILE = "ModuleConfig.txt";
     public static final String DEFAULT_MODULECONFIG_FILE = "DefaultModuleConfig.txt";
     public static final String WORKFLOW_FILE = "Workflow.txt";
-    public static final String WORKFLOWINSTANCE_FILE = "WorkflowInstance.txt";
 
     private Connection workflowDb;
-    private Connection instanceDb;
     
     private File workflowDirectory;
-    private WorkflowInstance instance;
     
     private Dao<WorkflowModule> workflow;
     private Dao<ModuleConfig> moduleConfig;
-    private Dao<ModuleConfig> defaultModuleConfig;
-    private Dao<WorkflowInstance> workflowInstance;
     private Dao<TaskDispatch> taskDispatch;
     private Dao<TaskConfig> taskConfig;
     private Dao<Task> taskStatus;
@@ -95,9 +92,6 @@ public class WorkflowRunner {
     private boolean isStopped;
     private Logger logger;
     private int logLabelLength = 14;
-    
-    private String instancePath;
-    private String instanceDbName;
     
     private Set<Task> notifiedTasks;
     private Logger.LogFileHandler logFileHandler;
@@ -121,7 +115,6 @@ public class WorkflowRunner {
      */
     public WorkflowRunner(
             File workflowDirectory, 
-            Integer instanceId, 
             Level loglevel,
             OpenHiCAMM mmslide) 
     {
@@ -133,17 +126,9 @@ public class WorkflowRunner {
         Dao<WorkflowModule> workflow = this.workflowDb.file(WorkflowModule.class, WORKFLOW_FILE);
         
         // set the workflow directory
-        this.workflowInstance = this.workflowDb.file(WorkflowInstance.class, WORKFLOWINSTANCE_FILE);
         this.workflowDirectory = workflowDirectory;
         this.workflow = workflow;
 
-        // set the instance DB
-        this.instance = instanceId == null? newWorkflowInstance() :
-                        workflowInstance.selectOneOrDie(where("id",instanceId));
-        this.instancePath = new File(this.workflowDirectory, this.instance.getStorageLocation()).getPath();
-        this.instanceDbName = String.format("%s.db", this.instance.getName());
-        this.instanceDb = Connection.get(new File(workflowDirectory, new File(this.instance.getStorageLocation(), instanceDbName).getPath()).getPath());
-        
         // init the notified tasks set
         this.notifiedTasks = new HashSet<Task>();
         // init the logger
@@ -156,11 +141,10 @@ public class WorkflowRunner {
         this.executor = new ThreadPoolExecutor(this.maxThreads+1, this.maxThreads+1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 
 		// initialize various Dao's for convenience
-        this.moduleConfig = this.instanceDb.file(ModuleConfig.class, MODULECONFIG_FILE);
-        this.defaultModuleConfig = this.workflowDb.file(ModuleConfig.class, DEFAULT_MODULECONFIG_FILE);
-        this.taskConfig = this.instanceDb.table(TaskConfig.class);
-        this.taskStatus = this.instanceDb.table(Task.class);
-        this.taskDispatch = this.instanceDb.table(TaskDispatch.class);
+        this.moduleConfig = this.workflowDb.file(ModuleConfig.class, DEFAULT_MODULECONFIG_FILE);
+        this.taskConfig = this.workflowDb.table(TaskConfig.class);
+        this.taskStatus = this.workflowDb.table(Task.class);
+        this.taskDispatch = this.workflowDb.table(TaskDispatch.class);
         
         this.taskListeners = new ArrayList<TaskListener>();
         this.mmslide = mmslide;
@@ -180,19 +164,6 @@ public class WorkflowRunner {
             }
         }
 
-        // move default moduleconfig into the instance moduleconfig
-        for (WorkflowModule w : workflow.select()) {
-            List<ModuleConfig> configs = this.moduleConfig.select(where("id", w.getId()));
-            Set<String> keySet = new HashSet<String>();
-            for (ModuleConfig mc : configs) {
-                keySet.add(mc.getKey());
-            }
-            List<ModuleConfig> defaultConfigs = this.defaultModuleConfig.select(where("id", w.getId()));
-            for (ModuleConfig dc : defaultConfigs) {
-                if (!keySet.contains(dc.getKey())) this.moduleConfig.insertOrUpdate(dc,"id","key");
-            }
-        }
-        
         workflowRunnerInstance = this;
     }
 
@@ -225,20 +196,6 @@ public class WorkflowRunner {
             catch (InstantiationException e) {throw new RuntimeException(e);} 
             catch (IllegalAccessException e) {throw new RuntimeException(e);}
         }
-    }
-    
-    /**
-     * Initialize the workflow instance's subdirectories and tasks.txt files.
-     * @return the assigned instance_id for the new workflow instance.
-     */
-    private WorkflowInstance newWorkflowInstance() {
-        WorkflowInstance instance = new WorkflowInstance();
-        workflowInstance.insert(instance);
-        // Create a new directory for the workflow instance.
-        instance.createStorageLocation(this.workflowDirectory.getPath());
-        workflowInstance.update(instance,"id");
-        
-        return instance;
     }
     
     public void deleteTaskRecords() {
@@ -330,8 +287,7 @@ public class WorkflowRunner {
         // init the log file handler
         try {
             this.logFileHandler =  new Logger.LogFileHandler(
-                    new File(this.workflowDirectory,
-                            new File(this.instance.getStorageLocation(), LOG_FILE).getPath()).getPath());
+                    new File(this.workflowDirectory, LOG_FILE).getPath());
         } 
         catch (SecurityException e) {throw new RuntimeException(e);} 
         catch (IOException e) {throw new RuntimeException(e);}
@@ -341,15 +297,8 @@ public class WorkflowRunner {
     }
     
     public void logWorkflowInfo(String startModuleName) {
-        // log some info on this workflow
-        this.logger.info(
-                String.format("Running workflow instance: %s",
-                WorkflowRunner.this.instance.getName()));
-
         this.logger.info(String.format("Using workflow DB directory: %s", this.workflowDirectory));
         this.logger.info(String.format("Using workflow DB: %s", WORKFLOW_DB));
-        this.logger.info(String.format("Using instance directory: %s", this.instancePath));
-        this.logger.info(String.format("Using instance DB: %s", this.instanceDbName));
         this.logger.info(String.format("Using thread pool with %d max threads", this.maxThreads));
         
         // Log the workflow module info
@@ -1059,18 +1008,14 @@ public class WorkflowRunner {
     // Various getters/setters
     public Dao<WorkflowModule> getWorkflow() { return workflow; }
     public Dao<ModuleConfig> getModuleConfig() { return moduleConfig; }
-    public Dao<ModuleConfig> getDefaultModuleConfig() { return defaultModuleConfig; }
-    public Dao<WorkflowInstance> getWorkflowInstanceDao() { return workflowInstance; }
     public Level getLogLevel() { return logLevel; }
     public void setLogLevel(Level logLevel) { this.logLevel = logLevel; }
     public int getMaxThreads() { return maxThreads; }
-    public WorkflowInstance getWorkflowInstance() { return instance; }
     public Dao<Task> getTaskStatus() { return taskStatus; }
     public Dao<TaskDispatch> getTaskDispatch() { return taskDispatch; }
     public Dao<TaskConfig> getTaskConfig() { return taskConfig; }
     public Connection getWorkflowDb() { return workflowDb; }
     public File getWorkflowDir() { return workflowDirectory; }
-    public Connection getInstanceDb() { return instanceDb; }
     public OpenHiCAMM getOpenHiCAMM() { return mmslide; }
     public Map<Integer,Module> getModuleInstances() { return moduleInstances; }
     
@@ -1175,9 +1120,47 @@ public class WorkflowRunner {
     
     public void shutdown() {
         try {
-            this.instanceDb.getReadWriteConnection().executeStatement("shutdown", DatabaseConnection.DEFAULT_RESULT_FLAGS);
             this.workflowDb.getReadWriteConnection().executeStatement("shutdown", DatabaseConnection.DEFAULT_RESULT_FLAGS);
         } 
         catch (SQLException e) {throw new RuntimeException(e);}
+    }
+
+    public void copyFromProject(WorkflowRunner oldWorkflowRunner) {
+        Dao<Pool> poolDao = this.getWorkflowDb().table(Pool.class);
+        Dao<Pool> oldPoolDao = oldWorkflowRunner.getWorkflowDb().table(Pool.class);
+        Dao<Slide> slideDao = this.getWorkflowDb().table(Slide.class);
+        Dao<Slide> oldSlideDao = oldWorkflowRunner.getWorkflowDb().table(Slide.class);
+        Dao<PoolSlide> poolSlideDao = this.getWorkflowDb().table(PoolSlide.class);
+        Dao<PoolSlide> oldPoolSlideDao = oldWorkflowRunner.getWorkflowDb().table(PoolSlide.class);
+
+        // delete old records
+        poolSlideDao.delete();
+        slideDao.delete();
+        poolDao.delete();
+        this.getModuleConfig().delete();
+        this.getWorkflow().delete();
+
+        // copy new records
+        for (WorkflowModule wm : oldWorkflowRunner.getWorkflow().select()) {
+            this.getWorkflow().insert(wm);
+        }
+        for (ModuleConfig mc : oldWorkflowRunner.getModuleConfig().select()) {
+            this.getModuleConfig().insert(mc);
+        }
+        for (Pool p : oldPoolDao.select()) {
+            poolDao.insert(p);
+        }
+        for (Slide s : oldSlideDao.select()) {
+            slideDao.insert(s);
+        }
+        for (PoolSlide ps : oldPoolSlideDao.select()) {
+            poolSlideDao.insert(ps);
+        }
+        
+        // update sequences
+        this.getWorkflow().updateSequence();
+        poolDao.updateSequence();
+        slideDao.updateSequence();
+        poolSlideDao.updateSequence();
     }
 }

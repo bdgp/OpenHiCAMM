@@ -14,7 +14,6 @@ import javax.swing.SwingUtilities;
 
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
 import org.bdgp.OpenHiCAMM.DB.Task;
-import org.bdgp.OpenHiCAMM.DB.WorkflowInstance;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
@@ -49,13 +48,12 @@ public class WorkflowDialog extends JDialog {
 	// Swing widgets
     JTextField workflowDir;
     JFileChooser directoryChooser;
-    JComboBox<String> workflowInstance;
     JComboBox<String> startModule;
     JButton editWorkflowButton;
     JButton startButton;
     JLabel lblConfigure;
     JButton btnConfigure;
-    JButton btnCreateNewInstance;
+    JButton btnCopyToNewProject;
 
     // The Micro-Manager plugin module
     OpenHiCAMM mmslide;
@@ -103,62 +101,42 @@ public class WorkflowDialog extends JDialog {
         JButton openWorkflowButton = new JButton("Choose");
         getContentPane().add(openWorkflowButton, "cell 1 0");
         
-        JLabel lblChooseWorkflowInstance = new JLabel("Workflow Instance");
-        getContentPane().add(lblChooseWorkflowInstance, "cell 0 1,alignx trailing");
-        workflowInstance = new JComboBox<String>();
-        workflowInstance.setEnabled(false);
-        workflowInstance.addItemListener(new ItemListener() {
+        JFileChooser newProjectChooser = new JFileChooser();
+        newProjectChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        newProjectChooser.addActionListener(new ActionListener() {
             @Override
-            public void itemStateChanged(ItemEvent e) {
-            	if (!active) return;
-                if (e.getStateChange() == ItemEvent.SELECTED) {
-                    initWorkflowRunner(false);
-
-                    // Set resume button enabled/disabled
-                    if (startModule.getModel() != null) {
-                        String startModuleName = (String)startModule.getItemAt(startModule.getSelectedIndex());
-                        if (startModuleName != null) {
-                            WorkflowModule startModule = workflowRunner.getWorkflow().selectOneOrDie(where("name", startModuleName));
-                            List<Task> tasks = workflowRunner.getTaskStatus().select(where("moduleId", startModule.getId()));
-                            btnResume.setEnabled(tasks.size() > 0);
-                        }
-                        else {
-                            btnResume.setEnabled(false);
-                        }
-                    }
-                    else {
-                        btnResume.setEnabled(false);
-                    }
-                }
+            public void actionPerformed(ActionEvent e) {
+                if (!active) return;
                 refresh();
             }});
-        
-        btnCreateNewInstance = new JButton("Create New Instance");
-        btnCreateNewInstance.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent arg0) {
-            	if (!active) return;
-                Connection workflowDb = Connection.get(
-                    new File(workflowDir.getText(), WorkflowRunner.WORKFLOW_DB).getPath());
-                Dao<WorkflowInstance> wfi = workflowDb.table(WorkflowInstance.class);
-                WorkflowInstance wf = new WorkflowInstance();
-                wfi.insert(wf);
-                wf.createStorageLocation(workflowDir.getText());
-                wfi.update(wf,"id");
 
-                List<String> workflowInstances = new ArrayList<String>();
-                for (WorkflowInstance instance : wfi.select()) {
-                    workflowInstances.add(instance.getName());
+        btnCopyToNewProject = new JButton("Copy to new Project...");
+        btnCopyToNewProject.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent arg0) {
+                if (!active) return;
+                String oldWorkflowDir = workflowDir.getText();
+                WorkflowRunner oldWorkflowRunner = workflowRunner;
+                if (newProjectChooser.showDialog(WorkflowDialog.this,"Choose New Workflow Directory") == JFileChooser.APPROVE_OPTION) {
+                    String newProjectPath = newProjectChooser.getSelectedFile().getPath();
+                    // If the workflow selection changed, then load the new workflow runner
+                    if (!newProjectPath.equals(oldWorkflowDir)) {
+                        WorkflowDialog.this.initWorkflowRunner(true);
+                        workflowDir.setText(newProjectPath);
+                        workflowRunner.copyFromProject(oldWorkflowRunner);
+                    }
+                    // If a workflow directory was given, enable the edit button and refresh the UI control state
+                    if (workflowDir.getText().length() > 0) {
+                        editWorkflowButton.setEnabled(true);
+                    }
+                    else {
+                        editWorkflowButton.setEnabled(false);
+                    }
+                    refresh();
                 }
-                Collections.sort(workflowInstances, Collections.reverseOrder());
-                workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
-                workflowInstance.setEnabled(true);
-                workflowInstance.getModel().setSelectedItem(wf.getName());
-                refresh();
         	}
         });
-        getContentPane().add(btnCreateNewInstance, "flowx,cell 1 1,alignx right");
-        getContentPane().add(workflowInstance, "cell 1 1,alignx right");
-        btnCreateNewInstance.setEnabled(false);
+        getContentPane().add(btnCopyToNewProject, "flowx,cell 1 1,alignx right");
+        btnCopyToNewProject.setEnabled(false);
         
         JLabel lblChooseStartTask = new JLabel("Start Task");
         getContentPane().add(lblChooseStartTask, "cell 0 2,alignx trailing");
@@ -188,8 +166,7 @@ public class WorkflowDialog extends JDialog {
                     WorkflowDialog.this, 
                     configurations, 
                     workflowRunner.getWorkflow(),
-                    workflowRunner.getModuleConfig(),
-                    workflowRunner.getDefaultModuleConfig());
+                    workflowRunner.getModuleConfig());
                 config.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 config.pack();
                 config.setVisible(true);
@@ -206,8 +183,7 @@ public class WorkflowDialog extends JDialog {
                     WorkflowDialog.this, 
                     configurations, 
                     workflowRunner.getWorkflow(),
-                    workflowRunner.getModuleConfig(),
-                    workflowRunner.getDefaultModuleConfig());
+                    workflowRunner.getModuleConfig());
                 config.storeConfiguration();
                 if (config.validateConfiguration()) {
                 	start(false);
@@ -238,8 +214,7 @@ public class WorkflowDialog extends JDialog {
                     WorkflowDialog.this, 
                     configurations, 
                     workflowRunner.getWorkflow(),
-                    workflowRunner.getModuleConfig(),
-                    workflowRunner.getDefaultModuleConfig());
+                    workflowRunner.getModuleConfig());
                 config.storeConfiguration();
                 if (config.validateConfiguration()) {
                 	start(true);
@@ -276,7 +251,6 @@ public class WorkflowDialog extends JDialog {
             	if (!active) return;
                 if (WorkflowDialog.this.workflowRunner != null) {
                     WorkflowDialog.this.workflowRunner.getWorkflowDb().startDatabaseManager();
-                    WorkflowDialog.this.workflowRunner.getInstanceDb().startDatabaseManager();
                 }
                 refresh();
             }
@@ -405,27 +379,13 @@ public class WorkflowDialog extends JDialog {
                 }
                 startModule.setEnabled(true);
                 
-                // get the list of workflow instances
-                List<String> workflowInstances = new ArrayList<String>();
-                Dao<WorkflowInstance> wfi = workflowDb.table(WorkflowInstance.class);
-                for (WorkflowInstance instance : wfi.select()) {
-                    workflowInstances.add(instance.getName());
-                }
-                Collections.sort(workflowInstances, Collections.reverseOrder());
-                String selectedInstance = (String)workflowInstance.getSelectedItem();
-                if (selectedInstance == null && workflowInstances.size() > 0) selectedInstance = workflowInstances.get(0);
-                workflowInstance.setModel(new DefaultComboBoxModel<String>(workflowInstances.toArray(new String[0])));
-                if (selectedInstance != null) workflowInstance.setSelectedItem(selectedInstance);
-                workflowInstance.setEnabled(true);
-                if (workflowInstances.size() > 0) {
-                    initWorkflowRunner(false);
-                }
+                initWorkflowRunner(false);
                 btnViewReport.setEnabled(this.workflowRunner != null);
                     
                 if (startModules.size() > 0) {
                     btnConfigure.setEnabled(true);
                     startButton.setEnabled(true);
-                    btnCreateNewInstance.setEnabled(true);
+                    btnCopyToNewProject.setEnabled(true);
 
                     if (startModuleName != null && workflowRunner != null) {
                         // If there are any tasks with status not equal to SUCCESS or FAIL, then enable
@@ -468,13 +428,11 @@ public class WorkflowDialog extends JDialog {
      * @param force
      */
     public void initWorkflowRunner(boolean force) {
-        Integer instanceId = workflowInstance.getSelectedIndex() < 0 ? null :
-            Integer.parseInt(((String)workflowInstance.getItemAt(workflowInstance.getSelectedIndex())).replaceAll("^WF",""));
-        if (workflowRunner == null || instanceId == null || !instanceId.equals(workflowRunner.getWorkflowInstance().getId()) || force) {
+        if (workflowRunner == null || force) {
             if (workflowRunner != null) {
                 workflowRunner.shutdown();
             }
-            workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), instanceId, Level.INFO, mmslide);
+            workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), Level.INFO, mmslide);
 
             workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
             workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);

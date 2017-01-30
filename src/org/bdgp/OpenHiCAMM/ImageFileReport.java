@@ -37,8 +37,8 @@ public class ImageFileReport implements Report {
 
     @Override
     public void runReport() {
-        Dao<Image> imageDao = workflowRunner.getInstanceDb().table(Image.class);
-        Dao<Acquisition> acqDao = workflowRunner.getInstanceDb().table(Acquisition.class);
+        Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
+        Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
 
         Html().with(()->{
             Head();
