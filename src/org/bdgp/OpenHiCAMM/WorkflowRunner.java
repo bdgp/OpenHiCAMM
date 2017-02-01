@@ -636,7 +636,7 @@ public class WorkflowRunner {
                     }
                     
                     // Wait until all tasks have completed
-                    while (!WorkflowRunner.this.executor.getQueue().isEmpty()) {
+                    while (WorkflowRunner.this.executor.getActiveCount() > 0) {
                         Thread.sleep(1000);
                     }
                     // Make sure task listeners have been notified of all tasks

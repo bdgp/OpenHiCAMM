@@ -203,11 +203,15 @@ public class SlideImager implements Module, ImageLogger {
     	// if this is the loadDynamicTaskRecords task, then we need to dynamically create the task records now
         Config loadDynamicTaskRecordsConf = conf.get("loadDynamicTaskRecords");
         if (loadDynamicTaskRecordsConf != null && loadDynamicTaskRecordsConf.getValue().equals("yes")) {
+            // get the set of parent tasks for this task
+            List<Task> siblingTasks = this.workflowRunner.getTaskStatus().select(where("dispatchUUID",task.getDispatchUUID()));
             List<Task> parentTasks = new ArrayList<>();
-            for (TaskDispatch td : this.workflowRunner.getTaskDispatch().select(where("taskId",task.getId()))) {
-                parentTasks.addAll(this.workflowRunner.getTaskStatus().select(where("id",td.getParentTaskId())));
+            for (Task siblingTask : siblingTasks) {
+                for (TaskDispatch td : this.workflowRunner.getTaskDispatch().select(where("taskId",siblingTask.getId()))) {
+                    parentTasks.addAll(this.workflowRunner.getTaskStatus().select(where("id",td.getParentTaskId())));
+                }
             }
-            conf.put("dispatchUUID", new Config(task.getId(), "dispatchUUID",task.getDispatchUUID()));
+            conf.put("dispatchUUID", new Config(task.getId(), "dispatchUUID", task.getDispatchUUID()));
             workflowRunner.createTaskRecords(this.workflowModule, parentTasks, conf, logger);
             return Status.SUCCESS;
         }
