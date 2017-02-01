@@ -226,8 +226,8 @@ public class SlideSurveyor implements Module {
 
             // create the empty large slide image
             slideThumb = NewImage.createRGBImage(String.format("%s.%s.%s", workflowModule.getName(), task.getName(wmDao), slide.getName()), 
-                    (int)Math.floor(slidePreviewWidth), 
-                    (int)Math.floor(slidePreviewHeight), 
+                    (int)Math.round(slidePreviewWidth), 
+                    (int)Math.round(slidePreviewHeight), 
                     1, NewImage.FILL_WHITE);
             
             // iterate through the position list, imaging using live mode to build up the large slide image
@@ -278,8 +278,8 @@ public class SlideSurveyor implements Module {
                 logger.fine(String.format("Image width: %d, height: %d", width, height));
                 imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
                 imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
-                        (int)Math.floor(imp.getWidth() * imageScaleFactor), 
-                        (int)Math.floor(imp.getHeight() * imageScaleFactor)));
+                        (int)Math.round(imp.getWidth() * imageScaleFactor), 
+                        (int)Math.round(imp.getHeight() * imageScaleFactor)));
                 logger.fine(String.format("Resized image width: %d, height: %d", imp.getWidth(), imp.getHeight()));
                 
                 double xloc = (x_stage_new - minX) / pixelSize;
@@ -293,8 +293,8 @@ public class SlideSurveyor implements Module {
 
                 // draw the thumbnail image
                 slideThumb.getProcessor().copyBits(imp.getProcessor(), 
-                        (int)Math.floor(xlocScale), 
-                        (int)Math.floor(ylocScale), 
+                        (int)Math.round(xlocScale), 
+                        (int)Math.round(ylocScale), 
                         Blitter.COPY);
             }
         } 
