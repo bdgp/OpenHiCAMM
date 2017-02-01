@@ -44,7 +44,7 @@ public class SlideSurveyorDialog extends JPanel {
 	public static final double DEFAULT_PIXEL_SIZE_UM = 0.962427;
 	// feasible default image scaling factor
 	// 1.0 = 4.6 GB image size, 0.1 = 460 MB image size
-	public static final double DEFAULT_IMAGE_SCALE_FACTOR = 0.5;
+	public static final double DEFAULT_IMAGE_SCALE_FACTOR = 0.3;
 	private final ButtonGroup invertXAxisGroup = new ButtonGroup();
 	private final ButtonGroup invertYAxisGroup = new ButtonGroup();
 	private final ButtonGroup setInitZPosGrp = new ButtonGroup();
