@@ -184,15 +184,15 @@ public class SlideSurveyor implements Module {
                         minX, minY, maxX, maxY, imageWidth, imageHeight));
             }
 
-            int slideWidthPx = (int)Math.floor(((maxX - minX) / pixelSize) + (double)imageWidth);
-            int slideHeightPx = (int)Math.floor(((maxY - minY) / pixelSize) + (double)imageHeight);
-            logger.fine(String.format("slideWidthPx = %d, slideHeightPx = %d", slideWidthPx, slideHeightPx));
+            double slideWidthPx = ((maxX - minX) / pixelSize) + (double)imageWidth;
+            double slideHeightPx = ((maxY - minY) / pixelSize) + (double)imageHeight;
+            logger.fine(String.format("slideWidthPx = %s, slideHeightPx = %s", slideWidthPx, slideHeightPx));
             
-            logger.fine(String.format("scaleFactor = %f", imageScaleFactor));
-            int slidePreviewWidth = (int)Math.floor(imageScaleFactor * slideWidthPx);
-            logger.fine(String.format("slidePreviewWidth = %d", slidePreviewWidth));
-            int slidePreviewHeight = (int)Math.floor(imageScaleFactor * slideHeightPx);
-            logger.fine(String.format("slidePreviewHeight = %d", slidePreviewHeight));
+            logger.fine(String.format("scaleFactor = %s", imageScaleFactor));
+            double slidePreviewWidth = imageScaleFactor * slideWidthPx;
+            logger.fine(String.format("slidePreviewWidth = %s", slidePreviewWidth));
+            double slidePreviewHeight = imageScaleFactor * slideHeightPx;
+            logger.fine(String.format("slidePreviewHeight = %s", slidePreviewHeight));
             
             // set the initial Z Position
             if (conf.containsKey("initialZPos")) {
@@ -226,7 +226,9 @@ public class SlideSurveyor implements Module {
 
             // create the empty large slide image
             slideThumb = NewImage.createRGBImage(String.format("%s.%s.%s", workflowModule.getName(), task.getName(wmDao), slide.getName()), 
-                    slidePreviewWidth, slidePreviewHeight, 1, NewImage.FILL_WHITE);
+                    (int)Math.floor(slidePreviewWidth), 
+                    (int)Math.floor(slidePreviewHeight), 
+                    1, NewImage.FILL_WHITE);
             
             // iterate through the position list, imaging using live mode to build up the large slide image
             for (int i=0; i<positionList.getNumberOfPositions(); ++i) {
@@ -280,17 +282,20 @@ public class SlideSurveyor implements Module {
                         (int)Math.floor(imp.getHeight() * imageScaleFactor)));
                 logger.fine(String.format("Resized image width: %d, height: %d", imp.getWidth(), imp.getHeight()));
                 
-                int xloc = (int)Math.floor(((x_stage_new - minX) / pixelSize));
-                int xlocInvert = invertXAxis? slideWidthPx - (xloc + width) : xloc;
-                int xlocScale = (int)Math.floor(xlocInvert * imageScaleFactor);
+                double xloc = (x_stage_new - minX) / pixelSize;
+                double xlocInvert = invertXAxis? slideWidthPx - (xloc + width) : xloc;
+                double xlocScale = xlocInvert * imageScaleFactor;
                 logger.fine(String.format("xloc = %d, xlocInvert = %d, xlocScale = %d", xloc, xlocInvert, xlocScale));
-                int yloc = (int)Math.floor(((y_stage_new - minY) / pixelSize));
-                int ylocInvert = invertYAxis? slideHeightPx - (yloc + height) : yloc;
-                int ylocScale = (int)Math.floor(ylocInvert * imageScaleFactor);
+                double yloc = (y_stage_new - minY) / pixelSize;
+                double ylocInvert = invertYAxis? slideHeightPx - (yloc + height) : yloc;
+                double ylocScale = ylocInvert * imageScaleFactor;
                 logger.fine(String.format("yloc = %d, ylocInvert = %d, ylocScale = %d", yloc, ylocInvert, ylocScale));
 
                 // draw the thumbnail image
-                slideThumb.getProcessor().copyBits(imp.getProcessor(), xlocScale, ylocScale, Blitter.COPY);
+                slideThumb.getProcessor().copyBits(imp.getProcessor(), 
+                        (int)Math.floor(xlocScale), 
+                        (int)Math.floor(ylocScale), 
+                        Blitter.COPY);
             }
         } 
         catch (Exception e) {
