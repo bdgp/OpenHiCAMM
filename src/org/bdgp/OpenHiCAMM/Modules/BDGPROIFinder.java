@@ -74,7 +74,8 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
         double imageScaleFactor = imageScaleFactorConf != null? new Double(imageScaleFactorConf.getValue()) : 1.0;
 
         // get the pixel size config value and scale it by the image scale factor
-        Config pixelSizeConf = config.get("pixelSizeConf");
+        // This value is inherited from the parent module's moduleconfig
+        Config pixelSizeConf = config.get("pixelSize");
         if (pixelSizeConf == null) throw new RuntimeException("pixelSize config value is missing!");
         double pixelSize = new Double(pixelSizeConf.getValue());
         pixelSize /= imageScaleFactor;
