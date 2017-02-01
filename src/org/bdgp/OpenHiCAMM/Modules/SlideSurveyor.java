@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.bdgp.OpenHiCAMM.Dao;
@@ -245,16 +246,27 @@ public class SlideSurveyor implements Module {
                 TaggedImage img = null;
                 ImageProcessor ip = null;
                 ImagePlus imp = null;
+                String lastElapsedTimeMs = null;
                 while (img == null || ip == null || ip.getPixels() == null) {
+                    ip = null;
                     img = core.getLastTaggedImage();
-                    logger.info(String.format("Image %s/%s tags: %s", i+1, positionList.getNumberOfPositions(), img.tags.toString()));
-                    if (img != null) ip = ImageUtils.makeProcessor(img);
+                    //logger.info(String.format("Image %s/%s tags: %s", i+1, positionList.getNumberOfPositions(), img.tags.toString()));
+                    if (img != null) {
+                        // make sure this image is not the same as the last one
+                        String elapsedTimeMs = null;
+                        try { elapsedTimeMs = img.tags.getString("ElapsedTime-ms"); }
+                        catch (JSONException e) { /* do nothing */ }
+                        if (elapsedTimeMs != null && !Objects.equals(lastElapsedTimeMs, elapsedTimeMs)) {
+                            ip = ImageUtils.makeProcessor(img);
+                        }
+                        lastElapsedTimeMs = elapsedTimeMs;
+                    }
                     if (ip != null && ip.getPixels() != null) {
                         imp = new ImagePlus(String.format("%s.%s.%s.x%s.y%s", 
                                 this.workflowModule.getName(), task.getName(wmDao), slide.getName(), msp.getX(), msp.getY()), 
                                 ip);
+                        break;
                     }
-                    if (imp != null) break;
 
                     Thread.sleep(10);
                 }
