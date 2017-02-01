@@ -642,9 +642,4 @@ public class SlideSurveyor implements Module {
 
     @Override
     public void runInitialize() { }
-    
-    @Override
-    public Status setTaskStatusOnResume(Task task) {
-        return Status.NEW;
-    }
 }
