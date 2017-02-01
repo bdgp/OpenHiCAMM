@@ -596,29 +596,29 @@ public class WorkflowReport implements Report {
                                 Integer imageWidth2_ = null, imageHeight2_ = null;
                                 Map<String,List<Task>> imagerTasks = new TreeMap<String,List<Task>>(new ImageLabelComparator());
                                 for (Task imagerTask : this.workflowRunner.getTaskStatus().select(where("moduleId", imager.getId()))) {
-                                    MultiStagePosition imagerMsp = getMsp(imagerTask);
-                                    if (imagerMsp.hasProperty("ROI") && imagerMsp.getProperty("ROI").equals(new Integer(roi.getId()).toString())) 
-                                    {
-                                        TaskConfig imageLabelConf = this.workflowRunner.getTaskConfig().selectOne(
-                                                where("id", imagerTask.getId()).
-                                                and("key", "imageLabel"));
-                                        int[] indices = MDUtils.getIndices(imageLabelConf.getValue());
-                                        if (indices != null && indices.length >= 4) {
-                                            String imageLabel = MDUtils.generateLabel(indices[0], indices[1], indices[2], 0);
-                                            if (!imagerTasks.containsKey(imageLabel)) {
-                                                imagerTasks.put(imageLabel, new ArrayList<Task>());
-                                            }
-                                            imagerTasks.get(imageLabel).add(imagerTask);
-                                            
-                                            if (minX2_ == null || imagerMsp.getX() < minX2_) minX2_ = imagerMsp.getX();
-                                            if (minY2_ == null || imagerMsp.getY() < minY2_) minY2_ = imagerMsp.getY();
-                                            if (maxX2_ == null || imagerMsp.getX() > maxX2_) maxX2_ = imagerMsp.getX();
-                                            if (maxY2_ == null || imagerMsp.getY() > maxY2_) maxY2_ = imagerMsp.getY();
-                                            if (imageWidth2_ == null || imageHeight2_ == null) {
-                                                Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
-                                                        where("id", imagerTask.getId()).
-                                                        and("key", "imageId"));
-                                                if (imageIdConf2 != null) {
+                                    Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
+                                            where("id", imagerTask.getId()).
+                                            and("key", "imageId"));
+                                    if (imageIdConf2 != null) {
+                                        MultiStagePosition imagerMsp = getMsp(imagerTask);
+                                        if (imagerMsp.hasProperty("ROI") && imagerMsp.getProperty("ROI").equals(new Integer(roi.getId()).toString())) 
+                                        {
+                                            TaskConfig imageLabelConf = this.workflowRunner.getTaskConfig().selectOne(
+                                                    where("id", imagerTask.getId()).
+                                                    and("key", "imageLabel"));
+                                            int[] indices = MDUtils.getIndices(imageLabelConf.getValue());
+                                            if (indices != null && indices.length >= 4) {
+                                                String imageLabel = MDUtils.generateLabel(indices[0], indices[1], indices[2], 0);
+                                                if (!imagerTasks.containsKey(imageLabel)) {
+                                                    imagerTasks.put(imageLabel, new ArrayList<Task>());
+                                                }
+                                                imagerTasks.get(imageLabel).add(imagerTask);
+                                                
+                                                if (minX2_ == null || imagerMsp.getX() < minX2_) minX2_ = imagerMsp.getX();
+                                                if (minY2_ == null || imagerMsp.getY() < minY2_) minY2_ = imagerMsp.getY();
+                                                if (maxX2_ == null || imagerMsp.getX() > maxX2_) maxX2_ = imagerMsp.getX();
+                                                if (maxY2_ == null || imagerMsp.getY() > maxY2_) maxY2_ = imagerMsp.getY();
+                                                if (imageWidth2_ == null || imageHeight2_ == null) {
                                                     Image image2 = imageDao.selectOneOrDie(
                                                             where("id", new Integer(imageIdConf2.getValue())));
                                                     log("Getting image size for image %s", image2);
