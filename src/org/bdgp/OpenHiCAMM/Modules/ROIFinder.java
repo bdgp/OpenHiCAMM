@@ -101,8 +101,6 @@ public abstract class ROIFinder implements Module, ImageLogger {
         Slide slide = slideDao.selectOneOrDie(where("id",image.getSlideId()));
         logger.fine(String.format("%s: Using slide: %s", label, slide));
 
-
-        
     	try {
     	    Config imageScaleFactorConf = config.get("imageScaleFactor");
     	    double imageScaleFactor = imageScaleFactorConf != null? new Double(imageScaleFactorConf.getValue()) : 1.0;
@@ -131,8 +129,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
             Config invertYAxisConf = config.get("invertYAxis");
             boolean invertYAxis = invertYAxisConf == null || "yes".equals(invertYAxisConf.getValue());
 
-			int imageWidth = MDUtils.getWidth(taggedImage.tags);
-			int imageHeight = MDUtils.getHeight(taggedImage.tags);
+			double imageWidth = MDUtils.getWidth(taggedImage.tags) / imageScaleFactor;
+			double imageHeight = MDUtils.getHeight(taggedImage.tags) / imageScaleFactor;
 
 			Config XPositionUmConf = config.get("XPositionUm");
 			double x_stage = XPositionUmConf == null? 
@@ -182,8 +180,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			    int roiWidth = roiX2-roiX1+1;
 			    int roiHeight = roiY2-roiY1+1;
 
-			    int tileWidth = (int)Math.floor(((double)imageWidth * hiResPixelSize) / pixelSize);
-			    int tileHeight = (int)Math.floor(((double)imageHeight * hiResPixelSize) / pixelSize);
+			    int tileWidth = (int)Math.floor((imageWidth * hiResPixelSize) / pixelSize);
+			    int tileHeight = (int)Math.floor((imageHeight * hiResPixelSize) / pixelSize);
 
 			    int tileXOverlap = (int)Math.floor((overlapPct / 100.0) * tileWidth);
 			    int tileYOverlap = (int)Math.floor((overlapPct / 100.0) * tileHeight);
@@ -211,8 +209,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
                         StagePosition sp = new StagePosition();
                         sp.numAxes = 2;
                         sp.stageName = "XYStage";
-                        sp.x = x_stage+((tileX-(double)imageWidth/2.0)*pixelSize)*(invertXAxis? -1.0 : 1.0);
-                        sp.y = y_stage+((tileY-(double)imageHeight/2.0)*pixelSize)*(invertYAxis? -1.0 : 1.0);
+                        sp.x = x_stage+((tileX-imageWidth/2.0)*pixelSize)*(invertXAxis? -1.0 : 1.0);
+                        sp.y = y_stage+((tileY-imageHeight/2.0)*pixelSize)*(invertYAxis? -1.0 : 1.0);
                         String mspLabel = String.format("%s.%s.ROI%d.X%d.Y%d", 
                                 positionName, imageLabel, roi.getId(), x, y);
                         msp.setProperty("stitchGroup", "ROI"+roi.getId());
