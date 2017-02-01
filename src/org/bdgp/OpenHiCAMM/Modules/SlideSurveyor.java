@@ -176,11 +176,11 @@ public class SlideSurveyor implements Module {
                 if (minY == null || msp.getY() < minY) minY = msp.getY();
                 if (maxY == null || msp.getY() > maxY) maxY = msp.getY();
             }
-            logger.fine(String.format("minX = %f, minY = %f, maxX = %f, maxY = %f, imageWidth = %d, imageHeight = %d", 
+            logger.fine(String.format("minX = %s, minY = %s, maxX = %s, maxY = %s, imageWidth = %s, imageHeight = %s", 
                     minX, minY, maxX, maxY, imageWidth, imageHeight));
             if (minX == null || maxX == null || minY == null || maxY == null || imageWidth == null || imageHeight == null) {
                 throw new RuntimeException(String.format(
-                        "Could not determine bounds of slide! minX = %f, minY = %f, maxX = %f, maxY = %f, imageWidth = %d, imageHeight = %d", 
+                        "Could not determine bounds of slide! minX = %s, minY = %s, maxX = %s, maxY = %s, imageWidth = %s, imageHeight = %s", 
                         minX, minY, maxX, maxY, imageWidth, imageHeight));
             }
 
@@ -234,7 +234,7 @@ public class SlideSurveyor implements Module {
             for (int i=0; i<positionList.getNumberOfPositions(); ++i) {
                 MultiStagePosition msp = positionList.getPosition(i);
 
-                logger.fine(String.format("Acquired survey image for slide %s: %s [%d/%d images]", 
+                logger.fine(String.format("Acquired survey image for slide %s: %s [%s/%s images]", 
                         slide.getName(),
                         msp.getLabel(),
                         i+1, positionList.getNumberOfPositions()));
@@ -275,21 +275,21 @@ public class SlideSurveyor implements Module {
                 //new ImageConverter(imp).convertToGray8();
 
                 int width = imp.getWidth(), height = imp.getHeight();
-                logger.fine(String.format("Image width: %d, height: %d", width, height));
+                logger.fine(String.format("Image width: %s, height: %s", width, height));
                 imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
                 imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
                         (int)Math.round(imp.getWidth() * imageScaleFactor), 
                         (int)Math.round(imp.getHeight() * imageScaleFactor)));
-                logger.fine(String.format("Resized image width: %d, height: %d", imp.getWidth(), imp.getHeight()));
+                logger.fine(String.format("Resized image width: %s, height: %s", imp.getWidth(), imp.getHeight()));
                 
                 double xloc = (x_stage_new - minX) / pixelSize;
                 double xlocInvert = invertXAxis? slideWidthPx - (xloc + width) : xloc;
                 double xlocScale = xlocInvert * imageScaleFactor;
-                logger.fine(String.format("xloc = %d, xlocInvert = %d, xlocScale = %d", xloc, xlocInvert, xlocScale));
+                logger.fine(String.format("xloc = %s, xlocInvert = %s, xlocScale = %s", xloc, xlocInvert, xlocScale));
                 double yloc = (y_stage_new - minY) / pixelSize;
                 double ylocInvert = invertYAxis? slideHeightPx - (yloc + height) : yloc;
                 double ylocScale = ylocInvert * imageScaleFactor;
-                logger.fine(String.format("yloc = %d, ylocInvert = %d, ylocScale = %d", yloc, ylocInvert, ylocScale));
+                logger.fine(String.format("yloc = %s, ylocInvert = %s, ylocScale = %s", yloc, ylocInvert, ylocScale));
 
                 // draw the thumbnail image
                 slideThumb.getProcessor().copyBits(imp.getProcessor(), 
@@ -339,10 +339,10 @@ public class SlideSurveyor implements Module {
     private File createSurveyImageFolder() {
         String rootDir = this.workflowRunner.getWorkflowDir().getPath();
         int count = 1;
-        File stitchedFolder = new File(rootDir, String.format("%s_%d", SURVEY_IMAGE_DIRECTORY_PREFIX, count));
+        File stitchedFolder = new File(rootDir, String.format("%s_%s", SURVEY_IMAGE_DIRECTORY_PREFIX, count));
         while (!stitchedFolder.mkdirs()) {
             ++count;
-            stitchedFolder = new File(rootDir, String.format("%s_%d", SURVEY_IMAGE_DIRECTORY_PREFIX, count));
+            stitchedFolder = new File(rootDir, String.format("%s_%s", SURVEY_IMAGE_DIRECTORY_PREFIX, count));
         }
         return stitchedFolder;
     }
