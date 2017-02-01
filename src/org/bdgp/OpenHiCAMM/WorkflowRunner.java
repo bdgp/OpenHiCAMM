@@ -99,7 +99,7 @@ public class WorkflowRunner {
     private Long startTime;
     private WorkflowModule startModule;
     
-    public static final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+    public static DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     
     private static WorkflowRunner workflowRunnerInstance;
 
@@ -327,27 +327,18 @@ public class WorkflowRunner {
                         m.getTaskType()));
                 // print workflow module config
                 List<ModuleConfig> configs = this.moduleConfig.select(where("id", module.getId()));
-                Collections.sort(configs, new Comparator<ModuleConfig>() {
-                    @Override public int compare(ModuleConfig a, ModuleConfig b) {
-                        return a.getId()-b.getId();
-                    }});
+                Collections.sort(configs, (a,b)->a.getId()-b.getId());
                 for (ModuleConfig config : configs) {
                     this.logger.info(String.format("        %s", config));
                 }
                 // Print the tasks associated with this module
                 List<Task> tasks = this.taskStatus.select(where("moduleId",module.getId()));
-                Collections.sort(tasks, new Comparator<Task>() {
-                    @Override public int compare(Task a, Task b) {
-                        return a.getId()-b.getId();
-                    }});
+                Collections.sort(tasks, (a,b)->a.getId()-b.getId());
                 for (Task task : tasks) {
                     this.logger.info(String.format("    %s", task));
                     // Print the task configs for the task
                     List<TaskConfig> taskConfigs = this.taskConfig.select(where("id", task.getId()));
-                    Collections.sort(taskConfigs, new Comparator<TaskConfig>() {
-                        @Override public int compare(TaskConfig a, TaskConfig b) {
-                            return new Integer(a.getId()).intValue()-new Integer(b.getId()).intValue();
-                        }});
+                    Collections.sort(taskConfigs, (a,b)->new Integer(a.getId()).intValue()-new Integer(b.getId()).intValue());
                     for (TaskConfig taskConfig : taskConfigs) {
                         this.logger.info(String.format("        %s", taskConfig));
                     }
@@ -440,28 +431,19 @@ public class WorkflowRunner {
         this.logger.info("Task Status Summary:");
         this.logger.info("====================");
         while (modules.size() > 0) {
-            Collections.sort(modules, new Comparator<WorkflowModule>() {
-                @Override public int compare(WorkflowModule a, WorkflowModule b) {
-                    return a.getClassName().compareTo(b.getClassName());
-                }});
+            Collections.sort(modules, (a,b)->a.getClassName().compareTo(b.getClassName()));
 
             List<WorkflowModule> childModules = new ArrayList<WorkflowModule>();
             for (WorkflowModule module : modules) {
                 List<Task> tasks = this.taskStatus.select(where("moduleId",module.getId()));
-                Collections.sort(tasks, new Comparator<Task>() {
-                    @Override public int compare(Task a, Task b) {
-                        return a.getId()-b.getId();
-                    }});
-                final Map<Status,Integer> stats = new HashMap<Status,Integer>();
+                Collections.sort(tasks, (a,b)->a.getId()-b.getId());
+                Map<Status,Integer> stats = new HashMap<Status,Integer>();
                 for (Task task : tasks) {
                     stats.put(task.getStatus(), 
                             stats.containsKey(task.getStatus())? stats.get(task.getStatus())+1 : 1);
                 }
                 List<Status> sortedStats = new ArrayList<Status>(stats.keySet());
-                Collections.sort(sortedStats, new Comparator<Status>() {
-                    @Override public int compare(Status a, Status b) {
-                        return stats.get(b).compareTo(stats.get(a));
-                    }});
+                Collections.sort(sortedStats, (a,b)->stats.get(b).compareTo(stats.get(a)));
                 for (Status status : sortedStats) {
                     this.logger.info(String.format("Module %s: Status %s: %d / %d tasks (%.02f%%)",
                             Util.escape(module.getName()), 
@@ -543,9 +525,9 @@ public class WorkflowRunner {
      * @return
      */
     public Future<Status> run(
-            final String startModuleName, 
-            final Map<String,Config> inheritedTaskConfig,
-            final boolean resume) 
+            String startModuleName, 
+            Map<String,Config> inheritedTaskConfig,
+            boolean resume) 
     {
         this.resume = resume;
         this.startModule = this.workflow.selectOneOrDie(where("name", startModuleName));
@@ -726,16 +708,16 @@ public class WorkflowRunner {
      * @param resume
      */
     public Future<Status> run(
-            final Task task, 
-            final Map<String,Config> inheritedTaskConfig) 
+            Task task, 
+            Map<String,Config> inheritedTaskConfig) 
     {
     	this.logger.fine(String.format("%s: running task %s", task.getName(workflow), task));
 
-        final WorkflowModule module = this.workflow.selectOneOrDie(
+        WorkflowModule module = this.workflow.selectOneOrDie(
                 where("id",task.getModuleId()));
         
         // get an instance of the module
-        final Module taskModule = moduleInstances.get(module.getId());
+        Module taskModule = moduleInstances.get(module.getId());
         if (taskModule == null) {
             throw new RuntimeException("No instantiated module found with ID: "+module.getName());
         }
@@ -758,7 +740,7 @@ public class WorkflowRunner {
         	configs.add(tc);
             this.logger.fine(String.format("%s: using task config: %s", task.getName(workflow), tc));
         }
-        final Map<String,Config> config = Config.merge(configs);
+        Map<String,Config> config = Config.merge(configs);
         
         Callable<Status> callable = new Callable<Status>() {
             @Override

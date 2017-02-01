@@ -69,7 +69,7 @@ public class SlideSurveyor implements Module {
     }
     
     @Override
-    public Status run(Task task, final Map<String,Config> conf, final Logger logger) {
+    public Status run(Task task, Map<String,Config> conf, final Logger logger) {
         Dao<WorkflowModule> wmDao = workflowRunner.getWorkflow();
         Dao<Slide> slideDao = workflowRunner.getWorkflowDb().table(Slide.class);
         Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);

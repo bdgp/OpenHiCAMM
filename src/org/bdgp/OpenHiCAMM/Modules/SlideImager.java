@@ -600,7 +600,7 @@ public class SlideImager implements Module, ImageLogger {
                             "imageId",
                             new Integer(image.getId()).toString());
                     taskConfigDao.insertOrUpdate(imageId,"id","key");
-                    conf.put("imageId", imageId);
+                    conf.put(imageId.getKey(), imageId);
                     logger.fine(String.format("Inserted/Updated imageId config: %s", imageId));
                 }
             }
