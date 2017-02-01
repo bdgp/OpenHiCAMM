@@ -189,10 +189,10 @@ public class SlideSurveyor implements Module {
             logger.fine(String.format("slideWidthPx = %s, slideHeightPx = %s", slideWidthPx, slideHeightPx));
             
             logger.fine(String.format("scaleFactor = %s", imageScaleFactor));
-            double slidePreviewWidth = imageScaleFactor * slideWidthPx;
-            logger.fine(String.format("slidePreviewWidth = %s", slidePreviewWidth));
-            double slidePreviewHeight = imageScaleFactor * slideHeightPx;
-            logger.fine(String.format("slidePreviewHeight = %s", slidePreviewHeight));
+            double scaledSlideWidth = imageScaleFactor * slideWidthPx;
+            logger.fine(String.format("slidePreviewWidth = %s", scaledSlideWidth));
+            double scaledSlideHeight = imageScaleFactor * slideHeightPx;
+            logger.fine(String.format("slidePreviewHeight = %s", scaledSlideHeight));
             
             // set the initial Z Position
             if (conf.containsKey("initialZPos")) {
@@ -226,8 +226,8 @@ public class SlideSurveyor implements Module {
 
             // create the empty large slide image
             slideThumb = NewImage.createRGBImage(String.format("%s.%s.%s", workflowModule.getName(), task.getName(wmDao), slide.getName()), 
-                    (int)Math.round(slidePreviewWidth), 
-                    (int)Math.round(slidePreviewHeight), 
+                    (int)Math.round(scaledSlideWidth), 
+                    (int)Math.round(scaledSlideHeight), 
                     1, NewImage.FILL_WHITE);
             
             // iterate through the position list, imaging using live mode to build up the large slide image
