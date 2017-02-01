@@ -325,6 +325,7 @@ public class SlideSurveyor implements Module {
                 "imageId",
                 new Integer(image.getId()).toString());
         taskConfigDao.insertOrUpdate(imageIdConf,"id","key");
+        conf.put(imageIdConf.getKey(), imageIdConf);
         logger.fine(String.format("Inserted/Updated imageId config: %s", imageIdConf));
                                 
         return Status.SUCCESS;
