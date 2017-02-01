@@ -1144,7 +1144,19 @@ public class SlideImager implements Module, ImageLogger {
             // get the new stage position
             double[] x_stage_new = new double[] {0.0};
             double[] y_stage_new = new double[] {0.0};
-            core.getXYPosition(xyStage, x_stage_new, y_stage_new);
+            tries = 0;
+            while(tries <= MAX_TRIES) {
+                try { 
+                    core.getXYPosition(xyStage, x_stage_new, y_stage_new);
+                    break;
+                } 
+                catch (Throwable e) { 
+                    if (tries >= MAX_TRIES) throw new RuntimeException(e);
+                }
+                Thread.sleep(500);
+                ++tries;
+            }
+
             if (logger != null) logger.fine(String.format("%s: New stage position: (%f,%f)", moduleId, x_stage_new[0], y_stage_new[0]));
             final double EPSILON = 1000;
             if (!(Math.abs(x_stage_new[0]-x) < EPSILON && Math.abs(y_stage_new[0]-y) < EPSILON)) {

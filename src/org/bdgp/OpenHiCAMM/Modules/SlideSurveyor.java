@@ -246,6 +246,7 @@ public class SlideSurveyor implements Module {
                 ImagePlus imp = null;
                 while (img == null || ip == null || ip.getPixels() == null) {
                     img = core.getLastTaggedImage();
+                    logger.info(String.format("Image %s/%s tags: %s", i+1, positionList.getNumberOfPositions(), img.tags.toString()));
                     if (img != null) ip = ImageUtils.makeProcessor(img);
                     if (ip != null && ip.getPixels() != null) {
                         imp = new ImagePlus(String.format("%s.%s.%s.x%s.y%s", 
