@@ -160,12 +160,16 @@ public class SlideSurveyor implements Module {
             //}
 
             // determine the image width/height
-            TaggedImage img0 = core.getLastTaggedImage();
-            ImageProcessor ip0 = ImageUtils.makeProcessor(img0);
+            TaggedImage img0 = null;
+            ImageProcessor ip0 = null;
+            try { img0 = core.getLastTaggedImage(); }
+            catch (Throwable e) { /* do nothing */ }
+            if (img0 != null) ip0 = ImageUtils.makeProcessor(img0);
             while (img0 == null || ip0 == null) {
                 Thread.sleep(10);
-                img0 = core.getLastTaggedImage();
-                ip0 = ImageUtils.makeProcessor(img0);
+                try { img0 = core.getLastTaggedImage(); }
+                catch (Throwable e) { /* do nothing */ }
+                if (img0 != null) ip0 = ImageUtils.makeProcessor(img0);
             }
             Integer imageWidth = ip0.getWidth(), imageHeight = ip0.getHeight();
 
