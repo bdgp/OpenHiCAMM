@@ -43,9 +43,10 @@ mkdir -pv 3rdpartypublic
 svn --username guest --password guest checkout https://valelab.ucsf.edu/svn/3rdpartypublic/classext 3rdpartypublic/classext
 cd micromanager
 ./autogen.sh
-./configure --enable-imagej-plugin="$fijidir" --with-ij-jar="$(echo "$fijidir"/jars/ij*.jar)"
+./configure --enable-imagej-plugin="$fijidir" --with-ij-jar="$(echo "$fijidir"/jars/ij-*.jar)"
 make fetchdeps
 # apply patches
 patch -p0 <"$patchdir"/disable-disk-space-check.patch
 make -j
 make install
+~/src/OpenHiCAMM/scripts/copy-libs-macosx |bash -x
