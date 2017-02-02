@@ -1,0 +1,124 @@
+Index: DeviceAdapters/ZeissCAN/ZeissCAN.cpp
+===================================================================
+--- DeviceAdapters/ZeissCAN/ZeissCAN.cpp	(revision 16023)
++++ DeviceAdapters/ZeissCAN/ZeissCAN.cpp	(working copy)
+@@ -33,6 +33,15 @@
+    #define snprintf _snprintf 
+ #endif
+ 
++#ifdef _WIN32
++#include <Windows.h>
++#define SLEEP(t) (Sleep(t))
++#else
++#include <unistd.h>
++#define SLEEP(t) (usleep(t)*1000)
++#endif
++#define SLEEP_TIME 1000
++
+ #include "ZeissCAN.h"
+ #include <cstdio>
+ #include <string>
+@@ -3205,19 +3214,26 @@
+    // the hard part is to get the formatting of the string right.
+    // it is a hex number from 800000 .. 7FFFFF, where everything larger than 800000 is a negative number!?
+    // We can speed up communication by skipping leading 0s, but that makes the following more complicated:
+-   char tmp[98];
+-   // convert the steps into a twos-complement 6bit number
+-   if (steps<0)
+-      steps = steps+0xffffff+1;
+-   snprintf(tmp, 9, "%08lX", steps);
+-   string tmp2 = tmp;
+-   ostringstream cmd;
+-   cmd << "FPZT" << tmp2.substr(2,6).c_str();
+-   int ret = g_hub.ExecuteCommand(*this, *GetCoreCallback(),  cmd.str().c_str());
+-   if (ret != DEVICE_OK)
++   int ret = DEVICE_OK;
++   int tries = 0;
++   const int MAX_TRIES = 10;
++   while (tries++ < MAX_TRIES) {
++      char tmp[98];
++      // convert the steps into a twos-complement 6bit number
++      if (steps<0)
++          steps = steps+0xffffff+1;
++      snprintf(tmp, 9, "%08lX", steps);
++      string tmp2 = tmp;
++      ostringstream cmd;
++      cmd << "FPZT" << tmp2.substr(2,6).c_str();
++      ret = g_hub.ExecuteCommand(*this, *GetCoreCallback(),  cmd.str().c_str());
++      if (ret != DEVICE_OK) {
++         SLEEP(SLEEP_TIME);
++          continue;
++      }
+       return ret;
+-
+-   return DEVICE_OK;
++   }
++   return ret;
+ }
+ 
+ /*
+@@ -3225,31 +3241,43 @@
+  */
+ int FocusStage::GetPositionSteps(long& steps)
+ {
+-   const char* cmd ="FPZp" ;
+-   int ret = g_hub.ExecuteCommand(*this, *GetCoreCallback(),  cmd);
+-   if (ret != DEVICE_OK)
+-      return ret;
++   int ret = DEVICE_OK;
++   int tries = 0;
++   const int MAX_TRIES = 10;
++   while (tries++ < MAX_TRIES) {
++      const char* cmd ="FPZp" ;
++      ret = g_hub.ExecuteCommand(*this, *GetCoreCallback(),  cmd);
++      if (ret != DEVICE_OK) {
++          SLEEP(SLEEP_TIME);
++          continue;
++      }
+ 
+-   string response;
+-   ret = g_hub.GetAnswer(*this, *GetCoreCallback(), response);
+-   if (ret != DEVICE_OK)
+-      return ret;
++      string response;
++      ret = g_hub.GetAnswer(*this, *GetCoreCallback(), response);
++      if (ret != DEVICE_OK) {
++          SLEEP(SLEEP_TIME);
++          continue;
++      }
+ 
+-   if (response.substr(0,2) == "PF") 
+-   {
+-      steps = strtol(response.substr(2).c_str(), NULL, 16);
+-   }
+-   else  
+-      return ERR_UNEXPECTED_ANSWER;
++      if (response.substr(0,2) == "PF") 
++      {
++          steps = strtol(response.substr(2).c_str(), NULL, 16);
++      }
++      else { 
++          ret = ERR_UNEXPECTED_ANSWER;
++          SLEEP(SLEEP_TIME);
++          continue;
++      }
+ 
+-   // To 'translate' 'negative' numbers according to the Zeiss schema (there must be a more elegant way of doing this:
+-   long sign = strtol(response.substr(2,1).c_str(), NULL, 16);
+-   if (sign > 7)  // negative numbers
+-   {
+-      steps = steps - 0xFFFFFF - 1;
++      // To 'translate' 'negative' numbers according to the Zeiss schema (there must be a more elegant way of doing this:
++      long sign = strtol(response.substr(2,1).c_str(), NULL, 16);
++      if (sign > 7)  // negative numbers
++      {
++          steps = steps - 0xFFFFFF - 1;
++      }
++      return ret;
+    }
+-
+-   return DEVICE_OK;
++   return ret;
+ }
+ 
+ int FocusStage::SetOrigin()
