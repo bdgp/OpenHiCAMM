@@ -22,6 +22,7 @@ import java.util.concurrent.FutureTask;
 import java.util.prefs.Preferences;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import mmcorej.CMMCore;
 import mmcorej.TaggedImage;
@@ -113,6 +114,8 @@ public class SlideImager implements Module, ImageLogger {
      * @return the position list, or null if no position list was found
      */
     public PositionList loadPositionList(Map<String,Config> conf, Logger logger) {
+        Dao<Task> taskDao = this.workflowRunner.getTaskStatus();
+
         // first try to load a position list from the posListId conf
         // otherwise, try loading from the posListModuleId conf
     	PositionList positionList;
@@ -123,9 +126,18 @@ public class SlideImager implements Module, ImageLogger {
             Integer slideId = new Integer(conf.get("slideId").getValue());
             WorkflowModule posListModule = this.workflowRunner.getWorkflow().selectOneOrDie(
                     where("name",posListModuleConf.getValue()));
-            List<SlidePosList> posLists = posListDao.select(
+            // get the list of slide position lists with valid task IDs or where task ID is null
+            List<SlidePosList> posLists = new ArrayList<>();
+            for (SlidePosList posList : posListDao.select(
                     where("slideId", slideId).
-                    and("moduleId", posListModule.getId()));
+                    and("moduleId", posListModule.getId()))) 
+            {
+                if (posList.getTaskId() != null) {
+                    Task checkTask = taskDao.selectOne(where("id",posList.getTaskId()));  
+                    if (checkTask == null) continue;
+                }
+                posLists.add(posList);
+            }
             if (posLists.isEmpty()) {
                 return null;
             }
@@ -200,17 +212,19 @@ public class SlideImager implements Module, ImageLogger {
     		logger.fine(String.format("Using configuration: %s", c));
     	}
     	
+        // get the list of parent tasks for this task
+        List<Task> siblingTasks = this.workflowRunner.getTaskStatus().select(where("dispatchUUID",task.getDispatchUUID()));
+        Set<Task> parentTaskSet = new HashSet<>();
+        for (Task siblingTask : siblingTasks) {
+            for (TaskDispatch td : this.workflowRunner.getTaskDispatch().select(where("taskId",siblingTask.getId()))) {
+                parentTaskSet.addAll(this.workflowRunner.getTaskStatus().select(where("id",td.getParentTaskId())));
+            }
+        }
+        List<Task> parentTasks = parentTaskSet.stream().collect(Collectors.toList());
+
     	// if this is the loadDynamicTaskRecords task, then we need to dynamically create the task records now
         Config loadDynamicTaskRecordsConf = conf.get("loadDynamicTaskRecords");
         if (loadDynamicTaskRecordsConf != null && loadDynamicTaskRecordsConf.getValue().equals("yes")) {
-            // get the set of parent tasks for this task
-            List<Task> siblingTasks = this.workflowRunner.getTaskStatus().select(where("dispatchUUID",task.getDispatchUUID()));
-            List<Task> parentTasks = new ArrayList<>();
-            for (Task siblingTask : siblingTasks) {
-                for (TaskDispatch td : this.workflowRunner.getTaskDispatch().select(where("taskId",siblingTask.getId()))) {
-                    parentTasks.addAll(this.workflowRunner.getTaskStatus().select(where("id",td.getParentTaskId())));
-                }
-            }
             conf.put("dispatchUUID", new Config(task.getId(), "dispatchUUID", task.getDispatchUUID()));
             workflowRunner.createTaskRecords(this.workflowModule, parentTasks, conf, logger);
             return Status.SUCCESS;
