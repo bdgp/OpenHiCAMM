@@ -89,17 +89,17 @@ public class ROIFinderDialog extends JPanel {
         add(roiImageScaleFactor, "cell 1 4");
         
         lblHiresImageWidth = new JLabel("HiRes Image Width:");
-        roiImageScaleFactor.setValue(DEFAULT_IMAGE_WIDTH);
         add(lblHiresImageWidth, "cell 0 5");
         
         imageWidth = new JSpinner();
+        imageWidth.setValue(DEFAULT_IMAGE_WIDTH);
         add(imageWidth, "cell 1 5");
         
         lblHiresImageHeight = new JLabel("HiRes Image Height:");
-        roiImageScaleFactor.setValue(DEFAULT_IMAGE_HEIGHT);
         add(lblHiresImageHeight, "cell 0 6");
         
         imageHeight = new JSpinner();
+        imageHeight.setValue(DEFAULT_IMAGE_HEIGHT);
         add(imageHeight, "cell 1 6");
         
         btnSetImageDimensions = new JButton("Set Image Dimensions");
