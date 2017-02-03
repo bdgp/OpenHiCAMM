@@ -381,7 +381,7 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
     }
     
     public double setPosition(double position) {
-        final double MAX_DIFFERENCE = 1.0;
+        final double MAX_DIFFERENCE = 2.0;
         Double currentPosition = null;
         int tries = 0;
         final int MAX_TRIES = 15;
