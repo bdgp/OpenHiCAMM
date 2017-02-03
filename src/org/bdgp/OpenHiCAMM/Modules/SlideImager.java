@@ -1208,6 +1208,8 @@ public class SlideImager implements Module, ImageLogger {
                 if (logger != null) logger.severe(String.format("%s: Failed to move stage to position (%.2f,%.2f): %s", moduleId, x,y, sw.toString()));
                 err = e;
             }
+            try { Thread.sleep(1000); } 
+            catch (InterruptedException e) { /* do nothing */ }
         }
         throw new RuntimeException(err);
     }
