@@ -108,7 +108,6 @@ public abstract class ROIFinder implements Module, ImageLogger {
     	    Config pixelSizeConf = config.get("pixelSize");
     	    if (pixelSizeConf == null) throw new RuntimeException("Config value pixelSize was not inherited!");
 			double pixelSize = new Double(pixelSizeConf.getValue());
-			pixelSize /= imageScaleFactor;
 			logger.fine(String.format("%s: Using pixelSize: %f", label, pixelSize));
 			
 			double hiResPixelSize = new Double(config.get("hiResPixelSize").getValue());
@@ -129,8 +128,15 @@ public abstract class ROIFinder implements Module, ImageLogger {
             Config invertYAxisConf = config.get("invertYAxis");
             boolean invertYAxis = invertYAxisConf == null || "yes".equals(invertYAxisConf.getValue());
 
-			double imageWidth = MDUtils.getWidth(taggedImage.tags) / imageScaleFactor;
-			double imageHeight = MDUtils.getHeight(taggedImage.tags) / imageScaleFactor;
+    	    Config imageWidthConf = config.get("imageWidth");
+    	    if (imageWidthConf == null) throw new RuntimeException("Config value imageWidth was not found!");
+			Integer imageWidth = new Integer(imageWidthConf.getValue());
+			logger.fine(String.format("%s: Using imageWidth: %s", label, imageWidth));
+			
+    	    Config imageHeightConf = config.get("imageHeight");
+    	    if (imageHeightConf == null) throw new RuntimeException("Config value imageHeight was not found!");
+			Integer imageHeight = new Integer(imageHeightConf.getValue());
+			logger.fine(String.format("%s: Using imageHeight: %s", label, imageHeight));
 
 			Config XPositionUmConf = config.get("XPositionUm");
 			double x_stage = XPositionUmConf == null? 
@@ -168,20 +174,20 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			    roiDao.insert(roi);
 
 			    // increase the ROI dimensions to add the margins
-			    int roiMarginWidth = (int)Math.floor((roiMarginPct / 100.0) * imageWidth * hiResPixelSize / pixelSize);
-			    int roiMarginHeight = (int)Math.floor((roiMarginPct / 100.0) * imageHeight * hiResPixelSize / pixelSize);
-			    int roiX1 = roi.getX1() - roiMarginWidth;
-			    int roiY1 = roi.getY1() - roiMarginHeight;
-			    int roiX2 = roi.getX2() + roiMarginWidth;
-			    int roiY2 = roi.getY2() + roiMarginHeight;
+			    double roiMarginWidth = (roiMarginPct / 100.0) * imageWidth * hiResPixelSize / (pixelSize / imageScaleFactor);
+			    double roiMarginHeight = (roiMarginPct / 100.0) * imageHeight * hiResPixelSize / (pixelSize / imageScaleFactor);
+			    int roiX1 = (int)Math.floor(roi.getX1() - roiMarginWidth);
+			    int roiY1 = (int)Math.floor(roi.getY1() - roiMarginHeight);
+			    int roiX2 = (int)Math.floor(roi.getX2() + roiMarginWidth);
+			    int roiY2 = (int)Math.floor(roi.getY2() + roiMarginHeight);
 			    
 			    // We need to potentially create a grid of Stage positions in order to capture all of the 
 			    // ROI.
 			    int roiWidth = roiX2-roiX1+1;
 			    int roiHeight = roiY2-roiY1+1;
 
-			    int tileWidth = (int)Math.floor((imageWidth * hiResPixelSize) / pixelSize);
-			    int tileHeight = (int)Math.floor((imageHeight * hiResPixelSize) / pixelSize);
+			    int tileWidth = (int)Math.floor((imageWidth * hiResPixelSize) / (pixelSize / imageScaleFactor));
+			    int tileHeight = (int)Math.floor((imageHeight * hiResPixelSize) / (pixelSize / imageScaleFactor));
 
 			    int tileXOverlap = (int)Math.floor((overlapPct / 100.0) * tileWidth);
 			    int tileYOverlap = (int)Math.floor((overlapPct / 100.0) * tileHeight);
@@ -209,8 +215,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
                         StagePosition sp = new StagePosition();
                         sp.numAxes = 2;
                         sp.stageName = "XYStage";
-                        sp.x = x_stage+((tileX-imageWidth/2.0)*pixelSize)*(invertXAxis? -1.0 : 1.0);
-                        sp.y = y_stage+((tileY-imageHeight/2.0)*pixelSize)*(invertYAxis? -1.0 : 1.0);
+                        sp.x = x_stage+((tileX-imageWidth/2.0)*(pixelSize/imageScaleFactor))*(invertXAxis? -1.0 : 1.0);
+                        sp.y = y_stage+((tileY-imageHeight/2.0)*(pixelSize/imageScaleFactor))*(invertYAxis? -1.0 : 1.0);
                         String mspLabel = String.format("%s.%s.ROI%d.X%d.Y%d", 
                                 positionName, imageLabel, roi.getId(), x, y);
                         msp.setProperty("stitchGroup", "ROI"+roi.getId());
@@ -242,7 +248,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			// First, delete any old slidepos and slideposlist records
 			logger.fine(String.format("Deleting old position lists"));
 			List<SlidePosList> oldSlidePosLists = slidePosListDao.select(
-					where("slideId",slide.getId()).and("moduleId",this.workflowModule.getId()));
+					where("slideId",slide.getId()).
+					and("moduleId",this.workflowModule.getId()).
+					and("taskId", task.getId()));
 			for (SlidePosList oldSlidePosList : oldSlidePosLists) {
 				slidePosDao.delete(where("slidePosListId",oldSlidePosList.getId()));
 			}
@@ -371,6 +379,14 @@ public abstract class ROIFinder implements Module, ImageLogger {
             	if (roiImageScaleFactor != null) {
             	    configs.add(new Config(ROIFinder.this.workflowModule.getId(), "roiImageScaleFactor", roiImageScaleFactor.toString()));
             	}
+            	Integer imageWidth = (Integer)dialog.imageWidth.getValue();
+            	if (imageWidth != null) {
+            	    configs.add(new Config(ROIFinder.this.workflowModule.getId(), "imageWidth", imageWidth.toString()));
+            	}
+            	Integer imageHeight = (Integer)dialog.imageHeight.getValue();
+            	if (imageHeight != null) {
+            	    configs.add(new Config(ROIFinder.this.workflowModule.getId(), "imageHeight", imageHeight.toString()));
+            	}
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -394,6 +410,12 @@ public abstract class ROIFinder implements Module, ImageLogger {
             	}
             	if (confs.containsKey("roiImageScaleFactor")) {
             	    dialog.roiImageScaleFactor.setValue(new Double(confs.get("roiImageScaleFactor").getValue()));
+            	}
+            	if (confs.containsKey("imageWidth")) {
+            	    dialog.imageWidth.setValue(new Integer(confs.get("imageWidth").getValue()));
+            	}
+            	if (confs.containsKey("imageHeight")) {
+            	    dialog.imageHeight.setValue(new Integer(confs.get("imageHeight").getValue()));
             	}
                 return dialog;
             }
@@ -424,6 +446,16 @@ public abstract class ROIFinder implements Module, ImageLogger {
             	if (roiImageScaleFactor == null || roiImageScaleFactor <= 0.0) {
             	    errors.add(new ValidationError(ROIFinder.this.workflowModule.getName(), 
             	            "Please enter a value greater than 0.0 ROI Image Scale Factor"));
+            	}
+            	Integer imageWidth = (Integer)dialog.imageWidth.getValue();
+            	if (imageWidth == null || imageWidth <= 0.0) {
+            	    errors.add(new ValidationError(ROIFinder.this.workflowModule.getName(), 
+            	            "Please enter a value greater than 0 for the HiRes Image Width"));
+            	}
+            	Integer imageHeight = (Integer)dialog.imageHeight.getValue();
+            	if (imageHeight == null || imageHeight <= 0.0) {
+            	    errors.add(new ValidationError(ROIFinder.this.workflowModule.getName(), 
+            	            "Please enter a value greater than 0 for the HiRes Image Height"));
             	}
                 return errors.toArray(new ValidationError[0]);
             }

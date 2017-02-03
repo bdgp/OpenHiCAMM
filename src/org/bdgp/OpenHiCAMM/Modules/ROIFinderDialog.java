@@ -7,6 +7,8 @@ import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
 import org.bdgp.OpenHiCAMM.Logger;
 import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.Image;
+import org.json.JSONException;
+import org.micromanager.utils.MDUtils;
 
 import mmcorej.TaggedImage;
 import net.miginfocom.swing.MigLayout;
@@ -17,6 +19,7 @@ import java.awt.event.ActionListener;
 import java.util.HashMap;
 import java.util.Map;
 import java.awt.event.ActionEvent;
+import javax.swing.JSpinner;
 
 @SuppressWarnings("serial")
 public class ROIFinderDialog extends JPanel {
@@ -28,6 +31,9 @@ public class ROIFinderDialog extends JPanel {
 	public static final double DEFAULT_HIRES_PIXEL_SIZE_UM = 0.1253;
 	public static final double DEFAULT_ROI_IMAGE_SCALE_FACTOR = 1.0;
 
+	public static final int DEFAULT_IMAGE_WIDTH = 4928;
+	public static final int DEFAULT_IMAGE_HEIGHT = 3264;
+
 	private JLabel lblMinRoiArea;
 	private JButton btnRoiTest;
 	private JLabel overlapPctLabel;
@@ -38,9 +44,14 @@ public class ROIFinderDialog extends JPanel {
 	DoubleSpinner roiMarginPct;
 	private JLabel lblImageScaling;
 	DoubleSpinner roiImageScaleFactor;
+	private JLabel lblHiresImageWidth;
+	private JLabel lblHiresImageHeight;
+	JSpinner imageWidth;
+	JSpinner imageHeight;
+	private JButton btnSetImageDimensions;
 
 	public ROIFinderDialog(final ROIFinder roiFinder) {
-		this.setLayout(new MigLayout("", "[][grow]", "[][][][][][]"));
+		this.setLayout(new MigLayout("", "[][grow]", "[][][][][][][][][]"));
         
         lblMinRoiArea = new JLabel("Min ROI Area (um^2)");
         add(lblMinRoiArea, "cell 0 0");
@@ -48,26 +59,6 @@ public class ROIFinderDialog extends JPanel {
         minRoiArea = new DoubleSpinner();
         minRoiArea.setValue(new Double(DEFAULT_MIN_ROI_AREA));
         add(minRoiArea, "cell 1 0");
-        
-        btnRoiTest = new JButton("ROI Test");
-        btnRoiTest.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                try { roiFinder.script.getMMCore().snapImage(); } 
-                catch (Exception e1) {throw new RuntimeException(e1);}
-                TaggedImage taggedImage;
-                try { taggedImage = roiFinder.script.getMMCore().getTaggedImage(); } 
-                catch (Exception e1) {throw new RuntimeException(e1);}
-
-                ImageLogRunner imageLogRunner = new ImageLogRunner("Test");
-                Logger logger = Logger.create(null, "ROIFinder Test", null);
-                Image image = new Image();
-                Map<String,Config> config = new HashMap<String,Config>();
-                config.put("minRoiArea", new Config(roiFinder.workflowModule.getId(), 
-                        "minRoiArea", new Double((Double)minRoiArea.getValue()).toString()));
-                roiFinder.process(image, taggedImage, logger, imageLogRunner, config);
-                imageLogRunner.display();
-            }
-        });
         
         overlapPctLabel = new JLabel("Tile Overlap Percentage:");
         add(overlapPctLabel, "cell 0 1");
@@ -96,7 +87,60 @@ public class ROIFinderDialog extends JPanel {
         roiImageScaleFactor = new DoubleSpinner();
         roiImageScaleFactor.setValue(DEFAULT_ROI_IMAGE_SCALE_FACTOR);
         add(roiImageScaleFactor, "cell 1 4");
-        add(btnRoiTest, "cell 0 5");
+        
+        lblHiresImageWidth = new JLabel("HiRes Image Width:");
+        roiImageScaleFactor.setValue(DEFAULT_IMAGE_WIDTH);
+        add(lblHiresImageWidth, "cell 0 5");
+        
+        imageWidth = new JSpinner();
+        add(imageWidth, "cell 1 5");
+        
+        lblHiresImageHeight = new JLabel("HiRes Image Height:");
+        roiImageScaleFactor.setValue(DEFAULT_IMAGE_HEIGHT);
+        add(lblHiresImageHeight, "cell 0 6");
+        
+        imageHeight = new JSpinner();
+        add(imageHeight, "cell 1 6");
+        
+        btnSetImageDimensions = new JButton("Set Image Dimensions");
+        btnSetImageDimensions.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                try { roiFinder.script.getMMCore().snapImage(); } 
+                catch (Exception e1) {throw new RuntimeException(e1);}
+                TaggedImage taggedImage;
+                try { taggedImage = roiFinder.script.getMMCore().getTaggedImage(); } 
+                catch (Exception e1) {throw new RuntimeException(e1);}
+                if (taggedImage != null) {
+                    try { imageWidth.setValue(MDUtils.getWidth(taggedImage.tags)); } 
+                    catch (JSONException e1) { /* do nothing */ }
+                    try { imageHeight.setValue(MDUtils.getHeight(taggedImage.tags)); } 
+                    catch (JSONException e1) { /* do nothing */ }
+
+                }
+            }
+        });
+        add(btnSetImageDimensions, "cell 1 7");
+        
+        btnRoiTest = new JButton("ROI Test");
+        btnRoiTest.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                try { roiFinder.script.getMMCore().snapImage(); } 
+                catch (Exception e1) {throw new RuntimeException(e1);}
+                TaggedImage taggedImage;
+                try { taggedImage = roiFinder.script.getMMCore().getTaggedImage(); } 
+                catch (Exception e1) {throw new RuntimeException(e1);}
+
+                ImageLogRunner imageLogRunner = new ImageLogRunner("Test");
+                Logger logger = Logger.create(null, "ROIFinder Test", null);
+                Image image = new Image();
+                Map<String,Config> config = new HashMap<String,Config>();
+                config.put("minRoiArea", new Config(roiFinder.workflowModule.getId(), 
+                        "minRoiArea", new Double((Double)minRoiArea.getValue()).toString()));
+                roiFinder.process(image, taggedImage, logger, imageLogRunner, config);
+                imageLogRunner.display();
+            }
+        });
+        add(btnRoiTest, "cell 0 8");
 	}
 	
 }
