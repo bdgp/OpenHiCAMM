@@ -468,12 +468,11 @@ public abstract class ROIFinder implements Module, ImageLogger {
                     logger.fine(String.format("Deleting old position lists"));
                     List<SlidePosList> oldSlidePosLists = slidePosListDao.select(
                             where("slideId",slide.getId()).
-                            and("moduleId",this.workflowModule.getId()).
-                            and("taskId", task.getId()));
+                            and("moduleId",this.workflowModule.getId()));
                     for (SlidePosList oldSlidePosList : oldSlidePosLists) {
                         slidePosDao.delete(where("slidePosListId",oldSlidePosList.getId()));
                     }
-                    slidePosListDao.delete(where("slideId",slide.getId()).and("moduleId",this.workflowModule.getId()).and("taskId", task.getId()));
+                    slidePosListDao.delete(where("slideId",slide.getId()).and("moduleId",this.workflowModule.getId()));
             	}
 
                 TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
