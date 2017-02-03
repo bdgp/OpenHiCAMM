@@ -1117,93 +1117,99 @@ public class SlideImager implements Module, ImageLogger {
     @Override
     public void runInitialize() { }
     
-    public static double[] moveStage(String moduleId, CMMCore core, double x, double y, Logger logger) {
+    public synchronized static double[] moveStage(String moduleId, CMMCore core, double x, double y, Logger logger) {
     	core.setTimeoutMs(10000);
         String xyStage = core.getXYStageDevice();
 
-        if (logger != null) logger.fine(String.format("%s: Moving stage to position: (%f,%f)", moduleId, x, y));
-        try {
-            // get the stage coordinates
-            // sometimes moving the stage throws, try at least 10 times
-            double[] x_stage = new double[] {0.0};
-            double[] y_stage = new double[] {0.0};
-            int tries = 0;
-            final int MAX_TRIES = 10;
-            while(tries <= MAX_TRIES) {
-                try { 
-                    core.getXYPosition(xyStage, x_stage, y_stage);
-                    break;
-                } 
-                catch (Throwable e) { 
-                    if (tries >= MAX_TRIES) throw new RuntimeException(e);
-                }
-                Thread.sleep(500);
-                ++tries;
-            }
-            if (logger != null) logger.fine(String.format("%s: Current stage position: (%f,%f)", moduleId, x_stage[0], y_stage[0]));
-
-            // set the stage coordinates
-            tries = 0;
-            while(tries <= MAX_TRIES) {
-                try { 
-                    core.setXYPosition(xyStage, x, y); 
-                    break;
-                } 
-                catch (Throwable e) { 
-                    if (tries >= MAX_TRIES) throw new RuntimeException(e);
-                }
-                Thread.sleep(500);
-                ++tries;
-            }
-
-            // wait for the stage to finish moving
-            final long MAX_WAIT = 10000000000L; // 10 seconds
-            long startTime = System.nanoTime();
-            while (core.deviceBusy(xyStage)) {
-                if (MAX_WAIT < System.nanoTime() - startTime) {
-                    // If it's taking too long to move the stage, 
-                    // try re-sending the stage movement command.
-                    if (logger != null) logger.warning(String.format("%s: Stage is taking too long to move, re-sending stage move commands...", moduleId));
-                    core.stop(xyStage);
+        int move_tries = 0;
+        final int MOVE_MAX_TRIES = 10;
+        Throwable err = new RuntimeException("Unknown exception");
+        while (move_tries++ < MOVE_MAX_TRIES) {
+            try {
+                if (logger != null) logger.fine(String.format("%s: Moving stage to position: (%f,%f)", moduleId, x, y));
+                // get the stage coordinates
+                // sometimes moving the stage throws, try at least 10 times
+                double[] x_stage = new double[] {0.0};
+                double[] y_stage = new double[] {0.0};
+                int tries = 0;
+                final int MAX_TRIES = 10;
+                while(tries <= MAX_TRIES) {
+                    try { 
+                        core.getXYPosition(xyStage, x_stage, y_stage);
+                        break;
+                    } 
+                    catch (Throwable e) { 
+                        if (tries >= MAX_TRIES) throw new RuntimeException(e);
+                    }
                     Thread.sleep(500);
-                    startTime = System.nanoTime();
-                    core.setXYPosition(xyStage, x, y);
+                    ++tries;
                 }
-                Thread.sleep(5);
-            }
-            
-            // get the new stage coordinates
-            double[] x_stage_new = new double[] {0.0};
-            double[] y_stage_new = new double[] {0.0};
-            tries = 0;
-            while(tries <= MAX_TRIES) {
-                try { 
-                    core.getXYPosition(xyStage, x_stage_new, y_stage_new);
-                    break;
-                } 
-                catch (Throwable e) { 
-                    if (tries >= MAX_TRIES) throw new RuntimeException(e);
-                }
-                Thread.sleep(500);
-                ++tries;
-            }
+                if (logger != null) logger.fine(String.format("%s: Current stage position: (%f,%f)", moduleId, x_stage[0], y_stage[0]));
 
-            // make sure the stage moved to the correct coordinates
-            if (logger != null) logger.fine(String.format("%s: New stage position: (%f,%f)", moduleId, x_stage_new[0], y_stage_new[0]));
-            final double EPSILON = 1000;
-            if (!(Math.abs(x_stage_new[0]-x) < EPSILON && Math.abs(y_stage_new[0]-y) < EPSILON)) {
-            	throw new RuntimeException(String.format("%s: Stage moved to wrong coordinates: (%.2f,%.2f)",
-            			moduleId, x_stage_new[0], y_stage_new[0]));
+                // set the stage coordinates
+                tries = 0;
+                while(tries <= MAX_TRIES) {
+                    try { 
+                        core.setXYPosition(xyStage, x, y); 
+                        break;
+                    } 
+                    catch (Throwable e) { 
+                        if (tries >= MAX_TRIES) throw new RuntimeException(e);
+                    }
+                    Thread.sleep(500);
+                    ++tries;
+                }
+
+                // wait for the stage to finish moving
+                final long MAX_WAIT = 10000000000L; // 10 seconds
+                long startTime = System.nanoTime();
+                while (core.deviceBusy(xyStage)) {
+                    if (MAX_WAIT < System.nanoTime() - startTime) {
+                        // If it's taking too long to move the stage, 
+                        // try re-sending the stage movement command.
+                        if (logger != null) logger.warning(String.format("%s: Stage is taking too long to move, re-sending stage move commands...", moduleId));
+                        core.stop(xyStage);
+                        Thread.sleep(500);
+                        startTime = System.nanoTime();
+                        core.setXYPosition(xyStage, x, y);
+                    }
+                    Thread.sleep(5);
+                }
+                
+                // get the new stage coordinates
+                double[] x_stage_new = new double[] {0.0};
+                double[] y_stage_new = new double[] {0.0};
+                tries = 0;
+                while(tries <= MAX_TRIES) {
+                    try { 
+                        core.getXYPosition(xyStage, x_stage_new, y_stage_new);
+                        break;
+                    } 
+                    catch (Throwable e) { 
+                        if (tries >= MAX_TRIES) throw new RuntimeException(e);
+                    }
+                    Thread.sleep(500);
+                    ++tries;
+                }
+
+                // make sure the stage moved to the correct coordinates
+                if (logger != null) logger.fine(String.format("%s: New stage position: (%f,%f)", moduleId, x_stage_new[0], y_stage_new[0]));
+                final double EPSILON = 1000;
+                if (!(Math.abs(x_stage_new[0]-x) < EPSILON && Math.abs(y_stage_new[0]-y) < EPSILON)) {
+                    throw new RuntimeException(String.format("%s: Stage moved to wrong coordinates: (%.2f,%.2f)",
+                            moduleId, x_stage_new[0], y_stage_new[0]));
+                }
+                // return the new stage coordinates
+                return new double[]{x_stage_new[0], y_stage_new[0]};
+            } 
+            catch (Throwable e) { 
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                if (logger != null) logger.severe(String.format("%s: Failed to move stage to position (%.2f,%.2f): %s", moduleId, x,y, sw.toString()));
+                err = e;
             }
-            // return the new stage coordinates
-            return new double[]{x_stage_new[0], y_stage_new[0]};
-		} 
-        catch (Throwable e) { 
-        	StringWriter sw = new StringWriter();
-        	e.printStackTrace(new PrintWriter(sw));
-        	if (logger != null) logger.severe(String.format("%s: Failed to move stage to position (%.2f,%.2f): %s", moduleId, x,y, sw.toString()));
-        	throw new RuntimeException(e);
         }
+        throw new RuntimeException(err);
     }
 
     public Status setTaskStatusOnResume(Task task) {
