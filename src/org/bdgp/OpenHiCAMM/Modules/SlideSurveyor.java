@@ -138,6 +138,15 @@ public class SlideSurveyor implements Module {
                 try { MMStudio.getInstance().closeAcquisitionWindow(name); } 
                 catch (MMScriptException e) { /* do nothing */ }
             }
+
+            // get the dimensions of a normal image
+            core.snapImage();
+            TaggedImage taggedImage = core.getTaggedImage();
+            if (taggedImage == null) {
+                throw new RuntimeException("Could not get image dimensions!");
+            }
+            int hiresImageWidth = MDUtils.getWidth(taggedImage.tags);
+            int hiresImageHeight = MDUtils.getHeight(taggedImage.tags);
             
             // start live mode
             core.clearCircularBuffer();
@@ -159,7 +168,7 @@ public class SlideSurveyor implements Module {
             //    }
             //}
 
-            // determine the image width/height
+            // determine the width/height of a live view image
             TaggedImage img0 = null;
             ImageProcessor ip0 = null;
             try { img0 = core.getLastTaggedImage(); }
@@ -172,6 +181,10 @@ public class SlideSurveyor implements Module {
                 if (img0 != null) ip0 = ImageUtils.makeProcessor(img0);
             }
             Integer imageWidth = ip0.getWidth(), imageHeight = ip0.getHeight();
+            
+            // compute the live view pixel sizes
+            double liveViewPixelSizeX = pixelSize * (double)hiresImageWidth / (double)imageWidth;
+            double liveViewPixelSizeY = pixelSize * (double)hiresImageHeight / (double)imageHeight;
 
             // determine the bounds of the stage coordinates
             for (MultiStagePosition msp : positionList.getPositions()) {
@@ -188,8 +201,8 @@ public class SlideSurveyor implements Module {
                         minX, minY, maxX, maxY, imageWidth, imageHeight));
             }
 
-            double slideWidthPx = ((maxX - minX) / pixelSize) + (double)imageWidth;
-            double slideHeightPx = ((maxY - minY) / pixelSize) + (double)imageHeight;
+            double slideWidthPx = ((maxX - minX) / liveViewPixelSizeX) + (double)imageWidth;
+            double slideHeightPx = ((maxY - minY) / liveViewPixelSizeY) + (double)imageHeight;
             logger.fine(String.format("slideWidthPx = %s, slideHeightPx = %s", slideWidthPx, slideHeightPx));
             
             logger.fine(String.format("scaleFactor = %s", imageScaleFactor));
@@ -286,11 +299,11 @@ public class SlideSurveyor implements Module {
                         (int)Math.round(imp.getHeight() * imageScaleFactor)));
                 logger.fine(String.format("Resized image width: %s, height: %s", imp.getWidth(), imp.getHeight()));
                 
-                double xloc = (x_stage_new - minX) / pixelSize;
+                double xloc = (x_stage_new - minX) / liveViewPixelSizeX;
                 double xlocInvert = invertXAxis? slideWidthPx - (xloc + width) : xloc;
                 double xlocScale = xlocInvert * imageScaleFactor;
                 logger.fine(String.format("xloc = %s, xlocInvert = %s, xlocScale = %s", xloc, xlocInvert, xlocScale));
-                double yloc = (y_stage_new - minY) / pixelSize;
+                double yloc = (y_stage_new - minY) / liveViewPixelSizeY;
                 double ylocInvert = invertYAxis? slideHeightPx - (yloc + height) : yloc;
                 double ylocScale = ylocInvert * imageScaleFactor;
                 logger.fine(String.format("yloc = %s, ylocInvert = %s, ylocScale = %s", yloc, ylocInvert, ylocScale));
@@ -301,6 +314,47 @@ public class SlideSurveyor implements Module {
                         (int)Math.round(ylocScale), 
                         Blitter.COPY);
             }
+            // perform any necessary image preprocessing on slideThumb
+            
+            // save the stitched image to the stitched folder using the stitch group as the 
+            // file name.
+            FileSaver fileSaver = new FileSaver(slideThumb);
+            File imageFile = new File(surveyFolder, String.format("%s.tif", slideThumb.getTitle()));
+            fileSaver.saveAsTiff(imageFile.getPath());
+
+            // create necessary DB records so that ROIFinder can work on the large slide image
+            Image image = new Image(imageFile.getPath(), slideId);
+            imageDao.insert(image);
+            logger.fine(String.format("Inserted image: %s", image));
+            imageDao.reload(image, "path","slideId");
+            
+            // Store the Image ID as a Task Config variable
+            TaskConfig imageIdConf = new TaskConfig(
+                    task.getId(),
+                    "imageId",
+                    new Integer(image.getId()).toString());
+            taskConfigDao.insertOrUpdate(imageIdConf,"id","key");
+            conf.put(imageIdConf.getKey(), imageIdConf);
+            logger.fine(String.format("Inserted/Updated imageId config: %s", imageIdConf));
+                                    
+            // Store the pixel Size X/Y conf
+            TaskConfig pixelSizeXConf = new TaskConfig(
+                    task.getId(),
+                    "pixelSizeX",
+                    new Double(liveViewPixelSizeX).toString());
+            taskConfigDao.insertOrUpdate(pixelSizeXConf,"id","key");
+            conf.put(pixelSizeXConf.getKey(), pixelSizeXConf);
+            logger.fine(String.format("Inserted/Updated pixelSizeUmX config: %s", pixelSizeXConf));
+                                    
+            TaskConfig pixelSizeYConf = new TaskConfig(
+                    task.getId(),
+                    "pixelSizeY",
+                    new Double(liveViewPixelSizeY).toString());
+            taskConfigDao.insertOrUpdate(pixelSizeYConf,"id","key");
+            conf.put(pixelSizeYConf.getKey(), pixelSizeYConf);
+            logger.fine(String.format("Inserted/Updated pixelSizeUmY config: %s", pixelSizeYConf));
+
+            return Status.SUCCESS;
         } 
         catch (Exception e) {
             throw new RuntimeException(e);
@@ -313,31 +367,6 @@ public class SlideSurveyor implements Module {
             try { core.stopSequenceAcquisition(); } 
             catch (Exception e) {throw new RuntimeException(e);}
         }
-        
-        // perform any necessary image preprocessing on slideThumb
-        
-        // save the stitched image to the stitched folder using the stitch group as the 
-        // file name.
-        FileSaver fileSaver = new FileSaver(slideThumb);
-        File imageFile = new File(surveyFolder, String.format("%s.tif", slideThumb.getTitle()));
-        fileSaver.saveAsTiff(imageFile.getPath());
-
-        // create necessary DB records so that ROIFinder can work on the large slide image
-        Image image = new Image(imageFile.getPath(), slideId);
-        imageDao.insert(image);
-        logger.fine(String.format("Inserted image: %s", image));
-        imageDao.reload(image, "path","slideId");
-        
-        // Store the Image ID as a Task Config variable
-        TaskConfig imageIdConf = new TaskConfig(
-                task.getId(),
-                "imageId",
-                new Integer(image.getId()).toString());
-        taskConfigDao.insertOrUpdate(imageIdConf,"id","key");
-        conf.put(imageIdConf.getKey(), imageIdConf);
-        logger.fine(String.format("Inserted/Updated imageId config: %s", imageIdConf));
-                                
-        return Status.SUCCESS;
     }
 
     private File createSurveyImageFolder() {

@@ -106,10 +106,18 @@ public abstract class ROIFinder implements Module, ImageLogger {
     	    double imageScaleFactor = imageScaleFactorConf != null? new Double(imageScaleFactorConf.getValue()) : 1.0;
 
     	    Config pixelSizeConf = config.get("pixelSize");
-    	    if (pixelSizeConf == null) throw new RuntimeException("Config value pixelSize was not inherited!");
-			double pixelSize = new Double(pixelSizeConf.getValue());
-			logger.fine(String.format("%s: Using pixelSize: %f", label, pixelSize));
-			
+			Double pixelSize = pixelSizeConf != null? new Double(pixelSizeConf.getValue()) : null;
+
+    	    Config pixelSizeXConf = config.get("pixelSizeX");
+    	    Double pixelSizeX = pixelSizeXConf != null? new Double(pixelSizeXConf.getValue()) : pixelSize;
+    	    if (pixelSizeX == null) throw new RuntimeException("Config value pixelSizeX was not inherited!");
+			logger.fine(String.format("%s: Using pixelSizeX: %f", label, pixelSizeX));
+
+    	    Config pixelSizeYConf = config.get("pixelSizeY");
+    	    Double pixelSizeY = pixelSizeYConf != null? new Double(pixelSizeYConf.getValue()) : pixelSize;
+    	    if (pixelSizeY == null) throw new RuntimeException("Config value pixelSizeY was not inherited!");
+			logger.fine(String.format("%s: Using pixelSizeY: %f", label, pixelSizeY));
+
 			double hiResPixelSize = new Double(config.get("hiResPixelSize").getValue());
 			logger.fine(String.format("%s: Using hiResPixelSize: %f", label, hiResPixelSize));
 
@@ -159,7 +167,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			try {
                 rois = process(image, taggedImage, logger, new ImageLog.NullImageLogRunner(), config);
 			}
-			catch (Exception e) {
+			catch (Throwable e) {
                 StringWriter sw = new StringWriter();
                 e.printStackTrace(new PrintWriter(sw));
 			    logger.warning(String.format("Exception during ROI processing: %s", sw.toString()));
@@ -174,8 +182,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			    roiDao.insert(roi);
 
 			    // increase the ROI dimensions to add the margins
-			    double roiMarginWidth = (roiMarginPct / 100.0) * imageWidth * hiResPixelSize / (pixelSize / imageScaleFactor);
-			    double roiMarginHeight = (roiMarginPct / 100.0) * imageHeight * hiResPixelSize / (pixelSize / imageScaleFactor);
+			    double roiMarginWidth = (roiMarginPct / 100.0) * imageWidth * hiResPixelSize / (pixelSizeX / imageScaleFactor);
+			    double roiMarginHeight = (roiMarginPct / 100.0) * imageHeight * hiResPixelSize / (pixelSizeY / imageScaleFactor);
 			    int roiX1 = (int)Math.floor(roi.getX1() - roiMarginWidth);
 			    int roiY1 = (int)Math.floor(roi.getY1() - roiMarginHeight);
 			    int roiX2 = (int)Math.floor(roi.getX2() + roiMarginWidth);
@@ -186,8 +194,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			    int roiWidth = roiX2-roiX1+1;
 			    int roiHeight = roiY2-roiY1+1;
 
-			    int tileWidth = (int)Math.floor((imageWidth * hiResPixelSize) / (pixelSize / imageScaleFactor));
-			    int tileHeight = (int)Math.floor((imageHeight * hiResPixelSize) / (pixelSize / imageScaleFactor));
+			    int tileWidth = (int)Math.floor((imageWidth * hiResPixelSize) / (pixelSizeX / imageScaleFactor));
+			    int tileHeight = (int)Math.floor((imageHeight * hiResPixelSize) / (pixelSizeY / imageScaleFactor));
 
 			    int tileXOverlap = (int)Math.floor((overlapPct / 100.0) * tileWidth);
 			    int tileYOverlap = (int)Math.floor((overlapPct / 100.0) * tileHeight);
@@ -215,8 +223,8 @@ public abstract class ROIFinder implements Module, ImageLogger {
                         StagePosition sp = new StagePosition();
                         sp.numAxes = 2;
                         sp.stageName = "XYStage";
-                        sp.x = x_stage+((tileX-imageWidth/2.0)*(pixelSize/imageScaleFactor))*(invertXAxis? -1.0 : 1.0);
-                        sp.y = y_stage+((tileY-imageHeight/2.0)*(pixelSize/imageScaleFactor))*(invertYAxis? -1.0 : 1.0);
+                        sp.x = x_stage+((tileX-imageWidth/2.0)*(pixelSizeX/imageScaleFactor))*(invertXAxis? -1.0 : 1.0);
+                        sp.y = y_stage+((tileY-imageHeight/2.0)*(pixelSizeY/imageScaleFactor))*(invertYAxis? -1.0 : 1.0);
                         String mspLabel = String.format("%s.%s.ROI%d.X%d.Y%d", 
                                 positionName, imageLabel, roi.getId(), x, y);
                         msp.setProperty("stitchGroup", "ROI"+roi.getId());
