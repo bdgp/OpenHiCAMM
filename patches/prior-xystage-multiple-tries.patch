@@ -1,24 +1,17 @@
-Index: DeviceAdapters/Prior/Prior.cpp
+Index: Prior.cpp
 ===================================================================
---- DeviceAdapters/Prior/Prior.cpp	(revision 15982)
-+++ DeviceAdapters/Prior/Prior.cpp	(working copy)
-@@ -33,6 +33,15 @@
+--- Prior.cpp	(revision 16290)
++++ Prior.cpp	(working copy)
+@@ -33,6 +33,8 @@
  #include "../../MMDevice/ModuleInterface.h"
  #include <sstream>
  
-+#ifdef _WIN32
-+#include <Windows.h>
-+#define SLEEP(t) (Sleep(t))
-+#else
-+#include <unistd.h>
-+#define SLEEP(t) (usleep(t)*1000)
-+#endif
-+#define SLEEP_TIME 500
++static const int SLEEP_TIME = 10000;
 +
  const char* g_XYStageDeviceName = "XYStage";
  const char* g_ZStageDeviceName = "ZStage";
  const char* g_NanoStageDeviceName = "NanoScanZ";
-@@ -970,7 +979,7 @@
+@@ -970,7 +972,7 @@
  
     return false;
  }
@@ -27,7 +20,7 @@ Index: DeviceAdapters/Prior/Prior.cpp
  int XYStage::SetPositionSteps(long x, long y)
  {
     MMThreadGuard guard(lock_);
-@@ -984,27 +993,40 @@
+@@ -984,27 +986,52 @@
     command << "G," << x << "," << y;
  
     // send command
@@ -35,11 +28,14 @@ Index: DeviceAdapters/Prior/Prior.cpp
 -   if (ret != DEVICE_OK)
 -      return ret;
 +   int tries = 0;
-+   const int MAX_TRIES = 10;
++   const int MAX_TRIES = 100;
 +   while (tries++ < MAX_TRIES) {
 +       ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
 +       if (ret != DEVICE_OK) {
-+           SLEEP(SLEEP_TIME);
++           std::ostringstream os;
++           os << "XYStage::SetPositionSteps G,x,y got ret code " << ret << ", trying again " << tries << "/" << MAX_TRIES;
++           LogMessage(os.str().c_str());
++           CDeviceUtils::SleepMs(SLEEP_TIME);
 +           continue;
 +       }
  
@@ -52,7 +48,10 @@ Index: DeviceAdapters/Prior/Prior.cpp
 +       std::string answer;
 +       ret = GetSerialAnswer(port_.c_str(), "\r", answer);
 +       if (ret != DEVICE_OK) {
-+           SLEEP(SLEEP_TIME);
++           std::ostringstream os;
++           os << "XYStage::SetPositionSteps G,x,y response got ret code " << ret << ", trying again " << tries << "/" << MAX_TRIES;
++           LogMessage(os.str().c_str());
++           CDeviceUtils::SleepMs(SLEEP_TIME);
 +           continue;
 +       }
  
@@ -67,13 +66,19 @@ Index: DeviceAdapters/Prior/Prior.cpp
 +       {
 +           int errNo = atoi(answer.substr(2).c_str());
 +           ret = ERR_OFFSET + errNo;
-+           SLEEP(SLEEP_TIME);
++           std::ostringstream os;
++           os << "XYStage::SetPositionSteps G,x,y response RE got ret code " << ret << ", trying again " << tries << "/" << MAX_TRIES;
++           LogMessage(os.str().c_str());
++           CDeviceUtils::SleepMs(SLEEP_TIME);
 +           continue;
 +       }
 +       else {
 +           ret = ERR_UNRECOGNIZED_ANSWER;   
 +       }
-+       SLEEP(SLEEP_TIME);
++       std::ostringstream os;
++       os << "XYStage::SetPositionSteps G,x,y got unrecognized ret code " << ret << ", trying again " << tries << "/" << MAX_TRIES;
++       LogMessage(os.str().c_str());
++       CDeviceUtils::SleepMs(SLEEP_TIME);
     }
 -   else if (answer.substr(0, 1).compare("E") == 0 && answer.length() > 2)
 -   {
@@ -86,7 +91,7 @@ Index: DeviceAdapters/Prior/Prior.cpp
  }
   
  int XYStage::SetRelativePositionSteps(long x, long y)
-@@ -1020,27 +1042,40 @@
+@@ -1020,27 +1047,52 @@
     command << "GR," << x << "," << y;
  
     // send command
@@ -94,11 +99,14 @@ Index: DeviceAdapters/Prior/Prior.cpp
 -   if (ret != DEVICE_OK)
 -      return ret;
 +   int tries = 0;
-+   const int MAX_TRIES = 10;
++   const int MAX_TRIES = 100;
 +   while (tries++ < MAX_TRIES) {
 +       ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
 +       if (ret != DEVICE_OK) {
-+           SLEEP(SLEEP_TIME);
++           std::ostringstream os;
++           os << "XYStage::SetRelativePositionSteps GR,x,y got ret code " << ret << ", trying again " << tries << "/" << MAX_TRIES;
++           LogMessage(os.str().c_str());
++           CDeviceUtils::SleepMs(SLEEP_TIME);
 +           continue;
 +       }
  
@@ -111,7 +119,10 @@ Index: DeviceAdapters/Prior/Prior.cpp
 +       std::string answer;
 +       ret = GetSerialAnswer(port_.c_str(), "\r", answer);
 +       if (ret != DEVICE_OK) {
-+           SLEEP(SLEEP_TIME);
++           std::ostringstream os;
++           os << "XYStage::SetRelativePositionSteps GR,x,y response got ret code " << ret << ", trying again " << tries << "/" << MAX_TRIES;
++           LogMessage(os.str().c_str());
++           CDeviceUtils::SleepMs(SLEEP_TIME);
 +           continue;
 +       }
  
@@ -126,13 +137,19 @@ Index: DeviceAdapters/Prior/Prior.cpp
 +       {
 +           int errNo = atoi(answer.substr(2).c_str());
 +           ret = ERR_OFFSET + errNo;
-+           SLEEP(SLEEP_TIME);
++           std::ostringstream os;
++           os << "XYStage::SetRelativePositionSteps GR,x,y response RE got ret code " << ret << ", trying again " << tries << "/" << MAX_TRIES;
++           LogMessage(os.str().c_str());
++           CDeviceUtils::SleepMs(SLEEP_TIME);
 +           continue;
 +       }
 +       else {
 +           ret = ERR_UNRECOGNIZED_ANSWER;
 +       }
-+       SLEEP(SLEEP_TIME);
++       std::ostringstream os;
++       os << "XYStage::SetRelativePositionSteps GR,x,y response got unrecognized ret code " << ret << ", trying again " << tries << "/" << MAX_TRIES;
++       LogMessage(os.str().c_str());
++       CDeviceUtils::SleepMs(SLEEP_TIME);
     }
 -   else if (answer.substr(0, 1).compare("E") == 0 && answer.length() > 2)
 -   {

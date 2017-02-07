@@ -1,31 +1,34 @@
 Index: SimpleCam.cpp
 ===================================================================
---- SimpleCam.cpp	(revision 15982)
+--- SimpleCam.cpp	(revision 16290)
 +++ SimpleCam.cpp	(working copy)
-@@ -37,6 +37,15 @@
+@@ -27,6 +27,7 @@
+ #include <string.h>
+ #include <iostream>
+ #include <algorithm>
++#include <sstream>
+ #include <gphoto2/gphoto2.h>
+ #include <gphoto2/gphoto2-version.h>
+ #include <gphoto2/gphoto2-port-version.h>
+@@ -37,6 +38,10 @@
  #include <sys/stat.h>
  #endif // __APPLE__
  
-+#ifdef _WIN32
-+#include <Windows.h>
-+#define SLEEP(t) (Sleep(t))
-+#else
-+#include <unistd.h>
-+#define SLEEP(t) (usleep(t)*1000)
-+#endif
-+#define SLEEP_TIME 1000
++#include "../../../MMDevice/DeviceUtils.h"
++
++static const int SLEEP_TIME = 10000;
 +
  using namespace std;
  
  CSimpleCam::CSimpleCam()
-@@ -722,48 +731,61 @@
+@@ -722,48 +727,64 @@
     }
  
     int rc = GP_OK;
 -   if (rc >= GP_OK)
 -      rc = gp_camera_capture(camera_, GP_CAPTURE_IMAGE, &camera_file_path, context_);
 +   int tries = 0;
-+   const int MAX_TRIES = 10;
++   const int MAX_TRIES = 100;
 +   while (tries++ < MAX_TRIES) {
 +       if (rc >= GP_OK)
 +          rc = gp_camera_capture(camera_, GP_CAPTURE_IMAGE, &camera_file_path, context_);
@@ -102,14 +105,17 @@ Index: SimpleCam.cpp
 +       if (rc >= GP_OK)
 +          return imageFilename; 
 +       else  {
-+          SLEEP(SLEEP_TIME);
++          ostringstream os;
++          os << "SimpleCam::captureImage got ret code " << rc << ", trying again " << tries << "/" << MAX_TRIES;
++          gp_log(GP_LOG_ERROR, "SimpleCam", "%s", os.str().c_str());
++          CDeviceUtils::SleepMs(SLEEP_TIME);
 +          gp_camera_exit(camera_, context_);
 +          rc = gp_camera_init(camera_, context_);
 +#ifdef __APPLE__
 +          if (rc < GP_OK)
 +              gp_log(GP_LOG_ERROR, "SimpleCam", "Perhaps you forgot to kill the Mac OS X PTP daemon after switching on the camera, but before running the program?");
 +#endif
-+          SLEEP(SLEEP_TIME);
++          CDeviceUtils::SleepMs(SLEEP_TIME);
 +       }
 +   }
 +   return "";
