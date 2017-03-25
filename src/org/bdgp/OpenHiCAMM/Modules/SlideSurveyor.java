@@ -42,7 +42,9 @@ import org.micromanager.utils.MMException;
 import org.micromanager.utils.MMScriptException;
 import org.micromanager.utils.MMSerializationException;
 
+import ij.IJ;
 import ij.ImagePlus;
+import ij.WindowManager;
 //import ij.WindowManager;
 import ij.gui.NewImage;
 import ij.io.FileSaver;
@@ -124,6 +126,9 @@ public class SlideSurveyor implements Module {
         if (invertYAxisConf == null) throw new RuntimeException("Undefined conf value for invertYAxis!");
         Boolean invertYAxis = new Boolean(invertYAxisConf.getValue().equals("yes"));
         
+        Config preprocessingMacroConf = conf.get("preprocessingMacro");
+        String preprocessingMacro = preprocessingMacroConf != null? preprocessingMacroConf.getValue() : "";
+
         ImagePlus slideThumb;
         Double minX = null, minY = null, maxX = null, maxY = null; 
         CMMCore core = this.workflowRunner.getOpenHiCAMM().getApp().getMMCore();
@@ -315,6 +320,20 @@ public class SlideSurveyor implements Module {
                         Blitter.COPY);
             }
             // perform any necessary image preprocessing on slideThumb
+            if (preprocessingMacro != null && !preprocessingMacro.replaceAll("\\s+","").isEmpty()) {
+                slideThumb.show();
+                logger.info(String.format("Running preprocessing macro:%n%s", preprocessingMacro));
+                IJ.runMacro(preprocessingMacro);
+                ImagePlus modifiedImage1 = WindowManager.getImage(slideThumb.getTitle());
+                if (modifiedImage1 != null) {
+                    modifiedImage1.changes = false;
+                    modifiedImage1.close();
+                }
+                else {
+                    slideThumb.changes = false;
+                    slideThumb.close();
+                }
+            }
             
             // save the stitched image to the stitched folder using the stitch group as the 
             // file name.
@@ -428,6 +447,9 @@ public class SlideSurveyor implements Module {
                 if (slideSurveyorDialog.setInitZPosYes.isSelected()) {
                     configs.add(new Config(workflowModule.getId(), "initialZPos", slideSurveyorDialog.initialZPos.getValue().toString()));
                 }
+                if (!slideSurveyorDialog.preprocessingMacro.getText().replaceAll("\\s+","").isEmpty()) {
+                    configs.add(new Config(workflowModule.getId(), "preprocessingMacro", slideSurveyorDialog.preprocessingMacro.getText()));
+                }
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -477,6 +499,9 @@ public class SlideSurveyor implements Module {
                 else {
                     slideSurveyorDialog.setInitZPosNo.setSelected(true);
                     slideSurveyorDialog.initialZPos.setValue(new Double(0.0));
+                }
+                if (conf.containsKey("preprocessingMacro")) {
+                    slideSurveyorDialog.preprocessingMacro.setText(conf.get("preprocessingMacro").getValue());
                 }
                 return slideSurveyorDialog;
             }

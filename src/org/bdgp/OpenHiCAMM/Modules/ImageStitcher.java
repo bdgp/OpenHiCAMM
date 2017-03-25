@@ -385,7 +385,7 @@ public class ImageStitcher implements Module, ImageLogger {
         IJ.run(image1, "Pairwise stitching", params);
         
         // Close the input images.
-        // The pairwise stitching module modifies then input images in-place, so
+        // The pairwise stitching module modifies the input images in-place, so
         // closing them won't remove them from the image table. We have to find
         // the modified images with the same title, and close those instead.
         this.showImageTable("Before close()", logger);

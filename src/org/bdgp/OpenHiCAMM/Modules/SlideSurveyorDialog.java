@@ -23,6 +23,7 @@ import javax.swing.JRadioButton;
 import javax.swing.ButtonGroup;
 import java.awt.event.ItemListener;
 import java.awt.event.ItemEvent;
+import javax.swing.JTextArea;
 
 @SuppressWarnings("serial")
 public class SlideSurveyorDialog extends JPanel {
@@ -43,14 +44,21 @@ public class SlideSurveyorDialog extends JPanel {
 	// feasible default image scaling factor
 	// 1.0 = 4.6 GB image size, 0.1 = 460 MB image size
 	public static final double DEFAULT_IMAGE_SCALE_FACTOR = 0.3;
+
+	// Default FFT options
+	public static final String PREPROCESSING_MACRO = 
+	        "run(\"Bandpass Filter...\", \"filter_large=25 filter_small=15 suppress=Vertical tolerance=5 autoscale saturate\");\n"+
+	        "run(\"Bandpass Filter...\", \"filter_large=25 filter_small=15 suppress=Horizontal tolerance=5 autoscale saturate\");\n";
 	
 	private final ButtonGroup invertXAxisGroup = new ButtonGroup();
 	private final ButtonGroup invertYAxisGroup = new ButtonGroup();
 	private final ButtonGroup setInitZPosGrp = new ButtonGroup();
 	private JButton btnShowAcquisitionDialog;
+	private JLabel lblFftFilterOptions;
+	JTextArea preprocessingMacro;
 	
 	public SlideSurveyorDialog(WorkflowRunner workflowRunner) {
-		this.setLayout(new MigLayout("", "[672.00,grow][]", "[][][][][][][][]"));
+		this.setLayout(new MigLayout("", "[672.00,grow][]", "[][][][][][][][][][][grow]"));
 		
 		btnShowAcquisitionDialog = new JButton("Show XY Position Dialog");
 		btnShowAcquisitionDialog.addActionListener(new ActionListener() {
@@ -198,6 +206,13 @@ public class SlideSurveyorDialog extends JPanel {
         imageScaleFactor = new DoubleSpinner();
         imageScaleFactor.setValue(new Double(DEFAULT_IMAGE_SCALE_FACTOR));
         add(imageScaleFactor, "cell 1 7");
+        
+        lblFftFilterOptions = new JLabel("Preprocessing Macro Script:");
+        add(lblFftFilterOptions, "cell 0 9");
+        
+        preprocessingMacro = new JTextArea();
+        preprocessingMacro.setText(PREPROCESSING_MACRO);
+        add(preprocessingMacro, "cell 0 10 2 1,grow");
         setInitZPosYes.addItemListener(new ItemListener() {
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {

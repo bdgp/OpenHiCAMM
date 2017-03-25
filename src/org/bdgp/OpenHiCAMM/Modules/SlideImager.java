@@ -888,6 +888,9 @@ public class SlideImager implements Module, ImageLogger {
                 for (int s=0; s<verboseSummary.slices; ++s) {
                     for (int f=0; f<verboseSummary.frames; ++f) {
                         for (int p=0; p<verboseSummary.positions; ++p) {
+                            MultiStagePosition msp = positionList.getPosition(p);
+                            if (msp == null) continue;
+
                             // Create task record
                             Task task = new Task(this.workflowModule.getId(), Status.NEW);
                             // setting the dispatch UUID is required for dynamically created
@@ -908,7 +911,6 @@ public class SlideImager implements Module, ImageLogger {
                                     this.workflowModule.getName(), imageLabel));
 
                             // Create taskConfig record for the MSP label (positionName)
-                            MultiStagePosition msp = positionList.getPosition(p);
                             TaskConfig positionName = new TaskConfig(
                                     task.getId(),
                                     "positionName", 
