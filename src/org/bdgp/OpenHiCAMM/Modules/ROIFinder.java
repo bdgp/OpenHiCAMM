@@ -86,11 +86,16 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
         // get the tagged image
         TaggedImage taggedImage = getTaggedImage(image, logger);
+        int taggedImageWidth; 
+        int taggedImageHeight; 
+        String positionName;
+        try {
+            taggedImageWidth = MDUtils.getWidth(taggedImage.tags);
+            taggedImageHeight = MDUtils.getHeight(taggedImage.tags);
+            positionName = MDUtils.getPositionName(taggedImage.tags);
+        } catch (JSONException e) {throw new RuntimeException(e);}
 
         // get the image label and position name
-        String positionName = null;
-        try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
-        catch (JSONException e) {throw new RuntimeException(e);} 
         String imageLabel = image.getLabel();
         String label = String.format("%s (%s)", positionName, imageLabel); 
         
@@ -227,8 +232,12 @@ public abstract class ROIFinder implements Module, ImageLogger {
                         StagePosition sp = new StagePosition();
                         sp.numAxes = 2;
                         sp.stageName = "XYStage";
-                        sp.x = x_stage+((tileX-imageWidth/2.0)*(pixelSizeX/imageScaleFactor))*(invertXAxis? -1.0 : 1.0);
-                        sp.y = y_stage+((tileY-imageHeight/2.0)*(pixelSizeY/imageScaleFactor))*(invertYAxis? -1.0 : 1.0);
+                        sp.x = x_stage+((tileX-taggedImageWidth/2.0)*(pixelSizeX/imageScaleFactor))*(invertXAxis? -1.0 : 1.0);
+                        logger.info(String.format("x_stage=%s, tileX=%s, taggedImageWidth=%s, pixelSizeX=%s, imageScaleFactor=%s, invertXAxis=%s, sp.x=%s", 
+                                x_stage, tileX, taggedImageWidth, pixelSizeX, imageScaleFactor, invertXAxis, sp.x));
+                        sp.y = y_stage+((tileY-taggedImageHeight/2.0)*(pixelSizeY/imageScaleFactor))*(invertYAxis? -1.0 : 1.0);
+                        logger.info(String.format("y_stage=%s, tileY=%s, taggedImageHeight=%s, pixelSizeY=%s, imageScaleFactor=%s, invertYAxis=%s, sp.y=%s", 
+                                y_stage, tileY, taggedImageHeight, pixelSizeY, imageScaleFactor, invertYAxis, sp.y));
                         String mspLabel = String.format("%s.%s.ROI%d.X%d.Y%d", 
                                 positionName, imageLabel, roi.getId(), x, y);
                         msp.setProperty("stitchGroup", "ROI"+roi.getId());
