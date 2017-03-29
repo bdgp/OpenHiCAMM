@@ -157,8 +157,6 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
                         (int)Math.floor(bx+width), 
                         (int)Math.floor(by+height));
                 rois.add(roi);
-                logger.info(String.format("%s: Created new ROI record with width=%.2f, height=%.2f, area=%.2f: %s", 
-                        label, width, height, area, roi));
                 
                 // Draw the ROI rectangle
                 try {

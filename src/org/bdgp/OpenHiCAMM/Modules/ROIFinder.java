@@ -181,6 +181,10 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			    // insert the ROI record
 			    roiDao.insert(roi);
 
+                logger.info(String.format("%s: Created new ROI record with width=%.2f, height=%.2f, area=%.2f: %s", 
+                        label, roi.getX2()-roi.getX1()+1, roi.getY2()-roi.getY1()+1, 
+                        (roi.getX2()-roi.getX1()+1)*(roi.getY2()-roi.getY1()+1), roi));
+
 			    // increase the ROI dimensions to add the margins
 			    double roiMarginWidth = (roiMarginPct / 100.0) * imageWidth * hiResPixelSize / (pixelSizeX / imageScaleFactor);
 			    double roiMarginHeight = (roiMarginPct / 100.0) * imageHeight * hiResPixelSize / (pixelSizeY / imageScaleFactor);
