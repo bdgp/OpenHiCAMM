@@ -46,7 +46,7 @@ public class SlideSurveyorDialog extends JPanel {
 	public static final double DEFAULT_IMAGE_SCALE_FACTOR = 0.3;
 
 	// Default FFT options
-	public static final String PREPROCESSING_MACRO = 
+	public static final String POSTPROCESSING_MACRO = 
 	        "run(\"Bandpass Filter...\", \"filter_large=25 filter_small=15 suppress=Vertical tolerance=5 autoscale saturate\");\n"+
 	        "run(\"Bandpass Filter...\", \"filter_large=25 filter_small=15 suppress=Horizontal tolerance=5 autoscale saturate\");\n";
 	
@@ -55,7 +55,7 @@ public class SlideSurveyorDialog extends JPanel {
 	private final ButtonGroup setInitZPosGrp = new ButtonGroup();
 	private JButton btnShowAcquisitionDialog;
 	private JLabel lblFftFilterOptions;
-	JTextArea preprocessingMacro;
+	JTextArea postprocessingMacro;
 	
 	public SlideSurveyorDialog(WorkflowRunner workflowRunner) {
 		this.setLayout(new MigLayout("", "[672.00,grow][]", "[][][][][][][][][][][grow]"));
@@ -210,9 +210,9 @@ public class SlideSurveyorDialog extends JPanel {
         lblFftFilterOptions = new JLabel("Preprocessing Macro Script:");
         add(lblFftFilterOptions, "cell 0 9");
         
-        preprocessingMacro = new JTextArea();
-        preprocessingMacro.setText(PREPROCESSING_MACRO);
-        add(preprocessingMacro, "cell 0 10 2 1,grow");
+        postprocessingMacro = new JTextArea();
+        postprocessingMacro.setText(POSTPROCESSING_MACRO);
+        add(postprocessingMacro, "cell 0 10 2 1,grow");
         setInitZPosYes.addItemListener(new ItemListener() {
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {

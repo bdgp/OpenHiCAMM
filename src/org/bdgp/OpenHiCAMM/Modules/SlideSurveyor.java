@@ -126,8 +126,8 @@ public class SlideSurveyor implements Module {
         if (invertYAxisConf == null) throw new RuntimeException("Undefined conf value for invertYAxis!");
         Boolean invertYAxis = new Boolean(invertYAxisConf.getValue().equals("yes"));
         
-        Config preprocessingMacroConf = conf.get("preprocessingMacro");
-        String preprocessingMacro = preprocessingMacroConf != null? preprocessingMacroConf.getValue() : "";
+        Config postprocessingMacroConf = conf.get("postprocessingMacro");
+        String postprocessingMacro = postprocessingMacroConf != null? postprocessingMacroConf.getValue() : "";
 
         ImagePlus slideThumb;
         Double minX = null, minY = null, maxX = null, maxY = null; 
@@ -319,11 +319,11 @@ public class SlideSurveyor implements Module {
                         (int)Math.round(ylocScale), 
                         Blitter.COPY);
             }
-            // perform any necessary image preprocessing on slideThumb
-            if (preprocessingMacro != null && !preprocessingMacro.replaceAll("\\s+","").isEmpty()) {
+            // perform any necessary image postprocessing on slideThumb
+            if (postprocessingMacro != null && !postprocessingMacro.replaceAll("\\s+","").isEmpty()) {
                 slideThumb.show();
-                logger.info(String.format("Running preprocessing macro:%n%s", preprocessingMacro));
-                IJ.runMacro(preprocessingMacro);
+                logger.info(String.format("Running postprocessing macro:%n%s", postprocessingMacro));
+                IJ.runMacro(postprocessingMacro);
                 ImagePlus modifiedImage1 = WindowManager.getImage(slideThumb.getTitle());
                 if (modifiedImage1 != null) {
                     modifiedImage1.changes = false;
@@ -447,8 +447,8 @@ public class SlideSurveyor implements Module {
                 if (slideSurveyorDialog.setInitZPosYes.isSelected()) {
                     configs.add(new Config(workflowModule.getId(), "initialZPos", slideSurveyorDialog.initialZPos.getValue().toString()));
                 }
-                if (!slideSurveyorDialog.preprocessingMacro.getText().replaceAll("\\s+","").isEmpty()) {
-                    configs.add(new Config(workflowModule.getId(), "preprocessingMacro", slideSurveyorDialog.preprocessingMacro.getText()));
+                if (!slideSurveyorDialog.postprocessingMacro.getText().replaceAll("\\s+","").isEmpty()) {
+                    configs.add(new Config(workflowModule.getId(), "postprocessingMacro", slideSurveyorDialog.postprocessingMacro.getText()));
                 }
                 return configs.toArray(new Config[0]);
             }
@@ -500,8 +500,8 @@ public class SlideSurveyor implements Module {
                     slideSurveyorDialog.setInitZPosNo.setSelected(true);
                     slideSurveyorDialog.initialZPos.setValue(new Double(0.0));
                 }
-                if (conf.containsKey("preprocessingMacro")) {
-                    slideSurveyorDialog.preprocessingMacro.setText(conf.get("preprocessingMacro").getValue());
+                if (conf.containsKey("postprocessingMacro")) {
+                    slideSurveyorDialog.postprocessingMacro.setText(conf.get("postprocessingMacro").getValue());
                 }
                 return slideSurveyorDialog;
             }
