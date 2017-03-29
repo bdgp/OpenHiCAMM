@@ -209,7 +209,7 @@ public class SlideSurveyorDialog extends JPanel {
         imageScaleFactor.setValue(new Double(DEFAULT_IMAGE_SCALE_FACTOR));
         add(imageScaleFactor, "cell 1 7");
         
-        lblFftFilterOptions = new JLabel("Preprocessing Macro Script:");
+        lblFftFilterOptions = new JLabel("Postprocessing Macro Script:");
         add(lblFftFilterOptions, "cell 0 9");
         
         scrollPane = new JScrollPane();
