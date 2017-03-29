@@ -319,6 +319,15 @@ public class SlideSurveyor implements Module {
                         (int)Math.round(ylocScale), 
                         Blitter.COPY);
             }
+
+            // save the unprocessed stitched image to the stitched folder using the stitch group as the 
+            // file name.
+            {
+                FileSaver fileSaver = new FileSaver(slideThumb);
+                File imageFile = new File(surveyFolder, String.format("%s.unprocessed.tif", slideThumb.getTitle()));
+                fileSaver.saveAsTiff(imageFile.getPath());
+            }
+
             // perform any necessary image postprocessing on slideThumb
             if (postprocessingMacro != null && !postprocessingMacro.replaceAll("\\s+","").isEmpty()) {
                 slideThumb.show();
