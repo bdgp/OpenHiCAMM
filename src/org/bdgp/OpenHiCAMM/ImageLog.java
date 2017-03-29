@@ -84,13 +84,18 @@ public class ImageLog extends JFrame {
             @Override public void mouseClicked(MouseEvent e) {
                 if (table.getSelectedRow() >= 0 && e.getClickCount() == 2) {
                     FutureTask<ImageLogRunner> futureTask = ImageLog.this.records.get(table.getSelectedRow()).getRunner();
-                    futureTask.run();
-                    try { 
-                        ImageLogRunner imageLogRunner = futureTask.get();
-                        if (imageLogRunner != null) imageLogRunner.display();
+                    ImageLogRunner imageLogRunner;
+                    try {
+                        ij.macro.Interpreter.batchMode = true;
+                        futureTask.run();
+                        imageLogRunner = futureTask.get();
                     } 
                     catch (InterruptedException e1) {throw new RuntimeException(e1);} 
                     catch (ExecutionException e1) {throw new RuntimeException(e1);}
+                    finally {
+                        ij.macro.Interpreter.batchMode = false;
+                    }
+                    if (imageLogRunner != null) imageLogRunner.display();
                 }
             }
         });

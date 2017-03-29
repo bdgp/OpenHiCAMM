@@ -37,8 +37,10 @@ public class CustomMacroROIFinderDialog extends JPanel {
 
 	public static final String DEFAULT_CUSTOM_MACRO = 
 	        "run(\"8-bit\");\n"+
-            "setAutoThreshold(\"Otsu\");\n"+
-	        "run(\"Gray Morphology\", \"radius=7 type=circle operator=erode\");\n"+
+            "setAutoThreshold(\"IsoData\");\n"+
+	        "setOption(\"BlackBackground\", false);\n"+
+	        "run(\"Convert to Mask\");\n"+
+	        "run(\"Gray Morphology\", \"radius=7 type=circle operator=dilate\");\n"+
             "run(\"Analyze Particles...\", \"size=500-50000 exclude clear summarize add in_situ\");\n";
 	private JButton btnRoiTest;
 	private JLabel overlapPctLabel;

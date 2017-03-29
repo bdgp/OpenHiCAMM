@@ -21,6 +21,7 @@ import org.micromanager.utils.MDUtils;
 
 import ij.IJ;
 import ij.ImagePlus;
+import ij.WindowManager;
 import ij.measure.ResultsTable;
 import ij.plugin.filter.Analyzer;
 import ij.process.ImageProcessor;
@@ -54,20 +55,22 @@ public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogg
 
         ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
         ImagePlus imp = new ImagePlus(image.toString(), processor);
-        imageLog.addImage(imp, "Original image");
         if (roiImageScaleFactor != 1.0) {
             logger.fine(String.format("%s: Resizing", label));
             imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
             imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
                     (int)Math.floor(imp.getWidth() * roiImageScaleFactor), 
                     (int)Math.floor(imp.getHeight() * roiImageScaleFactor)));
-            imageLog.addImage(imp, "Resizing");
         }
-        imageLog.addImage(imp, "Resizing");
+        imageLog.addImage(imp, "Resized");
 
-        imp.show();
         logger.info(String.format("Running custom macro macro:%n%s", customMacro));
+        imp.show();
         IJ.runMacro(customMacro);
+        ImagePlus modifiedImage1 = WindowManager.getImage(imp.getTitle());
+        if (modifiedImage1 != null) {
+            imp = modifiedImage1;
+        }
         imageLog.addImage(imp, "Running macro");
 
         List<ROI> rois = new ArrayList<ROI>();
