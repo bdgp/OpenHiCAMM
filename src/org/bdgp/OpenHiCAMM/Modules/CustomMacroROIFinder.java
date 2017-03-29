@@ -146,7 +146,7 @@ public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogg
             	    configs.add(new Config(workflowModule.getId(), "imageHeight", imageHeight.toString()));
             	}
                 if (!dialog.customMacro.getText().replaceAll("\\s+","").isEmpty()) {
-                    configs.add(new Config(workflowModule.getId(), "postprocessingMacro", dialog.customMacro.getText()));
+                    configs.add(new Config(workflowModule.getId(), "customMacro", dialog.customMacro.getText()));
                 }
                 return configs.toArray(new Config[0]);
             }
