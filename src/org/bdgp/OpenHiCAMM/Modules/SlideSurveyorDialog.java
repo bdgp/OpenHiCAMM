@@ -24,6 +24,7 @@ import javax.swing.ButtonGroup;
 import java.awt.event.ItemListener;
 import java.awt.event.ItemEvent;
 import javax.swing.JTextArea;
+import javax.swing.JScrollPane;
 
 @SuppressWarnings("serial")
 public class SlideSurveyorDialog extends JPanel {
@@ -55,6 +56,7 @@ public class SlideSurveyorDialog extends JPanel {
 	private final ButtonGroup setInitZPosGrp = new ButtonGroup();
 	private JButton btnShowAcquisitionDialog;
 	private JLabel lblFftFilterOptions;
+	private JScrollPane scrollPane;
 	JTextArea postprocessingMacro;
 	
 	public SlideSurveyorDialog(WorkflowRunner workflowRunner) {
@@ -210,9 +212,12 @@ public class SlideSurveyorDialog extends JPanel {
         lblFftFilterOptions = new JLabel("Preprocessing Macro Script:");
         add(lblFftFilterOptions, "cell 0 9");
         
+        scrollPane = new JScrollPane();
+        add(scrollPane, "cell 0 10 2 1,grow");
+        
         postprocessingMacro = new JTextArea();
         postprocessingMacro.setText(POSTPROCESSING_MACRO);
-        add(postprocessingMacro, "cell 0 10 2 1,grow");
+        scrollPane.setViewportView(postprocessingMacro);
         setInitZPosYes.addItemListener(new ItemListener() {
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
