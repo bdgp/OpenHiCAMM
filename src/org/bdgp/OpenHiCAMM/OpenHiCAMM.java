@@ -16,6 +16,7 @@ import javax.swing.SwingUtilities;
 import org.bdgp.OpenHiCAMM.Modules.PosCalibrator;
 import org.bdgp.OpenHiCAMM.Modules.BDGPROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.CompareImager;
+import org.bdgp.OpenHiCAMM.Modules.CustomMacroROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.ImageStitcher;
 import org.bdgp.OpenHiCAMM.Modules.SlideImager;
 import org.bdgp.OpenHiCAMM.Modules.SlideSurveyor;
@@ -165,6 +166,7 @@ public class OpenHiCAMM implements MMPlugin {
             moduleNames.add(SlideSurveyor.class.getName());
             moduleNames.add(CompareImager.class.getName());
             moduleNames.add(BDGPROIFinder.class.getName());
+            moduleNames.add(CustomMacroROIFinder.class.getName());
             moduleNames.add(ImageStitcher.class.getName());
             moduleNames.add(PosCalibrator.class.getName());
             
