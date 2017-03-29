@@ -68,8 +68,12 @@ public class Image {
     	return imageCache.getImage(this.channel, this.slice, this.frame, this.position);
     }
 
+    public TaggedImage getTaggedImage() {
+        return getTaggedImage(null);
+    }
     public TaggedImage getTaggedImage(Dao<Acquisition> acqDao) {
-        if (this.acquisitionId == 0) {
+        if (acqDao == null || this.acquisitionId == 0) {
+            if (this.getPath() == null) throw new RuntimeException("getPath() is null!");
             ImagePlus img = new ImagePlus(this.getPath());
             return ImageUtils.makeTaggedImage(img.getProcessor());
         }
@@ -87,8 +91,12 @@ public class Image {
         return taggedImage;
     }
     
+    public ImagePlus getImagePlus() {
+        return getImagePlus(null);
+    }
     public ImagePlus getImagePlus(Dao<Acquisition> acqDao) {
-        if (this.acquisitionId == 0) {
+        if (acqDao == null || this.acquisitionId == 0) {
+            if (this.getPath() == null) throw new RuntimeException("getPath() is null!");
             ImagePlus img = new ImagePlus(this.getPath());
             return img;
         }

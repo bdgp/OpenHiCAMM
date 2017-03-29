@@ -548,20 +548,25 @@ public abstract class ROIFinder implements Module, ImageLogger {
                     Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
                     final Image image = imageDao.selectOneOrDie(where("id",imageId));
                     logger.info(String.format("Using image: %s", image));
+                    
+                    TaggedImage taggedImage;
+                    if (image.getPath() != null) {
+                        taggedImage = image.getTaggedImage();
+                    }
+                    else {
+                        // Initialize the acquisition
+                        Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
+                        Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
+                        logger.info(String.format("Using acquisition: %s", acquisition));
+                        MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
 
-                    // Initialize the acquisition
-                    Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
-                    Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
-                    logger.info(String.format("Using acquisition: %s", acquisition));
-                    MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
-
-                    // Get the image cache object
-                    ImageCache imageCache = mmacquisition.getImageCache();
-                    if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
-                    // Get the tagged image from the image cache
-                    TaggedImage taggedImage = image.getImage(imageCache);
-                    logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
-
+                        // Get the image cache object
+                        ImageCache imageCache = mmacquisition.getImageCache();
+                        if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+                        // Get the tagged image from the image cache
+                        taggedImage = image.getImage(imageCache);
+                        logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
+                    }
                     ImageLogRunner imageLogRunner = new ImageLogRunner(task.getName(workflowRunner.getWorkflow()));
                     ROIFinder.this.process(image, taggedImage, logger, imageLogRunner, config);
                     return imageLogRunner;
