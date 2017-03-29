@@ -39,7 +39,7 @@ public class CustomMacroROIFinderDialog extends JPanel {
 	        "run(\"8-bit\");\n"+
             "setAutoThreshold(\"Otsu\");\n"+
 	        "run(\"Gray Morphology\", \"radius=7 type=circle operator=erode\");\n"+
-            "run(\"Analyze Particles...\", \"size=500-50000 display exclude clear summarize add in_situ\");\n";
+            "run(\"Analyze Particles...\", \"size=500-50000 exclude clear summarize add in_situ\");\n";
 	private JButton btnRoiTest;
 	private JLabel overlapPctLabel;
 	private JLabel lblHiresPixelSize;
