@@ -262,6 +262,10 @@ public class WorkflowRunner {
         for (WorkflowModule mod : modules) {
         	this.createTaskRecords(mod, childTasks, moduleConfig, logger);
         }
+        // update the task count and notify listeners
+        if (this.startModule != null) {
+            getTaskCount(this.startModule.getName(), true);
+        }
     }
     
     public void runInitialize(String moduleName) {
@@ -927,8 +931,7 @@ public class WorkflowRunner {
     public int getTaskCount(String startModuleName, boolean notify) {
         // Get the set of tasks that will be run using this the start module ID
         List<Task> tasks = this.getTaskStatus().select(
-                where("moduleId",startModule.getId()).
-                and("dispatchUUID", null));
+                where("name",startModule.getName()));
         Set<Task> totalTasks = new HashSet<>();
         while (tasks.size() > 0) {
             List<Task> childTasks = new ArrayList<>();
