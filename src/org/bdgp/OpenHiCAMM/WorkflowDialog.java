@@ -120,9 +120,17 @@ public class WorkflowDialog extends JDialog {
                     String newProjectPath = newProjectChooser.getSelectedFile().getPath();
                     // If the workflow selection changed, then load the new workflow runner
                     if (!newProjectPath.equals(oldWorkflowDir)) {
-                        WorkflowDialog.this.initWorkflowRunner(true);
+                        // init the new workflow runner
                         workflowDir.setText(newProjectPath);
+                        workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), Level.INFO, mmslide);
+                        // init the workflow runner dialog
+                        workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
+                        workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                        workflowRunnerDialog.pack();
+                        // copy from old to new
                         workflowRunner.copyFromProject(oldWorkflowRunner);
+                        // shutdown the old workflow runner
+                        oldWorkflowRunner.shutdown();
                     }
                     // If a workflow directory was given, enable the edit button and refresh the UI control state
                     if (workflowDir.getText().length() > 0) {
