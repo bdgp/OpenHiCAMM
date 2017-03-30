@@ -273,7 +273,8 @@ public class SlideSurveyor implements Module {
                 String lastElapsedTimeMs = null;
                 while (img == null || ip == null || ip.getPixels() == null) {
                     ip = null;
-                    img = core.getLastTaggedImage();
+                    try { img = core.getLastTaggedImage(); }
+                    catch (Throwable e) { /* do nothing */ }
                     if (img != null) {
                         //logger.info(String.format("Image %s/%s tags: %s", i+1, positionList.getNumberOfPositions(), img.tags.toString()));
                         // make sure this image is not the same as the last one
