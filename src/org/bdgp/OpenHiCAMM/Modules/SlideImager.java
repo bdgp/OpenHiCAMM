@@ -207,8 +207,13 @@ public class SlideImager implements Module, ImageLogger {
 
     @Override
     public Status run(Task task, Map<String,Config> conf, Logger logger) {
+        // Get Dao objects ready for use
         Dao<Task> taskDao = this.workflowRunner.getTaskStatus();
         Dao<TaskDispatch> taskDispatchDao = this.workflowRunner.getTaskDispatch();
+        Dao<TaskConfig> taskConfigDao = workflowRunner.getWorkflowDb().table(TaskConfig.class);
+        Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
+        Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
+        Dao<Slide> slideDao = workflowRunner.getWorkflowDb().table(Slide.class);
 
     	logger.fine(String.format("Running task: %s", task));
     	for (Config c : conf.values()) {
@@ -225,13 +230,23 @@ public class SlideImager implements Module, ImageLogger {
         }
         List<Task> parentTasks = parentTaskSet.stream().collect(Collectors.toList());
 
+        // get the slide ID
+        Config slideIdConf = conf.get("slideId");
+        Integer slideId = slideIdConf != null? new Integer(conf.get("slideId").getValue()) : null;
+        logger.info(String.format("Using slideId: %d", slideId));
+        Slide slide = slideId != null? slideDao.selectOne(where("id", slideId)) : null;
+
     	// if this is the loadDynamicTaskRecords task, then we need to dynamically create the task records now
         Config loadDynamicTaskRecordsConf = conf.get("loadDynamicTaskRecords");
         if (loadDynamicTaskRecordsConf != null && loadDynamicTaskRecordsConf.getValue().equals("yes")) {
             conf.put("dispatchUUID", new Config(task.getId(), "dispatchUUID", task.getDispatchUUID()));
             // remove old tasks
             for (Task t : taskDao.select(where("moduleId", this.workflowModule.getId()))) {
-                if (t.getId() != task.getId()) {
+                TaskConfig tc = taskConfigDao.selectOne(
+                        where("id",t.getId()).
+                        and("key","slideId").
+                        and("value",slideId));
+                if (tc != null && t.getId() != task.getId()) {
                     this.workflowRunner.deleteTaskRecords(t);
                 }
             }
@@ -266,20 +281,10 @@ public class SlideImager implements Module, ImageLogger {
             for (String line : verboseSummary.summary.split("\n")) workflowRunner.getLogger().info(String.format("    %s", line));
             int totalImages = verboseSummary.channels * verboseSummary.slices * verboseSummary.frames * verboseSummary.positions;
 
-            // Get Dao objects ready for use
-            Dao<TaskConfig> taskConfigDao = workflowRunner.getWorkflowDb().table(TaskConfig.class);
-            Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
-            Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
-            Dao<Slide> slideDao = workflowRunner.getWorkflowDb().table(Slide.class);
-
             Date startAcquisition = new Date();
 
             // get the slide ID from the config
-            if (!conf.containsKey("slideId")) throw new RuntimeException("No slideId found for image!");
-            Integer slideId = new Integer(conf.get("slideId").getValue());
-            logger.info(String.format("Using slideId: %d", slideId));
-            // get the slide's experiment ID
-            Slide slide = slideId != null? slideDao.selectOne(where("id", slideId)) : null;
+            if (slide == null) throw new RuntimeException("No slideId found for image!");
             String experimentId = slide != null? slide.getExperimentId() : null;
             
             // get the poolSlide record if it exists
@@ -328,11 +333,11 @@ public class SlideImager implements Module, ImageLogger {
             // build a map of imageLabel -> sibling task record
             List<TaskDispatch> tds = new ArrayList<>();
             for (Task t : taskDao.select(where("moduleId", this.workflowModule.getId()))) {
-                TaskConfig slideIdConf = this.workflowRunner.getTaskConfig().selectOne(
+                TaskConfig tc = this.workflowRunner.getTaskConfig().selectOne(
                         where("id", t.getId()).
                         and("key", "slideId").
                         and("value", slideId));
-                if (slideIdConf != null) {
+                if (tc != null) {
                     tds.addAll(taskDispatchDao.select(where("taskId", t.getId())));
                 }
             }
