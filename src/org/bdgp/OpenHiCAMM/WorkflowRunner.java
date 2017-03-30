@@ -930,8 +930,10 @@ public class WorkflowRunner {
     
     public int getTaskCount(String startModuleName, boolean notify) {
         // Get the set of tasks that will be run using this the start module ID
+        WorkflowModule startModule = this.getWorkflow().selectOneOrDie(
+                where("name",startModuleName));
         List<Task> tasks = this.getTaskStatus().select(
-                where("name",startModule.getName()));
+                where("moduleId",startModule.getId()));
         Set<Task> totalTasks = new HashSet<>();
         while (tasks.size() > 0) {
             List<Task> childTasks = new ArrayList<>();
