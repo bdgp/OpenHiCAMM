@@ -225,6 +225,20 @@ public class WorkflowRunner {
         // Then delete task records
         taskStatus.delete(where("moduleId",module.getId()));
     }
+    public void deleteTaskRecords(Task task) {
+        List<TaskDispatch> tds = this.taskDispatch.select(where("parentTaskId",task.getId()));
+        if (tds.isEmpty()) {
+            this.taskConfig.delete(where("id",task.getId()));
+            this.taskStatus.delete(task);
+        }
+        else {
+            for (TaskDispatch td : tds) {
+                this.taskDispatch.delete(td);
+                Task t = this.taskStatus.selectOneOrDie(where("id", td.getTaskId()));
+                this.deleteTaskRecords(t);
+            }
+        }
+    }
     
     public void createTaskRecords(String moduleName) {
         WorkflowModule module = this.workflow.selectOneOrDie(where("name",moduleName));

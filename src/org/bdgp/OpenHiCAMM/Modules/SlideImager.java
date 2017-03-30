@@ -207,6 +207,9 @@ public class SlideImager implements Module, ImageLogger {
 
     @Override
     public Status run(Task task, Map<String,Config> conf, Logger logger) {
+        Dao<Task> taskDao = this.workflowRunner.getTaskStatus();
+        Dao<TaskDispatch> taskDispatchDao = this.workflowRunner.getTaskDispatch();
+
     	logger.fine(String.format("Running task: %s", task));
     	for (Config c : conf.values()) {
     		logger.fine(String.format("Using configuration: %s", c));
@@ -226,6 +229,12 @@ public class SlideImager implements Module, ImageLogger {
         Config loadDynamicTaskRecordsConf = conf.get("loadDynamicTaskRecords");
         if (loadDynamicTaskRecordsConf != null && loadDynamicTaskRecordsConf.getValue().equals("yes")) {
             conf.put("dispatchUUID", new Config(task.getId(), "dispatchUUID", task.getDispatchUUID()));
+            // remove old tasks
+            for (Task t : taskDao.select(where("moduleId", this.workflowModule.getId()))) {
+                if (t.getId() != task.getId()) {
+                    this.workflowRunner.deleteTaskRecords(t);
+                }
+            }
             workflowRunner.createTaskRecords(this.workflowModule, parentTasks, conf, logger);
             return Status.SUCCESS;
         }
@@ -317,8 +326,6 @@ public class SlideImager implements Module, ImageLogger {
             }
             
             // build a map of imageLabel -> sibling task record
-            Dao<Task> taskDao = this.workflowRunner.getTaskStatus();
-            Dao<TaskDispatch> taskDispatchDao = this.workflowRunner.getTaskDispatch();
             List<TaskDispatch> tds = new ArrayList<>();
             for (Task t : taskDao.select(where("moduleId", this.workflowModule.getId()))) {
                 TaskConfig slideIdConf = this.workflowRunner.getTaskConfig().selectOne(
