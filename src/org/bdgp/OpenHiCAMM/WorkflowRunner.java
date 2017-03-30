@@ -133,7 +133,7 @@ public class WorkflowRunner {
         this.notifiedTasks = new HashSet<Task>();
         // init the logger
         this.logHandlers = new ArrayList<Handler>();
-        this.logLevel = Level.CONFIG;
+        this.logLevel = loglevel;
         this.initLogger();
         
         // set the number of cores to use in the thread pool
@@ -1163,5 +1163,16 @@ public class WorkflowRunner {
         poolDao.updateSequence();
         slideDao.updateSequence();
         poolSlideDao.updateSequence();
+
+        // reload module instances
+        this.loadModuleInstances();
+        
+        // set the logLabelLength
+        this.logLabelLength = 14;
+        for (WorkflowModule w : workflow.select()) {
+            if (this.logLabelLength < w.getName().length()+7) {
+                this.logLabelLength = w.getName().length()+7;
+            }
+        }
     }
 }
