@@ -27,6 +27,8 @@ import ij.plugin.filter.Analyzer;
 import ij.process.ImageProcessor;
 import mmcorej.TaggedImage;
 
+import static org.bdgp.OpenHiCAMM.Util.where;
+
 public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogger {
 
     public CustomMacroROIFinder() {
@@ -148,6 +150,10 @@ public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogg
                 if (!dialog.customMacro.getText().replaceAll("\\s+","").isEmpty()) {
                     configs.add(new Config(workflowModule.getId(), "customMacro", dialog.customMacro.getText()));
                 }
+                TaskType taskType = (TaskType)dialog.taskType.getSelectedItem();
+                if (taskType != null) {
+                    configs.add(new Config(workflowModule.getId(), "taskType", taskType.toString()));
+                }
                 return configs.toArray(new Config[0]);
             }
             @Override
@@ -177,6 +183,15 @@ public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogg
             	}
                 if (confs.containsKey("customMacro")) {
                     dialog.customMacro.setText(confs.get("customMacro").getValue());
+                }
+                if (confs.containsKey("taskType")) {
+                    try {
+                        TaskType taskType = TaskType.valueOf(confs.get("taskType").getValue());
+                        if (taskType != null) {
+                            dialog.taskType.setSelectedItem(taskType);
+                        }
+                    }
+                    catch (Throwable e) { /* do nothing */ }
                 }
                 return dialog;
             }
@@ -220,5 +235,15 @@ public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogg
                 return errors.toArray(new ValidationError[0]);
             }
         };
+    }
+
+    @Override
+    public TaskType getTaskType() {
+        Config taskTypeConf = this.workflowRunner.getModuleConfig().selectOne(
+                where("id", this.workflowModule.getId()).and("key", "taskType"));
+        if (taskTypeConf == null) return CustomMacroROIFinderDialog.DEFAULT_TASK_TYPE;
+        Module.TaskType taskType = Module.TaskType.valueOf(taskTypeConf.getValue());
+        if (taskType == null) return CustomMacroROIFinderDialog.DEFAULT_TASK_TYPE;
+        return taskType;
     }
 }

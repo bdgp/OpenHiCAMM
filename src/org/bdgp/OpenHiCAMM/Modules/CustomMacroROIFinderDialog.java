@@ -22,6 +22,9 @@ import java.awt.event.ActionEvent;
 import javax.swing.JSpinner;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.JComboBox;
+import javax.swing.DefaultComboBoxModel;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module.TaskType;
 
 @SuppressWarnings("serial")
 public class CustomMacroROIFinderDialog extends JPanel {
@@ -34,6 +37,7 @@ public class CustomMacroROIFinderDialog extends JPanel {
 
 	public static final int DEFAULT_IMAGE_WIDTH = 4928;
 	public static final int DEFAULT_IMAGE_HEIGHT = 3264;
+	public static final TaskType DEFAULT_TASK_TYPE = TaskType.SERIAL;
 
 	public static final String DEFAULT_CUSTOM_MACRO = 
 	        "run(\"8-bit\");\n"+
@@ -59,51 +63,61 @@ public class CustomMacroROIFinderDialog extends JPanel {
 	private JScrollPane scrollPane;
 	JTextArea customMacro;
 	private JLabel lblCustomRoiFinding;
+	private JLabel lblTaskType;
+	JComboBox<TaskType> taskType;
 
 	public CustomMacroROIFinderDialog(final ROIFinder roiFinder) {
-		this.setLayout(new MigLayout("", "[][grow]", "[][][][][][][][grow][]"));
+		this.setLayout(new MigLayout("", "[][grow]", "[][][][][][][][][grow][]"));
+        
+        lblTaskType = new JLabel("Task Type:");
+        add(lblTaskType, "cell 0 0");
+        
+        taskType = new JComboBox<TaskType>();
+        taskType.setModel(new DefaultComboBoxModel<TaskType>(TaskType.values()));
+        taskType.setSelectedItem(DEFAULT_TASK_TYPE);
+        add(taskType, "cell 1 0");
         
         overlapPctLabel = new JLabel("Tile Overlap Percentage:");
-        add(overlapPctLabel, "cell 0 0");
+        add(overlapPctLabel, "cell 0 1");
         
         overlapPct = new DoubleSpinner();
         overlapPct.setValue(new Double(DEFAULT_OVERLAP_PCT));
-        add(overlapPct, "cell 1 0");
+        add(overlapPct, "cell 1 1");
         
         lblHiresPixelSize = new JLabel("HIRes Pixel Size: ");
-        add(lblHiresPixelSize, "cell 0 1");
+        add(lblHiresPixelSize, "cell 0 2");
         
         hiResPixelSize = new DoubleSpinner();
         hiResPixelSize.setValue(DEFAULT_HIRES_PIXEL_SIZE_UM);
-        add(hiResPixelSize, "cell 1 1");
+        add(hiResPixelSize, "cell 1 2");
         
         JLabel lblRoiMarginPercentage = new JLabel("ROI Margin Percentage:");
-        add(lblRoiMarginPercentage, "cell 0 2");
+        add(lblRoiMarginPercentage, "cell 0 3");
         
         roiMarginPct = new DoubleSpinner();
         roiMarginPct.setValue(DEFAULT_ROI_MARGIN_PCT);
-        add(roiMarginPct, "cell 1 2");
+        add(roiMarginPct, "cell 1 3");
         
         lblImageScaling = new JLabel("ROI Image Scale Factor (0.0-1.0):");
-        add(lblImageScaling, "cell 0 3");
+        add(lblImageScaling, "cell 0 4");
         
         roiImageScaleFactor = new DoubleSpinner();
         roiImageScaleFactor.setValue(DEFAULT_ROI_IMAGE_SCALE_FACTOR);
-        add(roiImageScaleFactor, "cell 1 3");
+        add(roiImageScaleFactor, "cell 1 4");
         
         lblHiresImageWidth = new JLabel("HiRes Image Width:");
-        add(lblHiresImageWidth, "cell 0 4");
+        add(lblHiresImageWidth, "cell 0 5");
         
         imageWidth = new JSpinner();
         imageWidth.setValue(DEFAULT_IMAGE_WIDTH);
-        add(imageWidth, "cell 1 4");
+        add(imageWidth, "cell 1 5");
         
         lblHiresImageHeight = new JLabel("HiRes Image Height:");
-        add(lblHiresImageHeight, "cell 0 5");
+        add(lblHiresImageHeight, "cell 0 6");
         
         imageHeight = new JSpinner();
         imageHeight.setValue(DEFAULT_IMAGE_HEIGHT);
-        add(imageHeight, "cell 1 5");
+        add(imageHeight, "cell 1 6");
         
         btnSetImageDimensions = new JButton("Set Image Dimensions");
         btnSetImageDimensions.addActionListener(new ActionListener() {
@@ -122,7 +136,7 @@ public class CustomMacroROIFinderDialog extends JPanel {
                 }
             }
         });
-        add(btnSetImageDimensions, "cell 1 6");
+        add(btnSetImageDimensions, "cell 1 7");
         
         btnRoiTest = new JButton("ROI Test");
         btnRoiTest.addActionListener(new ActionListener() {
@@ -143,15 +157,15 @@ public class CustomMacroROIFinderDialog extends JPanel {
         });
         
         lblCustomRoiFinding = new JLabel("Custom ROI Finding Macro:");
-        add(lblCustomRoiFinding, "cell 0 7");
+        add(lblCustomRoiFinding, "cell 0 8");
         
         scrollPane = new JScrollPane();
-        add(scrollPane, "cell 1 7,grow");
+        add(scrollPane, "cell 1 8,grow");
         
         customMacro = new JTextArea();
         customMacro.setText(DEFAULT_CUSTOM_MACRO);
         scrollPane.setViewportView(customMacro);
-        add(btnRoiTest, "cell 0 8");
+        add(btnRoiTest, "cell 0 9");
 	}
 	
 }
