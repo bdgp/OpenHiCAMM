@@ -8,7 +8,7 @@ import com.j256.ormlite.table.DatabaseTable;
 
 @DatabaseTable
 public class Pool {
-    @DatabaseField(generatedId=true, canBeNull=false)
+    @DatabaseField(generatedId=true, canBeNull=false, allowGeneratedIdInsert=true)
     private int id;
 
     public Pool() { }

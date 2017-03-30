@@ -26,7 +26,7 @@ public class Task {
     			this.id, Util.escape(this.dispatchUUID), moduleId, status);
     }
     
-    @DatabaseField(generatedId=true,canBeNull=false,index=true)
+    @DatabaseField(generatedId=true,canBeNull=false,index=true, allowGeneratedIdInsert=true)
     private int id;
 
     // This field is used by the workflow runner task dispatching logic to determine

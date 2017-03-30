@@ -5,7 +5,7 @@ import com.j256.ormlite.table.DatabaseTable;
 
 @DatabaseTable
 public class PoolSlide implements Comparable<PoolSlide> {
-    @DatabaseField(generatedId=true, canBeNull=false)
+    @DatabaseField(generatedId=true, canBeNull=false, allowGeneratedIdInsert=true)
     private int id;
     @DatabaseField(canBeNull=false, uniqueCombo=true)
     private int poolId;

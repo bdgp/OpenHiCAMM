@@ -10,7 +10,7 @@ import com.j256.ormlite.table.DatabaseTable;
 
 @DatabaseTable
 public class SlidePosList {
-    @DatabaseField(generatedId=true) 
+    @DatabaseField(generatedId=true, allowGeneratedIdInsert=true) 
     private int id;
     @DatabaseField(canBeNull=false,uniqueCombo=true) 
     private Integer moduleId;

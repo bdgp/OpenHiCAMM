@@ -18,7 +18,7 @@ import com.j256.ormlite.table.DatabaseTable;
 
 @DatabaseTable
 public class Acquisition {
-    @DatabaseField(generatedId=true, canBeNull=false) private int id;
+    @DatabaseField(generatedId=true, canBeNull=false,allowGeneratedIdInsert=true) private int id;
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) private String name;
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) private String prefix;
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) private String directory;

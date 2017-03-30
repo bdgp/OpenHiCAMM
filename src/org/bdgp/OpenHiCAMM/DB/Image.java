@@ -18,7 +18,7 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 
 @DatabaseTable
 public class Image {
-    @DatabaseField(generatedId=true, canBeNull=false) private int id;
+    @DatabaseField(generatedId=true, canBeNull=false, allowGeneratedIdInsert=true) private int id;
     @DatabaseField(canBeNull=false) private int slideId;
     @DatabaseField(canBeNull=false) private int acquisitionId;
     @DatabaseField(canBeNull=false) private int channel;

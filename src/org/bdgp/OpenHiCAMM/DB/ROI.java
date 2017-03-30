@@ -5,7 +5,7 @@ import com.j256.ormlite.table.DatabaseTable;
  
 @DatabaseTable
 public class ROI {
-    @DatabaseField(generatedId=true) private int id;
+    @DatabaseField(generatedId=true, allowGeneratedIdInsert=true) private int id;
     @DatabaseField(canBeNull=false) private int imageId;
     @DatabaseField(canBeNull=false) private int x1;
     @DatabaseField(canBeNull=false) private int y1;
