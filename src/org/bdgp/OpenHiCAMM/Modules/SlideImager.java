@@ -233,7 +233,6 @@ public class SlideImager implements Module, ImageLogger {
         // get the slide ID
         Config slideIdConf = conf.get("slideId");
         Integer slideId = slideIdConf != null? new Integer(conf.get("slideId").getValue()) : null;
-        logger.info(String.format("Using slideId: %d", slideId));
         Slide slide = slideId != null? slideDao.selectOne(where("id", slideId)) : null;
 
     	// if this is the loadDynamicTaskRecords task, then we need to dynamically create the task records now
@@ -265,6 +264,7 @@ public class SlideImager implements Module, ImageLogger {
         
         // If this is the acqusition task 0_0_0_0, start the acquisition engine
         if (indices[0] == 0 && indices[1] == 0 && indices[2] == 0 && indices[3] == 0) {
+            logger.info(String.format("Using slideId: %d", slideId));
             // Make sure the acquisition control dialog was initialized
             if (this.acqControlDlg == null) {
                 throw new RuntimeException("acqControlDlg is not initialized!");
