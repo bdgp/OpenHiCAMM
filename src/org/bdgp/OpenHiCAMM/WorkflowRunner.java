@@ -937,8 +937,8 @@ public class WorkflowRunner {
                     totalTasks.add(t);
                     if (t.getStatus() != Status.FAIL) {
                         for (TaskDispatch td : this.getTaskDispatch().select(where("parentTaskId", t.getId()))) {
-                            Task ct = this.getTaskStatus().selectOneOrDie(where("id", td.getTaskId()));
-                            if (ct.getDispatchUUID() == null) {
+                            Task ct = this.getTaskStatus().selectOne(where("id", td.getTaskId()));
+                            if (ct != null && ct.getDispatchUUID() == null) {
                                 childTasks.add(ct);
                             }
                         }
