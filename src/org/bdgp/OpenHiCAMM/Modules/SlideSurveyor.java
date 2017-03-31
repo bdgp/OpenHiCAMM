@@ -70,6 +70,19 @@ public class SlideSurveyor implements Module {
                 "id", "key");
     }
     
+    public static boolean compareImages(ImagePlus im1, ImagePlus im2) {
+        int[][] im1s = im1.getProcessor().getIntArray();
+        int[][] im2s = im2.getProcessor().getIntArray();
+        if (im1s.length != im2s.length) return false;
+        for (int x=0; x<im1s.length; ++x) {
+            if (im1s[x].length != im2s[x].length) return false;
+            for (int y=0; y<im1s[x].length; ++y) {
+                if (im1s[x][y] != im2s[x][y]) return false;
+            }
+        }
+        return true;
+    }
+    
     @Override
     public Status run(Task task, Map<String,Config> conf, final Logger logger) {
         Dao<WorkflowModule> wmDao = workflowRunner.getWorkflow();
@@ -253,6 +266,7 @@ public class SlideSurveyor implements Module {
                     1, NewImage.FILL_WHITE);
             
             // iterate through the position list, imaging using live mode to build up the large slide image
+            ImagePlus lastimp = null;
             for (int i=0; i<positionList.getNumberOfPositions(); ++i) {
                 MultiStagePosition msp = positionList.getPosition(i);
 
@@ -270,32 +284,38 @@ public class SlideSurveyor implements Module {
                 TaggedImage img = null;
                 ImageProcessor ip = null;
                 ImagePlus imp = null;
-                String lastElapsedTimeMs = null;
                 while (img == null || ip == null || ip.getPixels() == null) {
                     ip = null;
                     try { img = core.getLastTaggedImage(); }
                     catch (Throwable e) { /* do nothing */ }
                     if (img != null) {
                         //logger.info(String.format("Image %s/%s tags: %s", i+1, positionList.getNumberOfPositions(), img.tags.toString()));
-                        // make sure this image is not the same as the last one
-                        String elapsedTimeMs = null;
-                        try { elapsedTimeMs = img.tags.getString("ElapsedTime-ms"); }
-                        catch (JSONException e) { /* do nothing */ }
-                        if (elapsedTimeMs != null && !Objects.equals(lastElapsedTimeMs, elapsedTimeMs)) {
-                            ip = ImageUtils.makeProcessor(img);
-                        }
-                        lastElapsedTimeMs = elapsedTimeMs;
+                        ip = ImageUtils.makeProcessor(img);
                     }
                     if (ip != null && ip.getPixels() != null) {
                         imp = new ImagePlus(String.format("%s.%s.%s.x%s.y%s", 
                                 this.workflowModule.getName(), task.getName(wmDao), slide.getName(), msp.getX(), msp.getY()), 
                                 ip);
+                        // do a bitwise check to make sure this image is not the same as the last one
+                        if (lastimp != null && compareImages(imp, lastimp)) {
+                            logger.warning(String.format("Detected same images from live view, retrying..."));
+                            img = null;
+                            imp = null;
+                            ip = null;
+                            // re-start live mode and try again
+                            try { core.stopSequenceAcquisition(); } 
+                            catch (Exception e) {throw new RuntimeException(e);}
+                            Thread.sleep(5000);
+                            core.clearCircularBuffer();
+                            core.startContinuousSequenceAcquisition(0);
+                            Thread.sleep(5000);
+                            continue;
+                        }
+                        lastimp = imp;
                         break;
                     }
-
-                    Thread.sleep(10);
+                    Thread.sleep(1000);
                 }
-                //new ImageConverter(imp).convertToGray8();
 
                 int width = imp.getWidth(), height = imp.getHeight();
                 logger.fine(String.format("Image width: %s, height: %s", width, height));

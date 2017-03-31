@@ -45,7 +45,7 @@ public class CustomMacroROIFinderDialog extends JPanel {
 	        "setOption(\"BlackBackground\", false);\n"+
 	        "run(\"Convert to Mask\");\n"+
 	        "run(\"Gray Morphology\", \"radius=7 type=circle operator=dilate\");\n"+
-            "run(\"Analyze Particles...\", \"size=500-50000 exclude clear add in_situ\");\n";
+            "run(\"Analyze Particles...\", \"size=500-5000 exclude clear add in_situ\");\n";
 	private JButton btnRoiTest;
 	private JLabel overlapPctLabel;
 	private JLabel lblHiresPixelSize;
