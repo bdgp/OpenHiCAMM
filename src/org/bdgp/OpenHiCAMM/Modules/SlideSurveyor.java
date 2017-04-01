@@ -69,6 +69,48 @@ public class SlideSurveyor implements Module {
                 "id", "key");
     }
     
+    public static boolean compareImages(TaggedImage taggedImage1, TaggedImage taggedImage2) {
+        if (taggedImage1 == null || taggedImage2 == null)
+            return false;
+        if (taggedImage1.pix instanceof byte[] && taggedImage2.pix instanceof byte[]) {
+            byte[] pix1 = (byte[])taggedImage1.pix;
+            byte[] pix2 = (byte[])taggedImage2.pix;
+            if (pix1.length != pix2.length) return false;
+            for (int i = 0; i < pix1.length; ++i) {
+                if (pix1[i] != pix2[i]) return false;
+            }
+            return true;
+        }
+        if (taggedImage1.pix instanceof int[] && taggedImage2.pix instanceof int[]) {
+            int[] pix1 = (int[])taggedImage1.pix;
+            int[] pix2 = (int[])taggedImage2.pix;
+            if (pix1.length != pix2.length) return false;
+            for (int i = 0; i < pix1.length; ++i) {
+                if (pix1[i] != pix2[i]) return false;
+            }
+            return true;
+        }
+        if (taggedImage1.pix instanceof short[] && taggedImage2.pix instanceof short[]) {
+            short[] pix1 = (short[])taggedImage1.pix;
+            short[] pix2 = (short[])taggedImage2.pix;
+            if (pix1.length != pix2.length) return false;
+            for (int i = 0; i < pix1.length; ++i) {
+                if (pix1[i] != pix2[i]) return false;
+            }
+            return true;
+        }
+        if (taggedImage1.pix instanceof float[] && taggedImage2.pix instanceof float[]) {
+            float[] pix1 = (float[])taggedImage1.pix;
+            float[] pix2 = (float[])taggedImage2.pix;
+            if (pix1.length != pix2.length) return false;
+            for (int i = 0; i < pix1.length; ++i) {
+                if (pix1[i] != pix2[i]) return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
     public static boolean compareImages(ImagePlus im1, ImagePlus im2) {
         int[][] im1s = im1.getProcessor().getIntArray();
         int[][] im2s = im2.getProcessor().getIntArray();
@@ -265,7 +307,7 @@ public class SlideSurveyor implements Module {
                     1, NewImage.FILL_WHITE);
             
             // iterate through the position list, imaging using live mode to build up the large slide image
-            ImagePlus lastimp = null;
+            TaggedImage lastimg = null;
             for (int i=0; i<positionList.getNumberOfPositions(); ++i) {
                 MultiStagePosition msp = positionList.getPosition(i);
 
@@ -296,7 +338,7 @@ public class SlideSurveyor implements Module {
                                 this.workflowModule.getName(), task.getName(wmDao), slide.getName(), msp.getX(), msp.getY()), 
                                 ip);
                         // do a bitwise check to make sure this image is not the same as the last one
-                        if (lastimp != null && compareImages(imp, lastimp)) {
+                        if (lastimg != null && compareImages(img, lastimg)) {
                             logger.warning(String.format("Detected same images from live view, retrying..."));
                             img = null;
                             imp = null;
@@ -310,7 +352,7 @@ public class SlideSurveyor implements Module {
                             Thread.sleep(5000);
                             continue;
                         }
-                        lastimp = imp;
+                        lastimg = img;
                         break;
                     }
                     Thread.sleep(1000);
