@@ -345,7 +345,7 @@ public class SlideSurveyor implements Module {
                             ip = null;
                             // re-start live mode and try again
                             try { core.stopSequenceAcquisition(); } 
-                            catch (Exception e) {throw new RuntimeException(e);}
+                            catch (Exception e) { /* do nothing */ }
                             Thread.sleep(5000);
                             core.clearCircularBuffer();
                             core.startContinuousSequenceAcquisition(0);

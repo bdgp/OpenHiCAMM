@@ -706,7 +706,50 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
         return sum;
     }
 
+    public static boolean compareImages(TaggedImage taggedImage1, TaggedImage taggedImage2) {
+        if (taggedImage1 == null || taggedImage2 == null)
+            return false;
+        if (taggedImage1.pix instanceof byte[] && taggedImage2.pix instanceof byte[]) {
+            byte[] pix1 = (byte[])taggedImage1.pix;
+            byte[] pix2 = (byte[])taggedImage2.pix;
+            if (pix1.length != pix2.length) return false;
+            for (int i = 0; i < pix1.length; ++i) {
+                if (pix1[i] != pix2[i]) return false;
+            }
+            return true;
+        }
+        if (taggedImage1.pix instanceof int[] && taggedImage2.pix instanceof int[]) {
+            int[] pix1 = (int[])taggedImage1.pix;
+            int[] pix2 = (int[])taggedImage2.pix;
+            if (pix1.length != pix2.length) return false;
+            for (int i = 0; i < pix1.length; ++i) {
+                if (pix1[i] != pix2[i]) return false;
+            }
+            return true;
+        }
+        if (taggedImage1.pix instanceof short[] && taggedImage2.pix instanceof short[]) {
+            short[] pix1 = (short[])taggedImage1.pix;
+            short[] pix2 = (short[])taggedImage2.pix;
+            if (pix1.length != pix2.length) return false;
+            for (int i = 0; i < pix1.length; ++i) {
+                if (pix1[i] != pix2[i]) return false;
+            }
+            return true;
+        }
+        if (taggedImage1.pix instanceof float[] && taggedImage2.pix instanceof float[]) {
+            float[] pix1 = (float[])taggedImage1.pix;
+            float[] pix2 = (float[])taggedImage2.pix;
+            if (pix1.length != pix2.length) return false;
+            for (int i = 0; i < pix1.length; ++i) {
+                if (pix1[i] != pix2[i]) return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
     //take a snapshot and save pixel values in ipCurrent_
+    private TaggedImage lastimg;
     public boolean snapSingleImage()
     {
         try
@@ -717,7 +760,23 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
                 while (img == null || ip == null || ip.getPixels() == null) {
                     try {
                         img = core_.getLastTaggedImage();
-                        if (img != null) ip = ImageUtils.makeProcessor(img);
+                        if (img != null) {
+                            if (lastimg != null && compareImages(img, lastimg)) {
+                                IJ.log("Autofous detected same image twice, retrying...");
+                                img = null;
+                                ip = null;
+                                // re-start live mode and try again
+                                try { core_.stopSequenceAcquisition(); } 
+                                catch (Exception e) { /* do nothing */ }
+                                Thread.sleep(5000);
+                                core_.clearCircularBuffer();
+                                core_.startContinuousSequenceAcquisition(0);
+                                Thread.sleep(5000);
+                                continue;
+                            }
+                            ip = ImageUtils.makeProcessor(img);  
+                            lastimg = img;
+                        }
                     } catch (Throwable e) { /* do nothing */ }
                     if (img == null || ip == null || ip.getPixels() == null) {
                         Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
@@ -740,7 +799,6 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
             IJ.error(sw.toString());
             return false;
         }
-
         return true;
     }
 
