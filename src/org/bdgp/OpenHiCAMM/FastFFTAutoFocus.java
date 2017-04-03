@@ -712,13 +712,16 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
         try
         {
             if (liveMode) {
-                TaggedImage img = core_.getLastTaggedImage();
+                TaggedImage img = null;
                 ImageProcessor ip = null;
-                if (img != null) ip = ImageUtils.makeProcessor(img);
                 while (img == null || ip == null || ip.getPixels() == null) {
-                    img = core_.getLastTaggedImage();
-                    if (img != null) ip = ImageUtils.makeProcessor(img);
-                    Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
+                    try {
+                        img = core_.getLastTaggedImage();
+                        if (img != null) ip = ImageUtils.makeProcessor(img);
+                    } catch (Throwable e) { /* do nothing */ }
+                    if (img == null || ip == null || ip.getPixels() == null) {
+                        Thread.sleep(WAIT_FOR_DEVICE_SLEEP);
+                    }
                 }
                 ImagePlus implus = new ImagePlus(String.valueOf(curDist), ip);
                 new ImageConverter(implus).convertToGray8();
