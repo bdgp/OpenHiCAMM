@@ -776,4 +776,18 @@ public class SlideSurveyor implements Module {
 
     @Override
     public void runInitialize() { }
+
+    @Override
+    public Status setTaskStatusOnResume(Task task) {
+        for (TaskDispatch td : this.workflowRunner.getTaskDispatch().select(where("parentTaskId", task.getId()))) {
+            Task t = this.workflowRunner.getTaskStatus().selectOneOrDie(where("id", td.getTaskId()));
+            ModuleConfig mc = this.workflowRunner.getModuleConfig().selectOne(where("id", t.getModuleId()).
+                    and("key", "canImageSlides").
+                    and("value", "yes"));
+            if (mc != null && t.getStatus() != Status.SUCCESS) {
+                return Status.NEW;
+            }
+        }
+        return task.getStatus();
+    }
 }
