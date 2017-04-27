@@ -245,7 +245,7 @@ public class WorkflowReport implements Report {
             });
         });
 
-        ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2);
         List<Future<?>> futures = new ArrayList<>();
         for (Map.Entry<String,Runnable> entry : runnables.entrySet()) {
             String reportFile = entry.getKey();

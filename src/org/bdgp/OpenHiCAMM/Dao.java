@@ -31,7 +31,7 @@ import com.j256.ormlite.db.DatabaseType;
  * @param <ID>
  */
 public class Dao<T> extends BaseDaoImpl<T,Object> {
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
 	private Connection connection;
 	private Map<String,FieldType> fields;
