@@ -3,6 +3,8 @@ package org.bdgp.OpenHiCAMM.DB;
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.Util;
@@ -23,6 +25,12 @@ public class Acquisition {
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) private String prefix;
     @DatabaseField(canBeNull=false,dataType=DataType.LONG_STRING) private String directory;
     
+    private static Map<String,MMAcquisition> acquisitionCache = new ConcurrentHashMap<>();
+    
+    public static void clearCache() {
+        acquisitionCache.clear();
+    }
+    
     public Acquisition() {}
     public Acquisition (String name, String prefix, String directory) {
         this.name = name;
@@ -39,6 +47,10 @@ public class Acquisition {
     }
 
     public MMAcquisition getAcquisition(Dao<Acquisition> acquisitionDao, boolean existing) {
+        File acquisitionPath = new File(this.directory, this.prefix);
+        if (acquisitionCache.containsKey(acquisitionPath.getPath())) {
+            return acquisitionCache.get(acquisitionPath.getPath());
+        }
         if (existing) {
             MMStudio mmstudio = MMStudio.getInstance();
             synchronized (mmstudio) {
@@ -53,6 +65,7 @@ public class Acquisition {
                             summaryMetadata.get("Prefix").toString().equals(this.prefix))
                         {
                             this.name = acqName;
+                            acquisitionCache.put(acquisitionPath.getPath(), acquisition);
                             return acquisition;
                         }
                     }
@@ -64,7 +77,6 @@ public class Acquisition {
                 } 
 
                 try {
-                    File acquisitionPath = new File(this.directory, this.prefix);
                     if (!acquisitionPath.exists()) throw new RuntimeException(String.format(
                             "Acquisition path %s does not exist!", acquisitionPath.getPath()));
                     this.name = mmstudio.openAcquisitionData(acquisitionPath.getPath(), false, false);
@@ -72,6 +84,7 @@ public class Acquisition {
                     if (acquisitionDao != null) {
                         acquisitionDao.update(this, "id");
                     }
+                    acquisitionCache.put(acquisitionPath.getPath(), acquisition);
                     return acquisition;
                 } 
                 catch (MMScriptException e1) {
@@ -93,6 +106,7 @@ public class Acquisition {
                         acquisitionDao.update(this, "id");
                     }
                 }
+                acquisitionCache.put(acquisitionPath.getPath(), acquisition);
                 return acquisition;
             } 
             catch (JSONException e) {throw new RuntimeException(e);}

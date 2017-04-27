@@ -84,7 +84,6 @@ import static org.bdgp.OpenHiCAMM.Tag.T.*;
 public class WorkflowReport implements Report {
     public static final int SLIDE_PREVIEW_WIDTH = 1280; 
     public static final int ROI_GRID_PREVIEW_WIDTH = 425; 
-    public static final boolean DEBUG=true;
 
     private WorkflowRunner workflowRunner;
     private WebEngine webEngine;
@@ -92,15 +91,16 @@ public class WorkflowReport implements Report {
     private String reportIndex;
     private Integer prevPoolSlideId;
     private Map<Integer,Boolean> isLoaderInitialized;
+    private Map<Integer,MultiStagePosition> msps;
+    private Map<Integer,Map<String,ModuleConfig>> moduleConfig;
+    private Map<Integer,Map<String,TaskConfig>> taskConfig;
 
     public void jsLog(String message) {
         IJ.log(String.format("[WorkflowReport:js] %s", message));
     }
 
     public void log(String message, Object... args) {
-        if (DEBUG) {
-            IJ.log(String.format("[WorkflowReport] %s", String.format(message, args)));
-        }
+        IJ.log(String.format("[WorkflowReport] %s", String.format(message, args)));
     }
     
     @Override public void initialize(WorkflowRunner workflowRunner, WebEngine webEngine, String reportDir, String reportIndex) {
@@ -109,12 +109,56 @@ public class WorkflowReport implements Report {
         this.reportDir = reportDir;
         this.reportIndex = reportIndex;
         isLoaderInitialized = new HashMap<Integer,Boolean>();
+        this.msps = new HashMap<>();
+        this.moduleConfig = new HashMap<>();
+        this.taskConfig = new HashMap<>();
+    }
+    
+    private ModuleConfig getModuleConfig(int id, String key) {
+        Map<String,ModuleConfig> confs = moduleConfig.get(id);
+        if (confs == null) return null;
+        return confs.get(key);
+    }
+    private TaskConfig getTaskConfig(int id, String key) {
+        Map<String,TaskConfig> confs = taskConfig.get(id);
+        if (confs == null) return null;
+        return confs.get(key);
     }
     
     @Override
     public void runReport() {
         Dao<Pool> poolDao = this.workflowRunner.getWorkflowDb().table(Pool.class);
         Dao<PoolSlide> psDao = this.workflowRunner.getWorkflowDb().table(PoolSlide.class);
+        
+        // cache the module config 
+        log("Caching the module config...");
+        for (ModuleConfig moduleConf : this.workflowRunner.getModuleConfig().select()) {
+            moduleConfig.putIfAbsent(moduleConf.getId(), new HashMap<>());
+            moduleConfig.get(moduleConf.getId()).put(moduleConf.getKey(), moduleConf);
+        }
+        // cache the task config
+        log("Caching the task config...");
+        for (TaskConfig taskConf : this.workflowRunner.getTaskConfig().select()) {
+            taskConfig.putIfAbsent(taskConf.getId(), new HashMap<>());
+            taskConfig.get(taskConf.getId()).put(taskConf.getKey(), taskConf);
+        }
+        // get the MSP from the task config
+        PositionList posList = new PositionList();
+        List<TaskConfig> mspConfs = this.workflowRunner.getTaskConfig().select(
+                where("key","MSP"));
+        log("Creating task->MSP table for %s tasks...", mspConfs.size());
+        for (TaskConfig mspConf : mspConfs) {
+            try {
+                JSONObject posListJson = new JSONObject().
+                        put("POSITIONS", new JSONArray().put(new JSONObject(mspConf.getValue()))).
+                        put("VERSION", 3).
+                        put("ID","Micro-Manager XY-position list");
+                posList.restore(posListJson.toString());
+                MultiStagePosition msp = posList.getPosition(0);
+                msps.put(mspConf.getId(), msp);
+            } 
+            catch (JSONException | MMSerializationException e) {throw new RuntimeException(e);}
+        }
 
         // Find SlideImager modules where there is no associated posListModuleId module config
         // This is the starting SlideImager module.
@@ -146,9 +190,7 @@ public class WorkflowReport implements Report {
                     WorkflowModule slideImager = this.workflowRunner.getWorkflow().selectOne(
                             where("id", canImageSlides.getId()));
                     if (slideImager != null && 
-                        workflowRunner.getModuleConfig().selectOne(
-                            where("id", slideImager.getId()).
-                            and("key", "posListModule")) == null) 
+                        getModuleConfig(slideImager.getId(), "posListModule") == null)
                     {
                         log("Working on slideImager: %s", slideImager);
                        // get the loader module
@@ -156,15 +198,10 @@ public class WorkflowReport implements Report {
                         while (loaderModuleId != null) {
                             WorkflowModule loaderModule = this.workflowRunner.getWorkflow().selectOneOrDie(
                                     where("id", loaderModuleId));
-                            if (this.workflowRunner.getModuleConfig().selectOne(
-                                    where("id", loaderModule.getId()).
-                                    and("key", "canLoadSlides").
-                                    and("value", "yes")) != null) 
-                            {
+                            Config canLoadSlides = getModuleConfig(loaderModule.getId(), "canLoadSlides");
+                            if (canLoadSlides != null && "yes".equals(canLoadSlides.getValue())) {
                                 log("Using loaderModule: %s", loaderModule);
-                                ModuleConfig poolIdConf = this.workflowRunner.getModuleConfig().selectOne(
-                                        where("id", loaderModule.getId()).
-                                        and("key", "poolId"));
+                                Config poolIdConf = getModuleConfig(loaderModule.getId(), "poolId");
                                 if (poolIdConf != null) {
                                     Pool pool = poolDao.selectOneOrDie(where("id", poolIdConf.getValue()));
                                     List<PoolSlide> pss = psDao.select(where("poolId", pool.getId()));
@@ -208,8 +245,7 @@ public class WorkflowReport implements Report {
             });
         });
 
-        // Use 2x as many threads as processors, since all processors don't seem to be at 100% usage
-        ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2);
+        ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         List<Future<?>> futures = new ArrayList<>();
         for (Map.Entry<String,Runnable> entry : runnables.entrySet()) {
             String reportFile = entry.getKey();
@@ -281,9 +317,7 @@ public class WorkflowReport implements Report {
         for (Task task : workflowRunner.getTaskStatus().select(
                 where("moduleId", startModule.getId()))) 
         {
-            TaskConfig imageIdConf = workflowRunner.getTaskConfig().selectOne(
-                    where("id", task.getId()).
-                    and("key", "imageId"));
+            TaskConfig imageIdConf = getTaskConfig(task.getId(), "imageId");
             if (imageIdConf != null) {
                 for (ROI roi : roiDao.select(where("imageId", imageIdConf.getValue()))) {
                     Set<Integer> roiModuleSet = roiModules.get(roi.getId());
@@ -298,11 +332,8 @@ public class WorkflowReport implements Report {
                                         where("key", "posListModule").
                                         and("value", roiModule.getName()))) 
                                 {
-                                    if (this.workflowRunner.getModuleConfig().selectOne(
-                                            where("id", posListModuleConf.getId()).
-                                            and("key", "canImageSlides").
-                                            and("value", "yes")) != null) 
-                                    {
+                                    Config canImageSlides = getModuleConfig(posListModuleConf.getId(), "canImageSlides");
+                                    if (canImageSlides != null && "yes".equals(canImageSlides.getValue())) {
                                         WorkflowModule imagerModule = this.workflowRunner.getWorkflow().selectOne(
                                                 where("id", posListModuleConf.getId()));
                                         if (imagerModule != null) {
@@ -348,16 +379,16 @@ public class WorkflowReport implements Report {
         }
 
         // get the pixel size of this slide imager config
-        Config pixelSizeConf = this.workflowRunner.getModuleConfig().selectOne(where("id", startModule.getId()).and("key","pixelSize"));
+        Config pixelSizeConf = getModuleConfig(startModule.getId(), "pixelSize");
         Double pixelSize = pixelSizeConf != null? new Double(pixelSizeConf.getValue()) : SlideImagerDialog.DEFAULT_PIXEL_SIZE_UM;
         log("pixelSize = %f", pixelSize);
 
         // get invertXAxis and invertYAxis conf values
-        Config invertXAxisConf = this.workflowRunner.getModuleConfig().selectOne(where("id", startModule.getId()).and("key","invertXAxis"));
+        Config invertXAxisConf = getModuleConfig(startModule.getId(), "invertXAxis");
         boolean invertXAxis = invertXAxisConf == null || invertXAxisConf.getValue().equals("yes");
         log("invertXAxis = %b", invertXAxis);
 
-        Config invertYAxisConf = this.workflowRunner.getModuleConfig().selectOne(where("id", startModule.getId()).and("key","invertYAxis"));
+        Config invertYAxisConf = getModuleConfig(startModule.getId(), "invertYAxis");
         boolean invertYAxis = invertYAxisConf == null || invertYAxisConf.getValue().equals("yes");
         log("invertYAxis = %b", invertYAxis);
 
@@ -366,11 +397,9 @@ public class WorkflowReport implements Report {
                 where("moduleId", startModule.getId()));
         Map<String,Task> imageTaskPosIdx = new TreeMap<String,Task>(new ImageLabelComparator());
         for (Task imageTask : imageTasks) {
-            Config slideIdConf = this.workflowRunner.getTaskConfig().selectOne(
-                    where("id", imageTask.getId()).and("key", "slideId"));
+            Config slideIdConf = getTaskConfig(imageTask.getId(), "slideId");
             if (poolSlide == null || new Integer(slideIdConf.getValue()).equals(poolSlide.getSlideId())) {
-                Config imageLabelConf = this.workflowRunner.getTaskConfig().selectOne(
-                        where("id", imageTask.getId()).and("key", "imageLabel"));
+                Config imageLabelConf = getTaskConfig(imageTask.getId(), "imageLabel");
                 if (imageLabelConf != null) {
                     imageTaskPosIdx.put(imageLabelConf.getValue(), imageTask);
                 }
@@ -382,9 +411,7 @@ public class WorkflowReport implements Report {
         
         final String acquisitionTime;
         if (!imageTasks.isEmpty()) {
-            Config acquisitionTimeConf = this.workflowRunner.getTaskConfig().selectOne(
-                    where("id", imageTasks.get(0).getId()).
-                    and("key", "acquisitionTime"));
+            Config acquisitionTimeConf = getTaskConfig(imageTasks.get(0).getId(), "acquisitionTime");
             if (acquisitionTimeConf != null) {
                 try {
                     acquisitionTime = new SimpleDateFormat("yyyyMMddHHmmss").format(
@@ -412,8 +439,7 @@ public class WorkflowReport implements Report {
             if (minY_ == null || msp.getY() < minY_) minY_ = msp.getY();
             if (maxY == null || msp.getY() > maxY) maxY = msp.getY();
             if (imageWidth_ == null || imageHeight_ == null) {
-                Config imageIdConf = this.workflowRunner.getTaskConfig().selectOne(
-                        where("id", task.getId()).and("key", "imageId"));
+                Config imageIdConf = getTaskConfig(task.getId(), "imageId");
                 if (imageIdConf != null) {
                     Image image = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf.getValue())));
                     log("Getting image size for image %s", image);
@@ -453,8 +479,7 @@ public class WorkflowReport implements Report {
             Map().attr("name",String.format("map-%s-%s", startModule.getName(), slideName)).with(()->{
                 // TODO: parallelize
                 for (Task task : imageTasks) {
-                    Config imageIdConf = this.workflowRunner.getTaskConfig().selectOne(
-                            where("id", task.getId()).and("key", "imageId"));
+                    Config imageIdConf = getTaskConfig(task.getId(), "imageId");
                     if (imageIdConf != null) {
                         MultiStagePosition msp = getMsp(task);
 
@@ -561,8 +586,7 @@ public class WorkflowReport implements Report {
             // now render the individual ROI sections
             // TODO: parallelize
             for (Task task : imageTasks) {
-                Config imageIdConf = this.workflowRunner.getTaskConfig().selectOne(
-                        where("id", task.getId()).and("key", "imageId"));
+                Config imageIdConf = getTaskConfig(task.getId(), "imageId");
                 if (imageIdConf != null) {
                     Image image = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf.getValue())));
 
@@ -586,7 +610,7 @@ public class WorkflowReport implements Report {
                                 WorkflowModule imager = this.workflowRunner.getWorkflow().selectOneOrDie(
                                         where("name", imagerModuleName));
                                 // get the hires pixel size for this imager
-                                Config hiResPixelSizeConf = this.workflowRunner.getModuleConfig().selectOne(where("id", imager.getId()).and("key","pixelSize"));
+                                Config hiResPixelSizeConf = getModuleConfig(imager.getId(), "pixelSize");
                                 Double hiResPixelSize = hiResPixelSizeConf != null? new Double(hiResPixelSizeConf.getValue()) : ROIFinderDialog.DEFAULT_HIRES_PIXEL_SIZE_UM;
                                 log("hiResPixelSize = %f", hiResPixelSize);
 
@@ -595,17 +619,15 @@ public class WorkflowReport implements Report {
                                 Double minX2_=null, minY2_=null, maxX2_=null, maxY2_=null;
                                 Integer imageWidth2_ = null, imageHeight2_ = null;
                                 Map<String,List<Task>> imagerTasks = new TreeMap<String,List<Task>>(new ImageLabelComparator());
-                                for (Task imagerTask : this.workflowRunner.getTaskStatus().select(where("moduleId", imager.getId()))) {
-                                    Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
-                                            where("id", imagerTask.getId()).
-                                            and("key", "imageId"));
+                                for (Task imagerTask : this.workflowRunner.getTaskStatus().select(
+                                        where("moduleId", imager.getId()))) 
+                                {
+                                    Config imageIdConf2 = getTaskConfig(imagerTask.getId(), "imageId");
                                     if (imageIdConf2 != null) {
                                         MultiStagePosition imagerMsp = getMsp(imagerTask);
                                         if (imagerMsp.hasProperty("ROI") && imagerMsp.getProperty("ROI").equals(new Integer(roi.getId()).toString())) 
                                         {
-                                            TaskConfig imageLabelConf = this.workflowRunner.getTaskConfig().selectOne(
-                                                    where("id", imagerTask.getId()).
-                                                    and("key", "imageLabel"));
+                                            TaskConfig imageLabelConf = getTaskConfig(imagerTask.getId(), "imageLabel");
                                             int[] indices = MDUtils.getIndices(imageLabelConf.getValue());
                                             if (indices != null && indices.length >= 4) {
                                                 String imageLabel = MDUtils.generateLabel(indices[0], indices[1], indices[2], 0);
@@ -696,8 +718,7 @@ public class WorkflowReport implements Report {
                                                         double yPos = 0.0;
                                                         for (Task imagerTask : imagerTaskEntry.getValue()) {
                                                             MultiStagePosition imagerMsp = getMsp(imagerTask);
-                                                            Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
-                                                                    where("id", imagerTask.getId()).and("key", "imageId"));
+                                                            Config imageIdConf2 = getTaskConfig(imagerTask.getId(), "imageId");
                                                             if (imageIdConf2 != null) {
                                                                 for (int i=0; i<imagerMsp.size(); ++i) {
                                                                     StagePosition sp = imagerMsp.get(i);
@@ -753,11 +774,9 @@ public class WorkflowReport implements Report {
                                                                     roiPreviewHeight));
 
                                                             ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
-                                                            if (DEBUG) {
-                                                                String dirs = new File(reportDir, reportFile).getPath().replaceAll("\\.html$", "");
-                                                                new File(dirs).mkdirs();
-                                                                new FileSaver(imp).saveAsJpeg(new File(dirs, String.format("ROI%s.roi_thumbnail.jpg", roi.getId())).getPath());
-                                                            }
+                                                            //String dirs = new File(reportDir, reportFile).getPath().replaceAll("\\.html$", "");
+                                                            //new File(dirs).mkdirs();
+                                                            //new FileSaver(imp).saveAsJpeg(new File(dirs, String.format("ROI%s.roi_thumbnail.jpg", roi.getId())).getPath());
                                                             try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                             catch (IOException e) {throw new RuntimeException(e);}
                                                             ImagePlus imp_ = imp;
@@ -780,8 +799,7 @@ public class WorkflowReport implements Report {
                                                         List<Runnable> makeLinks = new ArrayList<>();
                                                         Map().attr("name", String.format("map-roi-%s-ROI%d", imager.getName(), roi.getId())).with(()->{
                                                             for (Task imagerTask : imagerTaskEntry.getValue()) {
-                                                                Config imageIdConf2 = this.workflowRunner.getTaskConfig().selectOne(
-                                                                        where("id", imagerTask.getId()).and("key", "imageId"));
+                                                                Config imageIdConf2 = getTaskConfig(imagerTask.getId(), "imageId");
                                                                 if (imageIdConf2 != null) {
                                                                     MultiStagePosition imagerMsp = getMsp(imagerTask);
 
@@ -846,11 +864,9 @@ public class WorkflowReport implements Report {
                                                             }
                                                         });
 
-                                                        if (DEBUG) {
-                                                            String dirs = new File(reportDir, reportFile).getPath().replaceAll("\\.html$", "");
-                                                            new File(dirs).mkdirs();
-                                                            new FileSaver(roiGridThumb).saveAsJpeg(new File(dirs, String.format("ROI%s.grid_thumbnail.jpg", roi.getId())).getPath());
-                                                        }
+                                                        //String dirs = new File(reportDir, reportFile).getPath().replaceAll("\\.html$", "");
+                                                        //new File(dirs).mkdirs();
+                                                        //new FileSaver(roiGridThumb).saveAsJpeg(new File(dirs, String.format("ROI%s.grid_thumbnail.jpg", roi.getId())).getPath());
                                                         // write the grid thumbnail as an embedded HTML image.
                                                         ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                                                         try { ImageIO.write(roiGridThumb.getBufferedImage(), "jpg", baos2); } 
@@ -878,11 +894,10 @@ public class WorkflowReport implements Report {
                                                             for (TaskDispatch td : this.workflowRunner.getTaskDispatch().select(where("parentTaskId", imagerTask.getId()))) {
                                                                 Task stitcherTask = this.workflowRunner.getTaskStatus().selectOneOrDie(
                                                                         where("id", td.getTaskId()));
-                                                                if (!this.workflowRunner.getModuleConfig().select(
-                                                                        where("id", stitcherTask.getModuleId()).
-                                                                        and("key", "canStitchImages").
-                                                                        and("value", "yes")).isEmpty() &&
-                                                                     stitcherTask.getStatus().equals(Status.SUCCESS)) 
+                                                                Config canStitchImages = getModuleConfig(stitcherTask.getModuleId(), "canStitchImages");
+                                                                if (canStitchImages != null && 
+                                                                        "yes".equals(canStitchImages.getValue()) &&
+                                                                        stitcherTask.getStatus().equals(Status.SUCCESS)) 
                                                                 {
                                                                     stitcherTasks.add(stitcherTask);
                                                                 }
@@ -890,8 +905,7 @@ public class WorkflowReport implements Report {
                                                         }
                                                         for (Task stitcherTask : stitcherTasks) {
                                                             log("Working on stitcher task: %s", stitcherTask);
-                                                            Config stitchedImageFile = this.workflowRunner.getTaskConfig().selectOne(
-                                                                    where("id", stitcherTask.getId()).and("key", "stitchedImageFile"));
+                                                            Config stitchedImageFile = getTaskConfig(stitcherTask.getId(), "stitchedImageFile");
                                                             log("stitchedImageFile = %s", stitchedImageFile.getValue());
                                                             if (stitchedImageFile != null && new File(stitchedImageFile.getValue()).exists()) {
                                                                 stitchedImageFiles.add(stitchedImageFile.getValue());
@@ -909,11 +923,9 @@ public class WorkflowReport implements Report {
                                                                         stitchPreviewHeight));
                                                                 log("resized stitched image width=%d, height=%d", imp.getWidth(), imp.getHeight());
 
-                                                                if (DEBUG) {
-                                                                    String dirs = new File(reportDir, reportFile).getPath().replaceAll("\\.html$", "");
-                                                                    new File(dirs).mkdirs();
-                                                                    new FileSaver(imp).saveAsJpeg(new File(dirs, String.format("ROI%s.stitched_thumbnail.jpg", roi.getId())).getPath());
-                                                                }
+                                                                //String dirs = new File(reportDir, reportFile).getPath().replaceAll("\\.html$", "");
+                                                                //new File(dirs).mkdirs();
+                                                                //new FileSaver(imp).saveAsJpeg(new File(dirs, String.format("ROI%s.stitched_thumbnail.jpg", roi.getId())).getPath());
                                                                 // write the stitched thumbnail as an embedded HTML image.
                                                                 ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                                                                 try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
@@ -1210,18 +1222,8 @@ public class WorkflowReport implements Report {
     }
     
     private MultiStagePosition getMsp(Task task) {
-        // get the MSP from the task config
-        PositionList posList = new PositionList();
-        try {
-            Config mspConf = this.workflowRunner.getTaskConfig().selectOneOrDie(where("id", task.getId()).and("key","MSP"));
-            JSONObject posListJson = new JSONObject().
-                    put("POSITIONS", new JSONArray().put(new JSONObject(mspConf.getValue()))).
-                    put("VERSION", 3).
-                    put("ID","Micro-Manager XY-position list");
-            posList.restore(posListJson.toString());
-        } 
-        catch (JSONException | MMSerializationException e) {throw new RuntimeException(e);}
-        MultiStagePosition msp = posList.getPosition(0);
+        MultiStagePosition msp = this.msps.get(task.getId());
+        if (msp == null) throw new RuntimeException(String.format("Could not find MSP conf for task %s!", task));
         return msp;
     }
     

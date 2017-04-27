@@ -10,6 +10,7 @@ import java.util.Map;
 import com.j256.ormlite.field.DatabaseFieldConfig;
 import com.j256.ormlite.field.FieldType;
 import com.j256.ormlite.stmt.DeleteBuilder;
+import com.j256.ormlite.stmt.PreparedQuery;
 import com.j256.ormlite.stmt.QueryBuilder;
 import com.j256.ormlite.stmt.SelectArg;
 import com.j256.ormlite.stmt.UpdateBuilder;
@@ -17,6 +18,8 @@ import com.j256.ormlite.stmt.Where;
 import com.j256.ormlite.support.DatabaseConnection;
 import com.j256.ormlite.table.DatabaseTableConfig;
 import com.j256.ormlite.table.TableUtils;
+
+import ij.IJ;
 
 import com.j256.ormlite.dao.BaseDaoImpl;
 import com.j256.ormlite.db.DatabaseType;
@@ -28,6 +31,8 @@ import com.j256.ormlite.db.DatabaseType;
  * @param <ID>
  */
 public class Dao<T> extends BaseDaoImpl<T,Object> {
+    private static final boolean DEBUG = true;
+
 	private Connection connection;
 	private Map<String,FieldType> fields;
 	
@@ -454,6 +459,16 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
                 }
             }
             where.and(fieldValues.size());
+            if (DEBUG) {
+                long startTime = System.currentTimeMillis();
+                PreparedQuery<T> prepared = qb.prepare();
+                List<T> results = query(prepared);
+                long endTime = System.currentTimeMillis();
+                IJ.log(String.format("[Dao] query took %.2f seconds: %s", 
+                        (double)(endTime-startTime) / 1000.0, 
+                        prepared.getStatement()));
+                return results;
+            }
             return qb.query();
 	    }
 	    catch (SQLException e) {throw new RuntimeException(e);}
