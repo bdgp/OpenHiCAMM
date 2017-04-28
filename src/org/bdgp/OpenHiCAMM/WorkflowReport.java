@@ -251,29 +251,31 @@ public class WorkflowReport implements Report {
             String reportFile = entry.getKey();
             Runnable runnable = entry.getValue();
 
-            futures.add(pool.submit(()->{
-                Html().indent().with(()->{
-                    Head().with(()->{
-                        try {
-                            // CSS
-                            Style().raw(Resources.toString(Resources.getResource("bootstrap.min.css"), Charsets.UTF_8));
-                            Style().raw(Resources.toString(Resources.getResource("bootstrap-theme.min.css"), Charsets.UTF_8));
-                            Style().raw(Resources.toString(Resources.getResource("jquery.powertip.min.css"), Charsets.UTF_8));
-                            // Javascript
-                            Script().raw(Resources.toString(Resources.getResource("jquery-2.1.4.min.js"), Charsets.UTF_8));
-                            Script().raw(Resources.toString(Resources.getResource("bootstrap.min.js"), Charsets.UTF_8));
-                            Script().raw(Resources.toString(Resources.getResource("jquery.maphilight.js"), Charsets.UTF_8));
-                            Script().raw(Resources.toString(Resources.getResource("jquery.powertip.min.js"), Charsets.UTF_8));
-                            Script().raw(Resources.toString(Resources.getResource("notify.min.js"), Charsets.UTF_8));
-                            Script().raw(Resources.toString(Resources.getResource("WorkflowReport.js"), Charsets.UTF_8));
-                        } 
-                        catch (Exception e) {throw new RuntimeException(e);}
-                    });
-                    Body().with(()->{
-                        runnable.run();
-                    });
-                }).write(new File(reportDir, reportFile));
-            }));
+            if (!new File(reportFile).exists()) {
+                futures.add(pool.submit(()->{
+                    Html().indent().with(()->{
+                        Head().with(()->{
+                            try {
+                                // CSS
+                                Style().raw(Resources.toString(Resources.getResource("bootstrap.min.css"), Charsets.UTF_8));
+                                Style().raw(Resources.toString(Resources.getResource("bootstrap-theme.min.css"), Charsets.UTF_8));
+                                Style().raw(Resources.toString(Resources.getResource("jquery.powertip.min.css"), Charsets.UTF_8));
+                                // Javascript
+                                Script().raw(Resources.toString(Resources.getResource("jquery-2.1.4.min.js"), Charsets.UTF_8));
+                                Script().raw(Resources.toString(Resources.getResource("bootstrap.min.js"), Charsets.UTF_8));
+                                Script().raw(Resources.toString(Resources.getResource("jquery.maphilight.js"), Charsets.UTF_8));
+                                Script().raw(Resources.toString(Resources.getResource("jquery.powertip.min.js"), Charsets.UTF_8));
+                                Script().raw(Resources.toString(Resources.getResource("notify.min.js"), Charsets.UTF_8));
+                                Script().raw(Resources.toString(Resources.getResource("WorkflowReport.js"), Charsets.UTF_8));
+                            } 
+                            catch (Exception e) {throw new RuntimeException(e);}
+                        });
+                        Body().with(()->{
+                            runnable.run();
+                        });
+                    }).write(new File(reportDir, reportFile));
+                }));
+            }
         }
         for (Future<?> f : futures) { 
             try { f.get(); } 
@@ -628,6 +630,7 @@ public class WorkflowReport implements Report {
                                         if (imagerMsp.hasProperty("ROI") && imagerMsp.getProperty("ROI").equals(new Integer(roi.getId()).toString())) 
                                         {
                                             TaskConfig imageLabelConf = getTaskConfig(imagerTask.getId(), "imageLabel");
+                                            if (imageLabelConf == null) continue;
                                             int[] indices = MDUtils.getIndices(imageLabelConf.getValue());
                                             if (indices != null && indices.length >= 4) {
                                                 String imageLabel = MDUtils.generateLabel(indices[0], indices[1], indices[2], 0);
