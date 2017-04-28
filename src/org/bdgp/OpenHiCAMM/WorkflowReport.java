@@ -251,7 +251,7 @@ public class WorkflowReport implements Report {
             String reportFile = entry.getKey();
             Runnable runnable = entry.getValue();
 
-            if (!new File(reportFile).exists()) {
+            if (!new File(reportDir, reportFile).exists()) {
                 futures.add(pool.submit(()->{
                     Html().indent().with(()->{
                         Head().with(()->{
