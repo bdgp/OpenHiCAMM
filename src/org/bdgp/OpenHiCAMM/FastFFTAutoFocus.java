@@ -78,7 +78,7 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
     public double THRES = 0.02;
     public double CROP_SIZE = 0.2; 
     public String CHANNEL="";
-    public int WAIT_FOR_DEVICE_SLEEP = 1000;
+    public int WAIT_FOR_DEVICE_SLEEP = 100;
 
     private double indx = 0; //snapshot show new window iff indx = 1
 
