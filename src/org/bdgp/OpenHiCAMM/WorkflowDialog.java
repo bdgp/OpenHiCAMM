@@ -292,7 +292,7 @@ public class WorkflowDialog extends JDialog {
                 designer.addWindowListener(new WindowAdapter() {
                     @Override public void windowClosed(WindowEvent e) { 
                     	initWorkflowRunner(true);
-                    	WorkflowDialog.this.workflowRunner.deleteTaskRecords();
+                    	//WorkflowDialog.this.workflowRunner.deleteTaskRecords();
                         refresh();
                     }
                 });
