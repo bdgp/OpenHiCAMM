@@ -183,7 +183,7 @@ public class SlideImagerDialog extends JPanel {
         CMMCore mmcore = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
         String focusDevice = mmcore.getFocusDevice();
         try { initialZPos.setValue(new Double(mmcore.getPosition(focusDevice))); } 
-        catch (Exception e1) {throw new RuntimeException(e1);}
+        catch (Exception e1) { /* Do nothing */ }
         
         JButton btnSetPosition = new JButton("Read From Device");
         btnSetPosition.setEnabled(false);
