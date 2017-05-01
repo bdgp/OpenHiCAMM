@@ -135,7 +135,14 @@ public class SlideSurveyor implements Module {
     	for (Config c : conf.values()) {
     		logger.fine(String.format("Using configuration: %s", c));
     	}
-
+    	
+        Date startAcquisition = new Date();
+        this.workflowRunner.getTaskConfig().insertOrUpdate(
+                new TaskConfig(task.getId(),
+                        "startAcquisition", 
+                        new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(startAcquisition)), 
+                "id", "key");
+            
     	// load the position list
         if (!conf.containsKey("posListFile")) {
             throw new RuntimeException("Cuold not find configuration for posListFile!");
@@ -289,13 +296,6 @@ public class SlideSurveyor implements Module {
                 catch (Exception e1) {throw new RuntimeException(e1);}
             }
 
-            Date startAcquisition = new Date();
-            this.workflowRunner.getTaskConfig().insertOrUpdate(
-                    new TaskConfig(task.getId(),
-                            "startAcquisition", 
-                            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(startAcquisition)), 
-                    "id", "key");
-            
             logger.info(String.format("Now acquiring %s survey images for slide %s...", 
                     positionList.getNumberOfPositions(),
                     slide.getName()));
@@ -443,6 +443,19 @@ public class SlideSurveyor implements Module {
             taskConfigDao.insertOrUpdate(pixelSizeYConf,"id","key");
             conf.put(pixelSizeYConf.getKey(), pixelSizeYConf);
             logger.fine(String.format("Inserted/Updated pixelSizeUmY config: %s", pixelSizeYConf));
+
+            Date endAcquisition = new Date();
+            this.workflowRunner.getTaskConfig().insertOrUpdate(
+                    new TaskConfig(task.getId(),
+                            "endAcquisition", 
+                            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(endAcquisition)), 
+                    "id", "key");
+
+            this.workflowRunner.getTaskConfig().insertOrUpdate(
+                    new TaskConfig(task.getId(),
+                            "acquisitionDuration", 
+                            new Long(endAcquisition.getTime() - startAcquisition.getTime()).toString()), 
+                    "id", "key");
 
             return Status.SUCCESS;
         } 
