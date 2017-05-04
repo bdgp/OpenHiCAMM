@@ -792,15 +792,32 @@ public class SlideSurveyor implements Module {
 
     @Override
     public Status setTaskStatusOnResume(Task task) {
-        for (TaskDispatch td : this.workflowRunner.getTaskDispatch().select(where("parentTaskId", task.getId()))) {
-            Task t = this.workflowRunner.getTaskStatus().selectOneOrDie(where("id", td.getTaskId()));
-            ModuleConfig mc = this.workflowRunner.getModuleConfig().selectOne(where("id", t.getModuleId()).
-                    and("key", "canImageSlides").
-                    and("value", "yes"));
-            if (mc != null && t.getStatus() != Status.SUCCESS) {
-                return Status.NEW;
-            }
+        if (task.getStatus() != Status.SUCCESS) {
+            return Status.NEW;
         }
-        return task.getStatus();
+        // try to find the parent slide loader task
+        // if slide loader parent task needs to be re-run, then re-run this as well.
+        List<TaskDispatch> tds = this.workflowRunner.getTaskDispatch().select(where("taskId", task.getId()));
+        while (!tds.isEmpty()) {
+            List<TaskDispatch> parentTds = new ArrayList<>();
+            for (TaskDispatch td : tds) {
+                Task parentTask = this.workflowRunner.getTaskStatus().selectOneOrDie(where("id", td.getParentTaskId()));
+                if (this.workflowRunner.getModuleConfig().selectOne(
+                        where("id", parentTask.getModuleId()).
+                        and("key", "canLoadSlides").
+                        and("value", "yes")) != null) 
+                {
+                    if (parentTask.getStatus() == Status.NEW) {
+                        return Status.NEW;
+                    }
+                    else {
+                        return null;
+                    }
+                }
+                parentTds.addAll(this.workflowRunner.getTaskDispatch().select(where("taskId", parentTask.getId())));
+            }
+            tds = parentTds;
+        }
+        return null;
     }
 }
