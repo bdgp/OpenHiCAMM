@@ -380,13 +380,36 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	}
 	
 	/**
-	 * Delete a value from the database table.
+	 * Delete values from the database table.
 	 * @return The number of records deleted
 	 */
 	public int delete(T data) {
-	    try {
-    	    return super.delete(data);
-	    }
+        try {
+            return super.delete(data);
+        }
+        catch (SQLException e) {throw new RuntimeException(e);}
+	}
+	
+	/**
+	 * Delete a value from the database table.
+	 * @return The number of records deleted
+	 */
+	public int delete(T data, String... where) {
+        try {
+            if (where.length == 0) {
+                return super.delete(data);
+            }
+            // Construct the query
+            Map<String,Object> query = new HashMap<String,Object>();
+            for (String w : where) {
+                if (!this.fields.containsKey(w)) {
+                    throw new RuntimeException("Class "+this.getDataClass().getName()
+                            +" does not contain field "+w);
+                }
+                query.put(w, fields.get(w).extractRawJavaFieldValue(data));
+            }
+            return delete(query);
+        }
         catch (SQLException e) {throw new RuntimeException(e);}
 	}
 	
