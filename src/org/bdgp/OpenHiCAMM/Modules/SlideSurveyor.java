@@ -414,7 +414,8 @@ public class SlideSurveyor implements Module {
 
             // create necessary DB records so that ROIFinder can work on the large slide image
             Image image = new Image(imageFile.getPath(), slideId);
-            imageDao.insertOrUpdate(image,"path","slideId");
+            imageDao.delete(image);
+            imageDao.insert(image);
             logger.fine(String.format("Inserted image: %s", image));
             imageDao.reload(image, "path","slideId");
             
