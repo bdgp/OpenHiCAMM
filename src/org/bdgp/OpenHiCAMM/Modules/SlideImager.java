@@ -498,6 +498,10 @@ public class SlideImager implements Module, ImageLogger {
                         catch (Throwable e) {
                             dispatchTask.setStatus(Status.ERROR);
                             taskDao.update(dispatchTask, "id");
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            if (logger != null) logger.severe(String.format("Error working on task %s: %s", 
+                                    task.toString(), sw.toString()));
                             throw new RuntimeException(e);
                         }
                     }
@@ -868,6 +872,11 @@ public class SlideImager implements Module, ImageLogger {
                         "yes");
                 taskConfigDao.insert(loadDynamicTaskRecordsConf);
 
+                TaskConfig slideIdConf = new TaskConfig(
+                        task.getId(),
+                        "slideId", 
+                        new Integer(slide.getId()).toString());
+                taskConfigDao.insert(slideIdConf);
                 if (parentTask != null) {
                     TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
                     workflowRunner.getTaskDispatch().insert(dispatch);
@@ -1229,14 +1238,30 @@ public class SlideImager implements Module, ImageLogger {
     }
 
     public Status setTaskStatusOnResume(Task task) {
+        // if this is the dummy loadDynamicTaskRecords task, check if this imaging needs to be redone.
+        // Check all the other tasks to see if any are not SUCCESS.
     	TaskConfig loadDynamicTaskRecordsConf = this.workflowRunner.getTaskConfig().selectOne(
     	        where("id", task.getId()).
     	        and("key", "loadDynamicTaskRecords").
     	        and("value","yes"));
     	if (loadDynamicTaskRecordsConf != null) {
+    	    TaskConfig slideIdConf = workflowRunner.getTaskConfig().selectOne(
+    	            where("id", task.getId()).
+    	            and("key","slideId"));
+    	    Integer slideId = slideIdConf != null? new Integer(slideIdConf.getValue()) : null;
+            for (Task t : workflowRunner.getTaskStatus().select(where("moduleId", this.workflowModule.getId()))) {
+                TaskConfig tc = slideId != null? workflowRunner.getTaskConfig().selectOne(
+                        where("id",t.getId()).
+                        and("key","slideId").
+                        and("value",slideId)) : null;
+                if ((slideId == null || tc != null) && t.getId() != task.getId() && !t.getStatus().equals(Status.SUCCESS)) {
+                    return Status.NEW;
+                }
+            }
     	    return task.getStatus();
     	}
 
+    	// Handle normal tasks
     	TaskConfig imageLabelConf = this.workflowRunner.getTaskConfig().selectOne(
     	        where("id", task.getId()).
     	        and("key", "imageLabel"));
