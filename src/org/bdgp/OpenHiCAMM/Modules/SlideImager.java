@@ -1301,17 +1301,25 @@ public class SlideImager implements Module, ImageLogger {
                             and("moduleId", task.getModuleId())));
                 }
                 for (Task t : tasks) {
-                    if (t.getStatus() != Status.SUCCESS || 
-                        this.workflowRunner.getTaskConfig().selectOne(where("id", t.getId()).and("key", "imageId")) == null) 
+                    if (this.workflowRunner.getTaskConfig().selectOne(
+                            where("id", t.getId()).
+                            and("key", "loadDynamicTaskRecords").
+                            and("value", "yes")) == null) 
                     {
-                        for (Task t2 : tasks) {
-                            this.workflowRunner.getTaskStatus().update(
-                                    set("status", Status.NEW).
-                                    and("dispatchUUID", null), 
-                                    where("id", t2.getId()));
+                        if (t.getStatus() != Status.SUCCESS || 
+                            this.workflowRunner.getTaskConfig().selectOne(
+                                    where("id", t.getId()).
+                                    and("key", "imageId")) == null) 
+                        {
+                            for (Task t2 : tasks) {
+                                this.workflowRunner.getTaskStatus().update(
+                                        set("status", Status.NEW).
+                                        and("dispatchUUID", null), 
+                                        where("id", t2.getId()));
+                            }
+                            return Status.NEW;
                         }
-                        return Status.NEW;
-                    }
+                    } 
                 }
             }
             else {
