@@ -234,8 +234,10 @@ public class WorkflowRunner {
         else {
             for (TaskDispatch td : tds) {
                 this.taskDispatch.delete(td);
-                Task t = this.taskStatus.selectOneOrDie(where("id", td.getTaskId()));
-                this.deleteTaskRecords(t);
+                Task t = this.taskStatus.selectOne(where("id", td.getTaskId()));
+                if (t != null) {
+                    this.deleteTaskRecords(t);
+                }
             }
         }
     }
