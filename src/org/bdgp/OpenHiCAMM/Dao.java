@@ -384,10 +384,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	 * @return The number of records deleted
 	 */
 	public int delete(T data) {
-        try {
-            return super.delete(data);
-        }
-        catch (SQLException e) {throw new RuntimeException(e);}
+        return delete(data, fields.keySet().toArray(new String[]{}));
 	}
 	
 	/**
