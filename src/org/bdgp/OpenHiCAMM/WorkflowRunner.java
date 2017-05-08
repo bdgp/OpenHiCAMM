@@ -614,7 +614,7 @@ public class WorkflowRunner {
                         for (Task t : start) {
                             if (getTaskStatus().selectOne(where("id", t.getId())) == null) {
                                 WorkflowRunner.this.logger.fine(String.format(
-                                        "Task %s was invalidated, skipping", t));
+                                        "Task %s was invalidated, skipping", t.getName(workflow)));
                                 continue;
                             }
                             Future<Status> future = run(t, inheritedTaskConfig);
