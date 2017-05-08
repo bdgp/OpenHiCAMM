@@ -394,7 +394,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
 	public int delete(T data, String... where) {
         try {
             if (where.length == 0) {
-                return super.delete(data);
+                where = fields.keySet().toArray(new String[]{});
             }
             // Construct the query
             Map<String,Object> query = new HashMap<String,Object>();
