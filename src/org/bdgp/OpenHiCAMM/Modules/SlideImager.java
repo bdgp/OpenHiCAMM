@@ -1239,26 +1239,35 @@ public class SlideImager implements Module, ImageLogger {
 
     public Status setTaskStatusOnResume(Task task) {
         // if this is the dummy loadDynamicTaskRecords task, check if this imaging needs to be redone.
-        // Check all the other tasks to see if any are not SUCCESS.
+        // Check the associated ROI finder module's task statuses for this slide
     	TaskConfig loadDynamicTaskRecordsConf = this.workflowRunner.getTaskConfig().selectOne(
     	        where("id", task.getId()).
     	        and("key", "loadDynamicTaskRecords").
     	        and("value","yes"));
     	if (loadDynamicTaskRecordsConf != null) {
-    	    TaskConfig slideIdConf = workflowRunner.getTaskConfig().selectOne(
-    	            where("id", task.getId()).
-    	            and("key","slideId"));
-    	    Integer slideId = slideIdConf != null? new Integer(slideIdConf.getValue()) : null;
-            for (Task t : workflowRunner.getTaskStatus().select(where("moduleId", this.workflowModule.getId()))) {
-                TaskConfig tc = slideId != null? workflowRunner.getTaskConfig().selectOne(
-                        where("id",t.getId()).
-                        and("key","slideId").
-                        and("value",slideId)) : null;
-                if ((slideId == null || tc != null) && t.getId() != task.getId() && !t.getStatus().equals(Status.SUCCESS)) {
-                    return Status.NEW;
-                }
-            }
-    	    return task.getStatus();
+    	    ModuleConfig posListModuleConf = this.workflowRunner.getModuleConfig().selectOne(
+    	            where("id", this.workflowModule.getId()).
+    	            and("key", "posListModule"));
+    	    if (posListModuleConf != null) {
+    	        WorkflowModule posListModule = this.workflowRunner.getWorkflow().selectOneOrDie(
+    	                where("name", posListModuleConf.getValue()));
+                TaskConfig slideIdConf = this.workflowRunner.getTaskConfig().selectOneOrDie(
+                        where("id", task.getId()).
+                        and("key", "slideId"));
+                Integer slideId = new Integer(slideIdConf.getValue());
+    	        for (Task t : this.workflowRunner.getTaskStatus().select(where("moduleId", posListModule.getId()))) {
+    	            if (this.workflowRunner.getTaskConfig().selectOne(
+    	                    where("id", t.getId()).
+    	                    and("key", "slideId").
+    	                    and("value", slideId)) != null) 
+    	            {
+    	                if (t.getStatus() != Status.SUCCESS) {
+    	                    return Status.NEW;
+    	                }
+    	            }
+    	        }
+    	    }
+    	    return null;
     	}
 
     	// Handle normal tasks
@@ -1327,6 +1336,6 @@ public class SlideImager implements Module, ImageLogger {
                 }
             }
         }
-        return task.getDispatchUUID() == null? task.getStatus() : null;
+        return null;
     }
 }
