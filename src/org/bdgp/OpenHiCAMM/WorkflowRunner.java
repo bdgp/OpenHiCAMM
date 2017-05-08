@@ -612,6 +612,11 @@ public class WorkflowRunner {
                     while (!start.isEmpty()) {
                         Collections.sort(start, (a,b)->a.getId()-b.getId());
                         for (Task t : start) {
+                            if (getTaskStatus().selectOne(where("id", t.getId())) == null) {
+                                WorkflowRunner.this.logger.fine(String.format(
+                                        "Task %s was invalidated, skipping", t));
+                                continue;
+                            }
                             Future<Status> future = run(t, inheritedTaskConfig);
                             futures.add(future);
                             // If this is a serial task and it failed, don't run the successive sibling tasks
@@ -853,6 +858,11 @@ public class WorkflowRunner {
 
                         // enqueue the child tasks
                         for (Task childTask : childTasks) {
+                            if (getTaskStatus().selectOne(where("id",childTask.getId())) == null) {
+                                WorkflowRunner.this.logger.fine(String.format("%s: Child task was invalidated, skipping: %s", 
+                                        task.getName(workflow), childTask.toString()));
+                                continue;
+                            }
                             WorkflowRunner.this.logger.fine(String.format("%s: Dispatching child task: %s", 
                                     task.getName(workflow), childTask.toString()));
                             Future<Status> future = run(childTask, config);
