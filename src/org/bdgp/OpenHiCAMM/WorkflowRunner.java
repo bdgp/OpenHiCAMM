@@ -229,7 +229,7 @@ public class WorkflowRunner {
         List<TaskDispatch> tds = this.taskDispatch.select(where("parentTaskId",task.getId()));
         if (tds.isEmpty()) {
             this.taskConfig.delete(where("id",task.getId()));
-            this.taskStatus.delete(task);
+            this.taskStatus.delete(task, "id");
         }
         else {
             for (TaskDispatch td : tds) {
