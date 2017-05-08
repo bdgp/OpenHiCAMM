@@ -337,7 +337,11 @@ public class SlideImager implements Module, ImageLogger {
                         where("id", t.getId()).
                         and("key", "slideId").
                         and("value", slideId));
-                if (tc != null) {
+                TaskConfig ldtr = this.workflowRunner.getTaskConfig().selectOne(
+                        where("id", t.getId()).
+                        and("key", "loadDynamicTaskRecords").
+                        and("value", "yes"));
+                if (tc != null && ldtr == null) {
                     tds.addAll(taskDispatchDao.select(where("taskId", t.getId())));
                 }
             }
