@@ -239,16 +239,6 @@ public class SlideImager implements Module, ImageLogger {
         Config loadDynamicTaskRecordsConf = conf.get("loadDynamicTaskRecords");
         if (loadDynamicTaskRecordsConf != null && loadDynamicTaskRecordsConf.getValue().equals("yes")) {
             conf.put("dispatchUUID", new Config(task.getId(), "dispatchUUID", task.getDispatchUUID()));
-            // remove old tasks
-            for (Task t : taskDao.select(where("moduleId", this.workflowModule.getId()))) {
-                TaskConfig tc = taskConfigDao.selectOne(
-                        where("id",t.getId()).
-                        and("key","slideId").
-                        and("value",slideId));
-                if (tc != null && t.getId() != task.getId()) {
-                    this.workflowRunner.deleteTaskRecords(t);
-                }
-            }
             workflowRunner.createTaskRecords(this.workflowModule, parentTasks, conf, logger);
             return Status.SUCCESS;
         }
@@ -1266,6 +1256,18 @@ public class SlideImager implements Module, ImageLogger {
     	                    and("value", slideId)) != null) 
     	            {
     	                if (t.getStatus() != Status.SUCCESS) {
+    	                    // remove old tasks
+    	                    for (Task t2 : this.workflowRunner.getTaskStatus().select(
+    	                            where("moduleId", this.workflowModule.getId()))) 
+    	                    {
+    	                        TaskConfig tc = this.workflowRunner.getTaskConfig().selectOne(
+    	                                where("id",t2.getId()).
+    	                                and("key","slideId").
+    	                                and("value",slideId));
+    	                        if (tc != null && t2.getId() != task.getId()) {
+    	                            this.workflowRunner.deleteTaskRecords(t2);
+    	                        }
+    	                    }
     	                    return Status.NEW;
     	                }
     	            }
@@ -1287,51 +1289,27 @@ public class SlideImager implements Module, ImageLogger {
         
         if (indices[0] == 0 && indices[1] == 0 && indices[2] == 0 && indices[3] == 0) {
             // get this slide ID
-            TaskConfig slideIdConf = this.workflowRunner.getTaskConfig().selectOne(
+            TaskConfig slideIdConf = this.workflowRunner.getTaskConfig().selectOneOrDie(
                     where("id", task.getId()).
                     and("key", "slideId"));
-            Integer slideId = slideIdConf != null? new Integer(slideIdConf.getValue()) : null;
+            Integer slideId = new Integer(slideIdConf.getValue());
 
-            // if this task has a slide ID
-            if (slideId != null) {
-                // get all tasks with same slide ID as this one
-                List<TaskConfig> sameSlideId = this.workflowRunner.getTaskConfig().select(
-                        where("key", "slideId").
-                        and("value", slideId));
-                List<Task> tasks = new ArrayList<>();
-                for (TaskConfig tc : sameSlideId) {
-                    tasks.addAll(this.workflowRunner.getTaskStatus().select(
-                            where("id", tc.getId()).
-                            and("moduleId", task.getModuleId())));
-                }
-                for (Task t : tasks) {
-                    if (this.workflowRunner.getTaskConfig().selectOne(
-                            where("id", t.getId()).
-                            and("key", "loadDynamicTaskRecords").
-                            and("value", "yes")) == null) 
-                    {
-                        if (t.getStatus() != Status.SUCCESS) {
-                            for (Task t2 : tasks) {
-                                this.workflowRunner.getTaskStatus().update(
-                                        set("status", Status.NEW).
-                                        and("dispatchUUID", null), 
-                                        where("id", t2.getId()));
-                            }
-                            return Status.NEW;
-                        }
-                    } 
-                }
+            // get all tasks with same slide ID as this one
+            List<TaskConfig> sameSlideId = this.workflowRunner.getTaskConfig().select(
+                    where("key", "slideId").
+                    and("value", slideId));
+            List<Task> tasks = new ArrayList<>();
+            for (TaskConfig tc : sameSlideId) {
+                tasks.addAll(this.workflowRunner.getTaskStatus().select(
+                        where("id", tc.getId()).
+                        and("moduleId", task.getModuleId())));
             }
-            else {
-                // get all tasks without a defined slide ID
-                List<Task> tasks = new ArrayList<>();
-                for (Task t : this.workflowRunner.getTaskStatus().select(where("moduleId", task.getModuleId()))) {
-                    TaskConfig tc = this.workflowRunner.getTaskConfig().selectOne(
-                            where("id", t.getId()).
-                            and("key", "slideId"));
-                    if (tc == null) tasks.add(t);
-                }
-                for (Task t : tasks) {
+            for (Task t : tasks) {
+                if (this.workflowRunner.getTaskConfig().selectOne(
+                        where("id", t.getId()).
+                        and("key", "loadDynamicTaskRecords").
+                        and("value", "yes")) == null) 
+                {
                     if (t.getStatus() != Status.SUCCESS) {
                         for (Task t2 : tasks) {
                             this.workflowRunner.getTaskStatus().update(
@@ -1341,7 +1319,7 @@ public class SlideImager implements Module, ImageLogger {
                         }
                         return Status.NEW;
                     }
-                }
+                } 
             }
         }
         return null;

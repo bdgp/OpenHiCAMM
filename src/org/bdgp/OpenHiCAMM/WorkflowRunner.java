@@ -527,7 +527,9 @@ public class WorkflowRunner {
         }
         tasks.sort((a,b)->a.getId()-b.getId());
         for (Task t : tasks) {
-            updatedTasks += this.updateTaskRecordsOnResume(t);
+            if (this.taskStatus.selectOne(where("id", t.getId())) != null) {
+                updatedTasks += this.updateTaskRecordsOnResume(t);
+            }
         }
         if (updatedTasks > 0) {
             this.taskStatus.update(
