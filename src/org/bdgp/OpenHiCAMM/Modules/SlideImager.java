@@ -1265,7 +1265,9 @@ public class SlideImager implements Module, ImageLogger {
     	                                and("key","slideId").
     	                                and("value",slideId));
     	                        if (tc != null && t2.getId() != task.getId()) {
-    	                            this.workflowRunner.deleteTaskRecords(t2);
+    	                            int deletedTasks = this.workflowRunner.deleteTaskRecords(t2);
+    	                            this.workflowRunner.getLogger().info(String.format(
+    	                                    "loadDynamicTaskRecords: deleted %s old task records", deletedTasks));
     	                        }
     	                    }
     	                    return Status.NEW;

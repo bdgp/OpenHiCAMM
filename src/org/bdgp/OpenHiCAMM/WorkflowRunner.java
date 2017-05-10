@@ -198,23 +198,26 @@ public class WorkflowRunner {
         }
     }
     
-    public void deleteTaskRecords() {
+    public int deleteTaskRecords() {
         List<WorkflowModule> modules = this.workflow.select(where("parentId", null));
         Collections.sort(modules, (a,b)->a.getPriority().compareTo(b.getPriority()));
+        int deleted=0;
         for (WorkflowModule m : modules) {
-            this.deleteTaskRecords(m);
+            deleted += this.deleteTaskRecords(m);
         }
+        return deleted;
     }
-    public void deleteTaskRecords(String moduleName) {
+    public int deleteTaskRecords(String moduleName) {
         WorkflowModule module = this.workflow.selectOneOrDie(where("name",moduleName));
-        this.deleteTaskRecords(module);
+        return this.deleteTaskRecords(module);
     }
-    public void deleteTaskRecords(WorkflowModule module) {
+    public int deleteTaskRecords(WorkflowModule module) {
         // Delete any child task/dispatch records
         List<WorkflowModule> childModules = this.workflow.select(where("parentId",module.getId()));
         Collections.sort(childModules, (a,b)->a.getPriority().compareTo(b.getPriority()));
+        int deleted=0;
         for (WorkflowModule child : childModules) {
-            deleteTaskRecords(child);
+            deleted += deleteTaskRecords(child);
         }
         // Delete task dispatch and config records
         List<Task> tasks = taskStatus.select(where("moduleId",module.getId()));
@@ -223,23 +226,26 @@ public class WorkflowRunner {
             taskDispatch.delete(where("taskId",task.getId()));
         }
         // Then delete task records
-        taskStatus.delete(where("moduleId",module.getId()));
+        deleted += taskStatus.delete(where("moduleId",module.getId()));
+        return deleted;
     }
-    public void deleteTaskRecords(Task task) {
+    public int deleteTaskRecords(Task task) {
         List<TaskDispatch> tds = this.taskDispatch.select(where("parentTaskId",task.getId()));
+        int deleted=0;
         if (tds.isEmpty()) {
             this.taskConfig.delete(where("id",task.getId()));
-            this.taskStatus.delete(task, "id");
+            deleted += this.taskStatus.delete(task, "id");
         }
         else {
             for (TaskDispatch td : tds) {
                 this.taskDispatch.delete(td);
                 Task t = this.taskStatus.selectOne(where("id", td.getTaskId()));
                 if (t != null) {
-                    this.deleteTaskRecords(t);
+                    deleted += this.deleteTaskRecords(t);
                 }
             }
         }
+        return deleted;
     }
     
     public void createTaskRecords(String moduleName) {
