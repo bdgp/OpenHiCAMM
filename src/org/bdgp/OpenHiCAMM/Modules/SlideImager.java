@@ -1310,11 +1310,7 @@ public class SlideImager implements Module, ImageLogger {
                             and("key", "loadDynamicTaskRecords").
                             and("value", "yes")) == null) 
                     {
-                        if (t.getStatus() != Status.SUCCESS || 
-                            this.workflowRunner.getTaskConfig().selectOne(
-                                    where("id", t.getId()).
-                                    and("key", "imageId")) == null) 
-                        {
+                        if (t.getStatus() != Status.SUCCESS) {
                             for (Task t2 : tasks) {
                                 this.workflowRunner.getTaskStatus().update(
                                         set("status", Status.NEW).
