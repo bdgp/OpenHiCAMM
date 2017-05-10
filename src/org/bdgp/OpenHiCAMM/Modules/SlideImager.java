@@ -1257,6 +1257,7 @@ public class SlideImager implements Module, ImageLogger {
     	            {
     	                if (t.getStatus() != Status.SUCCESS) {
     	                    // remove old tasks
+    	                    int deletedTasks=0;
     	                    for (Task t2 : this.workflowRunner.getTaskStatus().select(
     	                            where("moduleId", this.workflowModule.getId()))) 
     	                    {
@@ -1265,11 +1266,12 @@ public class SlideImager implements Module, ImageLogger {
     	                                and("key","slideId").
     	                                and("value",slideId));
     	                        if (tc != null && t2.getId() != task.getId()) {
-    	                            int deletedTasks = this.workflowRunner.deleteTaskRecords(t2);
-    	                            this.workflowRunner.getLogger().info(String.format(
-    	                                    "loadDynamicTaskRecords: deleted %s old task records", deletedTasks));
+    	                            int dt = this.workflowRunner.deleteTaskRecords(t2);
+    	                            if (dt>0) ++deletedTasks;
     	                        }
     	                    }
+                            this.workflowRunner.getLogger().info(String.format(
+                                    "loadDynamicTaskRecords: deleted %s old task records", deletedTasks));
     	                    return Status.NEW;
     	                }
     	            }
