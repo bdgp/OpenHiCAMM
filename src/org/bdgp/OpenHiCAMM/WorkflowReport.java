@@ -336,7 +336,7 @@ public class WorkflowReport implements Report {
                 for (ROI roi : roiDao.select(where("imageId", imageIdConf.getValue()))) {
                     Set<Integer> roiModuleSet = roiModules.get(roi.getId());
                     if (roiModuleSet == null) {
-                        log(String.format("No ROI modules found for ROI %s!", roi));
+                        //log(String.format("No ROI modules found for ROI %s!", roi));
                     }
                     else {
                         for (Integer roiModuleId : roiModuleSet) {
