@@ -39,4 +39,16 @@ $(document).ready(function() {
     	var title = $(this).attr('title');
         $('#powerTip').text((title? title+': ' : '')+'Stage Coords: ('+stageX+','+stageY+')');
     });
+
+    // continuously poll to see if we need to update any of the curated images
+    function updateCuratedImages() {
+    	var changedImages = report.changedImages().split("\n");
+    	for (var i=0; i<changedImages.length; ++i) {
+    		var id = changedImages[i].split('/').pop();
+    		var base64 = report.getImageBase64(changedImages[i]);
+    		document.getElementById(id).setAttribute('src',base64);
+    	}
+        setTimeout(updateCuratedImages, 5000);
+    }
+    updateCuratedImages();
 });
