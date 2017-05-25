@@ -643,7 +643,12 @@ public class WorkflowReport implements Report {
                                         if (imagerMsp.hasProperty("ROI") && imagerMsp.getProperty("ROI").equals(new Integer(roi.getId()).toString())) 
                                         {
                                             TaskConfig imageLabelConf = getTaskConfig(imagerTask.getId(), "imageLabel");
-                                            if (imageLabelConf == null) continue;
+                                            if (imageLabelConf == null || 
+                                                imageLabelConf.getValue() == null || 
+                                                imageLabelConf.getValue().isEmpty()) 
+                                            {
+                                                continue;
+                                            }
                                             int[] indices = MDUtils.getIndices(imageLabelConf.getValue());
                                             if (indices != null && indices.length >= 4) {
                                                 String imageLabel = MDUtils.generateLabel(indices[0], indices[1], indices[2], 0);
@@ -933,6 +938,7 @@ public class WorkflowReport implements Report {
                                                                 log("stitchScaleFactor = %f", stitchScaleFactor);
                                                                 int stitchPreviewHeight = (int)Math.floor(imp.getHeight() * stitchScaleFactor);
                                                                 log("stitchPreviewHeight = %d", stitchPreviewHeight);
+                                                                cropImage(imp);
                                                                 imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
                                                                 imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
                                                                         ROI_GRID_PREVIEW_WIDTH, 
@@ -1266,6 +1272,7 @@ public class WorkflowReport implements Report {
         String editedImagePath = getEditedImagePath(imagePath);
         File editedImageFile = new File(editedImagePath);
         ImagePlus imp = editedImageFile.exists()? new ImagePlus(editedImagePath) : new ImagePlus(imagePath);
+        cropImage(imp);
 
         double stitchScaleFactor = (double)ROI_GRID_PREVIEW_WIDTH / (double)imp.getWidth();
         int stitchPreviewHeight = (int)Math.floor(imp.getHeight() * stitchScaleFactor);
@@ -1284,6 +1291,24 @@ public class WorkflowReport implements Report {
     public static final int CURATE_IMAGE_WIDTH = 1520;
     public static final int CURATE_IMAGE_HEIGHT = 1080;
     
+    public void cropImage(ImagePlus imp) {
+        // resize to smaller source dimension maintaining aspect ratio
+        int image_width = imp.getWidth() < imp.getHeight()? 
+                CURATE_IMAGE_WIDTH : 
+                (int)Math.ceil((double)imp.getWidth()*((double)CURATE_IMAGE_HEIGHT/(double)imp.getHeight()));
+        int image_height = imp.getWidth() < imp.getHeight()?
+                (int)Math.ceil((double)imp.getHeight()*((double)CURATE_IMAGE_WIDTH/(double)imp.getWidth())) :
+                CURATE_IMAGE_HEIGHT; 
+        imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
+        imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(image_width, image_height));
+        // then do a centered crop
+        imp.getProcessor().setRoi(
+                Math.max(0, (int)Math.floor(((double)imp.getWidth()/2.0) - ((double)CURATE_IMAGE_WIDTH/2.0))), 
+                Math.max(0, (int)Math.floor(((double)imp.getHeight()/2.0) - ((double)CURATE_IMAGE_HEIGHT/2.0))), 
+                CURATE_IMAGE_WIDTH, CURATE_IMAGE_HEIGHT);
+        imp.setProcessor(imp.getTitle(), imp.getProcessor().crop());
+    }
+    
     /**
      * If the user presses a curation button, copy and rename the stitched image into the curation folder.
      * @param stitchedImagePath The path to the stitched image
@@ -1300,21 +1325,7 @@ public class WorkflowReport implements Report {
         String editedImagePath = getEditedImagePath(stitchedImagePath);
         File editedImageFile = new File(editedImagePath);
         ImagePlus imp = editedImageFile.exists()? new ImagePlus(editedImagePath) : new ImagePlus(stitchedImagePath);
-        // resize to smaller source dimension maintaining aspect ratio
-        int image_width = imp.getWidth() < imp.getHeight()? 
-                CURATE_IMAGE_WIDTH : 
-                (int)Math.ceil((double)imp.getWidth()*((double)CURATE_IMAGE_HEIGHT/(double)imp.getHeight()));
-        int image_height = imp.getWidth() < imp.getHeight()?
-                (int)Math.ceil((double)imp.getHeight()*((double)CURATE_IMAGE_WIDTH/(double)imp.getWidth())) :
-                CURATE_IMAGE_HEIGHT; 
-        imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
-        imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(image_width, image_height));
-        // then do a centered crop
-        imp.getProcessor().setRoi(
-                Math.max(0, (int)Math.floor(((double)imp.getWidth()/2.0) - ((double)CURATE_IMAGE_WIDTH/2.0))), 
-                Math.max(0, (int)Math.floor(((double)imp.getHeight()/2.0) - ((double)CURATE_IMAGE_HEIGHT/2.0))), 
-                CURATE_IMAGE_WIDTH, CURATE_IMAGE_HEIGHT);
-        imp.setProcessor(imp.getTitle(), imp.getProcessor().crop());
+        cropImage(imp);
 
         if (new FileSaver(imp).saveAsJpeg(outputFile)) {
             this.webEngine.executeScript(String.format(
