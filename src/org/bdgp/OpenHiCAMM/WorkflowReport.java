@@ -82,6 +82,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
 import mmcorej.CMMCore;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
@@ -100,6 +101,8 @@ public class WorkflowReport implements Report {
     private Map<Integer,MultiStagePosition> msps;
     private Map<Integer,Map<String,ModuleConfig>> moduleConfig;
     private Map<Integer,Map<String,TaskConfig>> taskConfig;
+    
+    private Alert alert = null;
 
     public void jsLog(String message) {
         IJ.log(String.format("[WorkflowReport:js] %s", message));
@@ -573,7 +576,7 @@ public class WorkflowReport implements Report {
                                    (int)Math.floor(roi.getXBase()+roi.getFloatWidth()), 
                                    (int)Math.floor(roi.getYBase()+roi.getFloatHeight()))).
                            //attr("title", roi.getName()).
-                           attr("onClick", String.format("report.showImage(%d)", new Integer(roi.getProperty("id"))));
+                           attr("onClick", String.format("report.showImage(%d); return false", new Integer(roi.getProperty("id"))));
                 }
                 // now draw the ROI rois in red
                 for (Roi roiRoi : roiRois) {
@@ -759,7 +762,7 @@ public class WorkflowReport implements Report {
                                                             Double yPos_ = yPos / posCount;
                                                             P().with(()->{
                                                                 A().attr("onClick", 
-                                                                        String.format("report.goToPosition(%d,%d,%f,%f)", 
+                                                                        String.format("report.goToPosition(%d,%d,%f,%f); return false", 
                                                                                 loaderModule.getId(),
                                                                                 poolSlide != null? poolSlide.getId() : -1, 
                                                                                         xPos_, 
@@ -770,7 +773,7 @@ public class WorkflowReport implements Report {
                                                             // add another link to put the slide back
                                                             if (poolSlide != null) {
                                                                 P().with(()->{
-                                                                    A().attr("onClick", String.format("report.returnSlide(%d)",
+                                                                    A().attr("onClick", String.format("report.returnSlide(%d); return false",
                                                                                 loaderModule.getId())).
                                                                         text("Return slide to loader");
                                                                 });
@@ -801,7 +804,7 @@ public class WorkflowReport implements Report {
                                                             try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                             catch (IOException e) {throw new RuntimeException(e);}
                                                             ImagePlus imp_ = imp;
-                                                            A().attr("onClick", String.format("report.showImage(%d)", image.getId())).
+                                                            A().attr("onClick", String.format("report.showImage(%d); return false", image.getId())).
                                                                 with(()->{
                                                                     Img().attr("src", String.format("data:image/jpg;base64,%s", 
                                                                                 Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
@@ -862,11 +865,11 @@ public class WorkflowReport implements Report {
                                                                                         (int)Math.floor(tileRoi.getXBase()+tileRoi.getFloatWidth()),
                                                                                         (int)Math.floor(tileRoi.getYBase()+tileRoi.getFloatHeight()))).
                                                                                 attr("title", image2.getName()).
-                                                                                attr("onClick", String.format("report.showImage(%d)", image2.getId()));
+                                                                                attr("onClick", String.format("report.showImage(%d); return false", image2.getId()));
                                                                         
                                                                         makeLinks.add(()->{
                                                                             P().with(()->{
-                                                                                A().attr("onClick",String.format("report.checkPosCalibration(%d,%d,%f,%f,%f,%f,%f,%f,%f,%f)",
+                                                                                A().attr("onClick",String.format("report.checkPosCalibration(%d,%d,%f,%f,%f,%f,%f,%f,%f,%f); return false",
                                                                                         image.getId(), 
                                                                                         image2.getId(), 
                                                                                         pixelSize,
@@ -952,7 +955,7 @@ public class WorkflowReport implements Report {
                                                                 ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                                                                 try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                                 catch (IOException e) {throw new RuntimeException(e);}
-                                                                A().attr("onClick", String.format("report.showImageFile(\"%s\")",  
+                                                                A().attr("onClick", String.format("report.showImageFile(\"%s\"); return false",  
                                                                             Util.escapeJavaStyleString(stitchedImageFile.getValue()))).
                                                                     with(()->{
                                                                         Img().attr("src", String.format("data:image/jpg;base64,%s", 
@@ -1173,45 +1176,51 @@ public class WorkflowReport implements Report {
     }
     
     public void showInstructions() {
-        String instructions = Div().with(()->{
-            H1("Manual Curation Instructions:");
-            Ul().with(()->{
-                Li("Make sure image or Fiji toolbar is in focus");
-                Li("To flip the image horizontally, select Image -> Transform - Flip Horizontally from the menu");
-                Li("To flip the image vertically, select Image -> Transform - Flip Vertically from the menu");
-                Li().with(()->{
-                    Ul().with(()->{
-                        Li("To rotate the image, select Image -> Transform -> Rotate");
-                        Li("Check the \"Preview\" box to see the rotated image");
-                        Li("Select the angle of rotation");
+        if (alert == null) {
+            String instructions = Div().with(()->{
+                H1("Manual Curation Instructions:");
+                Ul().with(()->{
+                    Li("Make sure image or Fiji toolbar is in focus");
+                    Li("To flip the image horizontally, select Image -> Transform - Flip Horizontally from the menu");
+                    Li("To flip the image vertically, select Image -> Transform - Flip Vertically from the menu");
+                    Li("Rotation").with(()->{
+                        Ul().with(()->{
+                            Li("To rotate the image, select Image -> Transform -> Rotate");
+                            Li("Check the \"Preview\" box to see the rotated image");
+                            Li("Select the angle of rotation");
+                        });
                     });
-                });
-                Li().with(()->{
-                    Ul().with(()->{
-                        Li("To crop the image, first select Edit -> Selection -> Specify from the menu");
-                        Li(String.format("Set the width to %s and the height to %s", CURATE_IMAGE_WIDTH, CURATE_IMAGE_HEIGHT));
-                        Li("Using the mouse, drag the upper-left corner of the selection box to the upper-left corner of the ROI shape");
-                        Li("Hold down the ALT key, then using the mouse, drag the lower-right corner of the selection box to the lower-right corner of the ROI shape");
-                        Li("Using the mouse, drag the selection box to reposition the selection box until it completely covers the ROI shape");
-                        Li("Once the selection box is positioned correctly, select Image -> Crop from the menu");
+                    Li("Cropping").with(()->{
+                        Ul().with(()->{
+                            Li("To crop the image, first select Edit -> Selection -> Specify from the menu");
+                            Li(String.format("Set the width to %s and the height to %s", CURATE_IMAGE_WIDTH, CURATE_IMAGE_HEIGHT));
+                            Li("Using the mouse, drag the upper-left corner of the selection box to the upper-left corner of the ROI shape");
+                            Li("Hold down the ALT key, then using the mouse, drag the lower-right corner of the selection box to the lower-right corner of the ROI shape");
+                            Li("Using the mouse, drag the selection box to reposition the selection box until it completely covers the ROI shape");
+                            Li("Once the selection box is positioned correctly, select Image -> Crop from the menu");
+                        });
                     });
-                });
-                Li().with(()->{
-                    Ul().with(()->{
-                        Li("To resize the image, select Image -> Adjust -> Size from the menu");
-                        Li(String.format("Set the width to %s and the height to %s", CURATE_IMAGE_WIDTH, CURATE_IMAGE_HEIGHT));
-                        Li("Uncheck constrain aspect ratio if necessary");
+                    Li("Resizing").with(()->{
+                        Ul().with(()->{
+                            Li("To resize the image, select Image -> Adjust -> Size from the menu");
+                            Li(String.format("Set the width to %s and the height to %s", CURATE_IMAGE_WIDTH, CURATE_IMAGE_HEIGHT));
+                            Li("Uncheck constrain aspect ratio if necessary");
+                        });
                     });
+                    Li("To save the edited image, select File -> Save from the menu");
+                    Li("To close the edited image window, select File -> Close from the menu");
+                    Li("The updated image should now appear in the report page. Press a curation button to transfer the file into the database");
                 });
-                Li("To save the edited image, select File -> Save from the menu");
-                Li("To close the edited image window, select File -> Close from the menu");
-                Li("The updated image should now appear in the report page. Press a curation button to transfer the file into the database");
-            });
-        }).toString();
-        this.webEngine.executeScript("$('<div/>').html(\"This is a test!!!\").dialog();");
-        this.webEngine.executeScript(String.format(
-                "$('<div/>').html(\"%s\").dialog();", 
-                Util.escapeJavaStyleString(instructions)));
+            }).toString();
+
+            alert = new Alert(AlertType.INFORMATION);
+            alert.setHeaderText("Manual Curation Instructions");
+            WebView webView = new WebView();
+            webView.getEngine().loadContent(instructions);
+            webView.setPrefSize(1280, 1024);
+            alert.getDialogPane().setContent(webView);
+        }
+        alert.show();
     }
     
     private Map<String,Boolean> changedImages = new HashMap<>();
@@ -1234,8 +1243,31 @@ public class WorkflowReport implements Report {
                 changedImageList.add(imagePath);
             }
         }
-        return String.join("\n", changedImageList);
+        String changedImages = String.join("\n", changedImageList);
+        IJ.log(String.format("changedImages=%s", changedImages));
+        return changedImages;
     }
+    public String getImageBase64(String imagePath) {
+        String editedImagePath = getEditedImagePath(imagePath);
+        File editedImageFile = new File(editedImagePath);
+        ImagePlus imp = editedImageFile.exists()? new ImagePlus(editedImagePath) : new ImagePlus(imagePath);
+        cropImage(imp);
+
+        double stitchScaleFactor = (double)ROI_GRID_PREVIEW_WIDTH / (double)imp.getWidth();
+        int stitchPreviewHeight = (int)Math.floor(imp.getHeight() * stitchScaleFactor);
+        imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
+        imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
+                ROI_GRID_PREVIEW_WIDTH, 
+                stitchPreviewHeight));
+        ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
+        try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
+        catch (IOException e) {throw new RuntimeException(e);}
+        String base64 = String.format("data:image/jpg;base64,%s", 
+                Base64.getMimeEncoder().encodeToString(baos2.toByteArray()));
+        IJ.log(String.format("image=%s, base64=%s", imagePath, base64));
+        return base64;
+    }
+
     public synchronized void showImageFile(String imagePath) {
         //log("called showImageFile(imagePath=%s)", imagePath);
         String editedImagePath = getEditedImagePath(imagePath);
@@ -1269,26 +1301,6 @@ public class WorkflowReport implements Report {
         imp.show();
         changedImages.put(imagePath, imp.changes);
     }
-    public String getImageBase64(String imagePath) {
-        String editedImagePath = getEditedImagePath(imagePath);
-        File editedImageFile = new File(editedImagePath);
-        ImagePlus imp = editedImageFile.exists()? new ImagePlus(editedImagePath) : new ImagePlus(imagePath);
-        cropImage(imp);
-
-        double stitchScaleFactor = (double)ROI_GRID_PREVIEW_WIDTH / (double)imp.getWidth();
-        int stitchPreviewHeight = (int)Math.floor(imp.getHeight() * stitchScaleFactor);
-        imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
-        imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
-                ROI_GRID_PREVIEW_WIDTH, 
-                stitchPreviewHeight));
-        ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
-        try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
-        catch (IOException e) {throw new RuntimeException(e);}
-        String base64 = String.format("data:image/jpg;base64,%s", 
-                Base64.getMimeEncoder().encodeToString(baos2.toByteArray()));
-        return base64;
-    }
-
     public static final int CURATE_IMAGE_WIDTH = 1520;
     public static final int CURATE_IMAGE_HEIGHT = 1080;
     

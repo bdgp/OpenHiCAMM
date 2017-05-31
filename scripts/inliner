@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec perl -MMIME::Base64 -MFile::Slurp -0777 -i.backup -pe 's{\burl\("([^"]*?(?:\.([^."]+))?)"\)}{-f $1? "url(data:image/".($2||"jpeg").";base64,".encode_base64(read_file($1,{binmode=>":raw"}),"").")":$&}egi' "$@"
