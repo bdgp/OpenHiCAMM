@@ -1208,6 +1208,7 @@ public class WorkflowReport implements Report {
                 Li("The updated image should now appear in the report page. Press a curation button to transfer the file into the database");
             });
         }).toString();
+        this.webEngine.executeScript("$('<div/>').html(\"This is a test!!!\").dialog();");
         this.webEngine.executeScript(String.format(
                 "$('<div/>').html(\"%s\").dialog();", 
                 Util.escapeJavaStyleString(instructions)));
@@ -1302,11 +1303,13 @@ public class WorkflowReport implements Report {
         imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
         imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(image_width, image_height));
         // then do a centered crop
-        imp.getProcessor().setRoi(
+        ImageProcessor processor = imp.getProcessor();
+        processor.setRoi(
                 Math.max(0, (int)Math.floor(((double)imp.getWidth()/2.0) - ((double)CURATE_IMAGE_WIDTH/2.0))), 
                 Math.max(0, (int)Math.floor(((double)imp.getHeight()/2.0) - ((double)CURATE_IMAGE_HEIGHT/2.0))), 
                 CURATE_IMAGE_WIDTH, CURATE_IMAGE_HEIGHT);
-        imp.setProcessor(imp.getTitle(), imp.getProcessor().crop());
+        processor = processor.crop();
+        imp.setProcessor(imp.getTitle(), processor);
     }
     
     /**

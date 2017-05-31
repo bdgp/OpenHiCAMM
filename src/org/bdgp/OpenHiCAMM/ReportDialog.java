@@ -22,6 +22,7 @@ import javafx.concurrent.Worker;
 import javafx.concurrent.Worker.State;
 import javafx.embed.swing.JFXPanel;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -33,6 +34,7 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.TextField;
 import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebErrorEvent;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
 
@@ -134,6 +136,14 @@ public class ReportDialog {
                     reportName);
             reportDir.mkdirs();
             String reportIndex = "index.html";
+            
+            // log errors
+            webEngine.setOnError(new EventHandler<WebErrorEvent>(){
+                @Override public void handle(WebErrorEvent event) {
+                    StringWriter sw = new StringWriter();
+                    event.getException().printStackTrace(new PrintWriter(sw));
+                    IJ.log(String.format("Error in WebView: %s%n%s", event.getMessage(), sw.toString()));
+                }});
 
             report.initialize(this.workflowRunner, webEngine, reportDir.getPath(), reportIndex);
             File reportIndexFile = new File(reportDir, reportIndex);
