@@ -965,6 +965,8 @@ public class WorkflowReport implements Report {
                                                                         Img().attr("src", String.format("data:image/jpg;base64,%s", 
                                                                                     Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
                                                                                 attr("width", ROI_GRID_PREVIEW_WIDTH).
+                                                                                attr("class", "stitched").
+                                                                                attr("data-path", stitchedImagePath).
                                                                                 attr("id", new File(stitchedImagePath).getName()).
                                                                                 attr("title", stitchedImagePath);
                                                                     });
@@ -1250,6 +1252,11 @@ public class WorkflowReport implements Report {
         String changedImages = String.join("\n", changedImageList);
         //IJ.log(String.format("changedImages=%s", changedImages));
         return changedImages;
+    }
+    public boolean isEdited(String imagePath) {
+        String editedImagePath = getEditedImagePath(imagePath);
+        File editedImageFile = new File(editedImagePath);
+        return editedImageFile.exists();
     }
     public String getImageBase64(String imagePath) {
         String editedImagePath = getEditedImagePath(imagePath);

@@ -1,30 +1,41 @@
-function updateCuratedImages() {
-    if (window['report']) {
-        var changedImages = report.changedImages().split("\n");
-        for (var i=0; i<changedImages.length; ++i) {
-            if (changedImages[i]) {
-                var id = changedImages[i].split('/').pop();
-                if (id) {
-                    var base64 = report.getImageBase64(changedImages[i]);
-                    if (base64) {
-                        var element = document.getElementById(id);
-                        if (element) {
-                            element.setAttribute('src',base64);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    setTimeout(updateCuratedImages, 1000);
-}
-	
 $(document).ready(function() {
 	// run debugger
     //if (!document.getElementById('FirebugLite')){E = document['createElement' + 'NS'] && document.documentElement.namespaceURI;E = E ? document['createElement' + 'NS'](E, 'script') : document['createElement']('script');E['setAttribute']('id', 'FirebugLite');E['setAttribute']('src', 'https://getfirebug.com/' + 'firebug-lite.js' + '#startOpened');E['setAttribute']('FirebugLite', '4');(document['getElementsByTagName']('head')[0] || document['getElementsByTagName']('body')[0]).appendChild(E);E = new Image;E['setAttribute']('src', 'https://getfirebug.com/' + '#startOpened');}
 
     // continuously poll to see if we need to update any of the curated images
-	updateCuratedImages();
+	var initRefresh = false;
+    (function updateCuratedImages() {
+        if (window['report']) {
+        	if (!initRefresh) {
+        		initRefresh = true;
+        		$('img.stitched').each(function() {
+        			var imagePath = this.dataset.path;
+        			if (report.isEdited(imagePath)) {
+                        var base64 = report.getImageBase64(imagePath);
+                        if (base64) {
+                            this.setAttribute('src',base64);
+                        }
+        			}
+        		});
+        	}
+            var changedImages = report.changedImages().split("\n");
+            for (var i=0; i<changedImages.length; ++i) {
+                if (changedImages[i]) {
+                    var id = changedImages[i].split('/').pop();
+                    if (id) {
+                        var base64 = report.getImageBase64(changedImages[i]);
+                        if (base64) {
+                            var element = document.getElementById(id);
+                            if (element) {
+                                element.setAttribute('src',base64);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        setTimeout(updateCuratedImages, 1000);
+    })();
 
 	// highlight image maps
     $.fn.maphilight.defaults.strokeColor = '000000';
