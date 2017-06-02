@@ -4,6 +4,7 @@ import java.awt.Component;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -124,6 +125,9 @@ public class ImageStitcher implements Module, ImageLogger {
     	if (stitchedFolderConf == null) throw new RuntimeException(String.format(
     	        "%s: stitchedFolder config not found!", task.getName(this.workflowRunner.getWorkflow())));
     	File stitchedFolder = new File(stitchedFolderConf.getValue());
+    	if (!Paths.get(stitchedFolder.getPath()).isAbsolute()) {
+    	    stitchedFolder = Paths.get(workflowRunner.getWorkflowDir().getPath()).resolve(stitchedFolder.getPath()).toFile();
+    	}
     	logger.fine(String.format("Stitched folder: %s", stitchedFolder));
     	stitchedFolder.mkdirs();
     	
@@ -156,8 +160,12 @@ public class ImageStitcher implements Module, ImageLogger {
         fileSaver.saveAsTiff(imageFile.getPath());
         
         // write a task configuration for the stitched image location
+        String stitchedImageFile = imageFile.getPath();
+        if (Paths.get(stitchedImageFile).isAbsolute()) {
+            stitchedImageFile = Paths.get(workflowRunner.getWorkflowDir().getPath()).relativize(Paths.get(stitchedImageFile)).toString();
+        }
         TaskConfig imageFileConf = new TaskConfig(task.getId(),
-                "stitchedImageFile", imageFile.getPath());
+                "stitchedImageFile", stitchedImageFile);
         taskConfigDao.insertOrUpdate(imageFileConf, "id", "key");
     	
         return Status.SUCCESS;
@@ -509,6 +517,9 @@ public class ImageStitcher implements Module, ImageLogger {
             String stitchGroup = entry.getKey();
             List<Task> stitchTasks = entry.getValue();
             File stitchedGroupFolder = new File(stitchedFolder, stitchGroup);
+            if (stitchedGroupFolder.isAbsolute()) {
+                stitchedGroupFolder = Paths.get(workflowRunner.getWorkflowDir().getPath()).relativize(Paths.get(stitchedGroupFolder.getPath())).toFile();
+            }
             
             // insert the task record
             Task task = new Task(this.workflowModule.getId(), Status.NEW);
@@ -518,7 +529,7 @@ public class ImageStitcher implements Module, ImageLogger {
             // add the stitchedFolder task config
             TaskConfig stitchedFolderConf = new TaskConfig(
                     task.getId(),
-                    "stitchedFolder", stitchedGroupFolder.toString());
+                    "stitchedFolder", stitchedGroupFolder.getPath());
             taskConfigDao.insert(stitchedFolderConf);
 
             // add the stitchGroup task config

@@ -4,6 +4,7 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 
 import java.awt.Component;
 import java.io.File;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -162,6 +163,9 @@ public class SlideSurveyor implements Module {
         if (surveyFolderConf == null) throw new RuntimeException(String.format(
                 "%s: surveyFolder config not found!", task.getName(this.workflowRunner.getWorkflow())));
         File surveyFolder = new File(surveyFolderConf.getValue());
+        if (!Paths.get(surveyFolder.getPath()).isAbsolute()) {
+            surveyFolder = Paths.get(workflowRunner.getWorkflowDir().getPath()).resolve(Paths.get(surveyFolder.getPath())).toFile();
+        }
         logger.fine(String.format("Survey folder: %s", surveyFolder));
         surveyFolder.mkdirs();
         
@@ -476,12 +480,12 @@ public class SlideSurveyor implements Module {
     private File createSurveyImageFolder() {
         String rootDir = this.workflowRunner.getWorkflowDir().getPath();
         int count = 1;
-        File stitchedFolder = new File(rootDir, String.format("%s_%s", SURVEY_IMAGE_DIRECTORY_PREFIX, count));
-        while (!stitchedFolder.mkdirs()) {
+        File surveyImageFolder = new File(rootDir, String.format("%s_%s", SURVEY_IMAGE_DIRECTORY_PREFIX, count));
+        while (!surveyImageFolder.mkdirs()) {
             ++count;
-            stitchedFolder = new File(rootDir, String.format("%s_%s", SURVEY_IMAGE_DIRECTORY_PREFIX, count));
+            surveyImageFolder = new File(rootDir, String.format("%s_%s", SURVEY_IMAGE_DIRECTORY_PREFIX, count));
         }
-        return stitchedFolder;
+        return surveyImageFolder;
     }
 
     @Override
@@ -672,9 +676,13 @@ public class SlideSurveyor implements Module {
                     this.workflowModule.getName(), task));
             
             // add the surveyFolder task config
+            String surveyFolderPath = surveyFolder.getPath();
+            if (Paths.get(surveyFolderPath).isAbsolute()) {
+                surveyFolderPath = Paths.get(workflowRunner.getWorkflowDir().getPath()).relativize(Paths.get(surveyFolderPath)).toString();
+            }
             TaskConfig surveyFolderConf = new TaskConfig(
                     task.getId(),
-                    "surveyFolder", surveyFolder.toString());
+                    "surveyFolder", surveyFolderPath);
             taskConfigDao.insert(surveyFolderConf);
                             
             // Create taskConfig record for the image label

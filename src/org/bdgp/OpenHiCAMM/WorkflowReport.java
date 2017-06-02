@@ -925,14 +925,21 @@ public class WorkflowReport implements Report {
                                                         for (Task stitcherTask : stitcherTasks) {
                                                             log("Working on stitcher task: %s", stitcherTask);
                                                             Config stitchedImageConf = getTaskConfig(stitcherTask.getId(), "stitchedImageFile");
-                                                            if (stitchedImageConf != null && new File(stitchedImageConf.getValue()).exists()) {
+                                                            if (stitchedImageConf != null && stitchedImageConf.getValue() != null && !stitchedImageConf.getValue().isEmpty()) {
+                                                                String stitchedImage = stitchedImageConf.getValue();
+                                                                if (!Paths.get(stitchedImage).isAbsolute()) {
+                                                                    stitchedImage = Paths.get(workflowRunner.getWorkflowDir().getPath()).resolve(Paths.get(stitchedImage)).toString();
+                                                                }
+                                                                if (!new File(stitchedImage).exists()) continue;
+
                                                                 // see if there is an edited image. If so, display that instead.
                                                                 String editedImagePath = getEditedImagePath(stitchedImageConf.getValue());
                                                                 String stitchedImagePath = editedImagePath != null && new File(editedImagePath).exists()?
                                                                         editedImagePath : 
                                                                         stitchedImageConf.getValue();
                                                                 log("stitchedImageFile = %s", stitchedImagePath);
-                                                                stitchedImageFiles.add(stitchedImagePath);
+                                                                String stitchedImageRelPath = Paths.get(workflowRunner.getWorkflowDir().getPath()).relativize(Paths.get(stitchedImagePath)).toString();
+                                                                stitchedImageFiles.add(stitchedImageRelPath);
                                                                 // Get a thumbnail of the image
                                                                 ImagePlus imp = new ImagePlus(stitchedImagePath);
                                                                 log("stitchedImage width = %d, height = %d", imp.getWidth(), imp.getHeight());
@@ -956,15 +963,15 @@ public class WorkflowReport implements Report {
                                                                 try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                                 catch (IOException e) {throw new RuntimeException(e);}
                                                                 A().attr("onClick", String.format("report.showImageFile(\"%s\"); return false",  
-                                                                            Util.escapeJavaStyleString(stitchedImagePath))).
+                                                                            Util.escapeJavaStyleString(stitchedImageRelPath))).
                                                                     with(()->{
                                                                         Img().attr("src", String.format("data:image/jpg;base64,%s", 
                                                                                     Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
                                                                                 attr("width", ROI_GRID_PREVIEW_WIDTH).
                                                                                 attr("class", "stitched").
-                                                                                attr("data-path", stitchedImagePath).
-                                                                                attr("id", new File(stitchedImagePath).getName()).
-                                                                                attr("title", stitchedImagePath);
+                                                                                attr("data-path", stitchedImageRelPath).
+                                                                                attr("id", new File(stitchedImageRelPath).getName()).
+                                                                                attr("title", stitchedImageRelPath);
                                                                     });
                                                             }
                                                         }
@@ -1250,11 +1257,17 @@ public class WorkflowReport implements Report {
         return changedImages;
     }
     public boolean isEdited(String imagePath) {
+        if (!Paths.get(imagePath).isAbsolute()) {
+            imagePath = Paths.get(workflowRunner.getWorkflowDir().getPath()).resolve(Paths.get(imagePath)).toString();
+        }
         String editedImagePath = getEditedImagePath(imagePath);
         File editedImageFile = new File(editedImagePath);
         return editedImageFile.exists();
     }
     public String getImageBase64(String imagePath) {
+        if (!Paths.get(imagePath).isAbsolute()) {
+            imagePath = Paths.get(workflowRunner.getWorkflowDir().getPath()).resolve(Paths.get(imagePath)).toString();
+        }
         String editedImagePath = getEditedImagePath(imagePath);
         File editedImageFile = new File(editedImagePath);
         ImagePlus imp = editedImageFile.exists()? new ImagePlus(editedImagePath) : new ImagePlus(imagePath);
@@ -1276,6 +1289,9 @@ public class WorkflowReport implements Report {
     }
 
     public synchronized void showImageFile(String imagePath) {
+        if (!Paths.get(imagePath).isAbsolute()) {
+            imagePath = Paths.get(workflowRunner.getWorkflowDir().getPath()).resolve(Paths.get(imagePath)).toString();
+        }
         //log("called showImageFile(imagePath=%s)", imagePath);
         String editedImagePath = getEditedImagePath(imagePath);
         File editedImageFile = new File(editedImagePath);
@@ -1338,6 +1354,9 @@ public class WorkflowReport implements Report {
      * @param stage Curated timepoint in hours
      */
     public void curate(String stitchedImagePath, String experimentId, String orientation, String stage) {
+        if (!Paths.get(stitchedImagePath).isAbsolute()) {
+            stitchedImagePath = Paths.get(workflowRunner.getWorkflowDir().getPath()).resolve(Paths.get(stitchedImagePath)).toString();
+        }
         // /data/insitu_images/images/stage${stage}/lm(l|d|v)_${experiment_id}_${stage}.jpg
         String imagesFolder = "/data/insitu_images/images";
         String stageFolderName = String.format("stage%s",stage);
