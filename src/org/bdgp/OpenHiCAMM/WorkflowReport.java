@@ -933,12 +933,13 @@ public class WorkflowReport implements Report {
                                                                 if (!new File(stitchedImage).exists()) continue;
 
                                                                 // see if there is an edited image. If so, display that instead.
-                                                                String editedImagePath = getEditedImagePath(stitchedImageConf.getValue());
+                                                                String editedImagePath = getEditedImagePath(stitchedImage);
                                                                 String stitchedImagePath = editedImagePath != null && new File(editedImagePath).exists()?
                                                                         editedImagePath : 
-                                                                        stitchedImageConf.getValue();
-                                                                log("stitchedImageFile = %s", stitchedImagePath);
-                                                                String stitchedImageRelPath = Paths.get(workflowRunner.getWorkflowDir().getPath()).relativize(Paths.get(stitchedImagePath)).toString();
+                                                                        stitchedImage;
+                                                                log("stitchedImagePath = %s", stitchedImagePath);
+                                                                String stitchedImageRelPath;
+                                                                stitchedImageRelPath = Paths.get(workflowRunner.getWorkflowDir().getPath()).relativize(Paths.get(stitchedImagePath)).toString();
                                                                 stitchedImageFiles.add(stitchedImageRelPath);
                                                                 // Get a thumbnail of the image
                                                                 ImagePlus imp = new ImagePlus(stitchedImagePath);
