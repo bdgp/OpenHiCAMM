@@ -928,12 +928,17 @@ public class WorkflowReport implements Report {
                                                         }
                                                         for (Task stitcherTask : stitcherTasks) {
                                                             log("Working on stitcher task: %s", stitcherTask);
-                                                            Config stitchedImageFile = getTaskConfig(stitcherTask.getId(), "stitchedImageFile");
-                                                            log("stitchedImageFile = %s", stitchedImageFile.getValue());
-                                                            if (stitchedImageFile != null && new File(stitchedImageFile.getValue()).exists()) {
-                                                                stitchedImageFiles.add(stitchedImageFile.getValue());
+                                                            Config stitchedImageConf = getTaskConfig(stitcherTask.getId(), "stitchedImageFile");
+                                                            if (stitchedImageConf != null && new File(stitchedImageConf.getValue()).exists()) {
+                                                                // see if there is an edited image. If so, display that instead.
+                                                                String editedImagePath = getEditedImagePath(stitchedImageConf.getValue());
+                                                                String stitchedImagePath = editedImagePath != null && new File(editedImagePath).exists()?
+                                                                        editedImagePath : 
+                                                                        stitchedImageConf.getValue();
+                                                                log("stitchedImageFile = %s", stitchedImagePath);
+                                                                stitchedImageFiles.add(stitchedImagePath);
                                                                 // Get a thumbnail of the image
-                                                                ImagePlus imp = new ImagePlus(stitchedImageFile.getValue());
+                                                                ImagePlus imp = new ImagePlus(stitchedImagePath);
                                                                 log("stitchedImage width = %d, height = %d", imp.getWidth(), imp.getHeight());
 
                                                                 double stitchScaleFactor = (double)ROI_GRID_PREVIEW_WIDTH / (double)imp.getWidth();
@@ -955,13 +960,13 @@ public class WorkflowReport implements Report {
                                                                 try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                                 catch (IOException e) {throw new RuntimeException(e);}
                                                                 A().attr("onClick", String.format("report.showImageFile(\"%s\"); return false",  
-                                                                            Util.escapeJavaStyleString(stitchedImageFile.getValue()))).
+                                                                            Util.escapeJavaStyleString(stitchedImagePath))).
                                                                     with(()->{
                                                                         Img().attr("src", String.format("data:image/jpg;base64,%s", 
                                                                                     Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
                                                                                 attr("width", ROI_GRID_PREVIEW_WIDTH).
-                                                                                attr("id", new File(stitchedImageFile.getValue()).getName()).
-                                                                                attr("title", stitchedImageFile.getValue());
+                                                                                attr("id", new File(stitchedImagePath).getName()).
+                                                                                attr("title", stitchedImagePath);
                                                                     });
                                                             }
                                                         }
