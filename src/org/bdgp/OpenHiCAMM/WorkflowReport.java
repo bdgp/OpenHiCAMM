@@ -182,10 +182,8 @@ public class WorkflowReport implements Report {
                     Style().raw(Resources.toString(Resources.getResource("bootstrap.min.css"), Charsets.UTF_8));
                     Style().raw(Resources.toString(Resources.getResource("bootstrap-theme.min.css"), Charsets.UTF_8));
                     Style().raw(Resources.toString(Resources.getResource("jquery.powertip.min.css"), Charsets.UTF_8));
-                    Style().raw(Resources.toString(Resources.getResource("jquery-ui.min.css"), Charsets.UTF_8));
                     // Javascript
                     Script().raw(Resources.toString(Resources.getResource("jquery-2.1.4.min.js"), Charsets.UTF_8));
-                    Script().raw(Resources.toString(Resources.getResource("jquery-ui.min.js"), Charsets.UTF_8));
                     Script().raw(Resources.toString(Resources.getResource("bootstrap.min.js"), Charsets.UTF_8));
                     Script().raw(Resources.toString(Resources.getResource("jquery.maphilight.js"), Charsets.UTF_8));
                     Script().raw(Resources.toString(Resources.getResource("jquery.powertip.min.js"), Charsets.UTF_8));
@@ -274,10 +272,8 @@ public class WorkflowReport implements Report {
                                 Style().raw(Resources.toString(Resources.getResource("bootstrap.min.css"), Charsets.UTF_8));
                                 Style().raw(Resources.toString(Resources.getResource("bootstrap-theme.min.css"), Charsets.UTF_8));
                                 Style().raw(Resources.toString(Resources.getResource("jquery.powertip.min.css"), Charsets.UTF_8));
-                                Style().raw(Resources.toString(Resources.getResource("jquery-ui.min.css"), Charsets.UTF_8));
                                 // Javascript
                                 Script().raw(Resources.toString(Resources.getResource("jquery-2.1.4.min.js"), Charsets.UTF_8));
-                                Script().raw(Resources.toString(Resources.getResource("jquery-ui.min.js"), Charsets.UTF_8));
                                 Script().raw(Resources.toString(Resources.getResource("bootstrap.min.js"), Charsets.UTF_8));
                                 Script().raw(Resources.toString(Resources.getResource("jquery.maphilight.js"), Charsets.UTF_8));
                                 Script().raw(Resources.toString(Resources.getResource("jquery.powertip.min.js"), Charsets.UTF_8));
