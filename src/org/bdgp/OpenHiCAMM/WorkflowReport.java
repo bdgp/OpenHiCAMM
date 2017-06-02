@@ -1332,9 +1332,9 @@ public class WorkflowReport implements Report {
         // resize to smaller source dimension maintaining aspect ratio
         int image_width = imp.getWidth() < imp.getHeight()? 
                 CURATE_IMAGE_WIDTH : 
-                (int)Math.ceil((double)imp.getWidth()*((double)CURATE_IMAGE_HEIGHT/(double)imp.getHeight()));
+                (int)Math.ceil((double)imp.getHeight()*((double)CURATE_IMAGE_WIDTH/(double)CURATE_IMAGE_HEIGHT));
         int image_height = imp.getWidth() < imp.getHeight()?
-                (int)Math.ceil((double)imp.getHeight()*((double)CURATE_IMAGE_WIDTH/(double)imp.getWidth())) :
+                (int)Math.ceil((double)imp.getWidth()*((double)CURATE_IMAGE_HEIGHT/(double)CURATE_IMAGE_WIDTH)) :
                 CURATE_IMAGE_HEIGHT; 
         imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
         imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(image_width, image_height));
