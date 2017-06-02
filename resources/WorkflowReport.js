@@ -9,11 +9,13 @@ $(document).ready(function() {
         	if (!initRefresh) {
         		initRefresh = true;
         		$('img.stitched').each(function() {
-        			var imagePath = this.dataset.path;
-        			if (report.isEdited(imagePath)) {
-                        var base64 = report.getImageBase64(imagePath);
-                        if (base64) {
-                            this.setAttribute('src',base64);
+        			if (this.dataset['path']) {
+                        var imagePath = this.dataset.path;
+                        if (report.isEdited(imagePath)) {
+                            var base64 = report.getImageBase64(imagePath);
+                            if (base64) {
+                                this.setAttribute('src',base64);
+                            }
                         }
         			}
         		});
