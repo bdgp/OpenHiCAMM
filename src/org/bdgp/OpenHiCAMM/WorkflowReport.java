@@ -83,6 +83,7 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
+import javafx.stage.Modality;
 import mmcorej.CMMCore;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
@@ -808,8 +809,7 @@ public class WorkflowReport implements Report {
                                                                 with(()->{
                                                                     Img().attr("src", String.format("data:image/jpg;base64,%s", 
                                                                                 Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
-                                                                            attr("width", imp_.getWidth()).
-                                                                            attr("height", imp_.getHeight()).
+                                                                            attr("width", ROI_GRID_PREVIEW_WIDTH).
                                                                             attr("data-min-x", msp.getX() + (roi.getX1() - (imp_.getWidth() / 2.0)) * pixelSize * (invertXAxis? -1.0 : 1.0)).
                                                                             attr("data-max-x", msp.getX() + (roi.getX2() - (imp_.getWidth() / 2.0)) * pixelSize * (invertXAxis? -1.0 : 1.0)).
                                                                             attr("data-min-y", msp.getY() + (roi.getY1() - (imp_.getHeight() / 2.0)) * pixelSize * (invertYAxis? -1.0 : 1.0)).
@@ -897,8 +897,7 @@ public class WorkflowReport implements Report {
                                                         catch (IOException e) {throw new RuntimeException(e);}
                                                         Img().attr("src", String.format("data:image/jpg;base64,%s", 
                                                                     Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
-                                                                attr("width", roiGridThumb.getWidth()).
-                                                                attr("height", roiGridThumb.getHeight()).
+                                                                attr("width", ROI_GRID_PREVIEW_WIDTH).
                                                                 attr("class", "map stageCoords").
                                                                 attr("data-min-x", minX2 - imageWidth2 / 2.0 * hiResPixelSize * (invertXAxis? -1.0 : 1.0)).
                                                                 attr("data-max-x", maxX2 + imageWidth2 / 2.0 * hiResPixelSize * (invertXAxis? -1.0 : 1.0)).
@@ -960,8 +959,7 @@ public class WorkflowReport implements Report {
                                                                     with(()->{
                                                                         Img().attr("src", String.format("data:image/jpg;base64,%s", 
                                                                                     Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
-                                                                                attr("width", imp.getWidth()).
-                                                                                attr("height", imp.getHeight()).
+                                                                                attr("width", ROI_GRID_PREVIEW_WIDTH).
                                                                                 attr("id", new File(stitchedImageFile.getValue()).getName()).
                                                                                 attr("title", stitchedImageFile.getValue());
                                                                     });
@@ -1214,6 +1212,7 @@ public class WorkflowReport implements Report {
             }).toString();
 
             alert = new Alert(AlertType.INFORMATION);
+            alert.initModality(Modality.NONE);
             alert.setHeaderText("Manual Curation Instructions");
             WebView webView = new WebView();
             webView.getEngine().loadContent(instructions);
@@ -1244,7 +1243,7 @@ public class WorkflowReport implements Report {
             }
         }
         String changedImages = String.join("\n", changedImageList);
-        IJ.log(String.format("changedImages=%s", changedImages));
+        //IJ.log(String.format("changedImages=%s", changedImages));
         return changedImages;
     }
     public String getImageBase64(String imagePath) {
@@ -1264,7 +1263,7 @@ public class WorkflowReport implements Report {
         catch (IOException e) {throw new RuntimeException(e);}
         String base64 = String.format("data:image/jpg;base64,%s", 
                 Base64.getMimeEncoder().encodeToString(baos2.toByteArray()));
-        IJ.log(String.format("image=%s, base64=%s", imagePath, base64));
+        //IJ.log(String.format("image=%s, base64=%s", imagePath, base64));
         return base64;
     }
 

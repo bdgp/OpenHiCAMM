@@ -77,8 +77,8 @@ public class WorkflowDialog extends JDialog {
         return isDisposed;
     }
 
-    public WorkflowDialog(Frame parentFrame, OpenHiCAMM mmslide) {
-        super(parentFrame, "OpenHiCAMM");
+    public WorkflowDialog(OpenHiCAMM mmslide) {
+        super((Frame)null, "OpenHiCAMM");
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         this.mmslide = mmslide;
         

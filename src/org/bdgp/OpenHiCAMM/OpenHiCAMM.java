@@ -29,9 +29,6 @@ import org.micromanager.utils.JavaUtils;
 import org.micromanager.utils.MMException;
 import org.micromanager.utils.ReportingUtils;
 
-import ij.IJ;
-
-
 public class OpenHiCAMM implements MMPlugin {
 	public static final String MMSLIDEMODULESDIR = "lib/openhicamm_modules";
 	private ScriptInterface app;
@@ -90,7 +87,7 @@ public class OpenHiCAMM implements MMPlugin {
         // open the slide workflow dialog
         SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
-            	if (dialog == null || dialog.isDisposed()) dialog = new WorkflowDialog(IJ.getInstance(), OpenHiCAMM.this);
+            	if (dialog == null || dialog.isDisposed()) dialog = new WorkflowDialog(OpenHiCAMM.this);
                 //dialog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 dialog.pack();
                 dialog.setVisible(true);

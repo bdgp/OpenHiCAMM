@@ -47,6 +47,7 @@ public class ReportDialog {
     @FXML private WebView webView;
     @FXML private ChoiceBox<String> selectReport;
     @FXML private Button selectButton;
+    @FXML private Button debugButton;
     @FXML private TextField evaluateJs;
     
     public static final boolean DEBUG=true;
@@ -83,6 +84,11 @@ public class ReportDialog {
         }
     }
 
+    @FXML void debugButtonPressed(ActionEvent event) {
+        if (webView != null) {
+            webView.getEngine().executeScript("if (!document.getElementById('FirebugLite')){E = document['createElement' + 'NS'] && document.documentElement.namespaceURI;E = E ? document['createElement' + 'NS'](E, 'script') : document['createElement']('script');E['setAttribute']('id', 'FirebugLite');E['setAttribute']('src', 'https://getfirebug.com/' + 'firebug-lite.js' + '#startOpened');E['setAttribute']('FirebugLite', '4');(document['getElementsByTagName']('head')[0] || document['getElementsByTagName']('body')[0]).appendChild(E);E = new Image;E['setAttribute']('src', 'https://getfirebug.com/' + '#startOpened');}"); 
+        }
+    }
 
     @FXML void evaluateJs(ActionEvent event) {
         String text = evaluateJs.getText();
@@ -99,6 +105,7 @@ public class ReportDialog {
 
     public void runReport(Report report) {
         WebEngine webEngine = webView.getEngine();
+
         webEngine.getLoadWorker().stateProperty().addListener(new ChangeListener<Worker.State>() {
             @Override public void changed(ObservableValue<? extends State> ov, State t, State t1) {
                 if (t1 == Worker.State.SUCCEEDED) {
