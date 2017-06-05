@@ -945,11 +945,13 @@ public class WorkflowReport implements Report {
                                                                 ImagePlus imp = new ImagePlus(stitchedImagePath);
                                                                 log("stitchedImage width = %d, height = %d", imp.getWidth(), imp.getHeight());
 
+                                                                // crop the image
+                                                                cropImage(imp);
+                                                                // resize the image to thumbnail size
                                                                 double stitchScaleFactor = (double)ROI_GRID_PREVIEW_WIDTH / (double)imp.getWidth();
                                                                 log("stitchScaleFactor = %f", stitchScaleFactor);
                                                                 int stitchPreviewHeight = (int)Math.floor(imp.getHeight() * stitchScaleFactor);
                                                                 log("stitchPreviewHeight = %d", stitchPreviewHeight);
-                                                                cropImage(imp);
                                                                 imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
                                                                 imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(
                                                                         ROI_GRID_PREVIEW_WIDTH, 
@@ -1332,9 +1334,9 @@ public class WorkflowReport implements Report {
         // resize to smaller source dimension maintaining aspect ratio
         int image_width = imp.getWidth() < imp.getHeight()? 
                 CURATE_IMAGE_WIDTH : 
-                (int)Math.ceil((double)imp.getHeight()*((double)CURATE_IMAGE_WIDTH/(double)CURATE_IMAGE_HEIGHT));
+                (int)Math.ceil((double)imp.getWidth()*((double)CURATE_IMAGE_HEIGHT/(double)imp.getHeight()));
         int image_height = imp.getWidth() < imp.getHeight()?
-                (int)Math.ceil((double)imp.getWidth()*((double)CURATE_IMAGE_HEIGHT/(double)CURATE_IMAGE_WIDTH)) :
+                (int)Math.ceil((double)imp.getHeight()*((double)CURATE_IMAGE_WIDTH/(double)imp.getWidth())) :
                 CURATE_IMAGE_HEIGHT; 
         imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
         imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(image_width, image_height));
