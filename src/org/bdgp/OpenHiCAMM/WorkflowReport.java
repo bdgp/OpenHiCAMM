@@ -939,7 +939,7 @@ public class WorkflowReport implements Report {
                                                                         stitchedImage;
                                                                 log("stitchedImagePath = %s", stitchedImagePath);
                                                                 String stitchedImageRelPath;
-                                                                stitchedImageRelPath = Paths.get(workflowRunner.getWorkflowDir().getPath()).relativize(Paths.get(stitchedImagePath)).toString();
+                                                                stitchedImageRelPath = Paths.get(workflowRunner.getWorkflowDir().getPath()).relativize(Paths.get(stitchedImage)).toString();
                                                                 stitchedImageFiles.add(stitchedImageRelPath);
                                                                 // Get a thumbnail of the image
                                                                 ImagePlus imp = new ImagePlus(stitchedImagePath);
