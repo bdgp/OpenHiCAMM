@@ -18,6 +18,7 @@ import org.bdgp.OpenHiCAMM.Modules.BDGPROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.CompareImager;
 import org.bdgp.OpenHiCAMM.Modules.CustomMacroROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.ImageStitcher;
+import org.bdgp.OpenHiCAMM.Modules.ManualSlideLoader;
 import org.bdgp.OpenHiCAMM.Modules.SlideImager;
 import org.bdgp.OpenHiCAMM.Modules.SlideSurveyor;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
@@ -159,6 +160,7 @@ public class OpenHiCAMM implements MMPlugin {
 		if (moduleNames == null || reportNames == null) {
             // Add all the builtin modules to the modules list first
             moduleNames = new ArrayList<String>();
+            moduleNames.add(ManualSlideLoader.class.getName());
             moduleNames.add(SlideImager.class.getName());
             moduleNames.add(SlideSurveyor.class.getName());
             moduleNames.add(CompareImager.class.getName());
