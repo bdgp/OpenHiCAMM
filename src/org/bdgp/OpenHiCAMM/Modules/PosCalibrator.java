@@ -13,7 +13,6 @@ import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.Logger;
 import org.bdgp.OpenHiCAMM.ValidationError;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
-import org.bdgp.OpenHiCAMM.DB.Acquisition;
 import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.Image;
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
@@ -171,7 +170,6 @@ public class PosCalibrator implements Module {
 
     @Override public Status run(Task task, Map<String, Config> config, Logger logger) {
         Dao<Image> imageDao = workflow.getWorkflowDb().table(Image.class);
-        Dao<Acquisition> acqDao = workflow.getWorkflowDb().table(Acquisition.class);
         Dao<SlidePosList> slidePosListDao = workflow.getWorkflowDb().table(SlidePosList.class);
 
         // get the slide ID conf
@@ -196,9 +194,9 @@ public class PosCalibrator implements Module {
                         and("key", "imageId"));
                 if (imageId != null) {
                     Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
-                    ImagePlus imp = image.getImagePlus(acqDao);
+                    ImagePlus imp = image.getImagePlus(workflow);
                     new ImageConverter(imp).convertToGray8();
-                    TaggedImage taggedImage = image.getTaggedImage(acqDao);
+                    TaggedImage taggedImage = image.getTaggedImage(workflow);
                     try {
                         Double xPos = MDUtils.getXPositionUm(taggedImage.tags);
                         Double yPos = MDUtils.getYPositionUm(taggedImage.tags);
@@ -237,9 +235,9 @@ public class PosCalibrator implements Module {
                         and("key", "imageId"));
                 if (imageId != null) {
                     Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
-                    ImagePlus imp = image.getImagePlus(acqDao);
+                    ImagePlus imp = image.getImagePlus(workflow);
                     new ImageConverter(imp).convertToGray8();
-                    TaggedImage taggedImage = image.getTaggedImage(acqDao);
+                    TaggedImage taggedImage = image.getTaggedImage(workflow);
                     try {
                         Double xPos = MDUtils.getXPositionUm(taggedImage.tags);
                         Double yPos = MDUtils.getYPositionUm(taggedImage.tags);

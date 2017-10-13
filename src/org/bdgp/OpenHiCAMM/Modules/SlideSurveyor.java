@@ -417,7 +417,9 @@ public class SlideSurveyor implements Module {
             fileSaver.saveAsTiff(imageFile.getPath());
 
             // create necessary DB records so that ROIFinder can work on the large slide image
-            Image image = new Image(imageFile.getPath(), slideId);
+            String imagePath = Paths.get(workflowRunner.getWorkflowDir().getPath()).
+                    relativize(Paths.get(imageFile.getPath())).toString();
+            Image image = new Image(imagePath, slideId);
             imageDao.delete(image, "path", "slideId");
             imageDao.insert(image);
             logger.fine(String.format("Inserted image: %s", image));

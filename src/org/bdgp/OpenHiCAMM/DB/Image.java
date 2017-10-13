@@ -1,6 +1,7 @@
 package org.bdgp.OpenHiCAMM.DB;
 
 import org.bdgp.OpenHiCAMM.Dao;
+import org.bdgp.OpenHiCAMM.WorkflowRunner;
 import org.micromanager.acquisition.MMAcquisition;
 import org.micromanager.api.ImageCache;
 import org.micromanager.utils.ImageUtils;
@@ -15,6 +16,8 @@ import ij.ImagePlus;
 import ij.process.ImageProcessor;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
+
+import java.nio.file.Paths;
 
 @DatabaseTable
 public class Image {
@@ -68,13 +71,12 @@ public class Image {
     	return imageCache.getImage(this.channel, this.slice, this.frame, this.position);
     }
 
-    public TaggedImage getTaggedImage() {
-        return getTaggedImage(null);
-    }
-    public TaggedImage getTaggedImage(Dao<Acquisition> acqDao) {
-        if (acqDao == null || this.acquisitionId == 0) {
+    public TaggedImage getTaggedImage(WorkflowRunner runner) {
+        Dao<Acquisition> acqDao = runner.getWorkflowDb().table(Acquisition.class);
+        if (this.acquisitionId == 0) {
             if (this.getPath() == null) throw new RuntimeException("getPath() is null!");
-            ImagePlus img = new ImagePlus(this.getPath());
+            String imagePath = Paths.get(runner.getWorkflowDir().getPath()).resolve(this.getPath()).toString();
+            ImagePlus img = new ImagePlus(imagePath);
             return ImageUtils.makeTaggedImage(img.getProcessor());
         }
         // Initialize the acquisition
@@ -91,16 +93,13 @@ public class Image {
         return taggedImage;
     }
     
-    public ImagePlus getImagePlus() {
-        return getImagePlus(null);
-    }
-    public ImagePlus getImagePlus(Dao<Acquisition> acqDao) {
-        if (acqDao == null || this.acquisitionId == 0) {
+    public ImagePlus getImagePlus(WorkflowRunner runner) {
+        if (this.acquisitionId == 0) {
             if (this.getPath() == null) throw new RuntimeException("getPath() is null!");
             ImagePlus img = new ImagePlus(this.getPath());
             return img;
         }
-        TaggedImage taggedImage = this.getTaggedImage(acqDao);
+        TaggedImage taggedImage = this.getTaggedImage(runner);
         ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
         ImagePlus imp = new ImagePlus(this.toString(), processor);
         return imp;

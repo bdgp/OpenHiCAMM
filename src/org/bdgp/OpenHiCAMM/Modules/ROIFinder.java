@@ -302,7 +302,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
         // if this image is not in an acquisition, then load it as a file
         if (image.getAcquisitionId() == 0 && image.getPath() != null) {
-            TaggedImage taggedImage = image.getTaggedImage(null);
+            TaggedImage taggedImage = image.getTaggedImage(workflowRunner);
             return taggedImage;
         }
 
@@ -564,7 +564,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
                     
                     TaggedImage taggedImage;
                     if (image.getPath() != null) {
-                        taggedImage = image.getTaggedImage();
+                        taggedImage = image.getTaggedImage(workflowRunner);
                     }
                     else {
                         // Initialize the acquisition

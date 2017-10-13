@@ -59,7 +59,7 @@ public class ImageFileReport implements Report {
                                 Image image = imageDao.selectOne(where("id", imageIdConf.getValue()));
                                 if (image != null) {
                                     Acquisition acquisition = acqDao.selectOneOrDie(where("id", image.getAcquisitionId()));
-                                    TaggedImage taggedImage = image.getTaggedImage(acqDao);
+                                    TaggedImage taggedImage = image.getTaggedImage(workflowRunner);
                                     try {
                                         String dir = acquisition.getDirectory();
                                         String prefix = acquisition.getPrefix();

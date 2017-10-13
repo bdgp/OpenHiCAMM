@@ -34,7 +34,6 @@ import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
-import org.bdgp.OpenHiCAMM.DB.Acquisition;
 import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.Image;
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
@@ -305,7 +304,6 @@ public class WorkflowReport implements Report {
 
         Dao<Slide> slideDao = this.workflowRunner.getWorkflowDb().table(Slide.class);
         Dao<Image> imageDao = this.workflowRunner.getWorkflowDb().table(Image.class);
-        Dao<Acquisition> acqDao = this.workflowRunner.getWorkflowDb().table(Acquisition.class);
         Dao<ROI> roiDao = this.workflowRunner.getWorkflowDb().table(ROI.class);
         Dao<SlidePosList> slidePosListDao = this.workflowRunner.getWorkflowDb().table(SlidePosList.class);
         
@@ -459,7 +457,7 @@ public class WorkflowReport implements Report {
                     Image image = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf.getValue())));
                     log("Getting image size for image %s", image);
                     ImagePlus imp = null;
-                    try { imp = image.getImagePlus(acqDao); }
+                    try { imp = image.getImagePlus(workflowRunner); }
                     catch (Throwable e) {
                         StringWriter sw = new StringWriter();
                         e.printStackTrace(new PrintWriter(sw));
@@ -502,7 +500,7 @@ public class WorkflowReport implements Report {
                         Image image = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf.getValue())));
                         log("Working on image; %s", image);
                         ImagePlus imp = null;
-                        try { imp = image.getImagePlus(acqDao); }
+                        try { imp = image.getImagePlus(workflowRunner); }
                         catch (Throwable e) {
                             StringWriter sw = new StringWriter();
                             e.printStackTrace(new PrintWriter(sw));
@@ -666,7 +664,7 @@ public class WorkflowReport implements Report {
                                                             where("id", new Integer(imageIdConf2.getValue())));
                                                     log("Getting image size for image %s", image2);
                                                     ImagePlus imp = null;
-                                                    try { imp = image2.getImagePlus(acqDao); }
+                                                    try { imp = image2.getImagePlus(workflowRunner); }
                                                     catch (Throwable e) {
                                                         StringWriter sw = new StringWriter();
                                                         e.printStackTrace(new PrintWriter(sw));
@@ -779,7 +777,7 @@ public class WorkflowReport implements Report {
                                                     });
                                                     Td().with(()->{
                                                         ImagePlus imp = null;
-                                                        try { imp = image.getImagePlus(acqDao); }
+                                                        try { imp = image.getImagePlus(workflowRunner); }
                                                         catch (Throwable e) {
                                                             StringWriter sw = new StringWriter();
                                                             e.printStackTrace(new PrintWriter(sw));
@@ -826,7 +824,7 @@ public class WorkflowReport implements Report {
                                                                     // Get a thumbnail of the image
                                                                     Image image2 = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf2.getValue())));
                                                                     ImagePlus imp = null; 
-                                                                    try { imp = image2.getImagePlus(acqDao); } 
+                                                                    try { imp = image2.getImagePlus(workflowRunner); } 
                                                                     catch (Throwable e) {
                                                                         StringWriter sw = new StringWriter();
                                                                         e.printStackTrace(new PrintWriter(sw));
@@ -1035,9 +1033,8 @@ public class WorkflowReport implements Report {
     public void showImage(int imageId) {
         //log("called showImage(imageId=%d)", imageId);
         Dao<Image> imageDao = this.workflowRunner.getWorkflowDb().table(Image.class);
-        Dao<Acquisition> acqDao = this.workflowRunner.getWorkflowDb().table(Acquisition.class);
         Image image = imageDao.selectOneOrDie(where("id", imageId));
-        ImagePlus imp = image.getImagePlus(acqDao);
+        ImagePlus imp = image.getImagePlus(workflowRunner);
         imp.show();
     }
     
@@ -1402,12 +1399,11 @@ public class WorkflowReport implements Report {
             double image2X,
             double image2Y) 
     {
-        Dao<Acquisition> acqDao = this.workflowRunner.getWorkflowDb().table(Acquisition.class);
         Dao<Image> imageDao = this.workflowRunner.getWorkflowDb().table(Image.class);
         Image image1 = imageDao.selectOneOrDie(where("id", image1Id));
-        ImagePlus imp1 = image1.getImagePlus(acqDao);
+        ImagePlus imp1 = image1.getImagePlus(workflowRunner);
         Image image2 = imageDao.selectOneOrDie(where("id", image2Id));
-        ImagePlus imp2 = image2.getImagePlus(acqDao);
+        ImagePlus imp2 = image2.getImagePlus(workflowRunner);
         
         imp2.setProcessor(imp2.getProcessor().resize(
                 (int)Math.floor(imp2.getWidth() * (hiResPixelSize / pixelSize)), 
