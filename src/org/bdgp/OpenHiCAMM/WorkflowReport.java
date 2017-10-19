@@ -75,6 +75,9 @@ import ij.gui.NewImage;
 import ij.gui.Overlay;
 import ij.gui.Roi;
 import ij.io.FileSaver;
+import ij.measure.Measurements;
+import ij.measure.ResultsTable;
+import ij.plugin.filter.ParticleAnalyzer;
 import ij.process.Blitter;
 import ij.process.ImageProcessor;
 import javafx.scene.control.Alert;
@@ -932,6 +935,14 @@ public class WorkflowReport implements Report {
 
                                                                 // see if there is an edited image. If so, display that instead.
                                                                 String editedImagePath = getEditedImagePath(stitchedImage);
+                                                                // if there is no edited image, attempt to auto-rotate the image
+                                                                if (!new File(editedImagePath).exists()) {
+                                                                    ImagePlus imp = new ImagePlus(stitchedImage);
+                                                                    ImagePlus imp2 = autoRotateImage(imp);
+                                                                    if (imp2 != null) {
+                                                                        new FileSaver(imp2).saveAsTiff(editedImagePath);
+                                                                    }
+                                                                }
                                                                 String stitchedImagePath = editedImagePath != null && new File(editedImagePath).exists()?
                                                                         editedImagePath : 
                                                                         stitchedImage;
@@ -973,6 +984,15 @@ public class WorkflowReport implements Report {
                                                                                 attr("data-path", stitchedImageRelPath).
                                                                                 attr("id", new File(stitchedImageRelPath).getName()).
                                                                                 attr("title", stitchedImageRelPath);
+                                                                    });
+                                                                P().with(()->{
+                                                                    A().attr("onClick", String.format("report.flip(\"%s\", true, false); return false",  
+                                                                                Util.escapeJavaStyleString(stitchedImageRelPath))).
+                                                                        text("Flip Horizontally");
+                                                                    text(" ");
+                                                                    A().attr("onClick", String.format("report.flip(\"%s\", false, true); return false",  
+                                                                                Util.escapeJavaStyleString(stitchedImageRelPath))).
+                                                                        text("Flip Vertically");
                                                                     });
                                                             }
                                                         }
@@ -1461,4 +1481,163 @@ public class WorkflowReport implements Report {
         return msp;
     }
     
+    private ImagePlus autoRotateImage(ImagePlus imp) {
+        log("called autoRotateImage(imp=%s)", imp);
+        // create the image we will use to determine the angle of rotation
+        ImagePlus imp2 = new ImagePlus();
+        imp2.setProcessor(imp.getProcessor().duplicate());
+
+        // create the return image
+        ImagePlus imp3 = new ImagePlus();
+        imp3.setProcessor(imp.getProcessor().duplicate());
+
+        // convert image to 8-bit
+        IJ.run(imp2, "8-bit", "");
+        // crop out black rectangles
+        final double MAX_BLACK_PIXELS = 1;
+        int cropX1 = 0;
+        for (int x=0; x<imp2.getWidth(); ++x) {
+            int blackPixels = 0;
+            for (int y=0; y<imp2.getHeight(); ++y) {
+                int value = imp2.getPixel(x, y)[0];
+                if (value == 0) ++blackPixels;
+            }
+            if (blackPixels < MAX_BLACK_PIXELS) {
+                cropX1 = x;
+                break;
+            }
+        }
+        int cropX2 = imp2.getWidth()-1;
+        for (int x=imp2.getWidth()-1; x>=0; --x) {
+            int blackPixels = 0;
+            for (int y=0; y<imp2.getHeight(); ++y) {
+                int value = imp2.getPixel(x, y)[0];
+                if (value == 0) ++blackPixels;
+            }
+            if (blackPixels < MAX_BLACK_PIXELS) {
+                cropX2 = x;
+                break;
+            }
+        }
+        int cropY1 = 0;
+        for (int y=0; y<imp2.getHeight(); ++y) {
+            int blackPixels = 0;
+            for (int x=0; x<imp2.getWidth(); ++x) {
+                int value = imp2.getPixel(x, y)[0];
+                if (value == 0) ++blackPixels;
+            }
+            if (blackPixels < MAX_BLACK_PIXELS) {
+                cropY1 = y;
+                break;
+            }
+        }
+        int cropY2 = imp2.getHeight()-1;
+        for (int y=imp2.getHeight()-1; y>=0; --y) {
+            int blackPixels = 0;
+            for (int x=0; x<imp2.getHeight(); ++x) {
+                int value = imp2.getPixel(x, y)[0];
+                if (value == 0) ++blackPixels;
+            }
+            if (blackPixels < MAX_BLACK_PIXELS) {
+                cropY2 = y;
+                break;
+            }
+        }
+        // cropping failed
+        if (!(cropX1 < cropX2 && cropY1 < cropY2)) {
+            return null;
+        }
+        imp2.setRoi(new Roi(cropX1, cropY1, cropX2-cropX1+1, cropY2-cropY1+1));
+        imp2.setProcessor(imp2.getTitle(), imp2.getProcessor().crop());
+
+        // scale to width 200, keep aspect ratio
+        final int SCALE_WIDTH = 200;
+        double scaleFactor = SCALE_WIDTH / imp2.getWidth();
+        imp2.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
+        imp2.setProcessor(imp2.getTitle(), imp2.getProcessor().resize(
+                (int)Math.floor(imp2.getWidth() * scaleFactor), 
+                (int)Math.floor(imp2.getHeight() * scaleFactor)));
+
+        // subtract background
+        IJ.run(imp2, "Subtract Background...", "rolling=20 light sliding");
+        // run threshold
+        IJ.setAutoThreshold(imp2, "Otsu");
+        // run gray morphology erode
+        IJ.run(imp2, "Gray Morphology", "radius=5 type=circle operator=erode");
+        // analyze particles to get angle of rotation
+        ResultsTable rt = new ResultsTable();
+        ParticleAnalyzer particleAnalyzer = new ParticleAnalyzer(
+                ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES|
+                ParticleAnalyzer.CLEAR_WORKSHEET|
+                ParticleAnalyzer.ADD_TO_MANAGER|
+                ParticleAnalyzer.IN_SITU_SHOW,
+                Measurements.AREA|
+                Measurements.MEAN|
+                Measurements.MIN_MAX|
+                Measurements.CENTER_OF_MASS|
+                Measurements.RECT|
+                Measurements.SHAPE_DESCRIPTORS|
+                Measurements.ELLIPSE|
+                Measurements.PERIMETER|
+                Measurements.AREA_FRACTION,
+                rt, 20.0, Double.POSITIVE_INFINITY);
+        if (!particleAnalyzer.analyze(imp2)) {
+            // particle analyzer failed
+            return null;
+        }
+
+        // Get the largest object
+        double maxArea = 0.0;
+        int largest = -1;
+        for (int i=0; i < rt.getCounter(); i++) {
+            double area = rt.getValue("Area", i);
+            if (maxArea < area) {
+                maxArea = area;
+                largest = i;
+            }
+        }
+        if (largest < 0) {
+            // particle analyzer returned no results
+            return null;
+        }
+        double bx = rt.getValue("BX", largest) / scaleFactor;
+        double by = rt.getValue("BY", largest) / scaleFactor;
+        double width = rt.getValue("Width", largest) / scaleFactor;
+        double height = rt.getValue("Height", largest) / scaleFactor;
+        double major = rt.getValue("Major", largest) / scaleFactor;
+        double minor = rt.getValue("Minor", largest) / scaleFactor;
+        double angle = rt.getValue("Angle", largest);
+        double centerX = bx+(width/2.0);
+        double centerY = by+(height/2.0);
+
+        // rotate by that angle
+        IJ.run(imp3, "Rotate... ", String.format("angle=%s grid=1 interpolation=Bilinear", angle));
+        // now crop and return
+        final int PADDING=50;
+        imp3.setRoi(new Roi(
+                Math.max(0, centerX-(major/2.0)-PADDING), 
+                Math.max(0, centerY-(minor/2.0)-PADDING), 
+                Math.min(imp3.getWidth(), major+PADDING), 
+                Math.min(imp3.getHeight(), minor+PADDING)));
+        imp3.setProcessor(imp3.getTitle(), imp3.getProcessor().crop());
+        return imp3;
+    }
+    
+    public synchronized void flip(String imagePath, boolean horiz, boolean vert) {
+        if (!Paths.get(imagePath).isAbsolute()) {
+            imagePath = Paths.get(workflowRunner.getWorkflowDir().getPath()).resolve(Paths.get(imagePath)).toString();
+        }
+        log("called flip(imagePath=%s, horiz=%s, vert=%s)", imagePath, horiz, vert);
+        String editedImagePath = getEditedImagePath(imagePath);
+        File editedImageFile = new File(editedImagePath);
+        File imageFile = new File(imagePath);
+        if (!imageFile.exists()) {
+            throw new RuntimeException(String.format("Could not find image file %s!", imagePath));
+        }
+        ImagePlus imp = new ImagePlus(editedImageFile.exists()? editedImageFile.getPath() : imageFile.getPath());
+        if (horiz) imp.getProcessor().flipHorizontal();
+        if (vert) imp.getProcessor().flipVertical();
+        new FileSaver(imp).saveAsTiff(editedImagePath);
+        changedImages.put(imagePath, imp.changes);
+    }
 }
