@@ -1552,7 +1552,7 @@ public class WorkflowReport implements Report {
 
         // scale to width 200, keep aspect ratio
         final int SCALE_WIDTH = 200;
-        double scaleFactor = SCALE_WIDTH / imp2.getWidth();
+        double scaleFactor = (double)SCALE_WIDTH / (double)imp2.getWidth();
         imp2.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
         imp2.setProcessor(imp2.getTitle(), imp2.getProcessor().resize(
                 (int)Math.floor(imp2.getWidth() * scaleFactor), 
