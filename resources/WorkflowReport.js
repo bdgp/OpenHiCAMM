@@ -9,9 +9,10 @@ $(document).ready(function() {
         	if (!initRefresh) {
         		initRefresh = true;
         		$('img.stitched').each(function() {
-        			if (this.dataset['path']) {
+        			if (this.dataset['path'] && this.dataset['timestamp']) {
                         var imagePath = this.dataset.path;
-                        if (report.isEdited(imagePath)) {
+                        if (report.isEdited(imagePath) && !report.isUpToDate(imagePath, this.dataset.timestamp)) 
+                        {
                             var base64 = report.getImageBase64(imagePath);
                             if (base64) {
                                 this.setAttribute('src',base64);

@@ -16,6 +16,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -982,6 +983,9 @@ public class WorkflowReport implements Report {
                                                                                 attr("width", ROI_GRID_PREVIEW_WIDTH).
                                                                                 attr("class", "stitched").
                                                                                 attr("data-path", stitchedImageRelPath).
+                                                                                attr("data-timestamp", 
+                                                                                    new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss").format(
+                                                                                        new File(stitchedImageRelPath).lastModified())).
                                                                                 attr("id", new File(stitchedImageRelPath).getName()).
                                                                                 attr("title", stitchedImageRelPath);
                                                                     });
@@ -1600,24 +1604,24 @@ public class WorkflowReport implements Report {
             return null;
         }
         double bx = rt.getValue("BX", largest) / scaleFactor;
-        double by = rt.getValue("BY", largest) / scaleFactor;
+        //double by = rt.getValue("BY", largest) / scaleFactor;
         double width = rt.getValue("Width", largest) / scaleFactor;
-        double height = rt.getValue("Height", largest) / scaleFactor;
+        //double height = rt.getValue("Height", largest) / scaleFactor;
         double major = rt.getValue("Major", largest) / scaleFactor;
-        double minor = rt.getValue("Minor", largest) / scaleFactor;
+        //double minor = rt.getValue("Minor", largest) / scaleFactor;
         double angle = rt.getValue("Angle", largest);
         double centerX = bx+(width/2.0);
-        double centerY = by+(height/2.0);
+        //double centerY = by+(height/2.0);
 
         // rotate by that angle
         IJ.run(imp3, "Rotate... ", String.format("angle=%s grid=1 interpolation=Bilinear", angle));
         // now crop and return
-        final int PADDING=50;
+        final double PADDING=0.05;
         imp3.setRoi(new Roi(
-                Math.max(0, centerX-(major/2.0)-PADDING), 
-                Math.max(0, centerY-(minor/2.0)-PADDING), 
-                Math.min(imp3.getWidth(), major+PADDING), 
-                Math.min(imp3.getHeight(), minor+PADDING)));
+                Math.max(0, centerX-(major/2.0)-Math.floor(PADDING*major)), 
+                0,
+                Math.min(imp3.getWidth(), major+Math.floor(PADDING*major)), 
+                imp3.getHeight()));
         imp3.setProcessor(imp3.getTitle(), imp3.getProcessor().crop());
         return imp3;
     }
@@ -1637,6 +1641,15 @@ public class WorkflowReport implements Report {
         if (horiz) imp.getProcessor().flipHorizontal();
         if (vert) imp.getProcessor().flipVertical();
         new FileSaver(imp).saveAsTiff(editedImagePath);
-        changedImages.put(imagePath, imp.changes);
+        changedImages.put(imagePath, true);
+    }
+    public boolean isUpToDate(String imagePath, String timestamp) {
+        File imageFile = new File(imagePath);
+        if (!imageFile.exists()) throw new RuntimeException(String.format("Could not find file %s", imagePath));
+        Date lastModified = new Date(imageFile.lastModified());
+        Date timestampDate;
+        try { timestampDate = new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss").parse(timestamp); } 
+        catch (ParseException e) {throw new RuntimeException(e);}
+        return lastModified.getTime() <= timestampDate.getTime();
     }
 }
