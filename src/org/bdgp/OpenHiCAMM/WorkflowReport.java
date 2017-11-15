@@ -985,7 +985,7 @@ public class WorkflowReport implements Report {
                                                                                 attr("data-path", stitchedImageRelPath).
                                                                                 attr("data-timestamp", 
                                                                                     new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss").format(
-                                                                                        new File(stitchedImageRelPath).lastModified())).
+                                                                                        new File(stitchedImagePath).lastModified())).
                                                                                 attr("id", new File(stitchedImageRelPath).getName()).
                                                                                 attr("title", stitchedImageRelPath);
                                                                     });
@@ -1644,6 +1644,9 @@ public class WorkflowReport implements Report {
         changedImages.put(imagePath, true);
     }
     public boolean isUpToDate(String imagePath, String timestamp) {
+        if (!Paths.get(imagePath).isAbsolute()) {
+            imagePath = Paths.get(workflowRunner.getWorkflowDir().getPath()).resolve(Paths.get(imagePath)).toString();
+        }
         File imageFile = new File(imagePath);
         if (!imageFile.exists()) throw new RuntimeException(String.format("Could not find file %s", imagePath));
         Date lastModified = new Date(imageFile.lastModified());
