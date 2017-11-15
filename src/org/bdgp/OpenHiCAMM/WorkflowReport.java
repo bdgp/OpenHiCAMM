@@ -1569,7 +1569,6 @@ public class WorkflowReport implements Report {
         ParticleAnalyzer particleAnalyzer = new ParticleAnalyzer(
                 ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES|
                 ParticleAnalyzer.CLEAR_WORKSHEET|
-                ParticleAnalyzer.ADD_TO_MANAGER|
                 ParticleAnalyzer.IN_SITU_SHOW,
                 Measurements.AREA|
                 Measurements.MEAN|
