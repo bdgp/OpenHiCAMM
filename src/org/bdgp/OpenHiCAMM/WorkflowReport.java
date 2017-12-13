@@ -974,7 +974,9 @@ public class WorkflowReport implements Report {
                                                                 // write the stitched thumbnail as an embedded HTML image.
                                                                 ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                                                                 try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
-                                                                catch (IOException e) {throw new RuntimeException(e);}
+                                                                catch (IOException e) {
+                                                                    throw new RuntimeException(e);
+                                                                }
                                                                 A().attr("onClick", String.format("report.showImageFile(\"%s\"); return false",  
                                                                             Util.escapeJavaStyleString(stitchedImageRelPath))).
                                                                     with(()->{
@@ -1360,7 +1362,15 @@ public class WorkflowReport implements Report {
                 (int)Math.ceil((double)imp.getHeight()*((double)CURATE_IMAGE_WIDTH/(double)imp.getWidth())) :
                 CURATE_IMAGE_HEIGHT; 
         imp.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
-        imp.setProcessor(imp.getTitle(), imp.getProcessor().resize(image_width, image_height));
+        ImageProcessor proc;
+        try {
+            proc = imp.getProcessor().resize(image_width, image_height);
+        }
+        catch (Throwable e) {
+            log("Could not resize image %s with width %s, height %s:%n%s", imp, image_width, image_height, e);
+            return;
+        }
+        imp.setProcessor(imp.getTitle(), proc);
         // then do a centered crop
         ImageProcessor processor = imp.getProcessor();
         processor.setRoi(
@@ -1498,57 +1508,61 @@ public class WorkflowReport implements Report {
         // convert image to 8-bit
         IJ.run(imp2, "8-bit", "");
         // crop out black rectangles
-        final double MAX_BLACK_PIXELS = 1;
         int cropX1 = 0;
-        for (int x=0; x<imp2.getWidth(); ++x) {
-            int blackPixels = 0;
-            for (int y=0; y<imp2.getHeight(); ++y) {
-                int value = imp2.getPixel(x, y)[0];
-                if (value == 0) ++blackPixels;
-            }
-            if (blackPixels < MAX_BLACK_PIXELS) {
-                cropX1 = x;
-                break;
-            }
-        }
         int cropX2 = imp2.getWidth()-1;
-        for (int x=imp2.getWidth()-1; x>=0; --x) {
-            int blackPixels = 0;
-            for (int y=0; y<imp2.getHeight(); ++y) {
-                int value = imp2.getPixel(x, y)[0];
-                if (value == 0) ++blackPixels;
-            }
-            if (blackPixels < MAX_BLACK_PIXELS) {
-                cropX2 = x;
-                break;
-            }
-        }
         int cropY1 = 0;
-        for (int y=0; y<imp2.getHeight(); ++y) {
-            int blackPixels = 0;
-            for (int x=0; x<imp2.getWidth(); ++x) {
-                int value = imp2.getPixel(x, y)[0];
-                if (value == 0) ++blackPixels;
-            }
-            if (blackPixels < MAX_BLACK_PIXELS) {
-                cropY1 = y;
-                break;
-            }
-        }
         int cropY2 = imp2.getHeight()-1;
-        for (int y=imp2.getHeight()-1; y>=0; --y) {
-            int blackPixels = 0;
-            for (int x=0; x<imp2.getHeight(); ++x) {
-                int value = imp2.getPixel(x, y)[0];
-                if (value == 0) ++blackPixels;
+        int lastCropX1 = -1;
+        int lastCropY1 = -1;
+        int lastCropX2 = -1;
+        int lastCropY2 = -1;
+        int nextCropX1 = cropX1;
+        int nextCropX2 = cropX2;
+        int nextCropY1 = cropY1;
+        int nextCropY2 = cropY2;
+        while (cropX1 != lastCropX1 || cropY1 != lastCropY1 || cropX2 != lastCropX2 || cropY2 != lastCropY2) {
+            for (int y=cropY1; y<=cropY2; ++y) {
+                int value = imp2.getPixel(cropX1, y)[0];
+                if (value == 0) {
+                    nextCropX1 = cropX1+1;
+                    break;
+                }
             }
-            if (blackPixels < MAX_BLACK_PIXELS) {
-                cropY2 = y;
-                break;
+            for (int y=cropY1; y<=cropY2; ++y) {
+                int value = imp2.getPixel(cropX2, y)[0];
+                if (value == 0) {
+                    nextCropX2 = cropX2-1;
+                    break;
+                }
             }
+            for (int x=cropX1; x<=cropX2; ++x) {
+                int value = imp2.getPixel(x, cropY1)[0];
+                if (value == 0) {
+                    nextCropY1 = cropY1+1;
+                    break;
+                }
+            }
+            for (int x=cropX1; x<=cropX2; ++x) {
+                int value = imp2.getPixel(x, cropY2)[0];
+                if (value == 0) {
+                    nextCropY2 = cropY2-1;
+                    break;
+                }
+            }
+            lastCropX1 = cropX1;
+            lastCropX2 = cropX2;
+            lastCropY1 = cropY1;
+            lastCropY2 = cropY2;
+            cropX1 = nextCropX1;
+            cropX2 = nextCropX2;
+            cropY1 = nextCropY1;
+            cropY2 = nextCropY2;
         }
         // cropping failed
-        if (!(cropX1 < cropX2 && cropY1 < cropY2)) {
+        final double MIN_SIZE_RATIO = 0.4;
+        final int MIN_WIDTH = (int)Math.floor(imp.getWidth()*MIN_SIZE_RATIO);
+        final int MIN_HEIGHT = (int)Math.floor(imp.getHeight()*MIN_SIZE_RATIO);
+        if (!(cropX1+MIN_WIDTH < cropX2 && cropY1+MIN_HEIGHT < cropY2)) {
             return null;
         }
         imp2.setRoi(new Roi(cropX1, cropY1, cropX2-cropX1+1, cropY2-cropY1+1));
