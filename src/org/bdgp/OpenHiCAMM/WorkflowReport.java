@@ -1646,7 +1646,7 @@ public class WorkflowReport implements Report {
         // rotate by that angle
         IJ.run(imp3, "Rotate... ", String.format("angle=%s grid=1 interpolation=Bilinear", angle));
         // now crop and return
-        final double PADDING=0.05;
+        final double PADDING=0.10;
         imp3.setRoi(new Roi(
                 Math.max(0, centerX-(major/2.0)-Math.floor(PADDING*major)), 
                 0,
