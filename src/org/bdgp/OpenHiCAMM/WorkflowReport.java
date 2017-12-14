@@ -1508,61 +1508,77 @@ public class WorkflowReport implements Report {
         // convert image to 8-bit
         IJ.run(imp2, "8-bit", "");
         // crop out black rectangles
-        int cropX1 = 0;
-        int cropX2 = imp2.getWidth()-1;
-        int cropY1 = 0;
-        int cropY2 = imp2.getHeight()-1;
-        int lastCropX1 = -1;
-        int lastCropY1 = -1;
-        int lastCropX2 = -1;
-        int lastCropY2 = -1;
-        int nextCropX1 = cropX1;
-        int nextCropX2 = cropX2;
-        int nextCropY1 = cropY1;
-        int nextCropY2 = cropY2;
-        while (cropX1 != lastCropX1 || cropY1 != lastCropY1 || cropX2 != lastCropX2 || cropY2 != lastCropY2) {
-            for (int y=cropY1; y<=cropY2; ++y) {
-                int value = imp2.getPixel(cropX1, y)[0];
-                if (value == 0) {
-                    nextCropX1 = cropX1+1;
-                    break;
+        int x1 = 0;
+        int x2 = imp2.getWidth()-1;
+        int y1 = 0;
+        int y2 = imp2.getHeight()-1;
+        int cropX1 = -1;
+        int cropX2 = -1;
+        int cropY1 = -1;
+        int cropY2 = -1;
+        while ((cropX1 < 0 || cropY1 < 0 || cropX2 < 0 || cropY2 < 0) && x1 < x2 && y1 < y2) {
+            if (cropX1 < 0) {
+                int black=0;
+                for (int y=y1; y<=y2; ++y) {
+                    int value = imp2.getPixel(x1, y)[0];
+                    if (value == 0) {
+                        ++x1;
+                        ++black;
+                        break;
+                    }
+                }
+                if (black == 0) {
+                    cropX1 = x1;
                 }
             }
-            for (int y=cropY1; y<=cropY2; ++y) {
-                int value = imp2.getPixel(cropX2, y)[0];
-                if (value == 0) {
-                    nextCropX2 = cropX2-1;
-                    break;
+            if (cropX2 < 0) {
+                int black=0;
+                for (int y=y1; y<=y2; ++y) {
+                    int value = imp2.getPixel(x2, y)[0];
+                    if (value == 0) {
+                        --x2;
+                        ++black;
+                        break;
+                    }
+                }
+                if (black == 0) {
+                    cropX2 = x2;
+                } 
+            }
+            if (cropY1 < 0) {
+                int black=0;
+                for (int x=x1; x<=x2; ++x) {
+                    int value = imp2.getPixel(x, y1)[0];
+                    if (value == 0) {
+                        ++y1;
+                        ++black;
+                        break;
+                    }
+                }
+                if (black == 0) {
+                    cropY1 = y1;
                 }
             }
-            for (int x=cropX1; x<=cropX2; ++x) {
-                int value = imp2.getPixel(x, cropY1)[0];
-                if (value == 0) {
-                    nextCropY1 = cropY1+1;
-                    break;
+            if (cropY2 < 0) {
+                int black=0;
+                for (int x=x1; x<=x2; ++x) {
+                    int value = imp2.getPixel(x, y2)[0];
+                    if (value == 0) {
+                        --y2;
+                        ++black;
+                        break;
+                    }
+                }
+                if (black == 0) {
+                    cropY2 = y2;
                 }
             }
-            for (int x=cropX1; x<=cropX2; ++x) {
-                int value = imp2.getPixel(x, cropY2)[0];
-                if (value == 0) {
-                    nextCropY2 = cropY2-1;
-                    break;
-                }
-            }
-            lastCropX1 = cropX1;
-            lastCropX2 = cropX2;
-            lastCropY1 = cropY1;
-            lastCropY2 = cropY2;
-            cropX1 = nextCropX1;
-            cropX2 = nextCropX2;
-            cropY1 = nextCropY1;
-            cropY2 = nextCropY2;
         }
         // cropping failed
         final double MIN_SIZE_RATIO = 0.4;
         final int MIN_WIDTH = (int)Math.floor(imp.getWidth()*MIN_SIZE_RATIO);
         final int MIN_HEIGHT = (int)Math.floor(imp.getHeight()*MIN_SIZE_RATIO);
-        if (!(cropX1+MIN_WIDTH < cropX2 && cropY1+MIN_HEIGHT < cropY2)) {
+        if ((cropX1<0 || cropY1<0 || cropX2<0 || cropY2<0) || !(cropX1+MIN_WIDTH < cropX2 && cropY1+MIN_HEIGHT < cropY2)) {
             return null;
         }
         imp2.setRoi(new Roi(cropX1, cropY1, cropX2-cropX1+1, cropY2-cropY1+1));
