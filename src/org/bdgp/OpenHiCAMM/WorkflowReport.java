@@ -1643,8 +1643,29 @@ public class WorkflowReport implements Report {
         double centerX = bx+(width/2.0);
         //double centerY = by+(height/2.0);
 
+        // compute average pixel color values to use as background color
+        long[] avg = null;
+        for (int y=0; y<imp3.getHeight(); ++y) {
+            for (int x=0; x<imp3.getWidth(); ++x) {
+                int[] pixel = imp3.getPixel(x, y);
+                if (avg == null) avg = new long[]{pixel.length};
+                for (int i=0; i<avg.length; ++i) {
+                    avg[i] += pixel[i];
+                }
+            }
+        }
+        for (int i=0; i<avg.length; ++i) {
+            avg[i] = (long)Math.floor((double)avg[i] / (double)(imp3.getWidth()*imp3.getHeight()));
+        }
+        if (avg.length >= 3) {
+            imp3.getProcessor().setBackgroundValue(new Color(avg[0], avg[1], avg[2]).getRGB());
+        }
+        else if (avg.length == 1) {
+            imp3.getProcessor().setBackgroundValue(avg[0]);
+        }
         // rotate by that angle
-        IJ.run(imp3, "Rotate... ", String.format("angle=%s grid=1 interpolation=Bilinear", angle));
+        imp3.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
+        imp3.getProcessor().rotate(angle);
         // now crop and return
         final double PADDING=0.10;
         imp3.setRoi(new Roi(
