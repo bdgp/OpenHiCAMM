@@ -1673,13 +1673,25 @@ public class WorkflowReport implements Report {
         imp3.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
         imp3.getProcessor().rotate(angle);
         // now crop and return
-        final double PADDING=0.10;
+        final double PADDING=0.15;
         imp3.setRoi(new Roi(
                 Math.max(0, centerX-(major/2.0)-Math.floor(PADDING*major)), 
                 0,
                 Math.min(imp3.getWidth(), major+Math.floor(PADDING*major)), 
                 imp3.getHeight()));
         imp3.setProcessor(imp3.getTitle(), imp3.getProcessor().crop());
+
+        // fill any black pixels with the modal background color
+        for (int y=0; y<imp3.getHeight(); ++y) {
+            PIXEL:
+            for (int x=0; x<imp3.getWidth(); ++x) {
+                int[] pixel = imp3.getPixel(x, y);
+                for (int i=0; i<pixel.length; ++i) {
+                    if (pixel[i] != 0) continue PIXEL;
+                }
+                imp3.getProcessor().putPixel(x, y, mode);
+            }
+        }
         return imp3;
     }
     
