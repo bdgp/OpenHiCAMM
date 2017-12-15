@@ -1643,26 +1643,32 @@ public class WorkflowReport implements Report {
         double centerX = bx+(width/2.0);
         //double centerY = by+(height/2.0);
 
-        // compute average pixel color values to use as background color
-        long[] avg = null;
+        // compute histogram of pixel color values
+        Map<Integer,Long> histo = new HashMap<>();
         for (int y=0; y<imp3.getHeight(); ++y) {
             for (int x=0; x<imp3.getWidth(); ++x) {
                 int[] pixel = imp3.getPixel(x, y);
-                if (avg == null) avg = new long[]{pixel.length};
-                for (int i=0; i<avg.length; ++i) {
-                    avg[i] += pixel[i];
+                if (pixel.length >= 3) {
+                    int value = new Color(pixel[0], pixel[1], pixel[2]).getRGB();
+                    histo.put(value, histo.getOrDefault(value, 0L)+1L);
+                }
+                else if (pixel.length >= 1) {
+                    histo.put(pixel[0], histo.getOrDefault(pixel[0], 0L)+1L);
                 }
             }
         }
-        for (int i=0; i<avg.length; ++i) {
-            avg[i] = (long)Math.floor((double)avg[i] / (double)(imp3.getWidth()*imp3.getHeight()));
+        // get the modal color value for the image
+        int mode = 0;
+        long modeCount = 0;
+        for (Map.Entry<Integer,Long> entry : histo.entrySet()) {
+            if (modeCount < entry.getValue()) {
+                mode = entry.getKey();
+                modeCount = entry.getValue();
+            }
         }
-        if (avg.length >= 3) {
-            imp3.getProcessor().setBackgroundValue(new Color(avg[0], avg[1], avg[2]).getRGB());
-        }
-        else if (avg.length == 1) {
-            imp3.getProcessor().setBackgroundValue(avg[0]);
-        }
+        // set the background color to the modal color value
+        imp3.getProcessor().setBackgroundValue(mode);
+
         // rotate by that angle
         imp3.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
         imp3.getProcessor().rotate(angle);
