@@ -1673,7 +1673,7 @@ public class WorkflowReport implements Report {
         imp3.getProcessor().setInterpolationMethod(ImageProcessor.BILINEAR);
         imp3.getProcessor().rotate(angle);
         // now crop and return
-        final double PADDING=0.15;
+        final double PADDING=0.25;
         imp3.setRoi(new Roi(
                 Math.max(0, centerX-(major/2.0)-Math.floor(PADDING*major)), 
                 0,
