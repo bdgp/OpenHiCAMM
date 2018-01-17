@@ -41,7 +41,7 @@ $(document).ready(function() {
     	} 
     	catch (e) {
     		if (window['report']) report.jsLog(e.stack || e);
-    	    (console.error || console.log).call(console, e.stack || e);
+    	    if (window['console']) (console.error || console.log).call(console, e.stack || e);
     	} 
         setTimeout(updateCuratedImages, 1000);
     })();
@@ -92,6 +92,6 @@ $(document).ready(function() {
     } 
     catch (e) {
         if (window['report']) report.jsLog(e.stack || e);
-        (console.error || console.log).call(console, e.stack || e);
+        if (window['console']) (console.error || console.log).call(console, e.stack || e);
     }
 });
