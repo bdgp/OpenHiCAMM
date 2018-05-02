@@ -1595,9 +1595,15 @@ public class WorkflowReport implements Report {
         // subtract background
         IJ.run(imp2, "Subtract Background...", "rolling=20 light sliding");
         // run threshold
-        IJ.setAutoThreshold(imp2, "Otsu");
+        IJ.setAutoThreshold(imp2, "Triangle");
+        // despeckle 5x
+        IJ.run(imp, "Despeckle", "");
+        IJ.run(imp, "Despeckle", "");
+        IJ.run(imp, "Despeckle", "");
+        IJ.run(imp, "Despeckle", "");
+        IJ.run(imp, "Despeckle", "");
         // run gray morphology erode
-        IJ.run(imp2, "Gray Morphology", "radius=5 type=circle operator=erode");
+        IJ.run(imp2, "Gray Morphology", "radius=7 type=circle operator=erode");
         // analyze particles to get angle of rotation
         ResultsTable rt = new ResultsTable();
         ParticleAnalyzer particleAnalyzer = new ParticleAnalyzer(
