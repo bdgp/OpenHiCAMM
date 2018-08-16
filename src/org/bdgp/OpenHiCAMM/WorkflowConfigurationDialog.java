@@ -1,7 +1,6 @@
 package org.bdgp.OpenHiCAMM;
 
 import java.awt.Component;
-import java.awt.Dialog;
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,7 +42,8 @@ public class WorkflowConfigurationDialog extends JDialog {
             Dao<WorkflowModule> wmDao,
             Dao<ModuleConfig> config)
     {
-	    super(parent, "Module Configuration", Dialog.ModalityType.DOCUMENT_MODAL);
+	    //super(parent, "Module Configuration", Dialog.ModalityType.DOCUMENT_MODAL);
+	    super(parent, "Module Configuration");
 	    this.parent = parent;
 	    this.configurations = configurations;
 	    this.wmDao = wmDao;
