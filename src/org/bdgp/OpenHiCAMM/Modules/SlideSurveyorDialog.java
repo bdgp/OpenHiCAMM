@@ -22,6 +22,7 @@ import org.micromanager.positionlist.PositionListDlg;
 import mmcorej.CMMCore;
 
 import java.awt.event.ActionListener;
+import java.awt.Dialog;
 import java.awt.event.ActionEvent;
 
 import javax.swing.JRadioButton;
@@ -88,6 +89,7 @@ public class SlideSurveyorDialog extends JPanel {
 		                    new PositionList(),
 		                    acqControlDlg,
 		                    options);
+		            SlideSurveyorDialog.this.posListDlg.setModalExclusionType(Dialog.ModalExclusionType.APPLICATION_EXCLUDE);
 		        }
 		        SlideSurveyorDialog.this.posListDlg.setVisible(true);
 		    }
