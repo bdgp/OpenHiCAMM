@@ -31,7 +31,6 @@ import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
 import org.bdgp.OpenHiCAMM.Logger;
-import org.bdgp.OpenHiCAMM.OpenHiCAMM;
 import org.bdgp.OpenHiCAMM.Util;
 import org.bdgp.OpenHiCAMM.ValidationError;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
@@ -90,10 +89,9 @@ public class SlideImager implements Module, ImageLogger {
     public void initialize(WorkflowRunner workflowRunner, WorkflowModule workflowModule) {
         this.workflowRunner = workflowRunner;
         this.workflowModule = workflowModule;
-        OpenHiCAMM openhicamm = workflowRunner.getOpenHiCAMM();
-        this.script = openhicamm.getApp();
+        this.script = MMStudio.getInstance();
 
-        Preferences prefs = Preferences.userNodeForPackage(this.script.getClass());
+        Preferences prefs = Preferences.userNodeForPackage(MMStudio.getInstance().getClass());
         MMOptions options = new MMOptions();
         options.loadSettings();
         if (this.script != null) {

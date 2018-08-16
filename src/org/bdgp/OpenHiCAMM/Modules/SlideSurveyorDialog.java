@@ -11,8 +11,13 @@ import javax.swing.JTextField;
 import javax.swing.JButton;
 
 import org.bdgp.OpenHiCAMM.DoubleSpinner;
+import org.bdgp.OpenHiCAMM.OpenHiCAMM;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
+import org.micromanager.MMOptions;
 import org.micromanager.MMStudio;
+import org.micromanager.api.PositionList;
+import org.micromanager.dialogs.AcqControlDlg;
+import org.micromanager.positionlist.PositionListDlg;
 
 import mmcorej.CMMCore;
 
@@ -22,6 +27,7 @@ import java.awt.event.ActionEvent;
 import javax.swing.JRadioButton;
 import javax.swing.ButtonGroup;
 import java.awt.event.ItemListener;
+import java.util.prefs.Preferences;
 import java.awt.event.ItemEvent;
 import javax.swing.JTextArea;
 import javax.swing.JScrollPane;
@@ -59,13 +65,31 @@ public class SlideSurveyorDialog extends JPanel {
 	private JScrollPane scrollPane;
 	JTextArea postprocessingMacro;
 	
+	private PositionListDlg posListDlg;
+	
 	public SlideSurveyorDialog(WorkflowRunner workflowRunner) {
 		this.setLayout(new MigLayout("", "[672.00,grow][]", "[][][][][][][][][][][grow]"));
 		
 		btnShowAcquisitionDialog = new JButton("Show XY Position Dialog");
 		btnShowAcquisitionDialog.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
-		        MMStudio.getInstance().showXYPositionList();
+		        if (SlideSurveyorDialog.this.posListDlg == null) {
+                    Preferences prefs = Preferences.userNodeForPackage(MMStudio.getInstance().getClass());
+                    MMOptions options = new MMOptions();
+                    options.loadSettings();
+                    AcqControlDlg acqControlDlg = new AcqControlDlg(
+                            MMStudio.getInstance().getAcquisitionEngine(), 
+                            prefs, 
+                            MMStudio.getInstance(), 
+                            options);
+		            SlideSurveyorDialog.this.posListDlg = new PositionListDlg(
+		                    MMStudio.getInstance().getMMCore(), 
+		                    MMStudio.getInstance(), 
+		                    new PositionList(),
+		                    acqControlDlg,
+		                    options);
+		        }
+		        SlideSurveyorDialog.this.posListDlg.setVisible(true);
 		    }
 		});
 		add(btnShowAcquisitionDialog, "cell 0 0");
