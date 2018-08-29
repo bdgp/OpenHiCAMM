@@ -520,6 +520,10 @@ public class WorkflowRunner {
         if (module == null) throw new RuntimeException(String.format(
                 "Unknown module: %s", task.getModuleId()));
         int updatedTasks = 0;
+        // do not update tasks with successful/failed status
+        if (task.getStatus().equals(Status.SUCCESS) || task.getStatus().equals(Status.FAIL)) {
+            return updatedTasks;
+        }
         Status status = module.setTaskStatusOnResume(task);
         if (status != null) {
             task.setStatus(status);
