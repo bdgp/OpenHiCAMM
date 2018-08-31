@@ -96,7 +96,8 @@ public class Image {
     public ImagePlus getImagePlus(WorkflowRunner runner) {
         if (this.acquisitionId == 0) {
             if (this.getPath() == null) throw new RuntimeException("getPath() is null!");
-            ImagePlus img = new ImagePlus(this.getPath());
+            String imagePath = Paths.get(runner.getWorkflowDir().getPath()).resolve(this.getPath()).toString();
+            ImagePlus img = new ImagePlus(imagePath);
             return img;
         }
         TaggedImage taggedImage = this.getTaggedImage(runner);
