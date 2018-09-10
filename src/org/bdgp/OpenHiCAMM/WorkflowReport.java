@@ -939,9 +939,16 @@ public class WorkflowReport implements Report {
                                                                 // if there is no edited image, attempt to auto-rotate the image
                                                                 if (!new File(editedImagePath).exists()) {
                                                                     ImagePlus imp = new ImagePlus(stitchedImage);
-                                                                    ImagePlus imp2 = autoRotateImage(imp);
-                                                                    if (imp2 != null) {
-                                                                        new FileSaver(imp2).saveAsTiff(editedImagePath);
+                                                                    try {
+                                                                        ImagePlus imp2 = autoRotateImage(imp);
+                                                                        if (imp2 != null) {
+                                                                            new FileSaver(imp2).saveAsTiff(editedImagePath);
+                                                                        }
+                                                                    }
+                                                                    catch (Throwable e) {
+                                                                        StringWriter sw = new StringWriter();
+                                                                        e.printStackTrace(new PrintWriter(sw));
+                                                                        log("Error when running autoRotateImage: %s", sw);
                                                                     }
                                                                 }
                                                                 String stitchedImagePath = editedImagePath != null && new File(editedImagePath).exists()?
@@ -953,6 +960,10 @@ public class WorkflowReport implements Report {
                                                                 stitchedImageFiles.add(stitchedImageRelPath);
                                                                 // Get a thumbnail of the image
                                                                 ImagePlus imp = new ImagePlus(stitchedImagePath);
+                                                                if (imp == null || imp.getProcessor() == null) {
+                                                                    log("imp == null, skipping stitched image");
+                                                                    continue;
+                                                                }
                                                                 log("stitchedImage width = %d, height = %d", imp.getWidth(), imp.getHeight());
 
                                                                 // crop the image
