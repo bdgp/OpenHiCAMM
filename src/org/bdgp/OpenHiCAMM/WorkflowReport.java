@@ -97,7 +97,6 @@ public class WorkflowReport implements Report {
     public static final int ROI_GRID_PREVIEW_WIDTH = 425; 
 
     private WorkflowRunner workflowRunner;
-    private WebEngine webEngine;
     private String reportDir;
     private String reportIndex;
     private Integer prevPoolSlideId;
@@ -116,9 +115,8 @@ public class WorkflowReport implements Report {
         IJ.log(String.format("[WorkflowReport] %s", String.format(message, args)));
     }
     
-    @Override public void initialize(WorkflowRunner workflowRunner, WebEngine webEngine, String reportDir, String reportIndex) {
+    @Override public void initialize(WorkflowRunner workflowRunner, String reportDir, String reportIndex) {
         this.workflowRunner = workflowRunner;
-        this.webEngine = webEngine;
         this.reportDir = reportDir;
         this.reportIndex = reportIndex;
         isLoaderInitialized = new HashMap<Integer,Boolean>();

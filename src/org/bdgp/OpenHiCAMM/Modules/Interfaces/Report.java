@@ -13,7 +13,7 @@ public interface Report {
      * Initialize the report and set the workflow runner
      * @param workflowRunner
      */
-    public void initialize(WorkflowRunner workflowRunner, WebEngine webEngine, String repotDir, String reportIndex);
+    public void initialize(WorkflowRunner workflowRunner, String reportDir, String reportIndex);
 
     /**
      * Runs a report and returns the report document

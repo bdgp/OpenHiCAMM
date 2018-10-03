@@ -22,16 +22,14 @@ import static org.bdgp.OpenHiCAMM.Tag.T.*;
 
 public class ImageFileReport implements Report {
     WorkflowRunner workflowRunner;
-    WebEngine webEngine;
     String reportDir;
     String reportIndex;
 
     public ImageFileReport() { }
 
-    @Override public void initialize(WorkflowRunner workflowRunner, WebEngine webEngine, String reportDir, String reportIndex) {
+    @Override public void initialize(WorkflowRunner workflowRunner, String reportDir, String reportIndex) {
         this.workflowRunner = workflowRunner;
         this.reportIndex = reportIndex;
-        this.webEngine = webEngine;
         this.reportDir = reportDir;
     }
 

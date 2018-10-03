@@ -1,11 +1,18 @@
 package org.bdgp.OpenHiCAMM;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
+import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.swing.JFrame;
@@ -14,12 +21,11 @@ import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
 
+import com.google.gson.Gson;
+import com.sun.net.httpserver.HttpServer;
+
 import ij.IJ;
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.concurrent.Worker;
-import javafx.concurrent.Worker.State;
 import javafx.embed.swing.JFXPanel;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -33,10 +39,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.TextField;
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebErrorEvent;
-import javafx.scene.web.WebView;
-import netscape.javascript.JSObject;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
@@ -44,13 +46,14 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 public class ReportDialog {
     private WorkflowRunner workflowRunner;
 
-    @FXML private WebView webView;
     @FXML private ChoiceBox<String> selectReport;
     @FXML private Button selectButton;
     @FXML private Button debugButton;
     @FXML private TextField evaluateJs;
     
     public static final boolean DEBUG=true;
+    public final int REPORT_PORT=8080;
+    public static HttpServer server = null;
 
     public ReportDialog() { }
 
@@ -84,38 +87,27 @@ public class ReportDialog {
         }
     }
 
-    @FXML void debugButtonPressed(ActionEvent event) {
-        if (webView != null) {
-            webView.getEngine().executeScript("if (!document.getElementById('FirebugLite')){E = document['createElement' + 'NS'] && document.documentElement.namespaceURI;E = E ? document['createElement' + 'NS'](E, 'script') : document['createElement']('script');E['setAttribute']('id', 'FirebugLite');E['setAttribute']('src', 'https://getfirebug.com/' + 'firebug-lite.js' + '#startOpened');E['setAttribute']('FirebugLite', '4');(document['getElementsByTagName']('head')[0] || document['getElementsByTagName']('body')[0]).appendChild(E);E = new Image;E['setAttribute']('src', 'https://getfirebug.com/' + '#startOpened');}"); 
-        }
-    }
-
-    @FXML void evaluateJs(ActionEvent event) {
-        String text = evaluateJs.getText();
-
-        try {
-            log("JS result: %s", webView.getEngine().executeScript(text).toString());
+    void openPage(String reportName) {
+        ProcessBuilder builder = new ProcessBuilder(
+            System.getProperty("os.name").toLowerCase().matches(".*win.*")?
+                "start" :
+            System.getProperty("os.name").toLowerCase().matches(".*mac.*")?
+                "open" : 
+                "xdg-open",
+            String.format("file://%s", reportName));
+        try { 
+            Process process = builder.start(); 
+            try { int result = process.waitFor(); 
+                if (result != 0) throw new RuntimeException(
+                        String.format("Got nonzero result from process {}: {}", process, result));
+            } 
+            catch (InterruptedException e) { throw new RuntimeException(e); }
         } 
-        catch (Throwable e) {
-            StringWriter sw = new StringWriter();
-            e.printStackTrace(new PrintWriter(sw));
-            log("Caught exception while running workflow: %s", sw.toString());
-        }
+        catch (IOException e) {throw new RuntimeException(e);}
     }
 
     public void runReport(Report report) {
-        WebEngine webEngine = webView.getEngine();
-
-        webEngine.getLoadWorker().stateProperty().addListener(new ChangeListener<Worker.State>() {
-            @Override public void changed(ObservableValue<? extends State> ov, State t, State t1) {
-                if (t1 == Worker.State.SUCCEEDED) {
-                    JSObject jsobj = (JSObject) webEngine.executeScript("window");
-                    jsobj.setMember("report", report);
-                }
-            }
-        });
-        
-        try{
+        try {
             // get the time the workflow completed running
             Long workflowRunTime = null;
             for (WorkflowModule startModule : this.workflowRunner.getWorkflow().select(where("parentId", null))) {
@@ -144,21 +136,12 @@ public class ReportDialog {
             reportDir.mkdirs();
             String reportIndex = "index.html";
             
-            // log errors
-            webEngine.setOnError(new EventHandler<WebErrorEvent>(){
-                @Override public void handle(WebErrorEvent event) {
-                    StringWriter sw = new StringWriter();
-                    event.getException().printStackTrace(new PrintWriter(sw));
-                    IJ.log(String.format("Error in WebView: %s%n%s", event.getMessage(), sw.toString()));
-                }});
-
-            report.initialize(this.workflowRunner, webEngine, reportDir.getPath(), reportIndex);
+            report.initialize(this.workflowRunner, reportDir.getPath(), reportIndex);
+            
             File reportIndexFile = new File(reportDir, reportIndex);
             if (reportIndexFile.exists()) {
-                String html = new String(Files.readAllBytes(Paths.get(reportIndexFile.getPath())));
-                Platform.runLater(()->{
-                    webEngine.loadContent(html);
-                });
+                startWebServer(report);
+                openPage(report.getClass().getSimpleName());
             }
 
             // if the report file's timestamp is older than the workflow run time,
@@ -178,10 +161,8 @@ public class ReportDialog {
                         report.runReport();
                         if (reportIndexFile.exists()) {
                             try {
-                                String html = new String(Files.readAllBytes(Paths.get(reportIndexFile.getPath())));
-                                Platform.runLater(()->{
-                                    webEngine.loadContent(html);
-                                });
+                                startWebServer(report);
+                                openPage(report.getClass().getSimpleName());
                             } 
                             catch (Exception e) {throw new RuntimeException(e);}
                         }
@@ -200,10 +181,73 @@ public class ReportDialog {
         }
     }
     
+    synchronized public void startWebServer(Report report) {
+        // start HTTP server
+        String reportName = report.getClass().getSimpleName();
+        if (server != null) {
+            server.stop(0);
+        }
+        try { server = HttpServer.create(new InetSocketAddress(REPORT_PORT), 0); } 
+        catch (IOException e) { throw new RuntimeException(e); }
+        server.createContext(String.format("/%s/", reportName), (t)->{
+            // get command
+            String command = new File(t.getRequestURI().getPath()).getName().toString();
+            // decode query params
+            Map<String,List<String>> query = new LinkedHashMap<>();
+            for (String q : t.getRequestURI().getQuery().split("&")) {
+                String[] kv = q.split("=", 2);
+                String key = URLDecoder.decode(kv[0], "UTF-8");
+                String value = kv.length > 1? URLDecoder.decode(kv[1], "UTF-8") : "";
+                if (!query.containsKey(key)) query.put(key, new ArrayList<>());
+                query.get(key).add(value);
+            }
+            Gson gson = new Gson();
+            if (query.containsKey("args")) {
+                try {
+                    // decode JSON from args parameter
+                    Object[] args = gson.fromJson(query.get("args").get(0), Object[].class);
+                    List<Class<?>> classes = new ArrayList<>();
+                    for (Object arg : args) {
+                        classes.add(arg.getClass());
+                    }
+                    // invoke the method on the report
+                    Method method = report.getClass().getDeclaredMethod(command, classes.toArray(new Class<?>[]{}));
+                    Object obj = method.invoke(report, args);
+                    String result = gson.toJson(obj);
+                    t.sendResponseHeaders(200, result.getBytes().length);
+                    OutputStream os = t.getResponseBody();
+                    os.write(result.getBytes());
+                    os.close();
+                }
+                catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            else {
+                // invoke the method on the report
+                try {
+                    Method method = report.getClass().getDeclaredMethod(command);
+                    Object obj = method.invoke(report);
+                    String result = gson.toJson(obj);
+                    t.sendResponseHeaders(200, result.getBytes().length);
+                    OutputStream os = t.getResponseBody();
+                    os.write(result.getBytes());
+                    os.close();
+                } 
+                catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) { 
+                    throw new RuntimeException(e); 
+                }
+            }
+            
+        });
+        server.setExecutor(null); // creates a default executor
+        server.start();
+    }
+    
     public static class Frame extends JFrame {
         FXMLLoader loader;
         ReportDialog controller;
-
+        
         public Frame(WorkflowRunner workflowRunner) {
             JFXPanel fxPanel = new JFXPanel();
             this.add(fxPanel);
@@ -212,13 +256,6 @@ public class ReportDialog {
             this.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 
             Platform.runLater(()->{
-                // log JavaFX exceptions
-                Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
-                    StringWriter sw = new StringWriter();
-                    throwable.printStackTrace(new PrintWriter(sw));
-                    log("Caught exception while running workflow: %s", sw.toString());
-                });
-
                 try {
                     loader = new FXMLLoader(getClass().getResource("/ReportDialog.fxml"));
                     Parent root = loader.load();
@@ -242,5 +279,4 @@ public class ReportDialog {
             });
         }
     }
-
 }
