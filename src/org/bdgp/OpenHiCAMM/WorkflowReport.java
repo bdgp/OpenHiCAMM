@@ -651,7 +651,14 @@ public class WorkflowReport implements Report {
                                             {
                                                 continue;
                                             }
-                                            int[] indices = MDUtils.getIndices(imageLabelConf.getValue());
+                                            int[] indices;
+                                            try { indices = MDUtils.getIndices(imageLabelConf.getValue()); }
+                                            catch (Throwable e) {
+                                                StringWriter sw = new StringWriter();
+                                                e.printStackTrace(new PrintWriter(sw));
+                                                log("Couldn't parse indices for image %s%n%s", imageLabelConf.getValue());
+                                                continue;
+                                            }
                                             if (indices != null && indices.length >= 4) {
                                                 String imageLabel = MDUtils.generateLabel(indices[0], indices[1], indices[2], 0);
                                                 if (!imagerTasks.containsKey(imageLabel)) {
