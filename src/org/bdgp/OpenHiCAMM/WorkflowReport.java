@@ -1434,8 +1434,8 @@ public class WorkflowReport implements Report {
         }
         else {
             this.webEngine.executeScript(String.format(
-                    "(function(f){$.notify('Failed to write image \"'+f+'\"!','error')})(\"%s\")", 
-                    Util.escapeJavaStyleString(outputFile)));
+                    "(function(f,d){$.notify('Failed to write image \"'+f+'\"! Make sure shared folder \"'+d+'\" has been mounted!','error')})(\"%s\",\"%s\")", 
+                    Util.escapeJavaStyleString(outputFile), Util.escapeJavaStyleString(imagesFolder)));
         }
     }
     
