@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.security.SecureRandom;
 
 import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
@@ -1410,9 +1411,14 @@ public class WorkflowReport implements Report {
             stitchedImagePath = Paths.get(workflowRunner.getWorkflowDir().getPath()).resolve(Paths.get(stitchedImagePath)).toString();
         }
         // /data/insitu_images/images/stage${stage}/lm(l|d|v)_${experiment_id}_${stage}.jpg
-        String imagesFolder = "/data/insitu_images/images";
+        //String imagesFolder = "/data/insitu_images/images";
+        String imagesFolder = "/Volumes/images";
         String stageFolderName = String.format("stage%s",stage);
-        String fileName = String.format("lm%s_%s_%s.jpg", orientation.charAt(0), experimentId, stage);
+        SecureRandom secureRandom = new SecureRandom();
+        byte[] tokenBytes = new byte[8];
+        secureRandom.nextBytes(tokenBytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
+        String fileName = String.format("lm%s_%s_%s_%s.jpg", orientation.charAt(0), experimentId, token, stage);
         String outputFile = Paths.get(imagesFolder, stageFolderName, fileName).toString();
 
         String editedImagePath = getEditedImagePath(stitchedImagePath);
