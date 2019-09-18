@@ -33,7 +33,7 @@ public class CustomMacroROIFinderDialog extends JPanel {
 	public static final double DEFAULT_OVERLAP_PCT = 25.0;
 	public static final double DEFAULT_ROI_MARGIN_PCT = 2.0;
 	public static final double DEFAULT_HIRES_PIXEL_SIZE_UM = 0.1253;
-	public static final double DEFAULT_ROI_IMAGE_SCALE_FACTOR = 0.5;
+	public static final double DEFAULT_ROI_IMAGE_SCALE_FACTOR = 1.0;
 
 	public static final int DEFAULT_IMAGE_WIDTH = 4928;
 	public static final int DEFAULT_IMAGE_HEIGHT = 3264;
@@ -49,7 +49,7 @@ public class CustomMacroROIFinderDialog extends JPanel {
 	        "run(\"Convert to Mask\");\n"+
 	        "run(\"Gray Morphology\", \"radius=7 type=circle operator=dilate\");\n"+
 	        "run(\"Set Measurements...\", \"area mean min center bounding fit shape area_fraction redirect=None decimal=3\");\n"+
-            "run(\"Analyze Particles...\", \"size=500-5000 exclude clear add in_situ\");\n";
+            "run(\"Analyze Particles...\", \"size=1000-20000 exclude clear add in_situ\");\n";
 	private JButton btnRoiTest;
 	private JLabel overlapPctLabel;
 	private JLabel lblHiresPixelSize;
