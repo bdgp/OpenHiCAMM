@@ -40,6 +40,9 @@ public class CustomMacroROIFinderDialog extends JPanel {
 	public static final TaskType DEFAULT_TASK_TYPE = TaskType.SERIAL;
 
 	public static final String DEFAULT_CUSTOM_MACRO = 
+	        "run(\"RGB Stack\");\n"+
+            "run(\"Delete Slice\");\n"+
+            "run(\"Delete Slice\");\n"+
 	        "run(\"8-bit\");\n"+
             "setAutoThreshold(\"IsoData\");\n"+
 	        "setOption(\"BlackBackground\", false);\n"+
