@@ -1411,8 +1411,8 @@ public class WorkflowReport implements Report {
             stitchedImagePath = Paths.get(workflowRunner.getWorkflowDir().getPath()).resolve(Paths.get(stitchedImagePath)).toString();
         }
         // /data/insitu_images/images/stage${stage}/lm(l|d|v)_${experiment_id}_${stage}.jpg
-        String imagesFolder = "/data/insitu_images/images";
-        //String imagesFolder = "/Volumes/images";
+        //String imagesFolder = "/data/insitu_images/images";
+        String imagesFolder = "/Volumes/images";
         String stageFolderName = String.format("stage%s",stage);
         SecureRandom secureRandom = new SecureRandom();
         byte[] tokenBytes = new byte[8];
