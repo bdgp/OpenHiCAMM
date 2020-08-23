@@ -1,12 +1,17 @@
 package org.bdgp.OpenHiCAMM;
 
 import java.awt.Dimension;
+import java.io.EOFException;
 import java.io.File;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
@@ -36,6 +41,9 @@ public class OpenHiCAMM implements MMPlugin {
 	private WorkflowDialog dialog;
 	private static List<String> moduleNames = null;
 	private static List<String> reportNames = null;
+    private static Logger log = Logger.getLogger("org.bdgp.OpenHiCAMM");
+    private static Boolean clientServerMode = false;
+    private static OpenHiCAMM instance = null;
 
 	/**
 	 *  The menu name is stored in a static string, so Micro-Manager
@@ -43,12 +51,84 @@ public class OpenHiCAMM implements MMPlugin {
 	 */
 	public static String menuName = "OpenHiCAMM";	
 	public static String tooltipDescription = "Automated microscope imaging workflow tool";
+	private static Boolean loadedAutofocus = false;
+	
+	public static boolean isClentServerMode() {
+		return clientServerMode;
+	}
 	
     // Add the AutoFocus plugin
-	static {
-        MMStudio.getInstance().getAutofocusManager().setAFPluginClassName(FastFFTAutoFocus.class.getName());
-        try { MMStudio.getInstance().getAutofocusManager().refresh(); } 
-        catch (MMException e) { ReportingUtils.logError(e.getMessage()); }
+	public OpenHiCAMM() {
+		synchronized(OpenHiCAMM.instance) {
+            if (OpenHiCAMM.instance == null) OpenHiCAMM.instance = this;
+		}
+		synchronized(OpenHiCAMM.loadedAutofocus) {
+            if (!loadedAutofocus) {
+                MMStudio.getInstance().getAutofocusManager().setAFPluginClassName(FastFFTAutoFocus.class.getName());
+                try { MMStudio.getInstance().getAutofocusManager().refresh(); } 
+                catch (MMException e) { ReportingUtils.logError(e.getMessage()); }
+                loadedAutofocus = true;
+            }
+		}
+	}
+	
+	public static class Command { }
+	public static class SampleCommand extends Command {
+		public SampleCommand() {}
+	}
+	public static class Result { }
+	public static class Success extends Result {
+		public Success() {}
+	}
+	public static class Fail extends Result {
+		public String message;
+		public Fail(String message) {
+			this.message = message;
+		}
+	}
+	
+	public static void main(String[] args) {
+		synchronized(OpenHiCAMM.clientServerMode) {
+            clientServerMode = true;
+		}
+
+		if (args.length > 0 && args[0].equals("client")) {
+			log.info(String.format("Starting OpenHiCAMM in client mode"));
+
+			try {
+                ObjectInputStream ois = new ObjectInputStream(System.in);
+                ObjectOutputStream oos = new ObjectOutputStream(System.out);
+                while (true) {
+                    try {
+                        Object o = ois.readObject();
+                        if (o instanceof SampleCommand) {
+                        	SampleCommand sc = (SampleCommand) o;
+                        	try {
+                        		// Run some command here
+                        	}
+                        	catch (Throwable e) {
+                                oos.writeObject(new Fail(e.getMessage()));
+                                continue;
+                        	}
+                        	oos.writeObject(new Success());
+                        }
+                        else {
+                        	throw new RuntimeException(String.format("Unrecognized deserialized class %s", 
+                        			o.getClass().getCanonicalName()));
+                        }
+                    }
+                    catch (ClassNotFoundException e) {throw new RuntimeException(e);}
+                    catch (EOFException e) { break; }
+                }
+			}
+            catch (IOException e) {throw new RuntimeException(e);}
+			System.exit(0);
+		}
+		else {
+			log.info(String.format("Starting OpenHiCAMM in server mode"));
+			new OpenHiCAMM().show();
+			log.info(String.format("Starting client process"));
+		}
 	}
 
 	/**

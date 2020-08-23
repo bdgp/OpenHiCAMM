@@ -85,7 +85,7 @@ public class CustomMacroROIFinderDialog extends JPanel {
         add(overlapPctLabel, "cell 0 1");
         
         overlapPct = new DoubleSpinner();
-        overlapPct.setValue(new Double(DEFAULT_OVERLAP_PCT));
+        overlapPct.setValue(DEFAULT_OVERLAP_PCT);
         add(overlapPct, "cell 1 1");
         
         lblHiresPixelSize = new JLabel("HIRes Pixel Size: ");

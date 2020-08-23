@@ -142,7 +142,7 @@ public class SlideImagerDialog extends JPanel {
         
         dummyImageCount = new JSpinner();
         add(dummyImageCount, "cell 0 7");
-        dummyImageCount.setValue(new Integer(DEFAULT_DUMMY_IMAGE_COUNT));
+        dummyImageCount.setValue(DEFAULT_DUMMY_IMAGE_COUNT);
         
         JLabel lblPixelSize = new JLabel("Pixel Size: ");
         add(lblPixelSize, "flowx,cell 0 8");
@@ -182,14 +182,14 @@ public class SlideImagerDialog extends JPanel {
         add(initialZPos, "cell 0 11");
         CMMCore mmcore = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
         String focusDevice = mmcore.getFocusDevice();
-        try { initialZPos.setValue(new Double(mmcore.getPosition(focusDevice))); } 
+        try { initialZPos.setValue((mmcore.getPosition(focusDevice))); } 
         catch (Exception e1) { /* Do nothing */ }
         
         JButton btnSetPosition = new JButton("Read From Device");
         btnSetPosition.setEnabled(false);
         btnSetPosition.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                try { initialZPos.setValue(new Double(mmcore.getPosition(focusDevice))); } 
+                try { initialZPos.setValue(mmcore.getPosition(focusDevice)); } 
                 catch (Exception e1) {throw new RuntimeException(e1);}
             }
         });

@@ -140,6 +140,10 @@ public class Util {
             throw new RuntimeException(String.format("Could not macroEscape value: %s", value));
         }
     }
+    
+    public static String f(String fs, Object... args) {
+    	return String.format(fs, args);
+    }
 
     /**
      * Escape a java-style string. Adapted from Apache Commons.

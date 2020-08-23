@@ -80,7 +80,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
         // Get the Image record
     	Config imageIdConf = config.get("imageId");
     	if (imageIdConf == null) throw new RuntimeException("No imageId task configuration was set by the slide imager!");
-        Integer imageId = new Integer(imageIdConf.getValue());
+        Integer imageId = Integer.parseInt(imageIdConf.getValue());
         Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
         final Image image = imageDao.selectOneOrDie(where("id",imageId));
 
@@ -108,31 +108,29 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
     	try {
     	    Config imageScaleFactorConf = config.get("imageScaleFactor");
-    	    double imageScaleFactor = imageScaleFactorConf != null? new Double(imageScaleFactorConf.getValue()) : 1.0;
+    	    double imageScaleFactor = imageScaleFactorConf != null? Double.parseDouble(imageScaleFactorConf.getValue()) : 1.0;
 
     	    Config pixelSizeConf = config.get("pixelSize");
-			Double pixelSize = pixelSizeConf != null? new Double(pixelSizeConf.getValue()) : null;
+			Double pixelSize = pixelSizeConf != null? Double.parseDouble(pixelSizeConf.getValue()) : null;
 
     	    Config pixelSizeXConf = config.get("pixelSizeX");
-    	    Double pixelSizeX = pixelSizeXConf != null? new Double(pixelSizeXConf.getValue()) : pixelSize;
-    	    if (pixelSizeX == null) throw new RuntimeException("Config value pixelSizeX was not inherited!");
+    	    Double pixelSizeX = pixelSizeXConf != null? Double.parseDouble(pixelSizeXConf.getValue()) : pixelSize;
 			logger.fine(String.format("%s: Using pixelSizeX: %f", label, pixelSizeX));
 
     	    Config pixelSizeYConf = config.get("pixelSizeY");
-    	    Double pixelSizeY = pixelSizeYConf != null? new Double(pixelSizeYConf.getValue()) : pixelSize;
-    	    if (pixelSizeY == null) throw new RuntimeException("Config value pixelSizeY was not inherited!");
+    	    Double pixelSizeY = pixelSizeYConf != null? Double.parseDouble(pixelSizeYConf.getValue()) : pixelSize;
 			logger.fine(String.format("%s: Using pixelSizeY: %f", label, pixelSizeY));
 
-			double hiResPixelSize = new Double(config.get("hiResPixelSize").getValue());
+			double hiResPixelSize = Double.parseDouble(config.get("hiResPixelSize").getValue());
 			logger.fine(String.format("%s: Using hiResPixelSize: %f", label, hiResPixelSize));
 
-			double roiMarginPct = new Double(config.get("roiMarginPct").getValue());
+			double roiMarginPct = Double.parseDouble(config.get("roiMarginPct").getValue());
 			logger.fine(String.format("%s: Using ROI margin size in percent of image size: %f", label, roiMarginPct));
 
 			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
 			logger.fine(String.format("%s: Using positionIndex: %d", label, positionIndex));
 
-			double overlapPct = new Double(config.get("overlapPct").getValue());
+			double overlapPct = Double.parseDouble(config.get("overlapPct").getValue());
 			logger.fine(String.format("%s: Using percentage overlap: %f", label, overlapPct));
 
             // get invertXAxis and invertYAxis conf values
@@ -143,23 +141,23 @@ public abstract class ROIFinder implements Module, ImageLogger {
 
     	    Config imageWidthConf = config.get("imageWidth");
     	    if (imageWidthConf == null) throw new RuntimeException("Config value imageWidth was not found!");
-			Integer imageWidth = new Integer(imageWidthConf.getValue());
+			Integer imageWidth = Integer.parseInt(imageWidthConf.getValue());
 			logger.fine(String.format("%s: Using imageWidth: %s", label, imageWidth));
 			
     	    Config imageHeightConf = config.get("imageHeight");
     	    if (imageHeightConf == null) throw new RuntimeException("Config value imageHeight was not found!");
-			Integer imageHeight = new Integer(imageHeightConf.getValue());
+			Integer imageHeight = Integer.parseInt(imageHeightConf.getValue());
 			logger.fine(String.format("%s: Using imageHeight: %s", label, imageHeight));
 
 			Config XPositionUmConf = config.get("XPositionUm");
 			double x_stage = XPositionUmConf == null? 
 			        MDUtils.getXPositionUm(taggedImage.tags) : 
-                    new Double(XPositionUmConf.getValue());
+                    Double.parseDouble(XPositionUmConf.getValue());
 			
 			Config YPositionUmConf = config.get("YPositionUm");
 			double y_stage = YPositionUmConf == null?
 			        MDUtils.getYPositionUm(taggedImage.tags) :
-			        new Double(YPositionUmConf.getValue());
+			        Double.parseDouble(YPositionUmConf.getValue());
 			
 			// Delete any old ROI records
             Dao<ROI> roiDao = this.workflowRunner.getWorkflowDb().table(ROI.class);
@@ -241,9 +239,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
                         String mspLabel = String.format("%s.%s.ROI%d.X%d.Y%d", 
                                 positionName, imageLabel, roi.getId(), x, y);
                         msp.setProperty("stitchGroup", "ROI"+roi.getId());
-                        msp.setProperty("ROI", new Integer(roi.getId()).toString());
-                        msp.setProperty("tileX", new Integer(x).toString());
-                        msp.setProperty("tileY", new Integer(y).toString());
+                        msp.setProperty("ROI", Integer.toString(roi.getId()));
+                        msp.setProperty("tileX", Integer.toString(x));
+                        msp.setProperty("tileY", Integer.toString(y));
                         msp.setLabel(mspLabel);
                         msp.add(sp);
                         msp.setDefaultXYStage("XYStage");
@@ -418,25 +416,25 @@ public abstract class ROIFinder implements Module, ImageLogger {
             	}
 
             	if (confs.containsKey("hiResPixelSize")) {
-            	    dialog.hiResPixelSize.setValue(new Double(confs.get("hiResPixelSize").getValue()));
+            	    dialog.hiResPixelSize.setValue(Double.parseDouble(confs.get("hiResPixelSize").getValue()));
             	}
             	if (confs.containsKey("minRoiArea")) {
-            	    dialog.minRoiArea.setValue(new Double(confs.get("minRoiArea").getValue()));
+            	    dialog.minRoiArea.setValue(Double.parseDouble(confs.get("minRoiArea").getValue()));
             	}
             	if (confs.containsKey("overlapPct")) {
-            	    dialog.overlapPct.setValue(new Double(confs.get("overlapPct").getValue()));
+            	    dialog.overlapPct.setValue(Double.parseDouble(confs.get("overlapPct").getValue()));
             	}
             	if (confs.containsKey("roiMarginPct")) {
-            	    dialog.roiMarginPct.setValue(new Double(confs.get("roiMarginPct").getValue()));
+            	    dialog.roiMarginPct.setValue(Double.parseDouble(confs.get("roiMarginPct").getValue()));
             	}
             	if (confs.containsKey("roiImageScaleFactor")) {
-            	    dialog.roiImageScaleFactor.setValue(new Double(confs.get("roiImageScaleFactor").getValue()));
+            	    dialog.roiImageScaleFactor.setValue(Double.parseDouble(confs.get("roiImageScaleFactor").getValue()));
             	}
             	if (confs.containsKey("imageWidth")) {
-            	    dialog.imageWidth.setValue(new Integer(confs.get("imageWidth").getValue()));
+            	    dialog.imageWidth.setValue(Integer.parseInt(confs.get("imageWidth").getValue()));
             	}
             	if (confs.containsKey("imageHeight")) {
-            	    dialog.imageHeight.setValue(new Integer(confs.get("imageHeight").getValue()));
+            	    dialog.imageHeight.setValue(Integer.parseInt(confs.get("imageHeight").getValue()));
             	}
                 return dialog;
             }
@@ -517,7 +515,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
                             this.workflowModule.getName(), slideId));
                     
                     // delete any old slidepos and slideposlist records
-                    Slide slide = slideDao.selectOneOrDie(where("id",new Integer(slideIdConf.getValue())));
+                    Slide slide = slideDao.selectOneOrDie(where("id",Integer.parseInt(slideIdConf.getValue())));
                     logger.fine(String.format("Deleting old position lists"));
                     List<SlidePosList> oldSlidePosLists = slidePosListDao.select(
                             where("slideId",slide.getId()).
@@ -555,7 +553,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
                 // Get the Image record
                 Config imageIdConf = config.get("imageId");
                 if (imageIdConf != null) {
-                    Integer imageId = new Integer(imageIdConf.getValue());
+                    Integer imageId = Integer.parseInt(imageIdConf.getValue());
 
                     logger.info(String.format("Using image ID: %d", imageId));
                     Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);

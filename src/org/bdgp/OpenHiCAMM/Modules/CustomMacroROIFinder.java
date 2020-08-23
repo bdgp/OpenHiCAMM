@@ -49,7 +49,7 @@ public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogg
 
         Config roiImageScaleFactorConf = config.get("roiImageScaleFactor");
         if (roiImageScaleFactorConf == null) throw new RuntimeException("Config value roiImageScaleFactor not found!");
-        Double roiImageScaleFactor = new Double(roiImageScaleFactorConf.getValue());
+        Double roiImageScaleFactor = Double.parseDouble(roiImageScaleFactorConf.getValue());
 
         Config customMacroConf = config.get("customMacro");
         if (customMacroConf == null) throw new RuntimeException("Config value customMacro not found!");
@@ -164,22 +164,22 @@ public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogg
             	}
 
             	if (confs.containsKey("hiResPixelSize")) {
-            	    dialog.hiResPixelSize.setValue(new Double(confs.get("hiResPixelSize").getValue()));
+            	    dialog.hiResPixelSize.setValue(Double.parseDouble(confs.get("hiResPixelSize").getValue()));
             	}
             	if (confs.containsKey("overlapPct")) {
-            	    dialog.overlapPct.setValue(new Double(confs.get("overlapPct").getValue()));
+            	    dialog.overlapPct.setValue(Double.parseDouble(confs.get("overlapPct").getValue()));
             	}
             	if (confs.containsKey("roiMarginPct")) {
-            	    dialog.roiMarginPct.setValue(new Double(confs.get("roiMarginPct").getValue()));
+            	    dialog.roiMarginPct.setValue(Double.parseDouble(confs.get("roiMarginPct").getValue()));
             	}
             	if (confs.containsKey("roiImageScaleFactor")) {
-            	    dialog.roiImageScaleFactor.setValue(new Double(confs.get("roiImageScaleFactor").getValue()));
+            	    dialog.roiImageScaleFactor.setValue(Double.parseDouble(confs.get("roiImageScaleFactor").getValue()));
             	}
             	if (confs.containsKey("imageWidth")) {
-            	    dialog.imageWidth.setValue(new Integer(confs.get("imageWidth").getValue()));
+            	    dialog.imageWidth.setValue(Integer.parseInt(confs.get("imageWidth").getValue()));
             	}
             	if (confs.containsKey("imageHeight")) {
-            	    dialog.imageHeight.setValue(new Integer(confs.get("imageHeight").getValue()));
+            	    dialog.imageHeight.setValue(Integer.parseInt(confs.get("imageHeight").getValue()));
             	}
                 if (confs.containsKey("customMacro")) {
                     dialog.customMacro.setText(confs.get("customMacro").getValue());

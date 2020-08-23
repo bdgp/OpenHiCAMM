@@ -57,14 +57,14 @@ public class ROIFinderDialog extends JPanel {
         add(lblMinRoiArea, "cell 0 0");
         
         minRoiArea = new DoubleSpinner();
-        minRoiArea.setValue(new Double(DEFAULT_MIN_ROI_AREA));
+        minRoiArea.setValue(DEFAULT_MIN_ROI_AREA);
         add(minRoiArea, "cell 1 0");
         
         overlapPctLabel = new JLabel("Tile Overlap Percentage:");
         add(overlapPctLabel, "cell 0 1");
         
         overlapPct = new DoubleSpinner();
-        overlapPct.setValue(new Double(DEFAULT_OVERLAP_PCT));
+        overlapPct.setValue(DEFAULT_OVERLAP_PCT);
         add(overlapPct, "cell 1 1");
         
         lblHiresPixelSize = new JLabel("HIRes Pixel Size: ");
@@ -135,7 +135,7 @@ public class ROIFinderDialog extends JPanel {
                 Image image = new Image();
                 Map<String,Config> config = new HashMap<String,Config>();
                 config.put("minRoiArea", new Config(roiFinder.workflowModule.getId(), 
-                        "minRoiArea", new Double((Double)minRoiArea.getValue()).toString()));
+                        "minRoiArea", Double.toString((Double)minRoiArea.getValue())));
                 roiFinder.process(image, taggedImage, logger, imageLogRunner, config);
                 imageLogRunner.display();
             }

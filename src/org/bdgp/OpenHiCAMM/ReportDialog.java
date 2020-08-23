@@ -3,6 +3,7 @@ package org.bdgp.OpenHiCAMM;
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -76,8 +77,11 @@ public class ReportDialog {
         String reportName = selectReport.getSelectionModel().getSelectedItem();
         if (reportName != null && !reportName.equals("- Select a report -")) {
             Report report;
-            try { report = (Report)Class.forName(reportName).newInstance(); } 
-            catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) { 
+            try {
+				report = (Report)Class.forName(reportName).getDeclaredConstructor().newInstance();
+			} 
+            catch (InstantiationException|IllegalAccessException|ClassNotFoundException|IllegalArgumentException|InvocationTargetException|NoSuchMethodException|SecurityException e) 
+            { 
                 throw new RuntimeException(e); 
             }
             runReport(report);
@@ -85,9 +89,9 @@ public class ReportDialog {
     }
 
     @FXML void debugButtonPressed(ActionEvent event) {
-        if (webView != null) {
-            webView.getEngine().executeScript("if (!document.getElementById('FirebugLite')){E = document['createElement' + 'NS'] && document.documentElement.namespaceURI;E = E ? document['createElement' + 'NS'](E, 'script') : document['createElement']('script');E['setAttribute']('id', 'FirebugLite');E['setAttribute']('src', 'https://getfirebug.com/' + 'firebug-lite.js' + '#startOpened');E['setAttribute']('FirebugLite', '4');(document['getElementsByTagName']('head')[0] || document['getElementsByTagName']('body')[0]).appendChild(E);E = new Image;E['setAttribute']('src', 'https://getfirebug.com/' + '#startOpened');}"); 
-        }
+        //if (webView != null) {
+        //    webView.getEngine().executeScript("if (!document.getElementById('FirebugLite')){E = document['createElement' + 'NS'] && document.documentElement.namespaceURI;E = E ? document['createElement' + 'NS'](E, 'script') : document['createElement']('script');E['setAttribute']('id', 'FirebugLite');E['setAttribute']('src', 'https://getfirebug.com/' + 'firebug-lite.js' + '#startOpened');E['setAttribute']('FirebugLite', '4');(document['getElementsByTagName']('head')[0] || document['getElementsByTagName']('body')[0]).appendChild(E);E = new Image;E['setAttribute']('src', 'https://getfirebug.com/' + '#startOpened');}"); 
+        //}
     }
 
     @FXML void evaluateJs(ActionEvent event) {

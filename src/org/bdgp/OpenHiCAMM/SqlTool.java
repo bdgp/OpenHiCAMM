@@ -19,16 +19,18 @@ public class SqlTool {
         File rcFile = new File(cwd, "sqltool.rc");
         PrintWriter pw = null;
         String defaultDb = null;
-        for (Path file : Files.newDirectoryStream(Paths.get(cwd), "*.db.properties")) {
-            if (pw == null) pw = new PrintWriter(rcFile.getPath());
-            defaultDb = file.toFile().getName().replaceFirst("\\.db\\.properties$", "");
-            // load the database and start a server if needed
-            Connection c = Connection.get(new File(new File(cwd), defaultDb+".db").getPath(), null, true);
-            pw.println(String.format("urlid %s", defaultDb));
-            pw.println(String.format("url %s", c.url));
-            pw.println(String.format("username %s", c.user));
-            pw.println(String.format("password %s", c.pw));
-            pw.println();
+        try (var paths = Files.newDirectoryStream(Paths.get(cwd), "*.db.properties")) {
+            for (Path file : paths) {
+                if (pw == null) pw = new PrintWriter(rcFile.getPath());
+                defaultDb = file.toFile().getName().replaceFirst("\\.db\\.properties$", "");
+                // load the database and start a server if needed
+                Connection c = Connection.get(new File(new File(cwd), defaultDb+".db").getPath(), null, true);
+                pw.println(String.format("urlid %s", defaultDb));
+                pw.println(String.format("url %s", c.url));
+                pw.println(String.format("username %s", c.user));
+                pw.println(String.format("password %s", c.pw));
+                pw.println();
+            }
         }
         if (pw != null) pw.close();
 

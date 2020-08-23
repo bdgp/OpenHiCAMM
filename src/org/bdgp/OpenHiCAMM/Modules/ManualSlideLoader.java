@@ -57,7 +57,7 @@ public class ManualSlideLoader implements Module {
         // get the PoolSlide ID to load
         Config loadPoolSlideIdConf = config.get("loadPoolSlideId");
         Integer loadPoolSlideId = loadPoolSlideIdConf != null && loadPoolSlideIdConf.getValue() != null? 
-        		new Integer(loadPoolSlideIdConf.getValue()) : null;
+        		Integer.parseInt(loadPoolSlideIdConf.getValue()) : null;
         if (loadPoolSlideId != null) logger.info(String.format("Loading poolSlide ID: %s", Util.escape(loadPoolSlideId)));
         PoolSlide loadPoolSlide = loadPoolSlideId != null? poolSlideDao.selectOneOrDie(where("id",loadPoolSlideId)) : null;
         if (loadPoolSlide != null) logger.info(String.format("Loading poolSlide: %s", Util.escape(loadPoolSlide)));
@@ -125,7 +125,7 @@ public class ManualSlideLoader implements Module {
 				}
 				if (conf.containsKey("poolId")) {
 					Dao<Pool> poolDao = workflowRunner.getWorkflowDb().table(Pool.class);
-					Pool pool = poolDao.selectOne(where("id",new Integer(conf.get("poolId").getValue())));
+					Pool pool = poolDao.selectOne(where("id",Integer.parseInt(conf.get("poolId").getValue())));
 					if (pool != null) {
                         dialog.poolList.setSelectedValue(pool.getName(), true);
 					}
@@ -145,9 +145,9 @@ public class ManualSlideLoader implements Module {
 
         // Get the pool record
         Dao<Pool> poolDao = this.workflowRunner.getWorkflowDb().table(Pool.class);
-        Pool pool = poolDao.selectOne(where("id", new Integer(poolId.getValue())));
+        Pool pool = poolDao.selectOne(where("id", Integer.parseInt(poolId.getValue())));
         if (pool == null) throw new RuntimeException("No pool record could be found!");
-        List<PoolSlide> poolSlides = poolSlideDao.select(where("poolId",new Integer(poolId.getValue())));
+        List<PoolSlide> poolSlides = poolSlideDao.select(where("poolId",Integer.parseInt(poolId.getValue())));
     	Collections.sort(poolSlides);
 
     	Dao<Task> taskDao = workflowRunner.getWorkflowDb().table(Task.class);
@@ -169,14 +169,14 @@ public class ManualSlideLoader implements Module {
 
                 TaskConfig poolSlideId = new TaskConfig(loadTask.getId(),
                         "loadPoolSlideId", 
-                        poolSlide != null? new Integer(poolSlide.getId()).toString() : null);
+                        poolSlide != null? Integer.toString(poolSlide.getId()) : null);
                 taskConfigDao.insert(poolSlideId);
                 workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Creating task config: %s", 
                         this.workflowModule.getName(), poolSlideId));
 
                 TaskConfig slideId = new TaskConfig(loadTask.getId(),
                         "slideId", 
-                        new Integer(poolSlide.getSlideId()).toString());
+                        Integer.toString(poolSlide.getSlideId()));
                 taskConfigDao.insert(slideId);
                 workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Creating task config: %s", 
                         this.workflowModule.getName(), slideId));

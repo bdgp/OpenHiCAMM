@@ -154,20 +154,20 @@ public class ManualSlideLoaderDialog extends JTabbedPane {
                                     "Pool Description Formatting Error", JOptionPane.ERROR_MESSAGE);
                             return;
                         }
-                        if (!fields[0].matches("^[0-9]+$") || new Integer(fields[0]).intValue() < 1 || new Integer(fields[0]).intValue() > 4) {
+                        if (!fields[0].matches("^[0-9]+$") || Integer.parseInt(fields[0]) < 1 || Integer.parseInt(fields[0]) > 4) {
                             JOptionPane.showMessageDialog(ManualSlideLoaderDialog.this, "Line "+linenum+": Cartridge Position \""+fields[0]+"\" is invalid",
                                     "Pool Description Formatting Error", JOptionPane.ERROR_MESSAGE);
                             return;
                         }
-                        if (!fields[1].matches("^[0-9]+$") || new Integer(fields[1]).intValue() < 1 || new Integer(fields[1]).intValue() > 50) {
+                        if (!fields[1].matches("^[0-9]+$") || Integer.parseInt(fields[1]) < 1 || Integer.parseInt(fields[1]) > 50) {
                             JOptionPane.showMessageDialog(ManualSlideLoaderDialog.this, "Line "+linenum+": Slide Position \""+fields[1]+"\" is invalid",
                                     "Pool Description Formatting Error", JOptionPane.ERROR_MESSAGE);
                             return;
                         }
                         Slide slide = new Slide(fields[2]);
                         PoolSlide poolSlide = new PoolSlide( 0,
-                                new Integer(fields[0]).intValue(), 
-                                new Integer(fields[1]).intValue(), 
+                                Integer.parseInt(fields[0]), 
+                                Integer.parseInt(fields[1]), 
                                         slides.size());
                         if (poolSlides.contains(poolSlide)) {
                             JOptionPane.showMessageDialog(ManualSlideLoaderDialog.this, "Line "+linenum+": Slide Position "+fields[0]+","+fields[1]+"\" was already entered",

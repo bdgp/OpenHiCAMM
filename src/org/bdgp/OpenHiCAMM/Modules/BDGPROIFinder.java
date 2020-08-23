@@ -58,7 +58,7 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
         
         Config roiImageScaleFactorConf = config.get("roiImageScaleFactor");
         if (roiImageScaleFactorConf == null) throw new RuntimeException("Config value roiImageScaleFactor not found!");
-        Double roiImageScaleFactor = new Double(roiImageScaleFactorConf.getValue());
+        Double roiImageScaleFactor = Double.parseDouble(roiImageScaleFactorConf.getValue());
 
         // Resize by roiImageScaleFactor
         if (roiImageScaleFactor != 1.0) {
@@ -71,20 +71,20 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
         }
         
         Config imageScaleFactorConf = config.get("imageScaleFactor");
-        double imageScaleFactor = imageScaleFactorConf != null? new Double(imageScaleFactorConf.getValue()) : 1.0;
+        double imageScaleFactor = imageScaleFactorConf != null? Double.parseDouble(imageScaleFactorConf.getValue()) : 1.0;
 
         // get the pixel size config value and scale it by the image scale factor
         // This value is inherited from the parent module's moduleconfig
         Config pixelSizeConf = config.get("pixelSize");
         if (pixelSizeConf == null) throw new RuntimeException("pixelSize config value is missing!");
-        double pixelSize = new Double(pixelSizeConf.getValue());
+        double pixelSize = Double.parseDouble(pixelSizeConf.getValue());
         pixelSize /= imageScaleFactor;
         logger.fine(String.format("%s: Using pixelSize: %f", label, pixelSize));
 
         // get the minRoiArea config value and scale it by the pixel size squared
         Config minRoiAreaConf = config.get("minRoiArea");
         if (minRoiAreaConf == null) throw new RuntimeException("minRoiArea config value is missing!");
-        double minRoiArea = new Double(minRoiAreaConf.getValue());
+        double minRoiArea = Double.parseDouble(minRoiAreaConf.getValue());
         minRoiArea /= pixelSize;
         minRoiArea *= minRoiArea;
         logger.fine(String.format("%s: Using minRoiArea: %f", label, minRoiArea));

@@ -172,24 +172,24 @@ public class SlideSurveyor implements Module {
         // load configs
         Config slideIdConf = conf.get("slideId");
         if (slideIdConf == null) throw new RuntimeException("Undefined conf value for slideId!");
-        Integer slideId = new Integer(slideIdConf.getValue());
+        Integer slideId = Integer.parseInt(slideIdConf.getValue());
         Slide slide = slideDao.selectOneOrDie(where("id", slideId));
 
         Config imageScaleFactorConf = conf.get("imageScaleFactor");
         if (imageScaleFactorConf == null) throw new RuntimeException("Undefined conf value for scaleFactor!");
-        Double imageScaleFactor = new Double(imageScaleFactorConf.getValue());
+        Double imageScaleFactor = Double.parseDouble(imageScaleFactorConf.getValue());
         
         Config pixelSizeConf = conf.get("pixelSize");
         if (pixelSizeConf == null) throw new RuntimeException("Undefined conf value for pixelSize!");
-        Double pixelSize = new Double(pixelSizeConf.getValue());
+        Double pixelSize = Double.parseDouble(pixelSizeConf.getValue());
 
         Config invertXAxisConf = conf.get("invertXAxis");
         if (invertXAxisConf == null) throw new RuntimeException("Undefined conf value for invertXAxis!");
-        Boolean invertXAxis = new Boolean(invertXAxisConf.getValue().equals("yes"));
+        Boolean invertXAxis = invertXAxisConf.getValue().equals("yes");
 
         Config invertYAxisConf = conf.get("invertYAxis");
         if (invertYAxisConf == null) throw new RuntimeException("Undefined conf value for invertYAxis!");
-        Boolean invertYAxis = new Boolean(invertYAxisConf.getValue().equals("yes"));
+        Boolean invertYAxis = invertYAxisConf.getValue().equals("yes");
         
         Config postprocessingMacroConf = conf.get("postprocessingMacro");
         String postprocessingMacro = postprocessingMacroConf != null? postprocessingMacroConf.getValue() : "";
@@ -283,7 +283,7 @@ public class SlideSurveyor implements Module {
             
             // set the initial Z Position
             if (conf.containsKey("initialZPos")) {
-                Double initialZPos = new Double(conf.get("initialZPos").getValue());
+                Double initialZPos = Double.parseDouble(conf.get("initialZPos").getValue());
                 logger.info(String.format("Setting initial Z Position to: %.02f", initialZPos));
                 String focusDevice = core.getFocusDevice();
 
@@ -429,7 +429,7 @@ public class SlideSurveyor implements Module {
             TaskConfig imageIdConf = new TaskConfig(
                     task.getId(),
                     "imageId",
-                    new Integer(image.getId()).toString());
+                    Integer.toString(image.getId()));
             taskConfigDao.insertOrUpdate(imageIdConf,"id","key");
             conf.put(imageIdConf.getKey(), imageIdConf);
             logger.fine(String.format("Inserted/Updated imageId config: %s", imageIdConf));
@@ -438,7 +438,7 @@ public class SlideSurveyor implements Module {
             TaskConfig pixelSizeXConf = new TaskConfig(
                     task.getId(),
                     "pixelSizeX",
-                    new Double(liveViewPixelSizeX).toString());
+                    Double.toString(liveViewPixelSizeX));
             taskConfigDao.insertOrUpdate(pixelSizeXConf,"id","key");
             conf.put(pixelSizeXConf.getKey(), pixelSizeXConf);
             logger.fine(String.format("Inserted/Updated pixelSizeUmX config: %s", pixelSizeXConf));
@@ -446,7 +446,7 @@ public class SlideSurveyor implements Module {
             TaskConfig pixelSizeYConf = new TaskConfig(
                     task.getId(),
                     "pixelSizeY",
-                    new Double(liveViewPixelSizeY).toString());
+                    Double.toString(liveViewPixelSizeY));
             taskConfigDao.insertOrUpdate(pixelSizeYConf,"id","key");
             conf.put(pixelSizeYConf.getKey(), pixelSizeYConf);
             logger.fine(String.format("Inserted/Updated pixelSizeUmY config: %s", pixelSizeYConf));
@@ -461,7 +461,7 @@ public class SlideSurveyor implements Module {
             this.workflowRunner.getTaskConfig().insertOrUpdate(
                     new TaskConfig(task.getId(),
                             "acquisitionDuration", 
-                            new Long(endAcquisition.getTime() - startAcquisition.getTime()).toString()), 
+                            Long.toString(endAcquisition.getTime() - startAcquisition.getTime())), 
                     "id", "key");
 
             return Status.SUCCESS;
@@ -555,10 +555,10 @@ public class SlideSurveyor implements Module {
                 }
                 
                 if (conf.containsKey("pixelSize")) {
-                    slideSurveyorDialog.pixelSize.setValue(new Double(conf.get("pixelSize").getValue()));
+                    slideSurveyorDialog.pixelSize.setValue(Double.parseDouble(conf.get("pixelSize").getValue()));
                 }
                 if (conf.containsKey("imageScaleFactor")) {
-                    slideSurveyorDialog.imageScaleFactor.setValue(new Double(conf.get("imageScaleFactor").getValue()));
+                    slideSurveyorDialog.imageScaleFactor.setValue(Double.parseDouble(conf.get("imageScaleFactor").getValue()));
                 }
                 
                 if (conf.containsKey("invertXAxis")) {
@@ -585,11 +585,11 @@ public class SlideSurveyor implements Module {
                 
                 if (conf.containsKey("initialZPos")) {
                     slideSurveyorDialog.setInitZPosYes.setSelected(true);
-                    slideSurveyorDialog.initialZPos.setValue(new Double(conf.get("initialZPos").getValue()));
+                    slideSurveyorDialog.initialZPos.setValue(Double.parseDouble(conf.get("initialZPos").getValue()));
                 }
                 else {
                     slideSurveyorDialog.setInitZPosNo.setSelected(true);
-                    slideSurveyorDialog.initialZPos.setValue(new Double(0.0));
+                    slideSurveyorDialog.initialZPos.setValue(0.0);
                 }
                 if (conf.containsKey("postprocessingMacro")) {
                     slideSurveyorDialog.postprocessingMacro.setText(conf.get("postprocessingMacro").getValue());
@@ -657,7 +657,7 @@ public class SlideSurveyor implements Module {
         	// Get the associated slide.
         	Slide slide;
             if (parentTaskConf.containsKey("slideId")) {
-            	slide = slideDao.selectOneOrDie(where("id",new Integer(parentTaskConf.get("slideId").getValue())));
+            	slide = slideDao.selectOneOrDie(where("id",Integer.parseInt(parentTaskConf.get("slideId").getValue())));
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Inherited slideId %s", this.workflowModule.getName(), parentTaskConf.get("slideId")));
             }
             // If no associated slide is registered, create a slide to represent this task
@@ -668,7 +668,7 @@ public class SlideSurveyor implements Module {
             	slideDao.reload(slide, "experimentId");
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created new slide: %s", this.workflowModule.getName(), slide.toString()));
             }
-            config.put("slideId", new Config(this.workflowModule.getId(), "slideId", new Integer(slide.getId()).toString()));
+            config.put("slideId", new Config(this.workflowModule.getId(), "slideId", Integer.toString(slide.getId())));
 
             // Create task record
             Task task = new Task(this.workflowModule.getId(), Status.NEW);
@@ -739,7 +739,7 @@ public class SlideSurveyor implements Module {
             TaskConfig XPositionUmConf = new TaskConfig(
                     task.getId(),
                     "XPositionUm",
-                    new Double(XPositionUm).toString());
+                    Double.toString(XPositionUm));
             taskConfigDao.insertOrUpdate(XPositionUmConf,"id","key");
             logger.fine(String.format("Inserted/Updated XPositionUm config: %s", XPositionUm));
 
@@ -747,7 +747,7 @@ public class SlideSurveyor implements Module {
             TaskConfig YPositionUmConf = new TaskConfig(
                     task.getId(),
                     "YPositionUm",
-                    new Double(YPositionUm).toString());
+                    Double.toString(YPositionUm));
             taskConfigDao.insertOrUpdate(YPositionUmConf,"id","key");
             logger.fine(String.format("Inserted/Updated YPositionUm config: %s", YPositionUm));
             
@@ -775,7 +775,7 @@ public class SlideSurveyor implements Module {
             TaskConfig slideId = new TaskConfig(
                     task.getId(),
                     "slideId", 
-                    new Integer(slide.getId()).toString());
+                    Integer.toString(slide.getId()));
             taskConfigDao.insert(slideId);
             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created task config: %s", 
                     this.workflowModule.getName(), slideId));

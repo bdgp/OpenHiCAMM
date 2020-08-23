@@ -22,6 +22,7 @@ import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
+import javax.swing.tree.TreeNode;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -30,7 +31,6 @@ import java.io.File;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
-import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 
 import javax.swing.event.TreeSelectionListener;
@@ -205,11 +205,10 @@ public class WorkflowDesignerDialog extends JDialog {
 	            wf.delete();
 	            // create the WorkflowModule records
 	            int priority = 1;
-	            for (@SuppressWarnings("unchecked")
-                    Enumeration<WorkflowModuleNode> enum_=treeRoot.breadthFirstEnumeration(); 
+	            for (Enumeration<TreeNode> enum_=treeRoot.breadthFirstEnumeration(); 
                     enum_.hasMoreElements();) 
 	            {
-	                WorkflowModuleNode node = enum_.nextElement();
+	                WorkflowModuleNode node = (WorkflowModuleNode) enum_.nextElement();
 	                if (node != treeRoot) {
 	                    if (node.getWorkflowModule() != null) {
 	                        node.getWorkflowModule().setPriority(priority);
@@ -270,11 +269,10 @@ public class WorkflowDesignerDialog extends JDialog {
 	 * workflow.
 	 */
 	private boolean moduleNameExists(String moduleName) {
-	    for (@SuppressWarnings("unchecked")
-    	    Enumeration<WorkflowModuleNode> enum_=treeRoot.breadthFirstEnumeration(); 
+	    for (Enumeration<TreeNode> enum_= treeRoot.breadthFirstEnumeration(); 
             enum_.hasMoreElements();) 
 	    {
-	        WorkflowModuleNode node = enum_.nextElement();
+	        WorkflowModuleNode node = (WorkflowModuleNode) enum_.nextElement();
 	        if (moduleName != null && node.getWorkflowModule() != null && moduleName.equals(node.getWorkflowModule().getName())) 
 	        {
 	            return true;

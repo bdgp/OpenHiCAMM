@@ -320,7 +320,7 @@ public class WorkflowReport implements Report {
                 for (MultiStagePosition msp : posList.getPositions()) {
                     String roiIdConf = msp.getProperty("ROI");
                     if (roiIdConf != null) {
-                        Integer roiId = new Integer(roiIdConf);
+                        Integer roiId = Integer.parseInt(roiIdConf);
                         if (!roiModules.containsKey(roiId)) roiModules.put(roiId, new HashSet<>());
                         roiModules.get(roiId).add(spl.getModuleId());
                     }
@@ -398,7 +398,7 @@ public class WorkflowReport implements Report {
 
         // get the pixel size of this slide imager config
         Config pixelSizeConf = getModuleConfig(startModule.getId(), "pixelSize");
-        Double pixelSize = pixelSizeConf != null? new Double(pixelSizeConf.getValue()) : SlideImagerDialog.DEFAULT_PIXEL_SIZE_UM;
+        Double pixelSize = pixelSizeConf != null? Double.parseDouble(pixelSizeConf.getValue()) : SlideImagerDialog.DEFAULT_PIXEL_SIZE_UM;
         log("pixelSize = %f", pixelSize);
 
         // get invertXAxis and invertYAxis conf values
@@ -416,7 +416,7 @@ public class WorkflowReport implements Report {
         Map<String,Task> imageTaskPosIdx = new TreeMap<String,Task>(new ImageLabelComparator());
         for (Task imageTask : imageTasks) {
             Config slideIdConf = getTaskConfig(imageTask.getId(), "slideId");
-            if (poolSlide == null || new Integer(slideIdConf.getValue()).equals(poolSlide.getSlideId())) {
+            if (poolSlide == null || Integer.parseInt(slideIdConf.getValue()) == poolSlide.getSlideId()) {
                 Config imageLabelConf = getTaskConfig(imageTask.getId(), "imageLabel");
                 if (imageLabelConf != null) {
                     imageTaskPosIdx.put(imageLabelConf.getValue(), imageTask);
@@ -459,7 +459,7 @@ public class WorkflowReport implements Report {
             if (imageWidth_ == null || imageHeight_ == null) {
                 Config imageIdConf = getTaskConfig(task.getId(), "imageId");
                 if (imageIdConf != null) {
-                    Image image = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf.getValue())));
+                    Image image = imageDao.selectOneOrDie(where("id", Integer.parseInt(imageIdConf.getValue())));
                     log("Getting image size for image %s", image);
                     ImagePlus imp = null;
                     try { imp = image.getImagePlus(workflowRunner); }
@@ -502,7 +502,7 @@ public class WorkflowReport implements Report {
                         MultiStagePosition msp = getMsp(task);
 
                         // Get a thumbnail of the image
-                        Image image = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf.getValue())));
+                        Image image = imageDao.selectOneOrDie(where("id", Integer.parseInt(imageIdConf.getValue())));
                         log("Working on image; %s", image);
                         ImagePlus imp = null;
                         try { imp = image.getImagePlus(workflowRunner); }
@@ -535,7 +535,7 @@ public class WorkflowReport implements Report {
                             // save the image ROI for the image map
                             Roi imageRoi = new Roi(xlocScale, ylocScale, imp.getWidth(), imp.getHeight()); 
                             imageRoi.setName(image.getName());
-                            imageRoi.setProperty("id", new Integer(image.getId()).toString());
+                            imageRoi.setProperty("id", Integer.toString(image.getId()));
                             imageRois.put(image.getId(), imageRoi);
                             log("imageRoi = %s", imageRoi);
 
@@ -546,7 +546,7 @@ public class WorkflowReport implements Report {
                                 int roiHeight = (int)Math.floor((roi.getY2()-roi.getY1()+1) * scaleFactor);
                                 Roi r = new Roi(roiX, roiY, roiWidth, roiHeight);
                                 r.setName(roi.toString());
-                                r.setProperty("id", new Integer(roi.getId()).toString());
+                                r.setProperty("id", Integer.toString(roi.getId()));
                                 r.setStrokeColor(new Color(1f, 0f, 0f, 0.4f));
                                 r.setStrokeWidth(0.4);
                                 roiRois.add(r);
@@ -576,7 +576,7 @@ public class WorkflowReport implements Report {
                                    (int)Math.floor(roi.getXBase()+roi.getFloatWidth()), 
                                    (int)Math.floor(roi.getYBase()+roi.getFloatHeight()))).
                            //attr("title", roi.getName()).
-                           attr("onClick", String.format("report.showImage(%d); return false", new Integer(roi.getProperty("id"))));
+                           attr("onClick", String.format("report.showImage(%d); return false", Integer.parseInt(roi.getProperty("id"))));
                 }
                 // now draw the ROI rois in red
                 for (Roi roiRoi : roiRois) {
@@ -606,7 +606,7 @@ public class WorkflowReport implements Report {
             for (Task task : imageTasks) {
                 Config imageIdConf = getTaskConfig(task.getId(), "imageId");
                 if (imageIdConf != null) {
-                    Image image = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf.getValue())));
+                    Image image = imageDao.selectOneOrDie(where("id", Integer.parseInt(imageIdConf.getValue())));
 
                     // make sure this image was included in the slide thumbnail image
                     if (!imageRois.containsKey(image.getId())) continue;
@@ -629,7 +629,7 @@ public class WorkflowReport implements Report {
                                         where("name", imagerModuleName));
                                 // get the hires pixel size for this imager
                                 Config hiResPixelSizeConf = getModuleConfig(imager.getId(), "pixelSize");
-                                Double hiResPixelSize = hiResPixelSizeConf != null? new Double(hiResPixelSizeConf.getValue()) : ROIFinderDialog.DEFAULT_HIRES_PIXEL_SIZE_UM;
+                                Double hiResPixelSize = hiResPixelSizeConf != null? Double.parseDouble(hiResPixelSizeConf.getValue()) : ROIFinderDialog.DEFAULT_HIRES_PIXEL_SIZE_UM;
                                 log("hiResPixelSize = %f", hiResPixelSize);
 
                                 // determine the stage coordinate bounds of this ROI tile grid.
@@ -643,7 +643,7 @@ public class WorkflowReport implements Report {
                                     Config imageIdConf2 = getTaskConfig(imagerTask.getId(), "imageId");
                                     if (imageIdConf2 != null) {
                                         MultiStagePosition imagerMsp = getMsp(imagerTask);
-                                        if (imagerMsp.hasProperty("ROI") && imagerMsp.getProperty("ROI").equals(new Integer(roi.getId()).toString())) 
+                                        if (imagerMsp.hasProperty("ROI") && imagerMsp.getProperty("ROI").equals(Integer.toString(roi.getId()))) 
                                         {
                                             TaskConfig imageLabelConf = getTaskConfig(imagerTask.getId(), "imageLabel");
                                             if (imageLabelConf == null || 
@@ -673,7 +673,7 @@ public class WorkflowReport implements Report {
                                                 if (maxY2_ == null || imagerMsp.getY() > maxY2_) maxY2_ = imagerMsp.getY();
                                                 if (imageWidth2_ == null || imageHeight2_ == null) {
                                                     Image image2 = imageDao.selectOneOrDie(
-                                                            where("id", new Integer(imageIdConf2.getValue())));
+                                                            where("id", Integer.parseInt(imageIdConf2.getValue())));
                                                     log("Getting image size for image %s", image2);
                                                     ImagePlus imp = null;
                                                     try { imp = image2.getImagePlus(workflowRunner); }
@@ -834,7 +834,7 @@ public class WorkflowReport implements Report {
                                                                     MultiStagePosition imagerMsp = getMsp(imagerTask);
 
                                                                     // Get a thumbnail of the image
-                                                                    Image image2 = imageDao.selectOneOrDie(where("id", new Integer(imageIdConf2.getValue())));
+                                                                    Image image2 = imageDao.selectOneOrDie(where("id", Integer.parseInt(imageIdConf2.getValue())));
                                                                     ImagePlus imp = null; 
                                                                     try { imp = image2.getImagePlus(workflowRunner); } 
                                                                     catch (Throwable e) {

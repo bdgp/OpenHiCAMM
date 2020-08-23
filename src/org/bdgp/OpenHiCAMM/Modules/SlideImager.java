@@ -121,7 +121,7 @@ public class SlideImager implements Module, ImageLogger {
             // get a sorted list of all the SlidePosList records for the posListModuleId module
             Config posListModuleConf = conf.get("posListModule");
             Dao<SlidePosList> posListDao = workflowRunner.getWorkflowDb().table(SlidePosList.class);
-            Integer slideId = new Integer(conf.get("slideId").getValue());
+            Integer slideId = Integer.parseInt(conf.get("slideId").getValue());
             WorkflowModule posListModule = this.workflowRunner.getWorkflow().selectOneOrDie(
                     where("name",posListModuleConf.getValue()));
             // get the list of slide position lists with valid task IDs or where task ID is null
@@ -230,7 +230,7 @@ public class SlideImager implements Module, ImageLogger {
 
         // get the slide ID
         Config slideIdConf = conf.get("slideId");
-        Integer slideId = slideIdConf != null? new Integer(conf.get("slideId").getValue()) : null;
+        Integer slideId = slideIdConf != null? Integer.parseInt(conf.get("slideId").getValue()) : null;
         Slide slide = slideId != null? slideDao.selectOne(where("id", slideId)) : null;
 
     	// if this is the loadDynamicTaskRecords task, then we need to dynamically create the task records now
@@ -279,7 +279,7 @@ public class SlideImager implements Module, ImageLogger {
             Dao<PoolSlide> poolSlideDao = this.workflowRunner.getWorkflowDb().table(PoolSlide.class);
             PoolSlide poolSlide = null;
             if (conf.containsKey("loadPoolSlideId")) {
-                poolSlide = poolSlideDao.selectOneOrDie(where("id", new Integer(conf.get("loadPoolSlideId").getValue())));
+                poolSlide = poolSlideDao.selectOneOrDie(where("id", Integer.parseInt(conf.get("loadPoolSlideId").getValue())));
             }
 
             // set the acquisition name
@@ -301,7 +301,7 @@ public class SlideImager implements Module, ImageLogger {
             if (conf.containsKey("dummyImageCount") && 
                 posList.getNumberOfPositions() > 0) 
             {
-                Integer dummyImageCount = new Integer(conf.get("dummyImageCount").getValue());
+                Integer dummyImageCount = Integer.parseInt(conf.get("dummyImageCount").getValue());
             	logger.info("Moving stage to starting position");
                 MultiStagePosition pos = posList.getPosition(0);
                 SlideImager.moveStage(workflowModule.getName(), core, pos.getX(), pos.getY(), logger);
@@ -369,7 +369,7 @@ public class SlideImager implements Module, ImageLogger {
 
             // set the initial Z Position
             if (conf.containsKey("initialZPos")) {
-                Double initialZPos = new Double(conf.get("initialZPos").getValue());
+                Double initialZPos = Double.parseDouble(conf.get("initialZPos").getValue());
                 logger.info(String.format("Setting initial Z Position to: %.02f", initialZPos));
                 String focusDevice = core.getFocusDevice();
 
@@ -474,7 +474,7 @@ public class SlideImager implements Module, ImageLogger {
                                 TaskConfig imageId = new TaskConfig(
                                         dispatchTask.getId(),
                                         "imageId",
-                                        new Integer(image.getId()).toString());
+                                        Integer.toString(image.getId()));
                                 taskConfigDao.insertOrUpdate(imageId,"id","key");
                                 conf.put("imageId", imageId);
                                 logger.fine(String.format("Inserted/Updated imageId config: %s", imageId));
@@ -542,7 +542,7 @@ public class SlideImager implements Module, ImageLogger {
                 this.workflowRunner.getTaskConfig().insertOrUpdate(
                         new TaskConfig(task.getId(),
                                 "acquisitionDuration", 
-                                new Long(endAcquisition.getTime() - startAcquisition.getTime()).toString()), 
+                                Long.toString(endAcquisition.getTime() - startAcquisition.getTime())), 
                         "id", "key");
                 
                 // get the autofocus duration from the autofocus object
@@ -624,7 +624,7 @@ public class SlideImager implements Module, ImageLogger {
                     TaskConfig imageId = new TaskConfig(
                             t.getId(),
                             "imageId",
-                            new Integer(image.getId()).toString());
+                            Integer.toString(image.getId()));
                     taskConfigDao.insertOrUpdate(imageId,"id","key");
                     conf.put(imageId.getKey(), imageId);
                     logger.fine(String.format("Inserted/Updated imageId config: %s", imageId));
@@ -721,11 +721,11 @@ public class SlideImager implements Module, ImageLogger {
                 
                 if (conf.containsKey("dummyImageCount")) {
                     Config dummyImageCount = conf.get("dummyImageCount");
-                    slideImagerDialog.dummyImageCount.setValue(new Integer(dummyImageCount.getValue()));
+                    slideImagerDialog.dummyImageCount.setValue(Integer.parseInt(dummyImageCount.getValue()));
                 }
 
                 if (conf.containsKey("pixelSize")) {
-                    slideImagerDialog.pixelSize.setValue(new Double(conf.get("pixelSize").getValue()));
+                    slideImagerDialog.pixelSize.setValue(Double.parseDouble(conf.get("pixelSize").getValue()));
                 }
                 
                 if (conf.containsKey("invertXAxis")) {
@@ -752,11 +752,11 @@ public class SlideImager implements Module, ImageLogger {
                 
                 if (conf.containsKey("initialZPos")) {
                     slideImagerDialog.setInitZPosYes.setSelected(true);
-                    slideImagerDialog.initialZPos.setValue(new Double(conf.get("initialZPos").getValue()));
+                    slideImagerDialog.initialZPos.setValue(Double.parseDouble(conf.get("initialZPos").getValue()));
                 }
                 else {
                     slideImagerDialog.setInitZPosNo.setSelected(true);
-                    slideImagerDialog.initialZPos.setValue(new Double(0.0));
+                    slideImagerDialog.initialZPos.setValue(0.0);
                 }
                 return slideImagerDialog;
             }
@@ -825,7 +825,7 @@ public class SlideImager implements Module, ImageLogger {
         	// Get the associated slide.
         	Slide slide;
             if (parentTaskConf.containsKey("slideId")) {
-            	slide = slideDao.selectOneOrDie(where("id",new Integer(parentTaskConf.get("slideId").getValue())));
+            	slide = slideDao.selectOneOrDie(where("id",Integer.parseInt(parentTaskConf.get("slideId").getValue())));
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Inherited slideId %s", this.workflowModule.getName(), parentTaskConf.get("slideId")));
             }
             // if posListModule is set, use the most recent slide
@@ -847,7 +847,7 @@ public class SlideImager implements Module, ImageLogger {
             	slideDao.reload(slide, "experimentId");
             	workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created new slide: %s", this.workflowModule.getName(), slide.toString()));
             }
-            config.put("slideId", new Config(this.workflowModule.getId(), "slideId", new Integer(slide.getId()).toString()));
+            config.put("slideId", new Config(this.workflowModule.getId(), "slideId", Integer.toString(slide.getId())));
 
             // Load the position list and set the acquisition settings.
             // If the position list is not yet loaded, then it will be determined at runtime.
@@ -867,7 +867,7 @@ public class SlideImager implements Module, ImageLogger {
                 TaskConfig slideIdConf = new TaskConfig(
                         task.getId(),
                         "slideId", 
-                        new Integer(slide.getId()).toString());
+                        Integer.toString(slide.getId()));
                 taskConfigDao.insert(slideIdConf);
                 if (parentTask != null) {
                     TaskDispatch dispatch = new TaskDispatch(task.getId(), parentTask.getId());
@@ -963,7 +963,7 @@ public class SlideImager implements Module, ImageLogger {
                             TaskConfig slideId = new TaskConfig(
                                     task.getId(),
                                     "slideId", 
-                                    new Integer(slide.getId()).toString());
+                                    Integer.toString(slide.getId()));
                             taskConfigDao.insert(slideId);
                             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created task config: %s", 
                                     this.workflowModule.getName(), slideId));
@@ -973,13 +973,13 @@ public class SlideImager implements Module, ImageLogger {
                                 TaskConfig positionsConf = new TaskConfig(
                                         task.getId(),
                                         "positions", 
-                                        new Integer(verboseSummary.positions).toString());
+                                        Integer.toString(verboseSummary.positions));
                                 taskConfigDao.insert(positionsConf);
                                 
                                 TaskConfig roisConf = new TaskConfig(
                                         task.getId(),
                                         "ROIs", 
-                                        new Integer(rois.size()).toString());
+                                        Integer.toString(rois.size()));
                                 taskConfigDao.insert(roisConf);
                                 
                                 TaskConfig verboseSummaryConf = new TaskConfig(
@@ -1031,31 +1031,31 @@ public class SlideImager implements Module, ImageLogger {
         Matcher matcher = pattern.matcher(summary);
         if (!matcher.find()) throw new RuntimeException(String.format(
                 "Could not parse frames field from summary:%n%s", summary));
-        verboseSummary.frames = new Integer(matcher.group(1));
+        verboseSummary.frames = Integer.parseInt(matcher.group(1));
 
         pattern = Pattern.compile("^Number of positions: ([0-9]+)$", Pattern.MULTILINE);
         matcher = pattern.matcher(summary);
         if (!matcher.find()) throw new RuntimeException(String.format(
                 "Could not parse positions field from summary:%n%s", summary));
-        verboseSummary.positions = new Integer(matcher.group(1));
+        verboseSummary.positions = Integer.parseInt(matcher.group(1));
 
         pattern = Pattern.compile("^Number of slices: ([0-9]+)$", Pattern.MULTILINE);
         matcher = pattern.matcher(summary);
         if (!matcher.find()) throw new RuntimeException(String.format(
                 "Could not parse slices field from summary:%n%s", summary));
-        verboseSummary.slices = new Integer(matcher.group(1));
+        verboseSummary.slices = Integer.parseInt(matcher.group(1));
 
         pattern = Pattern.compile("^Number of channels: ([0-9]+)$", Pattern.MULTILINE);
         matcher = pattern.matcher(summary);
         if (!matcher.find()) throw new RuntimeException(String.format(
                 "Could not parse channels field from summary:%n%s", summary));
-        verboseSummary.channels = new Integer(matcher.group(1));
+        verboseSummary.channels = Integer.parseInt(matcher.group(1));
 
         pattern = Pattern.compile("^Total images: ([0-9]+)$", Pattern.MULTILINE);
         matcher = pattern.matcher(summary);
         if (!matcher.find()) throw new RuntimeException(String.format(
                 "Could not parse total images field from summary:%n%s", summary));
-        verboseSummary.totalImages = new Integer(matcher.group(1));
+        verboseSummary.totalImages = Integer.parseInt(matcher.group(1));
 
         pattern = Pattern.compile("^Total memory: ([^\\n]+)$", Pattern.MULTILINE);
         matcher = pattern.matcher(summary);
@@ -1099,7 +1099,7 @@ public class SlideImager implements Module, ImageLogger {
                 // Get the Image record
                 Config imageIdConf = config.get("imageId");
                 if (imageIdConf != null) {
-                    Integer imageId = new Integer(imageIdConf.getValue());
+                    Integer imageId = Integer.parseInt(imageIdConf.getValue());
 
                     logger.info(String.format("Using image ID: %d", imageId));
                     Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
@@ -1246,7 +1246,7 @@ public class SlideImager implements Module, ImageLogger {
                 TaskConfig slideIdConf = this.workflowRunner.getTaskConfig().selectOneOrDie(
                         where("id", task.getId()).
                         and("key", "slideId"));
-                Integer slideId = new Integer(slideIdConf.getValue());
+                Integer slideId = Integer.parseInt(slideIdConf.getValue());
     	        for (Task t : this.workflowRunner.getTaskStatus().select(where("moduleId", posListModule.getId()))) {
     	            if (this.workflowRunner.getTaskConfig().selectOne(
     	                    where("id", t.getId()).
@@ -1296,7 +1296,7 @@ public class SlideImager implements Module, ImageLogger {
             TaskConfig slideIdConf = this.workflowRunner.getTaskConfig().selectOneOrDie(
                     where("id", task.getId()).
                     and("key", "slideId"));
-            Integer slideId = new Integer(slideIdConf.getValue());
+            Integer slideId = Integer.parseInt(slideIdConf.getValue());
 
             // get all tasks with same slide ID as this one
             List<TaskConfig> sameSlideId = this.workflowRunner.getTaskConfig().select(

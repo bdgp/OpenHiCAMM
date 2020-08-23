@@ -11,7 +11,6 @@ import javax.swing.JTextField;
 import javax.swing.JButton;
 
 import org.bdgp.OpenHiCAMM.DoubleSpinner;
-import org.bdgp.OpenHiCAMM.OpenHiCAMM;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
 import org.micromanager.MMOptions;
 import org.micromanager.MMStudio;
@@ -171,14 +170,14 @@ public class SlideSurveyorDialog extends JPanel {
         initialZPos = new DoubleSpinner();
         initialZPos.setEnabled(false);
         add(initialZPos, "cell 1 6");
-        try { initialZPos.setValue(new Double(mmcore.getPosition(focusDevice))); } 
+        try { initialZPos.setValue(Double.toString(mmcore.getPosition(focusDevice))); } 
         catch (Exception e2) { } 
         
         JButton btnSetPosition = new JButton("Read From Device");
         btnSetPosition.setEnabled(false);
         btnSetPosition.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                try { initialZPos.setValue(new Double(mmcore.getPosition(focusDevice))); } 
+                try { initialZPos.setValue(Double.toString(mmcore.getPosition(focusDevice))); } 
                 catch (Exception e1) {throw new RuntimeException(e1);}
             }
         });
@@ -232,7 +231,7 @@ public class SlideSurveyorDialog extends JPanel {
         });
 
         imageScaleFactor = new DoubleSpinner();
-        imageScaleFactor.setValue(new Double(DEFAULT_IMAGE_SCALE_FACTOR));
+        imageScaleFactor.setValue(DEFAULT_IMAGE_SCALE_FACTOR);
         add(imageScaleFactor, "cell 1 7");
         
         lblFftFilterOptions = new JLabel("Postprocessing Macro Script:");

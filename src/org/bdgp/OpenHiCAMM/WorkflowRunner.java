@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -116,7 +117,7 @@ public class WorkflowRunner {
     public WorkflowRunner(
             File workflowDirectory, 
             Level loglevel,
-            OpenHiCAMM mmslide) 
+            OpenHiCAMM mmslide)
     {
         // Load the workflow database and workflow table
         if (workflowDirectory == null || !workflowDirectory.exists() || !workflowDirectory.isDirectory()) {
@@ -189,12 +190,14 @@ public class WorkflowRunner {
             }
             // Instantiate the module instances and put them in a hash
             try { 
-                Module m = w.getModule().newInstance();
+                Module m = w.getModule().getDeclaredConstructor().newInstance();
                 m.initialize(this, w);
                 moduleInstances.put(w.getId(), m); 
             } 
-            catch (InstantiationException e) {throw new RuntimeException(e);} 
-            catch (IllegalAccessException e) {throw new RuntimeException(e);}
+            catch (InstantiationException|IllegalArgumentException|InvocationTargetException|NoSuchMethodException|IllegalAccessException e) 
+            {
+            	throw new RuntimeException(e);
+            }
         }
     }
     
@@ -364,7 +367,7 @@ public class WorkflowRunner {
                     this.logger.info(String.format("    %s", task));
                     // Print the task configs for the task
                     List<TaskConfig> taskConfigs = this.taskConfig.select(where("id", task.getId()));
-                    Collections.sort(taskConfigs, (a,b)->new Integer(a.getId()).intValue()-new Integer(b.getId()).intValue());
+                    Collections.sort(taskConfigs, (a,b)->a.getId()-b.getId());
                     for (TaskConfig taskConfig : taskConfigs) {
                         this.logger.info(String.format("        %s", taskConfig));
                     }
@@ -502,7 +505,7 @@ public class WorkflowRunner {
                 StringBuilder sb = new StringBuilder();
                 for (Task task : tasks) {
                     TaskConfig slideIdConf = this.taskConfig.selectOne(where("id",task.getId()).and("key", "slideId"));
-                    Integer slideId = slideIdConf != null? new Integer(slideIdConf.getValue()) : null;
+                    Integer slideId = slideIdConf != null? Integer.parseInt(slideIdConf.getValue()) : null;
                     if (!Objects.equals(oldSlideId, slideId)) sb.append(slideId != null? String.format(" S%s:", slideId) : " ");
                     sb.append(task.getStatus().toString().charAt(0));
                     oldSlideId = slideId;
@@ -700,7 +703,7 @@ public class WorkflowRunner {
                     WorkflowRunner.this.getModuleConfig().insertOrUpdate(
                             new ModuleConfig(startModule.getId(), "endTime", endTimestamp), "id","key");
                     WorkflowRunner.this.getModuleConfig().insertOrUpdate(
-                            new ModuleConfig(startModule.getId(), "duration", new Long(endTime - startTime).toString()), "id","key");
+                            new ModuleConfig(startModule.getId(), "duration", Long.toString(endTime - startTime)), "id","key");
 
                     // Display a summary of all the task statuses
                     logTaskSummary(startModuleName);
@@ -1024,7 +1027,7 @@ public class WorkflowRunner {
         WorkflowRunner.this.getModuleConfig().insertOrUpdate(
                 new ModuleConfig(startModule.getId(), "endTime", endTimestamp), "id","key");
         WorkflowRunner.this.getModuleConfig().insertOrUpdate(
-                new ModuleConfig(startModule.getId(), "duration", new Long(endTime - startTime).toString()), "id","key");
+                new ModuleConfig(startModule.getId(), "duration", Long.toString(endTime - startTime)), "id","key");
 
 
         // Log a summary

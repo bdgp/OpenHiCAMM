@@ -22,7 +22,7 @@ public class Pool {
         Pattern pattern = Pattern.compile("^P([0-9]+)$");
         Matcher matcher = pattern.matcher(poolName);
         if (matcher.find()) {
-            return new Integer(matcher.group(1));
+            return Integer.parseInt(matcher.group(1));
         }
 		return null;
 	}

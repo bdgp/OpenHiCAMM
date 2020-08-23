@@ -65,7 +65,7 @@ public abstract class PostProcessor implements Module, ImageLogger {
         // Get the Image record
     	Config imageIdConf = config.get("imageId");
     	if (imageIdConf == null) throw new RuntimeException("No imageId task configuration was set by the slide imager!");
-        Integer imageId = new Integer(imageIdConf.getValue());
+        Integer imageId = Integer.parseInt(imageIdConf.getValue());
         Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);
         final Image image = imageDao.selectOneOrDie(where("id",imageId));
 
@@ -200,7 +200,7 @@ public abstract class PostProcessor implements Module, ImageLogger {
                 // Get the Image record
                 Config imageIdConf = config.get("imageId");
                 if (imageIdConf != null) {
-                    Integer imageId = new Integer(imageIdConf.getValue());
+                    Integer imageId = Integer.parseInt(imageIdConf.getValue());
 
                     logger.info(String.format("Using image ID: %d", imageId));
                     Dao<Image> imageDao = workflowRunner.getWorkflowDb().table(Image.class);

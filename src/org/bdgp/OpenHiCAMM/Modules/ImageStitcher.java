@@ -230,10 +230,10 @@ public class ImageStitcher implements Module, ImageLogger {
             // get the tileX and tileY, figure out gridWidth and gridHeight
             TaskConfig tileXConf = taskConfig.get("tileX");
             if (tileXConf == null) throw new RuntimeException(String.format("Task %s: tileX is null!", stitchTask));
-            Integer tileX = new Integer(tileXConf.getValue());
+            Integer tileX = Integer.parseInt(tileXConf.getValue());
             TaskConfig tileYConf = taskConfig.get("tileY");
             if (tileYConf == null) throw new RuntimeException(String.format("Task %s: tileY is null!", stitchTask));
-            Integer tileY = new Integer(tileYConf.getValue());
+            Integer tileY = Integer.parseInt(tileYConf.getValue());
             if (gridWidth == null || gridWidth < tileX+1) gridWidth = tileX+1;
             if (gridHeight == null || gridHeight < tileY+1) gridHeight = tileY+1;
 
@@ -241,7 +241,7 @@ public class ImageStitcher implements Module, ImageLogger {
             TaskConfig imageId = taskConfig.get("imageId");
             if (imageId == null) throw new RuntimeException(String.format("Task %s: imageId is null!", stitchTask));
             // get the Image record
-            Image image = imageDao.selectOneOrDie(where("id", new Integer(imageId.getValue())));
+            Image image = imageDao.selectOneOrDie(where("id", Integer.parseInt(imageId.getValue())));
             if (frame == null) frame = image.getFrame();
             if (channel == null) channel = image.getChannel();
             if (slice == null) slice = image.getSlice();

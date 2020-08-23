@@ -115,7 +115,7 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
       createProperty(KEY_MIN_AUTOFOCUS, "");
       createProperty(KEY_MAX_AUTOFOCUS, "");
       
-      createProperty("autofocusDuration", new Long(0).toString());
+      createProperty("autofocusDuration", Long.toString(0));
       createProperty("liveMode", "yes");
       
       loadSettings();
@@ -840,9 +840,9 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
         finally {
             try {
                 Date endTime = new Date();
-                Long autofocusDuration = new Long(this.getPropertyValue("autofocusDuration"));
-                this.setPropertyValue("autofocusDuration", new Long(
-                        endTime.getTime() - startTime.getTime() + autofocusDuration).toString());
+                Long autofocusDuration = Long.parseLong(this.getPropertyValue("autofocusDuration"));
+                this.setPropertyValue("autofocusDuration", Long.toString(
+                        endTime.getTime() - startTime.getTime() + autofocusDuration));
             } 
             catch (MMException e) {throw new RuntimeException(e);}
         }
@@ -864,9 +864,9 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
         finally {
             try {
                 Date endTime = new Date();
-                Long autofocusDuration = new Long(this.getPropertyValue("autofocusDuration"));
-                this.setPropertyValue("autofocusDuration", new Long(
-                        endTime.getTime() - startTime.getTime() + autofocusDuration).toString());
+                Long autofocusDuration = Long.parseLong(this.getPropertyValue("autofocusDuration"));
+                this.setPropertyValue("autofocusDuration", Long.toString(
+                        endTime.getTime() - startTime.getTime() + autofocusDuration));
             } 
             catch (MMException e) {throw new RuntimeException(e);}
         }
@@ -901,7 +901,7 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
               Double.parseDouble(getPropertyValue(KEY_MAX_AUTOFOCUS));
       
           liveMode = "yes".equals(getPropertyValue("liveMode"));
-          setPropertyValue("autofocusDuration", new Long(0).toString());
+          setPropertyValue("autofocusDuration", Long.toString(0));
       } catch (NumberFormatException e) {
          e.printStackTrace();
       } catch (MMException e) {

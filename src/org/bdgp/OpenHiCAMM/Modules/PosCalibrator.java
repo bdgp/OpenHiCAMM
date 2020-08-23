@@ -133,12 +133,12 @@ public class PosCalibrator implements Module {
                         where("name", roiFinderModuleConf.getValue()));
                 List<SlidePosList> slidePosLists = slidePosListDao.select(
                         where("moduleId", roiFinderModule.getId()).
-                        and("slideId", new Integer(slideIdConf.getValue())));
+                        and("slideId", Integer.parseInt(slideIdConf.getValue())));
                 
                 // remove old slide pos lists
                 slidePosListDao.delete(
                         where("moduleId", this.workflowModule.getId()).
-                        and("slideId", new Integer(slideIdConf.getValue())));
+                        and("slideId", Integer.parseInt(slideIdConf.getValue())));
 
                 // save the original X and Y positions as property values
                 for (SlidePosList spl : slidePosLists) {
@@ -148,8 +148,8 @@ public class PosCalibrator implements Module {
                         for (int i=0; i<msp.size(); ++i) {
                             StagePosition sp = msp.get(i);
                             if (sp.numAxes == 2 && sp.stageName.compareTo(msp.getDefaultXYStage()) == 0) {
-                                msp.setProperty("origX", new Double(sp.x).toString());
-                                msp.setProperty("origY", new Double(sp.y).toString());
+                                msp.setProperty("origX", Double.toString(sp.x));
+                                msp.setProperty("origY", Double.toString(sp.y));
                                 break;
                             }
                         }
@@ -281,13 +281,13 @@ public class PosCalibrator implements Module {
                 where("id", refSlideImagerModule.getId()).
                 and("key", "pixelSize"));
         if (pixelSizeConf == null) throw new RuntimeException("pixelSize conf not found for ref imager!");
-        Double pixelSize = new Double(pixelSizeConf.getValue());
+        Double pixelSize = Double.parseDouble(pixelSizeConf.getValue());
 
         ModuleConfig hiResPixelSizeConf = workflow.getModuleConfig().selectOne(
                 where("id", compareSlideImagerModule.getId()).
                 and("key", "pixelSize"));
         if (hiResPixelSizeConf == null) throw new RuntimeException("hires pixelSize conf not found for compare imager!");
-        Double hiResPixelSize = new Double(hiResPixelSizeConf.getValue());
+        Double hiResPixelSize = Double.parseDouble(hiResPixelSizeConf.getValue());
 
         ModuleConfig invertXAxisConf = workflow.getModuleConfig().selectOne(
                 where("id", refSlideImagerModule.getId()).
@@ -347,15 +347,15 @@ public class PosCalibrator implements Module {
         // store translated stage coordinates as task config
         this.workflow.getTaskConfig().insertOrUpdate(
                 new TaskConfig(task.getId(),
-                        "translateStageX", new Double(translateStage.getX()).toString()), "id", "key");
+                        "translateStageX", Double.toString(translateStage.getX())), "id", "key");
         this.workflow.getTaskConfig().insertOrUpdate(
                 new TaskConfig(task.getId(),
-                        "translateStageY", new Double(translateStage.getY()).toString()), "id", "key");
+                        "translateStageY", Double.toString(translateStage.getY())), "id", "key");
 
         // get the position lists
         List<SlidePosList> slidePosLists = slidePosListDao.select(
                 where("moduleId", this.workflowModule.getId()).
-                and("slideId", new Integer(slideIdConf.getValue())));
+                and("slideId", Integer.parseInt(slideIdConf.getValue())));
         
         // apply the translation matrix to the position list to derive a new position list
         for (SlidePosList spl : slidePosLists) {
@@ -363,9 +363,9 @@ public class PosCalibrator implements Module {
             MultiStagePosition[] msps = posList.getPositions();
             for (MultiStagePosition msp : msps) {
                 if (!msp.hasProperty("origX")) throw new RuntimeException(String.format("MSP property origX is missing!: %s", msp));
-                Double origX = new Double(msp.getProperty("origX"));
+                Double origX = Double.parseDouble(msp.getProperty("origX"));
                 if (!msp.hasProperty("origY")) throw new RuntimeException(String.format("MSP property origY is missing!: %s", msp));
-                Double origY = new Double(msp.getProperty("origY"));
+                Double origY = Double.parseDouble(msp.getProperty("origY"));
 
                 for (int i=0; i<msp.size(); ++i) {
                     StagePosition sp = msp.get(i);
