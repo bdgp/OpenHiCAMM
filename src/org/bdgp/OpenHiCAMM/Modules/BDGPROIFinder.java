@@ -11,10 +11,9 @@ import org.bdgp.OpenHiCAMM.DB.Image;
 import org.bdgp.OpenHiCAMM.DB.ROI;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
-import org.json.JSONException;
-import org.micromanager.utils.ImageUtils;
-import org.micromanager.utils.MDUtils;
-
+import mmcorej.org.json.JSONException;
+import org.micromanager.internal.utils.imageanalysis.ImageUtils;
+import org.micromanager.internal.utils.MDUtils;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.measure.Measurements;

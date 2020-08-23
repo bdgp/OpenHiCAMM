@@ -37,15 +37,15 @@ import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
-import org.json.JSONException;
-import org.micromanager.acquisition.MMAcquisition;
-import org.micromanager.api.ImageCache;
-import org.micromanager.api.MultiStagePosition;
-import org.micromanager.api.PositionList;
-import org.micromanager.api.ScriptInterface;
-import org.micromanager.api.StagePosition;
-import org.micromanager.utils.MDUtils;
-import org.micromanager.utils.MMSerializationException;
+import mmcorej.org.json.JSONException;
+import org.micromanager.acquisition.internal.MMAcquisition;
+import org.micromanager.ImageCache;
+import org.micromanager.MultiStagePosition;
+import org.micromanager.PositionList;
+import org.micromanager.Studio;
+import org.micromanager.StagePosition;
+import org.micromanager.internal.utils.MDUtils;
+import org.micromanager.internal.utils.MMSerializationException;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
@@ -55,7 +55,7 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 public abstract class ROIFinder implements Module, ImageLogger {
     protected WorkflowRunner workflowRunner;
     protected WorkflowModule workflowModule;
-    protected ScriptInterface script;
+    protected Studio script;
 
     @Override
     public void initialize(WorkflowRunner workflowRunner, WorkflowModule workflowModule) {
@@ -254,8 +254,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
 			}
 			if (posList.getNumberOfPositions() > 0) {
 			    logger.info(String.format("%s: Produced position list of %d ROIs", label, posList.getNumberOfPositions())); 
-                try { logger.fine(String.format("%s: Position List:%n%s", label, posList.serialize())); } 
-                catch (MMSerializationException e) {throw new RuntimeException(e);}
+                logger.fine(String.format("%s: Position List:%n%s", label, posList.toPropertyMap().toJSON()));
 			}
 			else {
 			    logger.info(String.format("%s: ROIFinder did not produce any positions for this image", label));

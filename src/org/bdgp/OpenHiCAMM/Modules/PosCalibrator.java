@@ -24,11 +24,11 @@ import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
-import org.json.JSONException;
-import org.micromanager.api.MultiStagePosition;
-import org.micromanager.api.PositionList;
-import org.micromanager.api.StagePosition;
-import org.micromanager.utils.MDUtils;
+import mmcorej.org.json.JSONException;
+import org.micromanager.MultiStagePosition;
+import org.micromanager.PositionList;
+import org.micromanager.StagePosition;
+import org.micromanager.internal.utils.MDUtils;
 
 import bdgp.org.hough.GHT_Rawmatch;
 import ij.ImagePlus;

@@ -7,8 +7,8 @@ import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
 import org.bdgp.OpenHiCAMM.Logger;
 import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.Image;
-import org.json.JSONException;
-import org.micromanager.utils.MDUtils;
+import mmcorej.org.json.JSONException;
+import org.micromanager.internal.utils.MDUtils;
 
 import mmcorej.TaggedImage;
 import net.miginfocom.swing.MigLayout;
@@ -105,10 +105,10 @@ public class ROIFinderDialog extends JPanel {
         btnSetImageDimensions = new JButton("Set Image Dimensions");
         btnSetImageDimensions.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                try { roiFinder.script.getMMCore().snapImage(); } 
+                try { roiFinder.script.getCMMCore().snapImage(); } 
                 catch (Exception e1) {throw new RuntimeException(e1);}
                 TaggedImage taggedImage;
-                try { taggedImage = roiFinder.script.getMMCore().getTaggedImage(); } 
+                try { taggedImage = roiFinder.script.getCMMCore().getTaggedImage(); } 
                 catch (Exception e1) {throw new RuntimeException(e1);}
                 if (taggedImage != null) {
                     try { imageWidth.setValue(MDUtils.getWidth(taggedImage.tags)); } 
@@ -124,10 +124,10 @@ public class ROIFinderDialog extends JPanel {
         btnRoiTest = new JButton("ROI Test");
         btnRoiTest.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                try { roiFinder.script.getMMCore().snapImage(); } 
+                try { roiFinder.script.getCMMCore().snapImage(); } 
                 catch (Exception e1) {throw new RuntimeException(e1);}
                 TaggedImage taggedImage;
-                try { taggedImage = roiFinder.script.getMMCore().getTaggedImage(); } 
+                try { taggedImage = roiFinder.script.getCMMCore().getTaggedImage(); } 
                 catch (Exception e1) {throw new RuntimeException(e1);}
 
                 ImageLogRunner imageLogRunner = new ImageLogRunner("Test");

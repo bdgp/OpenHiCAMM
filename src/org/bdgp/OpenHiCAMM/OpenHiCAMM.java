@@ -28,16 +28,16 @@ import org.bdgp.OpenHiCAMM.Modules.SlideImager;
 import org.bdgp.OpenHiCAMM.Modules.SlideSurveyor;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
-import org.micromanager.MMStudio;
-import org.micromanager.api.MMPlugin;
-import org.micromanager.api.ScriptInterface;
-import org.micromanager.utils.JavaUtils;
-import org.micromanager.utils.MMException;
-import org.micromanager.utils.ReportingUtils;
+import org.micromanager.internal.MMStudio;
+import org.micromanager.MMPlugin;
+import org.micromanager.Studio;
+import org.micromanager.internal.utils.JavaUtils;
+import org.micromanager.internal.utils.MMException;
+import org.micromanager.internal.utils.ReportingUtils;
 
 public class OpenHiCAMM implements MMPlugin {
 	public static final String MMSLIDEMODULESDIR = "lib/openhicamm_modules";
-	private ScriptInterface app;
+	private Studio app;
 	private WorkflowDialog dialog;
 	private static List<String> moduleNames = null;
 	private static List<String> reportNames = null;
@@ -150,11 +150,11 @@ public class OpenHiCAMM implements MMPlugin {
 	 * method is typically called after the module is instantiated.
 	 * @param app - ScriptInterface implementation
 	 */
-	public void setApp(ScriptInterface app) {
+	public void setApp(Studio app) {
 		this.app = app;
 	}
 
-	public ScriptInterface getApp() {
+	public Studio getApp() {
 		return this.app;
 	}
 

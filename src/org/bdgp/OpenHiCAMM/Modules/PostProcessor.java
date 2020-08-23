@@ -29,18 +29,18 @@ import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
-import org.json.JSONException;
-import org.micromanager.acquisition.MMAcquisition;
-import org.micromanager.api.ImageCache;
-import org.micromanager.api.ScriptInterface;
-import org.micromanager.utils.MDUtils;
+import mmcorej.org.json.JSONException;
+import org.micromanager.acquisition.internal.MMAcquisition;
+import org.micromanager.ImageCache;
+import org.micromanager.Studio;
+import org.micromanager.internal.utils.MDUtils;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
 public abstract class PostProcessor implements Module, ImageLogger {
     protected WorkflowRunner workflowRunner;
     protected WorkflowModule workflowModule;
-    protected ScriptInterface script;
+    protected Studio script;
 
     @Override
     public void initialize(WorkflowRunner workflowRunner, WorkflowModule workflowModule) {

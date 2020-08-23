@@ -13,10 +13,10 @@ import javax.swing.JButton;
 import org.bdgp.OpenHiCAMM.DoubleSpinner;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
 import org.micromanager.MMOptions;
-import org.micromanager.MMStudio;
-import org.micromanager.api.PositionList;
-import org.micromanager.dialogs.AcqControlDlg;
-import org.micromanager.positionlist.PositionListDlg;
+import org.micromanager.internal.MMStudio;
+import org.micromanager.PositionList;
+import org.micromanager.internal.dialogs.AcqControlDlg;
+import org.micromanager.internal.positionlist.PositionListDlg;
 
 import mmcorej.CMMCore;
 
@@ -83,7 +83,7 @@ public class SlideSurveyorDialog extends JPanel {
                             MMStudio.getInstance(), 
                             options);
 		            SlideSurveyorDialog.this.posListDlg = new PositionListDlg(
-		                    MMStudio.getInstance().getMMCore(), 
+		                    MMStudio.getInstance().getCMMCore(), 
 		                    MMStudio.getInstance(), 
 		                    new PositionList(),
 		                    acqControlDlg,
@@ -150,7 +150,7 @@ public class SlideSurveyorDialog extends JPanel {
         
         JLabel lblSetInitialZ = new JLabel("Set Initial Z Axis Position:");
         add(lblSetInitialZ, "flowx,cell 0 6");
-        CMMCore mmcore = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
+        CMMCore mmcore = workflowRunner.getOpenHiCAMM().getApp().getCMMCore();
         String focusDevice = mmcore.getFocusDevice();
         try {} 
         catch (Exception e1) {throw new RuntimeException(e1);}

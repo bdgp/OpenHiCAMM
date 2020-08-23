@@ -49,25 +49,25 @@ import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.micromanager.dialogs.AcqControlDlg;
+import mmcorej.org.json.JSONException;
+import mmcorej.org.json.JSONObject;
+import org.micromanager.internal.dialogs.AcqControlDlg;
 import org.micromanager.events.DisplayCreatedEvent;
 import org.micromanager.events.EventManager;
 import org.micromanager.MMOptions;
-import org.micromanager.MMStudio;
-import org.micromanager.acquisition.AcquisitionWrapperEngine;
-import org.micromanager.acquisition.MMAcquisition;
-import org.micromanager.api.Autofocus;
-import org.micromanager.api.ImageCache;
-import org.micromanager.api.ImageCacheListener;
-import org.micromanager.api.MultiStagePosition;
-import org.micromanager.api.PositionList;
-import org.micromanager.api.ScriptInterface;
-import org.micromanager.utils.MDUtils;
-import org.micromanager.utils.MMException;
-import org.micromanager.utils.MMScriptException;
-import org.micromanager.utils.MMSerializationException;
+import org.micromanager.internal.MMStudio;
+import org.micromanager.acquisition.internal.AcquisitionWrapperEngine;
+import org.micromanager.acquisition.internal.MMAcquisition;
+import org.micromanager.AutofocusPlugin;
+import org.micromanager.ImageCache;
+import org.micromanager.ImageCacheListener;
+import org.micromanager.MultiStagePosition;
+import org.micromanager.PositionList;
+import org.micromanager.Studio;
+import org.micromanager.internal.utils.MDUtils;
+import org.micromanager.internal.utils.MMException;
+import org.micromanager.internal.utils.MMScriptException;
+import org.micromanager.internal.utils.MMSerializationException;
 
 import com.google.common.eventbus.Subscribe;
 
@@ -82,7 +82,7 @@ public class SlideImager implements Module, ImageLogger {
 	WorkflowRunner workflowRunner;
     WorkflowModule workflowModule;
     AcqControlDlg acqControlDlg;
-    ScriptInterface script;
+    Studio script;
     AcquisitionWrapperEngine engine;
 
     @Override
@@ -156,7 +156,7 @@ public class SlideImager implements Module, ImageLogger {
             // log the position list to the console
             try {
 				logger.fine(String.format("%s: Read position list from module %s:%n%s", 
-						this.workflowModule.getName(), conf.get("posListModule"), positionList.serialize()));
+						this.workflowModule.getName(), conf.get("posListModule"), positionList.toPropertyMap().toJSON()));
 			} 
             catch (MMSerializationException e) {throw new RuntimeException(e);}
             // load the position list into the acquisition engine
@@ -292,7 +292,7 @@ public class SlideImager implements Module, ImageLogger {
                     slide != null? String.format("_%s", slide.getName()) : "",
                     experimentId != null? String.format("_%s", experimentId.replaceAll("[\\/ :]+","_")) : "");
 
-            CMMCore core = this.script.getMMCore();
+            CMMCore core = this.script.getCMMCore();
             logger.fine(String.format("This task is the acquisition task")); 
             logger.info(String.format("Using rootDir: %s", rootDir)); 
             logger.info(String.format("Requesting to use acqName: %s", acqName)); 
@@ -546,7 +546,7 @@ public class SlideImager implements Module, ImageLogger {
                         "id", "key");
                 
                 // get the autofocus duration from the autofocus object
-                Autofocus autofocus = this.script.getAutofocus();
+                AutofocusPlugin autofocus = this.script.getAutofocus();
                 if (new HashSet<String>(Arrays.asList(autofocus.getPropertyNames())).contains("autofocusDuration")) {
                     try {
                         this.workflowRunner.getTaskConfig().insertOrUpdate(
@@ -936,7 +936,7 @@ public class SlideImager implements Module, ImageLogger {
                             try {
                                 PositionList mspPosList = new PositionList();
                                 mspPosList.addPosition(msp);
-                                String mspJson = new JSONObject(mspPosList.serialize()).
+                                String mspJson = new JSONObject(mspPosList.toPropertyMap().toJSON()).
                                         getJSONArray("POSITIONS").getJSONObject(0).toString();
                                 TaskConfig mspConf = new TaskConfig(
                                         task.getId(), "MSP", mspJson);

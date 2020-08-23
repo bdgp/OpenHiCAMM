@@ -54,16 +54,16 @@ import org.bdgp.OpenHiCAMM.Modules.SlideImager;
 import org.bdgp.OpenHiCAMM.Modules.SlideImagerDialog;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.micromanager.MMStudio;
-import org.micromanager.api.MultiStagePosition;
-import org.micromanager.api.PositionList;
-import org.micromanager.api.StagePosition;
-import org.micromanager.utils.ImageLabelComparator;
-import org.micromanager.utils.MDUtils;
-import org.micromanager.utils.MMSerializationException;
+import mmcorej.org.json.JSONArray;
+import mmcorej.org.json.JSONException;
+import mmcorej.org.json.JSONObject;
+import org.micromanager.internal.MMStudio;
+import org.micromanager.MultiStagePosition;
+import org.micromanager.PositionList;
+import org.micromanager.StagePosition;
+import org.micromanager.internal.utils.ImageLabelComparator;
+import org.micromanager.internal.utils.MDUtils;
+import org.micromanager.internal.utils.MMSerializationException;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
@@ -172,7 +172,7 @@ public class WorkflowReport implements Report {
                 MultiStagePosition msp = posList.getPosition(0);
                 msps.put(mspConf.getId(), msp);
             } 
-            catch (JSONException | MMSerializationException e) {throw new RuntimeException(e);}
+            catch (JSONException | MMSerializationException e) {throw new RuntimeException(e.toString());}
         }
 
         // Find SlideImager modules where there is no associated posListModuleId module config
@@ -1165,7 +1165,7 @@ public class WorkflowReport implements Report {
                         }
                         
                         // move the stage
-                        CMMCore core = MMStudio.getInstance().getMMCore();
+                        CMMCore core = MMStudio.getInstance().getCMMCore();
                         try { SlideImager.moveStage(this.getClass().getSimpleName(), core, xPos_, yPos_, null); } 
                         catch (Exception e) {
                             StringWriter sw = new StringWriter();

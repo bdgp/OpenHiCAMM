@@ -1,7 +1,7 @@
 package org.bdgp.OpenHiCAMM;
 
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
-import org.micromanager.utils.MDUtils;
+import org.micromanager.internal.utils.MDUtils;
 
 import ij.IJ;
 import javafx.scene.web.WebEngine;

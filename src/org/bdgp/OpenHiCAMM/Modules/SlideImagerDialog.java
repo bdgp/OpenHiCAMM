@@ -17,7 +17,7 @@ import org.bdgp.OpenHiCAMM.DoubleSpinner;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
 import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
-import org.micromanager.dialogs.AcqControlDlg;
+import org.micromanager.internal.dialogs.AcqControlDlg;
 
 import mmcorej.CMMCore;
 
@@ -180,7 +180,7 @@ public class SlideImagerDialog extends JPanel {
         initialZPos = new DoubleSpinner();
         initialZPos.setEnabled(false);
         add(initialZPos, "cell 0 11");
-        CMMCore mmcore = workflowRunner.getOpenHiCAMM().getApp().getMMCore();
+        CMMCore mmcore = workflowRunner.getOpenHiCAMM().getApp().getCMMCore();
         String focusDevice = mmcore.getFocusDevice();
         try { initialZPos.setValue((mmcore.getPosition(focusDevice))); } 
         catch (Exception e1) { /* Do nothing */ }

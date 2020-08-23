@@ -1,10 +1,6 @@
 #!/usr/bin/env bash 
-[[ $# -lt 2 ]] && echo "Usage: $0 micromanager-srcdir fiji-appdir" >&2 && exit 1
-mvn install:install-file -Dfile="$1"/mmstudio/MMJ_.jar -DgroupId=MicroManager -DartifactId=MMJ_ -Dversion="$(cat "$1"/version.txt)" -Dpackaging=jar
-mvn install:install-file -Dfile="$1"/MMCoreJ_wrap/MMCoreJ.jar -DgroupId=MicroManager -DartifactId=MMCoreJ -Dversion="$(cat "$1"/version.txt)" -Dpackaging=jar
-mvn install:install-file -Dfile="$1"/plugins/PixelCalibrator.jar -DgroupId=MicroManager -DartifactId=PixelCalibrator -Dversion="$(cat "$1"/version.txt)" -Dpackaging=jar
-mvn install:install-file -Dfile="$1"/plugins/DataBrowser.jar -DgroupId=MicroManager -DartifactId=DataBrowser -Dversion="$(cat "$1"/version.txt)" -Dpackaging=jar
-mvn install:install-file -Dfile="$1"/plugins/Big.jar -DgroupId=MicroManager -DartifactId=Big -Dversion="$(cat "$1"/version.txt)" -Dpackaging=jar
-mvn install:install-file -Dfile="$1"/plugins/Recall.jar -DgroupId=MicroManager -DartifactId=Recall -Dversion="$(cat "$1"/version.txt)" -Dpackaging=jar
+[[ $# -lt 2 ]] && echo "Usage: $0 micromanager-dir fiji-appdir" >&2 && exit 1
+mvn install:install-file -Dfile="$1"/plugins/Micro-Manager/MMJ_.jar -DgroupId=MicroManager -DartifactId=MMJ_ -Dversion="${1##*/Micro-Manager-}" -Dpackaging=jar
+mvn install:install-file -Dfile="$1"/plugins/Micro-Manager/MMCoreJ.jar -DgroupId=MicroManager -DartifactId=MMCoreJ -Dversion="${1##*/Micro-Manager-}" -Dpackaging=jar
 
 mvn install:install-file -Dfile="$2/jars/Hough_Transform-1.0.0.jar" -DgroupId=sc.fiji -DartifactId=Hough_Transform -Dversion=1.0.0 -Dpackaging=jar

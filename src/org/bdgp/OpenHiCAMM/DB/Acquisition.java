@@ -8,11 +8,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.Util;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.micromanager.MMStudio;
-import org.micromanager.acquisition.MMAcquisition;
-import org.micromanager.utils.MMScriptException;
+import mmcorej.org.json.JSONException;
+import mmcorej.org.json.JSONObject;
+import org.micromanager.internal.MMStudio;
+import org.micromanager.acquisition.internal.MMAcquisition;
+import org.micromanager.internal.utils.MMScriptException;
 
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;

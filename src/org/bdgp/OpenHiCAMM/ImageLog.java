@@ -25,7 +25,8 @@ import java.util.concurrent.FutureTask;
 
 import javax.swing.ListSelectionModel;
 
-import org.micromanager.utils.ImageUtils;
+import org.micromanager.internal.utils.imageanalysis.ImageUtils;
+
 
 @SuppressWarnings("serial")
 public class ImageLog extends JFrame {

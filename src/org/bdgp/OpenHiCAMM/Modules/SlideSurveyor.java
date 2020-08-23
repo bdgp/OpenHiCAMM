@@ -29,18 +29,18 @@ import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.micromanager.MMStudio;
-import org.micromanager.api.MultiStagePosition;
-import org.micromanager.api.PositionList;
+import mmcorej.org.json.JSONException;
+import mmcorej.org.json.JSONObject;
+import org.micromanager.internal.MMStudio;
+import org.micromanager.MultiStagePosition;
+import org.micromanager.PositionList;
 //import org.micromanager.graph.MultiChannelHistograms;
 //import org.micromanager.imagedisplay.VirtualAcquisitionDisplay;
-import org.micromanager.utils.ImageUtils;
-import org.micromanager.utils.MDUtils;
-import org.micromanager.utils.MMException;
-import org.micromanager.utils.MMScriptException;
-import org.micromanager.utils.MMSerializationException;
+import org.micromanager.internal.utils.imageanalysis.ImageUtils;
+import org.micromanager.internal.utils.MDUtils;
+import org.micromanager.internal.utils.MMException;
+import org.micromanager.internal.utils.MMScriptException;
+import org.micromanager.internal.utils.MMSerializationException;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -196,7 +196,7 @@ public class SlideSurveyor implements Module {
 
         ImagePlus slideThumb;
         Double minX = null, minY = null, maxX = null, maxY = null; 
-        CMMCore core = this.workflowRunner.getOpenHiCAMM().getApp().getMMCore();
+        CMMCore core = this.workflowRunner.getOpenHiCAMM().getApp().getCMMCore();
         try {
             if (core.isSequenceRunning()) {
                 core.stopSequenceAcquisition();
@@ -752,14 +752,14 @@ public class SlideSurveyor implements Module {
             logger.fine(String.format("Inserted/Updated YPositionUm config: %s", YPositionUm));
             
             // Store the MSP value as a JSON string
-            CMMCore core = this.workflowRunner.getOpenHiCAMM().getApp().getMMCore();
+            CMMCore core = this.workflowRunner.getOpenHiCAMM().getApp().getCMMCore();
             String xyStage = core.getXYStageDevice();
             String focus = core.getFocusDevice();
             try {
                 PositionList mspPosList = new PositionList();
                 MultiStagePosition msp = new MultiStagePosition(xyStage, XPositionUm, YPositionUm, focus, 0.0);
                 mspPosList.addPosition(msp);
-                String mspJson = new JSONObject(mspPosList.serialize()).
+                String mspJson = new JSONObject(mspPosList.toPropertyMap().toJSON()).
                         getJSONArray("POSITIONS").getJSONObject(0).toString();
                 TaskConfig mspConf = new TaskConfig(
                         task.getId(), "MSP", mspJson);
@@ -768,7 +768,6 @@ public class SlideSurveyor implements Module {
                 workflowRunner.getLogger().fine(String.format(
                         "Inserted MultiStagePosition config: %s", mspJson));
             } 
-            catch (MMSerializationException e) {throw new RuntimeException(e);} 
             catch (JSONException e) {throw new RuntimeException(e);}
 
             // create taskConfig record for the slide ID

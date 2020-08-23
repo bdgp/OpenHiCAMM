@@ -35,12 +35,12 @@ import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.micromanager.acquisition.MMAcquisition;
-import org.micromanager.api.ImageCache;
-import org.micromanager.utils.ImageUtils;
-import org.micromanager.utils.MDUtils;
+import mmcorej.org.json.JSONArray;
+import mmcorej.org.json.JSONException;
+import org.micromanager.acquisition.internal.MMAcquisition;
+import org.micromanager.ImageCache;
+import org.micromanager.internal.utils.imageanalysis.ImageUtils;
+import org.micromanager.internal.utils.MDUtils;
 
 import ij.IJ;
 import ij.ImagePlus;

@@ -15,12 +15,12 @@ import java.io.StringWriter;
 import java.util.Date;
 import java.lang.System;
 
-import org.micromanager.MMStudio;
-import org.micromanager.api.Autofocus;
-import org.micromanager.api.ScriptInterface;
-import org.micromanager.utils.AutofocusBase;
-import org.micromanager.utils.ImageUtils;
-import org.micromanager.utils.MMException;
+import org.micromanager.internal.MMStudio;
+import org.micromanager.AutofocusPlugin;
+import org.micromanager.Studio;
+import org.micromanager.internal.utils.AutofocusBase;
+import org.micromanager.internal.utils.imageanalysis.ImageUtils;
+import org.micromanager.internal.utils.MMException;
 
 import mmcorej.CMMCore;
 import mmcorej.TaggedImage;
@@ -35,7 +35,7 @@ import edu.mines.jtk.dsp.FftReal;
  * @author: Pakpoom Subsoontorn & Hernan Garcia, changed to FFT Bandpass Analysis by Stephan Preib
  * 
  */
-public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus {
+public class FastFFTAutoFocus extends AutofocusBase {
     // NOTES:
     // gui = MMStudio, mmc = MMCore, acq = AcquisitionWrapperEngine
     // gui.getAutofocus()
@@ -154,7 +154,7 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
         if (core_ == null)
         {
             // if core object is not set attempt to get its global handle
-            core_ = MMStudio.getInstance().getMMCore();
+            core_ = MMStudio.getInstance().getCMMCore();
         }
 
         if (core_ == null)
@@ -1012,8 +1012,8 @@ public class FastFFTAutoFocus extends AutofocusBase implements PlugIn, Autofocus
 	}
 
 	@Override
-	public void setApp(ScriptInterface app) {
-		this.core_ = app.getMMCore();
+	public void setApp(Studio app) {
+		this.core_ = app.getCMMCore();
 	}
 
 	@Override

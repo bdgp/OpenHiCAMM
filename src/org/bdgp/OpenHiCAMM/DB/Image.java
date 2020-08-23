@@ -2,10 +2,10 @@ package org.bdgp.OpenHiCAMM.DB;
 
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
-import org.micromanager.acquisition.MMAcquisition;
-import org.micromanager.api.ImageCache;
-import org.micromanager.utils.ImageUtils;
-import org.micromanager.utils.MDUtils;
+import org.micromanager.acquisition.internal.MMAcquisition;
+import org.micromanager.ImageCache;
+import org.micromanager.internal.utils.imageanalysis.ImageUtils;
+import org.micromanager.internal.utils.MDUtils;
 
 import mmcorej.TaggedImage;
 
