@@ -4,6 +4,7 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 
 import java.awt.Component;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -34,13 +35,10 @@ import mmcorej.org.json.JSONObject;
 import org.micromanager.internal.MMStudio;
 import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
+import org.micromanager.data.internal.DefaultImage;
 //import org.micromanager.graph.MultiChannelHistograms;
 //import org.micromanager.imagedisplay.VirtualAcquisitionDisplay;
 import org.micromanager.internal.utils.imageanalysis.ImageUtils;
-import org.micromanager.internal.utils.MDUtils;
-import org.micromanager.internal.utils.MMException;
-import org.micromanager.internal.utils.MMScriptException;
-import org.micromanager.internal.utils.MMSerializationException;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -156,7 +154,7 @@ public class SlideSurveyor implements Module {
         }
         PositionList positionList = new PositionList();
         try { positionList.load(posListFile.getPath()); } 
-        catch (MMException e) {throw new RuntimeException(e);}
+        catch (IOException e) {throw new RuntimeException(e);}
         
         // get the survey folder
         Config surveyFolderConf = conf.get("surveyFolder");
@@ -204,10 +202,7 @@ public class SlideSurveyor implements Module {
             }
 
             // close all open acquisition windows
-            for (String name : MMStudio.getInstance().getAcquisitionNames()) {
-                try { MMStudio.getInstance().closeAcquisitionWindow(name); } 
-                catch (MMScriptException e) { /* do nothing */ }
-            }
+            MMStudio.getInstance().getDisplayManager().closeAllDisplayWindows(false);
 
             // get the dimensions of a normal image
             core.snapImage();
@@ -215,8 +210,9 @@ public class SlideSurveyor implements Module {
             if (taggedImage == null) {
                 throw new RuntimeException("Could not get image dimensions!");
             }
-            int hiresImageWidth = MDUtils.getWidth(taggedImage.tags);
-            int hiresImageHeight = MDUtils.getHeight(taggedImage.tags);
+            org.micromanager.data.Image mmimage = new DefaultImage(taggedImage);
+            int hiresImageWidth = mmimage.getWidth();
+            int hiresImageHeight = mmimage.getHeight();
             
             // start live mode
             core.clearCircularBuffer();
@@ -717,7 +713,7 @@ public class SlideSurveyor implements Module {
             }
             PositionList positionList = new PositionList();
             try { positionList.load(posListFile.getPath()); } 
-            catch (MMException e) {throw new RuntimeException(e);}
+            catch (IOException e1) { throw new RuntimeException(e1); }
 
             // determine the bounds of the stage coordinates
             Double minX = null, minY = null, maxX = null, maxY = null; 

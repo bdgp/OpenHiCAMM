@@ -38,9 +38,8 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import mmcorej.org.json.JSONArray;
 import mmcorej.org.json.JSONException;
 import org.micromanager.acquisition.internal.MMAcquisition;
-import org.micromanager.ImageCache;
-import org.micromanager.internal.utils.imageanalysis.ImageUtils;
-import org.micromanager.internal.utils.MDUtils;
+import org.micromanager.data.Datastore;
+import org.micromanager.internal.MMStudio;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -48,7 +47,6 @@ import ij.WindowManager;
 import ij.io.FileSaver;
 import ij.macro.Interpreter;
 import ij.process.ImageProcessor;
-import mmcorej.TaggedImage;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
@@ -250,14 +248,14 @@ public class ImageStitcher implements Module, ImageLogger {
             Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
             MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
             // Get the image cache object
-            ImageCache imageCache = mmacquisition.getImageCache();
-            if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+            Datastore datastore = mmacquisition.getDatastore();
+            if (datastore == null) throw new RuntimeException("Acquisition was not initialized; datastore is null!");
             // Get the tagged image from the image cache
-            TaggedImage taggedImage = image.getImage(imageCache);
-            if (taggedImage == null) throw new RuntimeException(String.format("Acqusition %s, Image %s is not in the image cache!",
+            org.micromanager.data.Image mmimage = image.getImage(datastore);
+            if (mmimage == null) throw new RuntimeException(String.format("Acqusition %s, Image %s is not in the image cache!",
                     acquisition, image));
             // convert the tagged image into an ImagePlus object
-            ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
+            ImageProcessor processor = MMStudio.getInstance().getDataManager().getImageJConverter().createProcessor(mmimage);
             ImagePlus imp = new ImagePlus(image.getName(), processor);
             imageLogRunner.addImage(imp, imp.getTitle());
 

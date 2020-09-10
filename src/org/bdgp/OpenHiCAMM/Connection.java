@@ -142,7 +142,7 @@ public class Connection extends JdbcConnectionSource {
                     		username, password);
                     // test the connection
                     if (schema != null) con.setSchema(schema);
-                    DatabaseConnection dc = con.getReadWriteConnection();
+                    DatabaseConnection dc = con.getReadWriteConnection("TASK");
                     con.releaseConnection(dc);
                     return con;
                 } catch (SQLException e) {
@@ -232,7 +232,7 @@ public class Connection extends JdbcConnectionSource {
 	
 	public void createSchema(String schema) {
 	    try {
-            DatabaseConnection dc = this.getReadWriteConnection();
+            DatabaseConnection dc = this.getReadWriteConnection(null);
             StringBuilder sb = new StringBuilder();
             sb.append("CREATE SCHEMA ");
             this.getDatabaseType().appendEscapedEntityName(sb, schema);
@@ -248,7 +248,7 @@ public class Connection extends JdbcConnectionSource {
             if (!isSchemaExists(schema)) {
                 createSchema(schema);
             }
-            DatabaseConnection dc = this.getReadWriteConnection();
+            DatabaseConnection dc = this.getReadWriteConnection(null);
             StringBuilder sb = new StringBuilder();
             sb.append("SET SCHEMA ");
             this.getDatabaseType().appendEscapedEntityName(sb, schema);
@@ -276,7 +276,7 @@ public class Connection extends JdbcConnectionSource {
 	public boolean isTableExists(String tableName, String tableSchem) {
 	    try {
             // we only support schema checking for JdbcDatabaseConnections.
-            DatabaseConnection dc = this.getReadWriteConnection();
+            DatabaseConnection dc = this.getReadWriteConnection(null);
             if (!JdbcDatabaseConnection.class.isAssignableFrom(dc.getClass()) || tableSchem == null) {
                 throw new RuntimeException("Only JdbcDatabaseConnections are supported!");
             }
@@ -312,7 +312,7 @@ public class Connection extends JdbcConnectionSource {
 	public boolean isSchemaExists(String tableSchem) {
 	    try {
             // we only support schema checking for JdbcDatabaseConnections.
-            DatabaseConnection dc = this.getReadWriteConnection();
+            DatabaseConnection dc = this.getReadWriteConnection(null);
             if (!JdbcDatabaseConnection.class.isAssignableFrom(dc.getClass()) || tableSchem == null) {
                 throw new RuntimeException("Only JdbcDatabaseConnections are supported!");
             }

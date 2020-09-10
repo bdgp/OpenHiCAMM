@@ -3,14 +3,21 @@ package org.bdgp.OpenHiCAMM;
 import java.awt.Dimension;
 import java.io.EOFException;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.jar.JarEntry;
+import java.util.jar.JarInputStream;
 import java.util.logging.Logger;
 
 import javax.swing.JOptionPane;
@@ -32,7 +39,6 @@ import org.micromanager.internal.MMStudio;
 import org.micromanager.MMPlugin;
 import org.micromanager.Studio;
 import org.micromanager.internal.utils.JavaUtils;
-import org.micromanager.internal.utils.MMException;
 import org.micromanager.internal.utils.ReportingUtils;
 
 public class OpenHiCAMM implements MMPlugin {
@@ -64,9 +70,7 @@ public class OpenHiCAMM implements MMPlugin {
 		}
 		synchronized(OpenHiCAMM.loadedAutofocus) {
             if (!loadedAutofocus) {
-                MMStudio.getInstance().getAutofocusManager().setAFPluginClassName(FastFFTAutoFocus.class.getName());
-                try { MMStudio.getInstance().getAutofocusManager().refresh(); } 
-                catch (MMException e) { ReportingUtils.logError(e.getMessage()); }
+                 MMStudio.getInstance().getAutofocusManager().refresh();
                 loadedAutofocus = true;
             }
 		}
@@ -255,7 +259,7 @@ public class OpenHiCAMM implements MMPlugin {
             
             // Look in the mmslidemodules/ directory for any additional workflow modules.
             File pluginRootDir = new File(System.getProperty("org.bdgp.mmslide.module.path", MMSLIDEMODULESDIR));
-            List<Class<?>> classes = JavaUtils.findAndLoadClasses(pluginRootDir, 0);
+            List<Class<?>> classes = findAndLoadClasses(pluginRootDir, 0);
             for (Class<?> clazz : classes) { 
                 if (!Modifier.isAbstract(clazz.getModifiers())) {
                     for (Class<?> iface : clazz.getInterfaces()) {
@@ -271,6 +275,101 @@ public class OpenHiCAMM implements MMPlugin {
 		}
 	}
 	
+	public static List<Class<?>> findAndLoadClasses(File directory, int recursionLevel) {
+		List<Class<?>> classes = new ArrayList<Class<?>>();
+		if (!directory.exists()) {
+			return classes;
+		}
+
+		final URL directoryURL;
+		try {
+			directoryURL = directory.toURI().toURL();
+		}
+		catch (MalformedURLException e) {
+			ReportingUtils.logError(e, "Failed to search for classes");
+			return classes;
+		}
+
+		try {
+			addURL(directoryURL);
+		}
+		catch (IOException ignore) {
+			// Logged by addURL()
+		}
+
+		File[] files = directory.listFiles();
+		for (File file : files) {
+			final String fileName = file.getName();
+			if (file.isDirectory() && recursionLevel > 0) {
+				classes.addAll(findAndLoadClasses(file, recursionLevel - 1));
+			} else if (fileName.endsWith(".class")) {
+				final String className = stripFilenameExtension(fileName);
+				try {
+					classes.add(Class.forName(className));
+				}
+				catch (ClassNotFoundException e) {
+					ReportingUtils.logError(e, "Failed to load class: " +
+							className + " (expected in " + fileName + ")");
+				}
+			} else if (file.getName().endsWith(".jar")) {
+				try {
+					addURL(new URL("jar:file:" + file.getAbsolutePath() + "!/"));
+					try (JarInputStream jarFile = new JarInputStream(new FileInputStream(file))) {
+                        for (JarEntry jarEntry = jarFile.getNextJarEntry();
+                                jarEntry != null;
+                                jarEntry = jarFile.getNextJarEntry()) {
+                            final String classFileName = jarEntry.getName();
+                            if (classFileName.endsWith(".class")) {
+                                final String className = stripFilenameExtension(classFileName).replace("/", ".");
+                                try {
+                                    classes.add(Class.forName(className));
+                                } catch (ClassNotFoundException e) {
+                                    ReportingUtils.logError(e, "Failed to load class: " +
+                                            className + " (expected in " +
+                                            file.getAbsolutePath() + " based on JAR entry");
+                                } catch (NoClassDefFoundError ncfe) {
+                                    ReportingUtils.logError(ncfe, "Failed to load class: " +
+                                            className + " (expected in " +
+                                            file.getAbsolutePath() + " based on JAR entry");
+                                }
+                            }
+                        }
+					}
+				} catch (Exception e) {
+					ReportingUtils.logError(e);
+				}
+			}
+		}
+
+		return classes;
+	}
+
+   private static final Class<?>[] parameters = new Class[]{URL.class};
+   public static void addURL(URL u) throws IOException {
+	   URLClassLoader loader = (URLClassLoader) JavaUtils.class.getClassLoader();
+	   Class<?> sysclass = URLClassLoader.class;
+
+	   try {
+		   Method method = sysclass.getDeclaredMethod("addURL", parameters);
+		   method.setAccessible(true);
+		   method.invoke(loader, new Object[]{u});
+		   ReportingUtils.logMessage("Added URL to system class loader: " + u);
+	   } catch (Throwable t) {
+		   ReportingUtils.logError(t, "Failed to add URL to system class loader: " + u);
+		   throw new IOException("Failed to add URL to system class loader: " + u);
+	   }
+
+   }
+
+   private static String stripFilenameExtension(String filename) {
+	   int i = filename.lastIndexOf('.');
+	   if (i > 0) {
+		   return filename.substring(0, i);
+	   } else {
+		   return filename;
+	   }
+   }
+	
 	/**
 	 * @return The list of registered modules
 	 */
@@ -285,5 +384,20 @@ public class OpenHiCAMM implements MMPlugin {
 	public static List<String> getReportNames() {
 	    loadModules();
 	    return reportNames;
+	}
+
+	@Override
+	public void setContext(Studio studio) {
+		this.app = studio;
+	}
+
+	@Override
+	public String getName() {
+		return this.getClass().getSimpleName();
+	}
+
+	@Override
+	public String getHelpText() {
+		return this.getClass().getSimpleName();
 	}
 }

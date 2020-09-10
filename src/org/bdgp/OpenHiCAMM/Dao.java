@@ -556,7 +556,7 @@ public class Dao<T> extends BaseDaoImpl<T,Object> {
                     long restart = this.queryRawValue(String.format("select max(\"%s\") from \"%s\"", 
                             fieldType.getColumnName(), 
                             this.getTableInfo().getTableName()));
-                    connection.getReadWriteConnection().executeStatement(String.format("alter sequence \"%s\" restart with %d", 
+                    connection.getReadWriteConnection(null).executeStatement(String.format("alter sequence \"%s\" restart with %d", 
                             sequenceName, restart+1), DatabaseConnection.DEFAULT_RESULT_FLAGS);
                 }
                 catch (SQLException e) {throw new RuntimeException(e);}

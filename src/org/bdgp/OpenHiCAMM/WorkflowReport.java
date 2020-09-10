@@ -62,8 +62,6 @@ import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
 import org.micromanager.StagePosition;
 import org.micromanager.internal.utils.ImageLabelComparator;
-import org.micromanager.internal.utils.MDUtils;
-import org.micromanager.internal.utils.MMSerializationException;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
@@ -168,11 +166,11 @@ public class WorkflowReport implements Report {
                         put("POSITIONS", new JSONArray().put(new JSONObject(mspConf.getValue()))).
                         put("VERSION", 3).
                         put("ID","Micro-Manager XY-position list");
-                posList.restore(posListJson.toString());
+                posList.load(posListJson.toString());
                 MultiStagePosition msp = posList.getPosition(0);
                 msps.put(mspConf.getId(), msp);
             } 
-            catch (JSONException | MMSerializationException e) {throw new RuntimeException(e.toString());}
+            catch (JSONException | IOException e) {throw new RuntimeException(e.toString());} 
         }
 
         // Find SlideImager modules where there is no associated posListModuleId module config
@@ -753,9 +751,9 @@ public class WorkflowReport implements Report {
                                                             if (imageIdConf2 != null) {
                                                                 for (int i=0; i<imagerMsp.size(); ++i) {
                                                                     StagePosition sp = imagerMsp.get(i);
-                                                                    if (sp.numAxes == 2 && sp.stageName.compareTo(imagerMsp.getDefaultXYStage()) == 0) {
-                                                                        xPos += sp.x;
-                                                                        yPos += sp.y;
+                                                                    if (sp.getNumberOfStageAxes() == 2 && sp.getStageDeviceLabel().compareTo(imagerMsp.getDefaultXYStage()) == 0) {
+                                                                        xPos += sp.get2DPositionX();
+                                                                        yPos += sp.get2DPositionY();
                                                                         ++posCount;
                                                                         break;
                                                                     }

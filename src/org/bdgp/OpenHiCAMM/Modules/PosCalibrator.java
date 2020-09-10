@@ -24,17 +24,14 @@ import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
-import mmcorej.org.json.JSONException;
 import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
 import org.micromanager.StagePosition;
-import org.micromanager.internal.utils.MDUtils;
 
 import bdgp.org.hough.GHT_Rawmatch;
 import ij.ImagePlus;
 import ij.gui.Roi;
 import ij.process.ImageConverter;
-import mmcorej.TaggedImage;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
@@ -147,9 +144,9 @@ public class PosCalibrator implements Module {
                     for (MultiStagePosition msp : msps) {
                         for (int i=0; i<msp.size(); ++i) {
                             StagePosition sp = msp.get(i);
-                            if (sp.numAxes == 2 && sp.stageName.compareTo(msp.getDefaultXYStage()) == 0) {
-                                msp.setProperty("origX", Double.toString(sp.x));
-                                msp.setProperty("origY", Double.toString(sp.y));
+                            if (sp.getNumberOfStageAxes() == 2 && sp.getStageDeviceLabel().compareTo(msp.getDefaultXYStage()) == 0) {
+                                msp.setProperty("origX", Double.toString(sp.get2DPositionX()));
+                                msp.setProperty("origY", Double.toString(sp.get2DPositionY()));
                                 break;
                             }
                         }
@@ -196,13 +193,10 @@ public class PosCalibrator implements Module {
                     Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
                     ImagePlus imp = image.getImagePlus(workflow);
                     new ImageConverter(imp).convertToGray8();
-                    TaggedImage taggedImage = image.getTaggedImage(workflow);
-                    try {
-                        Double xPos = MDUtils.getXPositionUm(taggedImage.tags);
-                        Double yPos = MDUtils.getYPositionUm(taggedImage.tags);
-                        refImages.put(imp, new Point2D.Double(xPos, yPos));
-                    }
-                    catch (JSONException e) { throw new RuntimeException(e); }
+                    org.micromanager.data.Image mmimage = image.getImage(workflow);
+                    Double xPos = mmimage.getMetadata().getXPositionUm();
+                    Double yPos = mmimage.getMetadata().getYPositionUm();
+                    refImages.put(imp, new Point2D.Double(xPos, yPos));
                 }
             }
         }
@@ -237,13 +231,10 @@ public class PosCalibrator implements Module {
                     Image image = imageDao.selectOneOrDie(where("id", imageId.getValue()));
                     ImagePlus imp = image.getImagePlus(workflow);
                     new ImageConverter(imp).convertToGray8();
-                    TaggedImage taggedImage = image.getTaggedImage(workflow);
-                    try {
-                        Double xPos = MDUtils.getXPositionUm(taggedImage.tags);
-                        Double yPos = MDUtils.getYPositionUm(taggedImage.tags);
-                        compareImages.put(imp, new Point2D.Double(xPos, yPos));
-                    } 
-                    catch (JSONException e) {throw new RuntimeException(e);}
+                    org.micromanager.data.Image mmimage = image.getImage(workflow);
+                    Double xPos = mmimage.getMetadata().getXPositionUm();
+                    Double yPos = mmimage.getMetadata().getYPositionUm();
+                    compareImages.put(imp, new Point2D.Double(xPos, yPos));
                 }
             }
         }
@@ -369,9 +360,8 @@ public class PosCalibrator implements Module {
 
                 for (int i=0; i<msp.size(); ++i) {
                     StagePosition sp = msp.get(i);
-                    if (sp.numAxes == 2 && sp.stageName.compareTo(msp.getDefaultXYStage()) == 0) {
-                        sp.x = origX + translateStage.getX();
-                        sp.y = origY + translateStage.getY();
+                    if (sp.getNumberOfStageAxes() == 2 && sp.getStageDeviceLabel().compareTo(msp.getDefaultXYStage()) == 0) {
+                    	sp.set2DPosition(sp.getStageDeviceLabel(), origX+translateStage.getX(), origY+translateStage.getY());
                         break;
                     }
                 }

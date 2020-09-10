@@ -31,9 +31,8 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import mmcorej.org.json.JSONException;
 import org.micromanager.acquisition.internal.MMAcquisition;
-import org.micromanager.ImageCache;
+import org.micromanager.data.Datastore;
 import org.micromanager.Studio;
-import org.micromanager.internal.utils.MDUtils;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
@@ -70,12 +69,10 @@ public abstract class PostProcessor implements Module, ImageLogger {
         final Image image = imageDao.selectOneOrDie(where("id",imageId));
 
         // get the tagged image
-        TaggedImage taggedImage = getTaggedImage(image, logger);
+        org.micromanager.data.Image mmimage = getMMImage(image, logger);
 
         // get the image label and position name
-        String positionName = null;
-        try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
-        catch (JSONException e) {throw new RuntimeException(e);} 
+        String positionName = mmimage.getMetadata().getPositionName(Integer.toString(mmimage.getCoords().getStagePosition()));
         String imageLabel = image.getLabel();
         String label = String.format("%s (%s)", positionName, imageLabel); 
         
@@ -86,10 +83,10 @@ public abstract class PostProcessor implements Module, ImageLogger {
         Slide slide = slideDao.selectOneOrDie(where("id",image.getSlideId()));
         logger.fine(String.format("%s: Using slide: %s", label, slide));
 
-        return process(image, taggedImage, logger, new ImageLog.NullImageLogRunner(), config);
+        return process(image, mmimage, logger, new ImageLog.NullImageLogRunner(), config);
     }
     
-    public TaggedImage getTaggedImage(Image image, Logger logger) {
+    public org.micromanager.data.Image getMMImage(Image image, Logger logger) {
         String label = image.getLabel();
 
         // Initialize the acquisition
@@ -98,18 +95,18 @@ public abstract class PostProcessor implements Module, ImageLogger {
         logger.fine(String.format("%s: Using acquisition: %s", label, acquisition));
         MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
 
-        // Get the image cache object
-        ImageCache imageCache = mmacquisition.getImageCache();
-        if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
-        logger.fine(String.format("%s: ImageCache has following images: %s", label, imageCache.imageKeys()));
-        logger.fine(String.format("%s: Attempting to grab image %s from imageCache", label, image));
+        // Get the datastore object
+        Datastore datastore = mmacquisition.getDatastore();
+        if (datastore == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+        logger.fine(String.format("%s: Datastore has following images: %s", label, datastore.imageKeys()));
+        logger.fine(String.format("%s: Attempting to grab image %s from datastore", label, image));
         // Get the tagged image from the image cache
-        TaggedImage taggedImage = image.getImage(imageCache);
-        if (taggedImage == null) throw new RuntimeException(String.format("Acqusition %s, Image %s is not in the image cache!",
+        org.micromanager.data.Image mmimage = image.getImage(datastore);
+        if (mmimage == null) throw new RuntimeException(String.format("Acqusition %s, Image %s is not in the datastore!",
                 acquisition, image));
-        logger.fine(String.format("%s: Got taggedImage from ImageCache: %s", label, taggedImage));
+        logger.fine(String.format("%s: Got mmimage from ImageCache: %s", label, mmimage));
 
-        return taggedImage;
+        return mmimage;
     }
     
     /**
@@ -124,7 +121,7 @@ public abstract class PostProcessor implements Module, ImageLogger {
      */
     public abstract Status process(
             Image image, 
-            TaggedImage taggedImage, 
+            org.micromanager.data.Image mmimage, 
             Logger logger, 
             ImageLogRunner imageLog, 
             Map<String,Config> config);
@@ -214,14 +211,14 @@ public abstract class PostProcessor implements Module, ImageLogger {
                     MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
 
                     // Get the image cache object
-                    ImageCache imageCache = mmacquisition.getImageCache();
-                    if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+                    Datastore datastore = mmacquisition.getDatastore();
+                    if (datastore == null) throw new RuntimeException("Acquisition was not initialized; datastore is null!");
                     // Get the tagged image from the image cache
-                    TaggedImage taggedImage = image.getImage(imageCache);
-                    logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
+                    org.micromanager.data.Image mmimage = image.getImage(datastore);
+                    logger.info(String.format("Got mmimage from Datastore: %s", mmimage));
 
                     ImageLogRunner imageLogRunner = new ImageLogRunner(task.getName(workflowRunner.getWorkflow()));
-                    PostProcessor.this.process(image, taggedImage, logger, imageLogRunner, config);
+                    PostProcessor.this.process(image, mmimage, logger, imageLogRunner, config);
                     return imageLogRunner;
                 }
                 return null;

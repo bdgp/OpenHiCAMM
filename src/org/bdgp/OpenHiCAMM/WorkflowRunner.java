@@ -823,7 +823,7 @@ public class WorkflowRunner {
                 String dispatchUUID = UUID.randomUUID().toString();
                 if (status == Status.SUCCESS) {
                     try {
-                        DatabaseConnection db = taskStatus.getConnectionSource().getReadWriteConnection();
+                        DatabaseConnection db = taskStatus.getConnectionSource().getReadWriteConnection("TASK");
                         List<TaskDispatch> childTasks = taskDispatch.select(where("parentTaskId",task.getId()));
                         try {
                             for (TaskDispatch td : childTasks) {
@@ -841,7 +841,7 @@ public class WorkflowRunner {
                                     "       where td.parentTaskId=p.id \n"+
                                     "         and td.taskId=? \n"+
                                     "         and p.status<>'SUCCESS')=0",
-                                    StatementType.UPDATE, new FieldType[0], DatabaseConnection.DEFAULT_RESULT_FLAGS);
+                                    StatementType.UPDATE, new FieldType[0], DatabaseConnection.DEFAULT_RESULT_FLAGS, false);
                                 compiledStatement.setObject(0, dispatchUUID, SqlType.LONG_STRING);
                                 compiledStatement.setObject(1, td.getTaskId(), SqlType.INTEGER);
                                 compiledStatement.setObject(2, td.getTaskId(), SqlType.INTEGER);
@@ -1153,7 +1153,7 @@ public class WorkflowRunner {
     
     public void shutdown() {
         try {
-            this.workflowDb.getReadWriteConnection().executeStatement("shutdown", DatabaseConnection.DEFAULT_RESULT_FLAGS);
+            this.workflowDb.getReadWriteConnection(null).executeStatement("shutdown", DatabaseConnection.DEFAULT_RESULT_FLAGS);
         } 
         catch (SQLException e) {throw new RuntimeException(e);}
     }

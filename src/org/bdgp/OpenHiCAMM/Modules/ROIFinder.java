@@ -39,12 +39,11 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import mmcorej.org.json.JSONException;
 import org.micromanager.acquisition.internal.MMAcquisition;
-import org.micromanager.ImageCache;
+import org.micromanager.data.Datastore;
 import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
 import org.micromanager.Studio;
 import org.micromanager.StagePosition;
-import org.micromanager.internal.utils.MDUtils;
 import org.micromanager.internal.utils.MMSerializationException;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
@@ -85,15 +84,13 @@ public abstract class ROIFinder implements Module, ImageLogger {
         final Image image = imageDao.selectOneOrDie(where("id",imageId));
 
         // get the tagged image
-        TaggedImage taggedImage = getTaggedImage(image, logger);
+        org.micromanager.data.Image mmimage = getMMImage(image, logger);
         int taggedImageWidth; 
         int taggedImageHeight; 
         String positionName;
-        try {
-            taggedImageWidth = MDUtils.getWidth(taggedImage.tags);
-            taggedImageHeight = MDUtils.getHeight(taggedImage.tags);
-            positionName = MDUtils.getPositionName(taggedImage.tags);
-        } catch (JSONException e) {throw new RuntimeException(e);}
+        taggedImageWidth = mmimage.getWidth();
+        taggedImageHeight = mmimage.getHeight();
+        positionName = mmimage.getMetadata().getPositionName(Integer.toString(mmimage.getCoords().getStagePosition()));
 
         // get the image label and position name
         String imageLabel = image.getLabel();
@@ -106,201 +103,197 @@ public abstract class ROIFinder implements Module, ImageLogger {
         Slide slide = slideDao.selectOneOrDie(where("id",image.getSlideId()));
         logger.fine(String.format("%s: Using slide: %s", label, slide));
 
-    	try {
-    	    Config imageScaleFactorConf = config.get("imageScaleFactor");
-    	    double imageScaleFactor = imageScaleFactorConf != null? Double.parseDouble(imageScaleFactorConf.getValue()) : 1.0;
+        Config imageScaleFactorConf = config.get("imageScaleFactor");
+        double imageScaleFactor = imageScaleFactorConf != null? Double.parseDouble(imageScaleFactorConf.getValue()) : 1.0;
 
-    	    Config pixelSizeConf = config.get("pixelSize");
-			Double pixelSize = pixelSizeConf != null? Double.parseDouble(pixelSizeConf.getValue()) : null;
+        Config pixelSizeConf = config.get("pixelSize");
+        Double pixelSize = pixelSizeConf != null? Double.parseDouble(pixelSizeConf.getValue()) : null;
 
-    	    Config pixelSizeXConf = config.get("pixelSizeX");
-    	    Double pixelSizeX = pixelSizeXConf != null? Double.parseDouble(pixelSizeXConf.getValue()) : pixelSize;
-			logger.fine(String.format("%s: Using pixelSizeX: %f", label, pixelSizeX));
+        Config pixelSizeXConf = config.get("pixelSizeX");
+        Double pixelSizeX = pixelSizeXConf != null? Double.parseDouble(pixelSizeXConf.getValue()) : pixelSize;
+        logger.fine(String.format("%s: Using pixelSizeX: %f", label, pixelSizeX));
 
-    	    Config pixelSizeYConf = config.get("pixelSizeY");
-    	    Double pixelSizeY = pixelSizeYConf != null? Double.parseDouble(pixelSizeYConf.getValue()) : pixelSize;
-			logger.fine(String.format("%s: Using pixelSizeY: %f", label, pixelSizeY));
+        Config pixelSizeYConf = config.get("pixelSizeY");
+        Double pixelSizeY = pixelSizeYConf != null? Double.parseDouble(pixelSizeYConf.getValue()) : pixelSize;
+        logger.fine(String.format("%s: Using pixelSizeY: %f", label, pixelSizeY));
 
-			double hiResPixelSize = Double.parseDouble(config.get("hiResPixelSize").getValue());
-			logger.fine(String.format("%s: Using hiResPixelSize: %f", label, hiResPixelSize));
+        double hiResPixelSize = Double.parseDouble(config.get("hiResPixelSize").getValue());
+        logger.fine(String.format("%s: Using hiResPixelSize: %f", label, hiResPixelSize));
 
-			double roiMarginPct = Double.parseDouble(config.get("roiMarginPct").getValue());
-			logger.fine(String.format("%s: Using ROI margin size in percent of image size: %f", label, roiMarginPct));
+        double roiMarginPct = Double.parseDouble(config.get("roiMarginPct").getValue());
+        logger.fine(String.format("%s: Using ROI margin size in percent of image size: %f", label, roiMarginPct));
 
-			int positionIndex = MDUtils.getPositionIndex(taggedImage.tags);
-			logger.fine(String.format("%s: Using positionIndex: %d", label, positionIndex));
+        int positionIndex = mmimage.getCoords().getStagePosition();
+        logger.fine(String.format("%s: Using positionIndex: %d", label, positionIndex));
 
-			double overlapPct = Double.parseDouble(config.get("overlapPct").getValue());
-			logger.fine(String.format("%s: Using percentage overlap: %f", label, overlapPct));
+        double overlapPct = Double.parseDouble(config.get("overlapPct").getValue());
+        logger.fine(String.format("%s: Using percentage overlap: %f", label, overlapPct));
 
-            // get invertXAxis and invertYAxis conf values
-            Config invertXAxisConf = config.get("invertXAxis");
-            boolean invertXAxis = invertXAxisConf == null || "yes".equals(invertXAxisConf.getValue());
-            Config invertYAxisConf = config.get("invertYAxis");
-            boolean invertYAxis = invertYAxisConf == null || "yes".equals(invertYAxisConf.getValue());
+        // get invertXAxis and invertYAxis conf values
+        Config invertXAxisConf = config.get("invertXAxis");
+        boolean invertXAxis = invertXAxisConf == null || "yes".equals(invertXAxisConf.getValue());
+        Config invertYAxisConf = config.get("invertYAxis");
+        boolean invertYAxis = invertYAxisConf == null || "yes".equals(invertYAxisConf.getValue());
 
-    	    Config imageWidthConf = config.get("imageWidth");
-    	    if (imageWidthConf == null) throw new RuntimeException("Config value imageWidth was not found!");
-			Integer imageWidth = Integer.parseInt(imageWidthConf.getValue());
-			logger.fine(String.format("%s: Using imageWidth: %s", label, imageWidth));
-			
-    	    Config imageHeightConf = config.get("imageHeight");
-    	    if (imageHeightConf == null) throw new RuntimeException("Config value imageHeight was not found!");
-			Integer imageHeight = Integer.parseInt(imageHeightConf.getValue());
-			logger.fine(String.format("%s: Using imageHeight: %s", label, imageHeight));
+        Config imageWidthConf = config.get("imageWidth");
+        if (imageWidthConf == null) throw new RuntimeException("Config value imageWidth was not found!");
+        Integer imageWidth = Integer.parseInt(imageWidthConf.getValue());
+        logger.fine(String.format("%s: Using imageWidth: %s", label, imageWidth));
+        
+        Config imageHeightConf = config.get("imageHeight");
+        if (imageHeightConf == null) throw new RuntimeException("Config value imageHeight was not found!");
+        Integer imageHeight = Integer.parseInt(imageHeightConf.getValue());
+        logger.fine(String.format("%s: Using imageHeight: %s", label, imageHeight));
 
-			Config XPositionUmConf = config.get("XPositionUm");
-			double x_stage = XPositionUmConf == null? 
-			        MDUtils.getXPositionUm(taggedImage.tags) : 
-                    Double.parseDouble(XPositionUmConf.getValue());
-			
-			Config YPositionUmConf = config.get("YPositionUm");
-			double y_stage = YPositionUmConf == null?
-			        MDUtils.getYPositionUm(taggedImage.tags) :
-			        Double.parseDouble(YPositionUmConf.getValue());
-			
-			// Delete any old ROI records
-            Dao<ROI> roiDao = this.workflowRunner.getWorkflowDb().table(ROI.class);
-			int deleted = roiDao.delete(where("imageId", imageId));
-			logger.fine(String.format("%s: Deleted %d old ROI records.", label, deleted));
-			
-			// Fill in list of ROIs
-			logger.fine(String.format("%s: Running process() to get list of ROIs", label));
-			List<ROI> rois = new ArrayList<ROI>();
-			try {
-                rois = process(image, taggedImage, logger, new ImageLog.NullImageLogRunner(), config);
-			}
-			catch (Throwable e) {
-                StringWriter sw = new StringWriter();
-                e.printStackTrace(new PrintWriter(sw));
-			    logger.warning(String.format("Exception during ROI processing: %s", sw.toString()));
-			    return Status.ERROR;
-			}
+        Config XPositionUmConf = config.get("XPositionUm");
+        double x_stage = XPositionUmConf == null? 
+                mmimage.getMetadata().getXPositionUm() : 
+                Double.parseDouble(XPositionUmConf.getValue());
+        
+        Config YPositionUmConf = config.get("YPositionUm");
+        double y_stage = YPositionUmConf == null?
+                mmimage.getMetadata().getYPositionUm() :
+                Double.parseDouble(YPositionUmConf.getValue());
+        
+        // Delete any old ROI records
+        Dao<ROI> roiDao = this.workflowRunner.getWorkflowDb().table(ROI.class);
+        int deleted = roiDao.delete(where("imageId", imageId));
+        logger.fine(String.format("%s: Deleted %d old ROI records.", label, deleted));
+        
+        // Fill in list of ROIs
+        logger.fine(String.format("%s: Running process() to get list of ROIs", label));
+        List<ROI> rois = new ArrayList<ROI>();
+        try {
+            rois = process(image, mmimage, logger, new ImageLog.NullImageLogRunner(), config);
+        }
+        catch (Throwable e) {
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            logger.warning(String.format("Exception during ROI processing: %s", sw.toString()));
+            return Status.ERROR;
+        }
 
-            // Convert the ROIs into a PositionList
-			Map<MultiStagePosition,ROI> roiMap = new HashMap<MultiStagePosition,ROI>();
-			PositionList posList = new PositionList();
-			for (ROI roi : rois) {
-			    // insert the ROI record
-			    roiDao.insert(roi);
+        // Convert the ROIs into a PositionList
+        Map<MultiStagePosition,ROI> roiMap = new HashMap<MultiStagePosition,ROI>();
+        PositionList posList = new PositionList();
+        for (ROI roi : rois) {
+            // insert the ROI record
+            roiDao.insert(roi);
 
-                logger.info(String.format("%s: Created new ROI record with width=%s, height=%s, area=%s: %s", 
-                        label, roi.getX2()-roi.getX1()+1, roi.getY2()-roi.getY1()+1, 
-                        (roi.getX2()-roi.getX1()+1)*(roi.getY2()-roi.getY1()+1), roi));
+            logger.info(String.format("%s: Created new ROI record with width=%s, height=%s, area=%s: %s", 
+                    label, roi.getX2()-roi.getX1()+1, roi.getY2()-roi.getY1()+1, 
+                    (roi.getX2()-roi.getX1()+1)*(roi.getY2()-roi.getY1()+1), roi));
 
-			    // increase the ROI dimensions to add the margins
-			    double roiMarginWidth = (roiMarginPct / 100.0) * imageWidth * hiResPixelSize / (pixelSizeX / imageScaleFactor);
-			    double roiMarginHeight = (roiMarginPct / 100.0) * imageHeight * hiResPixelSize / (pixelSizeY / imageScaleFactor);
-			    int roiX1 = (int)Math.floor(roi.getX1() - roiMarginWidth);
-			    int roiY1 = (int)Math.floor(roi.getY1() - roiMarginHeight);
-			    int roiX2 = (int)Math.floor(roi.getX2() + roiMarginWidth);
-			    int roiY2 = (int)Math.floor(roi.getY2() + roiMarginHeight);
-			    
-			    // We need to potentially create a grid of Stage positions in order to capture all of the 
-			    // ROI.
-			    int roiWidth = roiX2-roiX1+1;
-			    int roiHeight = roiY2-roiY1+1;
+            // increase the ROI dimensions to add the margins
+            double roiMarginWidth = (roiMarginPct / 100.0) * imageWidth * hiResPixelSize / (pixelSizeX / imageScaleFactor);
+            double roiMarginHeight = (roiMarginPct / 100.0) * imageHeight * hiResPixelSize / (pixelSizeY / imageScaleFactor);
+            int roiX1 = (int)Math.floor(roi.getX1() - roiMarginWidth);
+            int roiY1 = (int)Math.floor(roi.getY1() - roiMarginHeight);
+            int roiX2 = (int)Math.floor(roi.getX2() + roiMarginWidth);
+            int roiY2 = (int)Math.floor(roi.getY2() + roiMarginHeight);
+            
+            // We need to potentially create a grid of Stage positions in order to capture all of the 
+            // ROI.
+            int roiWidth = roiX2-roiX1+1;
+            int roiHeight = roiY2-roiY1+1;
 
-			    int tileWidth = (int)Math.floor((imageWidth * hiResPixelSize) / (pixelSizeX / imageScaleFactor));
-			    int tileHeight = (int)Math.floor((imageHeight * hiResPixelSize) / (pixelSizeY / imageScaleFactor));
+            int tileWidth = (int)Math.floor((imageWidth * hiResPixelSize) / (pixelSizeX / imageScaleFactor));
+            int tileHeight = (int)Math.floor((imageHeight * hiResPixelSize) / (pixelSizeY / imageScaleFactor));
 
-			    int tileXOverlap = (int)Math.floor((overlapPct / 100.0) * tileWidth);
-			    int tileYOverlap = (int)Math.floor((overlapPct / 100.0) * tileHeight);
+            int tileXOverlap = (int)Math.floor((overlapPct / 100.0) * tileWidth);
+            int tileYOverlap = (int)Math.floor((overlapPct / 100.0) * tileHeight);
 
-			    int tileXCount = (int)Math.ceil((double)(roiWidth - tileXOverlap) / (double)(tileWidth - tileXOverlap));
-			    int tileYCount = (int)Math.ceil((double)(roiHeight - tileYOverlap) / (double)(tileHeight - tileYOverlap));
+            int tileXCount = (int)Math.ceil((double)(roiWidth - tileXOverlap) / (double)(tileWidth - tileXOverlap));
+            int tileYCount = (int)Math.ceil((double)(roiHeight - tileYOverlap) / (double)(tileHeight - tileYOverlap));
 
-			    int tileSetWidth = (tileXCount * (tileWidth - tileXOverlap)) + tileXOverlap;
-			    int tileSetHeight = (tileYCount * (tileHeight - tileYOverlap)) + tileYOverlap;
+            int tileSetWidth = (tileXCount * (tileWidth - tileXOverlap)) + tileXOverlap;
+            int tileSetHeight = (tileYCount * (tileHeight - tileYOverlap)) + tileYOverlap;
 
-			    int tileXOffset = (int)Math.floor(
-			            (roiX1 + ((double)roiWidth / 2.0)) 
-			            - ((double)tileSetWidth / 2.0) 
-			            + ((double)tileWidth / 2.0));
-			    int tileYOffset = (int)Math.floor(
-			            (roiY1 + ((double)roiHeight / 2.0)) 
-			            - ((double)tileSetHeight / 2.0) 
-			            + ((double)tileHeight / 2.0));
+            int tileXOffset = (int)Math.floor(
+                    (roiX1 + ((double)roiWidth / 2.0)) 
+                    - ((double)tileSetWidth / 2.0) 
+                    + ((double)tileWidth / 2.0));
+            int tileYOffset = (int)Math.floor(
+                    (roiY1 + ((double)roiHeight / 2.0)) 
+                    - ((double)tileSetHeight / 2.0) 
+                    + ((double)tileHeight / 2.0));
 
-			    for (int x=0; x < tileXCount; ++x) {
-                    for (int y=0; y < tileYCount; ++y) {
-                        int tileX = (x*(tileWidth - tileXOverlap)) + tileXOffset;
-                        int tileY = (y*(tileHeight - tileYOverlap)) + tileYOffset;
-                        MultiStagePosition msp = new MultiStagePosition();
-                        StagePosition sp = new StagePosition();
-                        sp.numAxes = 2;
-                        sp.stageName = "XYStage";
-                        sp.x = x_stage+((tileX-taggedImageWidth/2.0)*(pixelSizeX/imageScaleFactor))*(invertXAxis? -1.0 : 1.0);
-                        logger.info(String.format("x_stage=%s, tileX=%s, taggedImageWidth=%s, pixelSizeX=%s, imageScaleFactor=%s, invertXAxis=%s, sp.x=%s", 
-                                x_stage, tileX, taggedImageWidth, pixelSizeX, imageScaleFactor, invertXAxis, sp.x));
-                        sp.y = y_stage+((tileY-taggedImageHeight/2.0)*(pixelSizeY/imageScaleFactor))*(invertYAxis? -1.0 : 1.0);
-                        logger.info(String.format("y_stage=%s, tileY=%s, taggedImageHeight=%s, pixelSizeY=%s, imageScaleFactor=%s, invertYAxis=%s, sp.y=%s", 
-                                y_stage, tileY, taggedImageHeight, pixelSizeY, imageScaleFactor, invertYAxis, sp.y));
-                        String mspLabel = String.format("%s.%s.ROI%d.X%d.Y%d", 
-                                positionName, imageLabel, roi.getId(), x, y);
-                        msp.setProperty("stitchGroup", "ROI"+roi.getId());
-                        msp.setProperty("ROI", Integer.toString(roi.getId()));
-                        msp.setProperty("tileX", Integer.toString(x));
-                        msp.setProperty("tileY", Integer.toString(y));
-                        msp.setLabel(mspLabel);
-                        msp.add(sp);
-                        msp.setDefaultXYStage("XYStage");
-                        posList.addPosition(msp);
-                        roiMap.put(msp, roi);
-                        logger.info(String.format("%s: Storing StagePosition(label=%s, numAxes: %d, stageName: %s, x=%.2f, y=%.2f, tileX=%d, tileY=%d)",
-                                label, Util.escape(mspLabel), sp.numAxes, Util.escape(sp.stageName), sp.x, sp.y, tileX, tileY));
-                    }
-			    }
-			}
-			if (posList.getNumberOfPositions() > 0) {
-			    logger.info(String.format("%s: Produced position list of %d ROIs", label, posList.getNumberOfPositions())); 
-                logger.fine(String.format("%s: Position List:%n%s", label, posList.toPropertyMap().toJSON()));
-			}
-			else {
-			    logger.info(String.format("%s: ROIFinder did not produce any positions for this image", label));
-			}
+            for (int x=0; x < tileXCount; ++x) {
+                for (int y=0; y < tileYCount; ++y) {
+                    int tileX = (x*(tileWidth - tileXOverlap)) + tileXOffset;
+                    int tileY = (y*(tileHeight - tileYOverlap)) + tileYOffset;
+                    MultiStagePosition msp = new MultiStagePosition();
+                    double sp_x = x_stage+((tileX-taggedImageWidth/2.0)*(pixelSizeX/imageScaleFactor))*(invertXAxis? -1.0 : 1.0);
+                    logger.info(String.format("x_stage=%s, tileX=%s, taggedImageWidth=%s, pixelSizeX=%s, imageScaleFactor=%s, invertXAxis=%s, sp.x=%s", 
+                            x_stage, tileX, taggedImageWidth, pixelSizeX, imageScaleFactor, invertXAxis, sp_x));
+                    double sp_y = y_stage+((tileY-taggedImageHeight/2.0)*(pixelSizeY/imageScaleFactor))*(invertYAxis? -1.0 : 1.0);
+                    logger.info(String.format("y_stage=%s, tileY=%s, taggedImageHeight=%s, pixelSizeY=%s, imageScaleFactor=%s, invertYAxis=%s, sp.y=%s", 
+                            y_stage, tileY, taggedImageHeight, pixelSizeY, imageScaleFactor, invertYAxis, sp_y));
+                    StagePosition sp = StagePosition.create2D("XYStage", sp_x, sp_y);
 
-			Dao<SlidePosList> slidePosListDao = workflowRunner.getWorkflowDb().table(SlidePosList.class);
-            Dao<SlidePos> slidePosDao = workflowRunner.getWorkflowDb().table(SlidePos.class);
+                    String mspLabel = String.format("%s.%s.ROI%d.X%d.Y%d", 
+                            positionName, imageLabel, roi.getId(), x, y);
+                    msp.setProperty("stitchGroup", "ROI"+roi.getId());
+                    msp.setProperty("ROI", Integer.toString(roi.getId()));
+                    msp.setProperty("tileX", Integer.toString(x));
+                    msp.setProperty("tileY", Integer.toString(y));
+                    msp.setLabel(mspLabel);
+                    msp.add(sp);
+                    msp.setDefaultXYStage("XYStage");
+                    posList.addPosition(msp);
+                    roiMap.put(msp, roi);
+                    logger.info(String.format("%s: Storing StagePosition(label=%s, numAxes: %d, stageName: %s, x=%.2f, y=%.2f, tileX=%d, tileY=%d)",
+                            label, Util.escape(mspLabel), sp.getNumberOfStageAxes(), Util.escape(sp.getStageDeviceLabel()), sp.get2DPositionX(), sp.get2DPositionY(), tileX, tileY));
+                }
+            }
+        }
+        if (posList.getNumberOfPositions() > 0) {
+            logger.info(String.format("%s: Produced position list of %d ROIs", label, posList.getNumberOfPositions())); 
+            logger.fine(String.format("%s: Position List:%n%s", label, posList.toPropertyMap().toJSON()));
+        }
+        else {
+            logger.info(String.format("%s: ROIFinder did not produce any positions for this image", label));
+        }
 
-			// First, delete any old slidepos and slideposlist records
-			logger.fine(String.format("Deleting old position lists"));
-			List<SlidePosList> oldSlidePosLists = slidePosListDao.select(
-					where("slideId",slide.getId()).
-					and("moduleId",this.workflowModule.getId()).
-					and("taskId", task.getId()));
-			for (SlidePosList oldSlidePosList : oldSlidePosLists) {
-				slidePosDao.delete(where("slidePosListId",oldSlidePosList.getId()));
-			}
-			slidePosListDao.delete(where("slideId",slide.getId()).and("moduleId",this.workflowModule.getId()));
+        Dao<SlidePosList> slidePosListDao = workflowRunner.getWorkflowDb().table(SlidePosList.class);
+        Dao<SlidePos> slidePosDao = workflowRunner.getWorkflowDb().table(SlidePos.class);
 
-			// Create/Update SlidePosList and SlidePos DB records
-			SlidePosList slidePosList = new SlidePosList(this.workflowModule.getId(), slide.getId(), task.getId(), posList);
-			slidePosListDao.insert(slidePosList);
-			logger.fine(String.format("%s: Created new SlidePosList: %s", label, slidePosList));
+        // First, delete any old slidepos and slideposlist records
+        logger.fine(String.format("Deleting old position lists"));
+        List<SlidePosList> oldSlidePosLists = slidePosListDao.select(
+                where("slideId",slide.getId()).
+                and("moduleId",this.workflowModule.getId()).
+                and("taskId", task.getId()));
+        for (SlidePosList oldSlidePosList : oldSlidePosLists) {
+            slidePosDao.delete(where("slidePosListId",oldSlidePosList.getId()));
+        }
+        slidePosListDao.delete(where("slideId",slide.getId()).and("moduleId",this.workflowModule.getId()));
 
-			MultiStagePosition[] msps = posList.getPositions();
-			for (int i=0; i<msps.length; ++i) {
-			    ROI roi = roiMap.get(msps[i]);
-			    if (roi == null) throw new RuntimeException(
-			            String.format("Error: could not get ROI for MSP %s using roiMap", msps[i]));
+        // Create/Update SlidePosList and SlidePos DB records
+        SlidePosList slidePosList = new SlidePosList(this.workflowModule.getId(), slide.getId(), task.getId(), posList);
+        slidePosListDao.insert(slidePosList);
+        logger.fine(String.format("%s: Created new SlidePosList: %s", label, slidePosList));
 
-				SlidePos slidePos = new SlidePos(slidePosList.getId(), i, roi.getId());
-				slidePosDao.insert(slidePos);
-                logger.fine(String.format("%s: Created new SlidePos record for position %d: %s", label, i, slidePos));
-			}
-			return Status.SUCCESS;
-		} 
-    	catch (JSONException e) { throw new RuntimeException(e); }
+        MultiStagePosition[] msps = posList.getPositions();
+        for (int i=0; i<msps.length; ++i) {
+            ROI roi = roiMap.get(msps[i]);
+            if (roi == null) throw new RuntimeException(
+                    String.format("Error: could not get ROI for MSP %s using roiMap", msps[i]));
+
+            SlidePos slidePos = new SlidePos(slidePosList.getId(), i, roi.getId());
+            slidePosDao.insert(slidePos);
+            logger.fine(String.format("%s: Created new SlidePos record for position %d: %s", label, i, slidePos));
+        }
+        return Status.SUCCESS;
     }
     
-    public TaggedImage getTaggedImage(Image image, Logger logger) {
+    public org.micromanager.data.Image getMMImage(Image image, Logger logger) {
         String label = image.getLabel();
 
         // if this image is not in an acquisition, then load it as a file
         if (image.getAcquisitionId() == 0 && image.getPath() != null) {
-            TaggedImage taggedImage = image.getTaggedImage(workflowRunner);
-            return taggedImage;
+            org.micromanager.data.Image mmimage = image.getImage(workflowRunner);
+            return mmimage;
         }
 
         // Initialize the acquisition
@@ -328,17 +321,17 @@ public abstract class ROIFinder implements Module, ImageLogger {
         }
 
         // Get the image cache object
-        ImageCache imageCache = mmacquisition.getImageCache();
-        if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
-        logger.fine(String.format("%s: ImageCache has following images: %s", label, imageCache.imageKeys()));
+        Datastore datastore = mmacquisition.getDatastore();
+        if (datastore == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+        logger.fine(String.format("%s: ImageCache has following images: %s", label, datastore.imageKeys()));
         logger.fine(String.format("%s: Attempting to grab image %s from imageCache", label, image));
         // Get the tagged image from the image cache
-        TaggedImage taggedImage = image.getImage(imageCache);
-        if (taggedImage == null) throw new RuntimeException(String.format("Acqusition %s, Image %s is not in the image cache!",
+        org.micromanager.data.Image mmimage = image.getImage(datastore);
+        if (mmimage == null) throw new RuntimeException(String.format("Acqusition %s, Image %s is not in the image cache!",
                 acquisition, image));
-        logger.fine(String.format("%s: Got taggedImage from ImageCache: %s", label, taggedImage));
+        logger.fine(String.format("%s: Got mmimage from Datastore: %s", label, mmimage));
 
-        return taggedImage;
+        return mmimage;
     }
     
     /**
@@ -353,7 +346,7 @@ public abstract class ROIFinder implements Module, ImageLogger {
      */
     public abstract List<ROI> process(
             Image image, 
-            TaggedImage taggedImage, 
+            org.micromanager.data.Image mmimage, 
             Logger logger, 
             ImageLogRunner imageLog, 
             Map<String,Config> config);
@@ -559,9 +552,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
                     final Image image = imageDao.selectOneOrDie(where("id",imageId));
                     logger.info(String.format("Using image: %s", image));
                     
-                    TaggedImage taggedImage;
+                    org.micromanager.data.Image mmimage;
                     if (image.getPath() != null) {
-                        taggedImage = image.getTaggedImage(workflowRunner);
+                        mmimage = image.getImage(workflowRunner);
                     }
                     else {
                         // Initialize the acquisition
@@ -571,14 +564,14 @@ public abstract class ROIFinder implements Module, ImageLogger {
                         MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
 
                         // Get the image cache object
-                        ImageCache imageCache = mmacquisition.getImageCache();
-                        if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+                        Datastore datastore = mmacquisition.getDatastore();
+                        if (datastore == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
                         // Get the tagged image from the image cache
-                        taggedImage = image.getImage(imageCache);
-                        logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
+                        mmimage = image.getImage(datastore);
+                        logger.info(String.format("Got mmimage from Datastore: %s", mmimage));
                     }
                     ImageLogRunner imageLogRunner = new ImageLogRunner(task.getName(workflowRunner.getWorkflow()));
-                    ROIFinder.this.process(image, taggedImage, logger, imageLogRunner, config);
+                    ROIFinder.this.process(image, mmimage, logger, imageLogRunner, config);
                     return imageLogRunner;
                 }
                 return null;

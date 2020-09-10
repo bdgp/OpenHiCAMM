@@ -4,7 +4,6 @@ package org.bdgp.OpenHiCAMM;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.ImageWindow;
-import ij.plugin.PlugIn;
 import ij.process.ByteProcessor;
 import ij.process.ImageConverter;
 import ij.process.ImageProcessor;
@@ -27,6 +26,8 @@ import mmcorej.TaggedImage;
 import edu.mines.jtk.dsp.FftComplex;
 import edu.mines.jtk.dsp.FftReal;
 
+import org.scijava.plugin.SciJavaPlugin;
+
 /**
  * ImageJ plugin wrapper for uManager.
  * This plugin take a stack of snapshots and computes their sharpness using an FFT Bandpass
@@ -35,7 +36,7 @@ import edu.mines.jtk.dsp.FftReal;
  * @author: Pakpoom Subsoontorn & Hernan Garcia, changed to FFT Bandpass Analysis by Stephan Preib
  * 
  */
-public class FastFFTAutoFocus extends AutofocusBase {
+public class FastFFTAutoFocus extends AutofocusBase implements AutofocusPlugin, SciJavaPlugin {
     // NOTES:
     // gui = MMStudio, mmc = MMCore, acq = AcquisitionWrapperEngine
     // gui.getAutofocus()
@@ -67,6 +68,7 @@ public class FastFFTAutoFocus extends AutofocusBase {
     private ImagePlus outputFine = null;
     private ImageStack outputStackFine = null;*/
 
+    public Studio studio;
     public CMMCore core_;
     public ImageProcessor ipCurrent_ = null;
 
@@ -1012,23 +1014,33 @@ public class FastFFTAutoFocus extends AutofocusBase {
 	}
 
 	@Override
-	public void setApp(Studio app) {
-		this.core_ = app.getCMMCore();
-	}
-
-	@Override
-	public void focus(double arg0, int arg1, double arg2, int arg3) throws MMException {
-		throw new MMException("OBSOLETE - do not use");
-	}
-
-	@Override
-	public String getDeviceName() {
-        return AF_DEVICE_NAME;
-	}
-
-	@Override
 	public int getNumberOfImages() {
 		return 0;
+	}
+
+	@Override
+	public void setContext(Studio studio) {
+		this.studio = studio;
+	}
+
+	@Override
+	public String getName() {
+		return this.getClass().getSimpleName();
+	}
+
+	@Override
+	public String getHelpText() {
+		return this.getClass().getSimpleName();
+	}
+
+	@Override
+	public String getVersion() {
+		return "1.0";
+	}
+
+	@Override
+	public String getCopyright() {
+		return "";
 	}
 }
 

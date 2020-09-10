@@ -11,16 +11,13 @@ import org.bdgp.OpenHiCAMM.DB.Image;
 import org.bdgp.OpenHiCAMM.DB.ROI;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
-import mmcorej.org.json.JSONException;
-import org.micromanager.internal.utils.imageanalysis.ImageUtils;
-import org.micromanager.internal.utils.MDUtils;
+import org.micromanager.internal.MMStudio;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.measure.Measurements;
 import ij.measure.ResultsTable;
 import ij.plugin.filter.ParticleAnalyzer;
 import ij.process.ImageProcessor;
-import mmcorej.TaggedImage;
 
 public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
     public BDGPROIFinder() {
@@ -30,20 +27,18 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
     @Override
     public List<ROI> process(
             Image image, 
-            TaggedImage taggedImage,
+            org.micromanager.data.Image mmimage,
             Logger logger, 
             ImageLogRunner imageLog,
             Map<String, Config> config) 
     {
         // get the image label
-        String positionName = null;
-        try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
-        catch (JSONException e) {throw new RuntimeException(e);} 
+        String positionName = mmimage.getMetadata().getPositionName(Integer.toString(mmimage.getCoords().getStagePosition()));
         String imageLabel = image.getLabel();
         String label = String.format("%s (%s)", positionName, imageLabel); 
 
         List<ROI> rois = new ArrayList<ROI>();
-        ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
+        ImageProcessor processor = MMStudio.getInstance().getDataManager().getImageJConverter().createProcessor(mmimage);
         ImagePlus imp = new ImagePlus(image.toString(), processor);
         
         // Convert to gray

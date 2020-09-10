@@ -12,10 +12,8 @@ import javax.swing.JButton;
 
 import org.bdgp.OpenHiCAMM.DoubleSpinner;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
-import org.micromanager.MMOptions;
 import org.micromanager.internal.MMStudio;
 import org.micromanager.PositionList;
-import org.micromanager.internal.dialogs.AcqControlDlg;
 import org.micromanager.internal.positionlist.PositionListDlg;
 
 import mmcorej.CMMCore;
@@ -27,7 +25,6 @@ import java.awt.event.ActionEvent;
 import javax.swing.JRadioButton;
 import javax.swing.ButtonGroup;
 import java.awt.event.ItemListener;
-import java.util.prefs.Preferences;
 import java.awt.event.ItemEvent;
 import javax.swing.JTextArea;
 import javax.swing.JScrollPane;
@@ -74,20 +71,9 @@ public class SlideSurveyorDialog extends JPanel {
 		btnShowAcquisitionDialog.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent e) {
 		        if (SlideSurveyorDialog.this.posListDlg == null) {
-                    Preferences prefs = Preferences.userNodeForPackage(MMStudio.getInstance().getClass());
-                    MMOptions options = new MMOptions();
-                    options.loadSettings();
-                    AcqControlDlg acqControlDlg = new AcqControlDlg(
-                            MMStudio.getInstance().getAcquisitionEngine(), 
-                            prefs, 
-                            MMStudio.getInstance(), 
-                            options);
 		            SlideSurveyorDialog.this.posListDlg = new PositionListDlg(
-		                    MMStudio.getInstance().getCMMCore(), 
 		                    MMStudio.getInstance(), 
-		                    new PositionList(),
-		                    acqControlDlg,
-		                    options);
+		                    new PositionList());
 		            SlideSurveyorDialog.this.posListDlg.setModalExclusionType(Dialog.ModalExclusionType.APPLICATION_EXCLUDE);
 		        }
 		        SlideSurveyorDialog.this.posListDlg.setVisible(true);

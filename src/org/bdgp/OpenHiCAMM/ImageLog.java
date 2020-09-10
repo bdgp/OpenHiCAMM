@@ -6,7 +6,6 @@ import ij.process.ImageProcessor;
 
 import javax.swing.JFrame;
 
-import mmcorej.TaggedImage;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JTable;
@@ -25,7 +24,7 @@ import java.util.concurrent.FutureTask;
 
 import javax.swing.ListSelectionModel;
 
-import org.micromanager.internal.utils.imageanalysis.ImageUtils;
+import org.micromanager.internal.MMStudio;
 
 
 @SuppressWarnings("serial")
@@ -140,8 +139,8 @@ public class ImageLog extends JFrame {
             this.imageStackName = imageStackName;
         }
         
-        public void addImage(TaggedImage image, String description) {
-            ImageProcessor ip = ImageUtils.makeProcessor(image);
+        public void addImage(org.micromanager.data.Image mmimage, String description) {
+            ImageProcessor ip = MMStudio.getInstance().getDataManager().getImageJConverter().createProcessor(mmimage);
             ip = ip.duplicate();
             if (this.imageStack == null) {
                 this.imageStack = new ImageStack(ip.getWidth(), ip.getHeight());
@@ -175,7 +174,7 @@ public class ImageLog extends JFrame {
         public NullImageLogRunner() {
             super(null);
         }
-        @Override public void addImage(TaggedImage image, String description) { }
+        @Override public void addImage(org.micromanager.data.Image mmimage, String description) { }
         @Override public void addImage(ImagePlus image, String description) { }
         @Override public void display() { }
     }

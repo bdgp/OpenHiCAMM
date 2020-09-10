@@ -1,11 +1,9 @@
 package org.bdgp.OpenHiCAMM;
 
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
-import org.micromanager.internal.utils.MDUtils;
 
 import ij.IJ;
 import javafx.scene.web.WebEngine;
-import mmcorej.TaggedImage;
 
 import org.bdgp.OpenHiCAMM.DB.Acquisition;
 import org.bdgp.OpenHiCAMM.DB.Image;
@@ -59,12 +57,12 @@ public class ImageFileReport implements Report {
                                 Image image = imageDao.selectOne(where("id", imageIdConf.getValue()));
                                 if (image != null) {
                                     Acquisition acquisition = acqDao.selectOneOrDie(where("id", image.getAcquisitionId()));
-                                    TaggedImage taggedImage = image.getTaggedImage(workflowRunner);
+                                    org.micromanager.data.Image mmimage = image.getImage(workflowRunner);
                                     try {
                                         String dir = acquisition.getDirectory();
                                         String prefix = acquisition.getPrefix();
-                                        String posName = MDUtils.getPositionName(taggedImage.tags);
-                                        String fileName = MDUtils.getFileName(taggedImage.tags);
+                                        String posName = mmimage.getMetadata().getPositionName(Integer.toString(mmimage.getCoords().getStagePosition()));
+                                        String fileName = mmimage.getMetadata().getFileName();
                                         if (fileName != null) {
                                             File path = Paths.get(dir, prefix, fileName).toFile();
                                             if (!path.exists() && posName != null) {

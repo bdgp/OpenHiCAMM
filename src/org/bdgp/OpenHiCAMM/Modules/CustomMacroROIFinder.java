@@ -15,9 +15,7 @@ import org.bdgp.OpenHiCAMM.DB.ROI;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
-import mmcorej.org.json.JSONException;
-import org.micromanager.internal.utils.imageanalysis.ImageUtils;
-import org.micromanager.internal.utils.MDUtils;
+import org.micromanager.internal.MMStudio;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -25,7 +23,6 @@ import ij.WindowManager;
 import ij.measure.ResultsTable;
 import ij.plugin.filter.Analyzer;
 import ij.process.ImageProcessor;
-import mmcorej.TaggedImage;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
@@ -36,14 +33,12 @@ public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogg
     }
 
     @Override
-    public List<ROI> process(Image image, TaggedImage taggedImage,
+    public List<ROI> process(Image image, org.micromanager.data.Image mmimage,
             Logger logger, ImageLogRunner imageLog,
             Map<String, Config> config) 
     {
         // get the image label
-        String positionName = null;
-        try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
-        catch (JSONException e) {throw new RuntimeException(e);} 
+        String positionName = mmimage.getMetadata().getPositionName(Integer.toString(mmimage.getCoords().getStagePosition()));
         String imageLabel = image.getLabel();
         String label = String.format("%s (%s)", positionName, imageLabel); 
 
@@ -55,7 +50,7 @@ public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogg
         if (customMacroConf == null) throw new RuntimeException("Config value customMacro not found!");
         String customMacro = customMacroConf.getValue();
 
-        ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
+        ImageProcessor processor = MMStudio.getInstance().getDataManager().getImageJConverter().createProcessor(mmimage);
         ImagePlus imp = new ImagePlus(image.toString(), processor);
         if (roiImageScaleFactor != 1.0) {
             logger.fine(String.format("%s: Resizing", label));

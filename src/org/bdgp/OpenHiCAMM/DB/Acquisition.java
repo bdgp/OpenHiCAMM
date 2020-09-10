@@ -12,6 +12,7 @@ import mmcorej.org.json.JSONException;
 import mmcorej.org.json.JSONObject;
 import org.micromanager.internal.MMStudio;
 import org.micromanager.acquisition.internal.MMAcquisition;
+import org.micromanager.data.SummaryMetadata;
 import org.micromanager.internal.utils.MMScriptException;
 
 import com.j256.ormlite.field.DataType;
@@ -51,66 +52,46 @@ public class Acquisition {
         if (acquisitionCache.containsKey(acquisitionPath.getPath())) {
             return acquisitionCache.get(acquisitionPath.getPath());
         }
-        if (existing) {
-            MMStudio mmstudio = MMStudio.getInstance();
-            synchronized (mmstudio) {
-                try {
-                    for (String acqName : mmstudio.getAcquisitionNames()) {
-                        MMAcquisition acquisition = mmstudio.getAcquisitionWithName(acqName);
-                        JSONObject summaryMetadata = acquisition.getImageCache().getSummaryMetadata();
-                        if (summaryMetadata != null &&
-                            summaryMetadata.has("Directory") && 
-                            summaryMetadata.get("Directory").toString().equals(this.directory) &&
-                            summaryMetadata.has("Prefix") &&
-                            summaryMetadata.get("Prefix").toString().equals(this.prefix))
-                        {
-                            this.name = acqName;
-                            acquisitionCache.put(acquisitionPath.getPath(), acquisition);
-                            return acquisition;
-                        }
+        MMStudio mmstudio = MMStudio.getInstance();
+        synchronized (mmstudio) {
+            try {
+                for (String acqName : mmstudio.getAcquisitionNames()) {
+                    MMAcquisition acquisition = mmstudio.getAcquisitionWithName(acqName);
+                    SummaryMetadata summaryMetadata = acquisition.getDatastore().getSummaryMetadata();
+                    if (summaryMetadata != null &&
+                        summaryMetadata.getDirectory() != null && 
+                        summaryMetadata.getDirectory().equals(this.directory) &&
+                        summaryMetadata.getPrefix() != null &&
+                        summaryMetadata.getPrefix().toString().equals(this.prefix))
+                    {
+                        this.name = acqName;
+                        acquisitionCache.put(acquisitionPath.getPath(), acquisition);
+                        return acquisition;
                     }
-                } 
-                catch (JSONException e) {throw new RuntimeException(e);}
-                catch (MMScriptException e) { 
-                    // this means there was no acquisition loaded with this name, that's OK. Let's try to 
-                    // open the acquisition next...
-                } 
-
-                try {
-                    if (!acquisitionPath.exists()) throw new RuntimeException(String.format(
-                            "Acquisition path %s does not exist!", acquisitionPath.getPath()));
-                    this.name = mmstudio.openAcquisitionData(acquisitionPath.getPath(), false, false);
-                    MMAcquisition acquisition = mmstudio.getAcquisitionWithName(this.name);
-                    if (acquisitionDao != null) {
-                        acquisitionDao.update(this, "id");
-                    }
-                    acquisitionCache.put(acquisitionPath.getPath(), acquisition);
-                    return acquisition;
-                } 
-                catch (MMScriptException e1) {
-                    StringWriter sw = new StringWriter();
-                    e1.printStackTrace(new PrintWriter(sw));
-                    throw new RuntimeException(String.format("Could not open acquisition %s:\n%s", this, sw));
                 }
-            }
-        }
-        else {
-            try { 
-                MMAcquisition acquisition = new MMAcquisition(this.name, this.directory, false, true, false); 
-                acquisition.initialize();
-                // update the prefix metadata
-                JSONObject summaryMetadata = acquisition.getSummaryMetadata();
-                if (summaryMetadata != null && summaryMetadata.has("Prefix")) {
-                    this.prefix = summaryMetadata.get("Prefix").toString();
-                    if (acquisitionDao != null) {
-                        acquisitionDao.update(this, "id");
-                    }
+            } 
+            catch (JSONException e) {throw new RuntimeException(e);}
+            catch (MMScriptException e) { 
+                // this means there was no acquisition loaded with this name, that's OK. Let's try to 
+                // open the acquisition next...
+            } 
+
+            try {
+                if (!acquisitionPath.exists()) throw new RuntimeException(String.format(
+                        "Acquisition path %s does not exist!", acquisitionPath.getPath()));
+                this.name = mmstudio.openAcquisitionData(acquisitionPath.getPath(), false, false);
+                MMAcquisition acquisition = mmstudio.getAcquisitionWithName(this.name);
+                if (acquisitionDao != null) {
+                    acquisitionDao.update(this, "id");
                 }
                 acquisitionCache.put(acquisitionPath.getPath(), acquisition);
                 return acquisition;
             } 
-            catch (JSONException e) {throw new RuntimeException(e);}
-            catch (MMScriptException e) {throw new RuntimeException(e);}
+            catch (MMScriptException e1) {
+                StringWriter sw = new StringWriter();
+                e1.printStackTrace(new PrintWriter(sw));
+                throw new RuntimeException(String.format("Could not open acquisition %s:\n%s", this, sw));
+            }
         }
     }
     

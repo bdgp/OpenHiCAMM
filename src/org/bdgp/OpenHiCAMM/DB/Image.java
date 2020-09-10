@@ -3,11 +3,8 @@ package org.bdgp.OpenHiCAMM.DB;
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
 import org.micromanager.acquisition.internal.MMAcquisition;
-import org.micromanager.ImageCache;
-import org.micromanager.internal.utils.imageanalysis.ImageUtils;
-import org.micromanager.internal.utils.MDUtils;
-
-import mmcorej.TaggedImage;
+import org.micromanager.data.Datastore;
+import org.micromanager.data.internal.DefaultCoords;
 
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
@@ -17,6 +14,7 @@ import ij.process.ImageProcessor;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
+import java.io.IOException;
 import java.nio.file.Paths;
 
 @DatabaseTable
@@ -67,30 +65,33 @@ public class Image {
     public int getPosition() {return this.position;}
     public String getPath() {return this.path;}
     
-    public TaggedImage getImage(ImageCache imageCache) {
-    	return imageCache.getImage(this.channel, this.slice, this.frame, this.position);
+    public org.micromanager.data.Image getImage(Datastore datastore) {
+    	try {
+			return datastore.getImage(new DefaultCoords.Builder().
+					channel(this.channel).
+					zSlice(this.slice).
+					timePoint(this.frame).
+					stagePosition(this.position).build());
+		} catch (IOException e) {throw new RuntimeException(e);}
     }
 
-    public TaggedImage getTaggedImage(WorkflowRunner runner) {
+    public org.micromanager.data.Image getImage(WorkflowRunner runner) {
         Dao<Acquisition> acqDao = runner.getWorkflowDb().table(Acquisition.class);
-        if (this.acquisitionId == 0) {
-            if (this.getPath() == null) throw new RuntimeException("getPath() is null!");
-            String imagePath = Paths.get(runner.getWorkflowDir().getPath()).resolve(this.getPath()).toString();
-            ImagePlus img = new ImagePlus(imagePath);
-            return ImageUtils.makeTaggedImage(img.getProcessor());
+        if (this.acquisitionId < 1) {
+            throw new RuntimeException("acquisitionId is not set!");
         }
         // Initialize the acquisition
         Acquisition acquisition = acqDao.selectOneOrDie(where("id",this.getAcquisitionId()));
         MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
 
         // Get the image cache object
-        ImageCache imageCache = mmacquisition.getImageCache();
-        if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+        Datastore datastore = mmacquisition.getDatastore();
+        if (datastore == null) throw new RuntimeException("Acquisition was not initialized; datastore is null!");
         // Get the tagged image from the image cache
-        TaggedImage taggedImage = this.getImage(imageCache);
-        if (taggedImage == null) throw new RuntimeException(String.format("Acqusition %s, Image %s is not in the image cache!",
+        org.micromanager.data.Image image = this.getImage(datastore);
+        if (image == null) throw new RuntimeException(String.format("Acqusition %s, Image %s is not in the image cache!",
                 acquisition, this));
-        return taggedImage;
+        return image;
     }
     
     public ImagePlus getImagePlus(WorkflowRunner runner) {
@@ -100,8 +101,9 @@ public class Image {
             ImagePlus img = new ImagePlus(imagePath);
             return img;
         }
-        TaggedImage taggedImage = this.getTaggedImage(runner);
-        ImageProcessor processor = ImageUtils.makeProcessor(taggedImage);
+        org.micromanager.data.Image mmimage = this.getImage(runner);
+
+        ImageProcessor processor = runner.getOpenHiCAMM().getApp().getDataManager().getImageJConverter().createProcessor(mmimage);
         ImagePlus imp = new ImagePlus(this.toString(), processor);
         return imp;
     }

@@ -2,6 +2,7 @@ package org.bdgp.OpenHiCAMM.Modules;
 
 import java.awt.Component;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.SimpleDateFormat;
@@ -52,19 +53,20 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import mmcorej.org.json.JSONException;
 import mmcorej.org.json.JSONObject;
 import org.micromanager.internal.dialogs.AcqControlDlg;
-import org.micromanager.events.DisplayCreatedEvent;
 import org.micromanager.events.EventManager;
-import org.micromanager.MMOptions;
 import org.micromanager.internal.MMStudio;
 import org.micromanager.acquisition.internal.AcquisitionWrapperEngine;
 import org.micromanager.acquisition.internal.MMAcquisition;
+import org.micromanager.data.Coords;
+import org.micromanager.data.DataProvider;
+import org.micromanager.data.DataProviderHasNewImageEvent;
+import org.micromanager.data.Datastore;
+import org.micromanager.data.internal.DefaultNewImageEvent;
+import org.micromanager.AutofocusManager;
 import org.micromanager.AutofocusPlugin;
-import org.micromanager.ImageCache;
-import org.micromanager.ImageCacheListener;
 import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
 import org.micromanager.Studio;
-import org.micromanager.internal.utils.MDUtils;
 import org.micromanager.internal.utils.MMException;
 import org.micromanager.internal.utils.MMScriptException;
 import org.micromanager.internal.utils.MMSerializationException;
@@ -77,12 +79,10 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 public class SlideImager implements Module, ImageLogger {
 	private static final long DUMMY_SLEEP = 500;
 
-    private static final boolean SANITY_CHECK = false;
-
 	WorkflowRunner workflowRunner;
     WorkflowModule workflowModule;
     AcqControlDlg acqControlDlg;
-    Studio script;
+    MMStudio script;
     AcquisitionWrapperEngine engine;
 
     @Override
@@ -91,12 +91,9 @@ public class SlideImager implements Module, ImageLogger {
         this.workflowModule = workflowModule;
         this.script = MMStudio.getInstance();
 
-        Preferences prefs = Preferences.userNodeForPackage(MMStudio.getInstance().getClass());
-        MMOptions options = new MMOptions();
-        options.loadSettings();
         if (this.script != null) {
-            this.engine = MMStudio.getInstance().getAcquisitionEngine();
-            this.acqControlDlg = new AcqControlDlg(this.engine, prefs, this.script, options);
+            this.engine = this.script.getAcquisitionEngine();
+            this.acqControlDlg = new AcqControlDlg(this.engine, this.script);
         }
 
         // set initial configs
@@ -154,14 +151,10 @@ public class SlideImager implements Module, ImageLogger {
                 }
             }
             // log the position list to the console
-            try {
-				logger.fine(String.format("%s: Read position list from module %s:%n%s", 
-						this.workflowModule.getName(), conf.get("posListModule"), positionList.toPropertyMap().toJSON()));
-			} 
-            catch (MMSerializationException e) {throw new RuntimeException(e);}
+            logger.fine(String.format("%s: Read position list from module %s:%n%s", 
+                    this.workflowModule.getName(), conf.get("posListModule"), positionList.toPropertyMap().toJSON()));
             // load the position list into the acquisition engine
-            try { this.script.setPositionList(positionList); } 
-            catch (MMScriptException e) {throw new RuntimeException(e);}
+            this.script.getPositionListManager().setPositionList(positionList);
             this.engine.setPositionList(positionList);
         }
         // otherwise, load a position list from a file
@@ -175,11 +168,10 @@ public class SlideImager implements Module, ImageLogger {
             try {
                 positionList = new PositionList();
                 positionList.load(posListFile.getPath());
-                try { this.script.setPositionList(positionList); } 
-                catch (MMScriptException e) {throw new RuntimeException(e);}
+                this.script.getPositionListManager().setPositionList(positionList);
                 this.engine.setPositionList(positionList);
             } 
-            catch (MMException e) {throw new RuntimeException(e);}
+            catch (IOException e) {throw new RuntimeException(e);}
         }
         else {
         	throw new RuntimeException("No position list was given!");
@@ -194,15 +186,11 @@ public class SlideImager implements Module, ImageLogger {
                 throw new RuntimeException("Cannot find acquisition settings file "+acqSettingsFile.getPath());
             }
             try { acqControlDlg.loadAcqSettingsFromFile(acqSettingsFile.getPath()); } 
-            catch (MMScriptException e) {throw new RuntimeException(e);}
+            catch (IOException e) {throw new RuntimeException(e);}
         }
         return positionList;
     }
     
-    @Subscribe public void showDisplay(DisplayCreatedEvent e) {
-        e.getDisplayWindow().setVisible(true);
-    }
-
     @Override
     public Status run(Task task, Map<String,Config> conf, Logger logger) {
         // Get Dao objects ready for use
@@ -362,10 +350,8 @@ public class SlideImager implements Module, ImageLogger {
             }
             
             // close all open acquisition windows
-            for (String name : MMStudio.getInstance().getAcquisitionNames()) {
-                try { MMStudio.getInstance().closeAcquisitionWindow(name); } 
-                catch (MMScriptException e) { /* do nothing */ }
-            }
+            try { MMStudio.getInstance().getDisplayManager().closeAllDisplayWindows(false); } 
+            catch (MMScriptException e) { /* do nothing */ }
 
             // set the initial Z Position
             if (conf.containsKey("initialZPos")) {
@@ -388,7 +374,7 @@ public class SlideImager implements Module, ImageLogger {
 
             // Start the acquisition engine. This runs asynchronously.
             try {
-                EventManager.register(this);
+                //EventManager.register(this);
                 
                 this.workflowRunner.getTaskConfig().insertOrUpdate(
                         new TaskConfig(task.getId(),
@@ -397,9 +383,9 @@ public class SlideImager implements Module, ImageLogger {
                         "id", "key");
                 
                 logger.info(String.format("Now running the image acquisition sequence, please wait..."));
-                String returnAcqName = acqControlDlg.runAcquisition(acqName, rootDir);
-                if (returnAcqName == null) {
-                    throw new RuntimeException("acqControlDlg.runAcquisition returned null acquisition name");
+                Datastore datastore = acqControlDlg.runAcquisition(acqName, rootDir);
+                if (datastore == null) {
+                    throw new RuntimeException("acqControlDlg.runAcquisition returned null datastore");
                 }
 
                 // get the prefix name and log it
@@ -411,32 +397,26 @@ public class SlideImager implements Module, ImageLogger {
                         Util.escape(rootDir), Util.escape(prefix)));
                 
                 // Write the acquisition record
-                Acquisition acquisition = new Acquisition(returnAcqName, prefix, rootDir);
+                Acquisition acquisition = new Acquisition(datastore.getName(), prefix, rootDir);
                 acqDao.insertOrUpdate(acquisition,"prefix","directory");
                 acqDao.reload(acquisition);
                 logger.info(String.format("Using acquisition record: %s", acquisition));
 
                 // add an image cache listener to eagerly kick off downstream processing after each image
                 // is received.
-                ImageCache acqImageCache = this.engine.getImageCache();
-                acqImageCache.addImageCacheListener(new ImageCacheListener() {
-                    @Override public void imageReceived(TaggedImage taggedImage) {
-                        // Log how many images have been acquired so far
-                        Set<String> taggedImages = new HashSet<String>(acqImageCache.imageKeys());
-                        String label = MDUtils.getLabel(taggedImage.tags);
+                acquisition.getAcquisition().getDatastore().registerForEvents(new Object() {
+                	@Subscribe void newImage(DefaultNewImageEvent event) {
+                		org.micromanager.data.Image mmimage = event.getImage();
+                		DataProvider provider = event.getDataProvider();
 
                         // Get the task record that should be eagerly dispatched.
+                		String label = mmimage.toString();
                         Task dispatchTask = tasks.get(label);
                         if (dispatchTask == null) throw new RuntimeException(String.format(
                                 "No SlideImager task was created for image with label %s!", label));
                         
                         try {
-                            if (taggedImage.pix == null) throw new RuntimeException(String.format(
-                                    "%s: taggedImage.pix is null!", label));
-
-                            String positionName = null;
-                            try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
-                            catch (JSONException e) {}
+                        	String positionName = Integer.toString(mmimage.getCoords().getStagePosition());
                             
                             taggedImages.add(label);
                             logger.info(String.format("Acquired image: %s [%d/%d images]", 
@@ -501,7 +481,7 @@ public class SlideImager implements Module, ImageLogger {
                 });
 
                 // wait until the current acquisition finishes
-                while (acqControlDlg.isAcquisitionRunning()) {
+                while (this.engine.isAcquisitionRunning()) {
                      try { Thread.sleep(1000); } 
                      catch (InterruptedException e) {
                          // if the thread is interrupted, abort the acquisition.
@@ -516,11 +496,11 @@ public class SlideImager implements Module, ImageLogger {
 
                 // Get the ImageCache object for this acquisition
                 MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
-                ImageCache imageCache = mmacquisition.getImageCache();
-                if (imageCache == null) throw new RuntimeException("MMAcquisition object was not initialized; imageCache is null!");
+                datastore = mmacquisition.getDatastore();
+                if (datastore == null) throw new RuntimeException("MMAcquisition object was not initialized; datastore is null!");
                 
                 // Wait for the image cache to finish...
-                while (!imageCache.isFinished()) {
+                while (!datastore.isFinished()) {
                     try { 
                         logger.info("Waiting for the ImageCache to finish...");
                         Thread.sleep(1000); 
@@ -530,7 +510,7 @@ public class SlideImager implements Module, ImageLogger {
                         return Status.ERROR;
                     }
                 }
-                if (!imageCache.isFinished()) throw new RuntimeException("ImageCache is not finished!");
+                if (!datastore.isFinished()) throw new RuntimeException("ImageCache is not finished!");
 
                 Date endAcquisition = new Date();
                 this.workflowRunner.getTaskConfig().insertOrUpdate(
@@ -546,7 +526,8 @@ public class SlideImager implements Module, ImageLogger {
                         "id", "key");
                 
                 // get the autofocus duration from the autofocus object
-                AutofocusPlugin autofocus = this.script.getAutofocus();
+                AutofocusManager mgr = this.script.getAutofocusManager();
+                AutofocusPlugin autofocus = mgr.getAutofocusMethod();
                 if (new HashSet<String>(Arrays.asList(autofocus.getPropertyNames())).contains("autofocusDuration")) {
                     try {
                         this.workflowRunner.getTaskConfig().insertOrUpdate(
@@ -561,7 +542,7 @@ public class SlideImager implements Module, ImageLogger {
                 autofocus.applySettings();
 
                 // Get the set of taggedImage labels from the acquisition
-                Set<String> taggedImages = imageCache.imageKeys();
+                Set<String> taggedImages = datastore.imageKeys();
                 logger.info(String.format("Found %d taggedImages: %s", taggedImages.size(), taggedImages.toString()));
                 
                 // Make sure the set of acquisition image labels matches what we expected.
@@ -590,30 +571,6 @@ public class SlideImager implements Module, ImageLogger {
                     if (t == null) throw new RuntimeException(String.format(
                             "Could not get task record for image with label %s!", label));
 
-                    // The following sanity checks are very time-consuming and don't seem
-                    // to be necessary, so I've disabled them by default using the SANITY_CHECK flag.
-                    if (SANITY_CHECK) {
-                        TaggedImage taggedImage = imageCache.getImage(idx[0], idx[1], idx[2], idx[3]);
-                        if (taggedImage.pix == null) throw new RuntimeException(String.format(
-                                "%s: taggedImage.pix is null!", label));
-
-                        // get the positionName
-                        String positionName;
-                        try { positionName = MDUtils.getPositionName(taggedImage.tags); } 
-                        catch (JSONException e) {throw new RuntimeException(e);}
-
-                        // Make sure the position name of this image's metadata matches what we expected
-                        // from the Task configuration.
-                        TaskConfig positionNameConf = taskConfigDao.selectOneOrDie(
-                                where("id", t.getId()).and("key", "positionName"));
-                        if (!positionName.equals(positionNameConf.getValue())) {
-                            throw new RuntimeException(String.format(
-                                    "Position name mismatch! TaskConfig=%s, MDUtils.getPositionName=%s",
-                                    positionNameConf, positionName));
-                        }
-                    }
-
-
                     // Insert/Update image DB record
                     Image image = new Image(slideId, acquisition, idx[0], idx[1], idx[2], idx[3]);
                     imageDao.insertOrUpdate(image,"acquisitionId","channel","slice","frame","position");
@@ -631,7 +588,7 @@ public class SlideImager implements Module, ImageLogger {
                 }
             }
             finally {
-                EventManager.unregister(this);
+                //EventManager.unregister(this);
             }
         }
         return Status.SUCCESS;
@@ -945,7 +902,6 @@ public class SlideImager implements Module, ImageLogger {
                                 workflowRunner.getLogger().fine(String.format(
                                         "Inserted MultiStagePosition config: %s", mspJson));
                             } 
-                            catch (MMSerializationException e) {throw new RuntimeException(e);} 
                             catch (JSONException e) {throw new RuntimeException(e);}
 
                             // Transfer MultiStagePosition property values to the task's configuration
@@ -1113,14 +1069,14 @@ public class SlideImager implements Module, ImageLogger {
                     MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
 
                     // Get the image cache object
-                    ImageCache imageCache = mmacquisition.getImageCache();
-                    if (imageCache == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
+                    Datastore datastore = mmacquisition.getDatastore();
+                    if (datastore == null) throw new RuntimeException("Acquisition was not initialized; datastore is null!");
                     // Get the tagged image from the image cache
-                    TaggedImage taggedImage = image.getImage(imageCache);
-                    logger.info(String.format("Got taggedImage from ImageCache: %s", taggedImage));
+                    org.micromanager.data.Image mmimage = image.getImage(datastore);
+                    logger.info(String.format("Got mmimage from datastore: %s", mmimage));
 
                     ImageLogRunner imageLogRunner = new ImageLogRunner(task.getName(workflowRunner.getWorkflow()));
-                    imageLogRunner.addImage(taggedImage, "The image");
+                    imageLogRunner.addImage(mmimage, "The image");
                     return imageLogRunner;
                 }
                 return null;

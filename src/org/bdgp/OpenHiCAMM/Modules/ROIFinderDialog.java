@@ -7,8 +7,8 @@ import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRunner;
 import org.bdgp.OpenHiCAMM.Logger;
 import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.Image;
-import mmcorej.org.json.JSONException;
-import org.micromanager.internal.utils.MDUtils;
+
+import org.micromanager.data.internal.DefaultImage;
 
 import mmcorej.TaggedImage;
 import net.miginfocom.swing.MigLayout;
@@ -110,12 +110,10 @@ public class ROIFinderDialog extends JPanel {
                 TaggedImage taggedImage;
                 try { taggedImage = roiFinder.script.getCMMCore().getTaggedImage(); } 
                 catch (Exception e1) {throw new RuntimeException(e1);}
+                org.micromanager.data.Image mmimage = new DefaultImage(taggedImage);
                 if (taggedImage != null) {
-                    try { imageWidth.setValue(MDUtils.getWidth(taggedImage.tags)); } 
-                    catch (JSONException e1) { /* do nothing */ }
-                    try { imageHeight.setValue(MDUtils.getHeight(taggedImage.tags)); } 
-                    catch (JSONException e1) { /* do nothing */ }
-
+                    imageWidth.setValue(mmimage.getWidth());
+                    imageHeight.setValue(mmimage.getHeight());
                 }
             }
         });
@@ -136,7 +134,7 @@ public class ROIFinderDialog extends JPanel {
                 Map<String,Config> config = new HashMap<String,Config>();
                 config.put("minRoiArea", new Config(roiFinder.workflowModule.getId(), 
                         "minRoiArea", Double.toString((Double)minRoiArea.getValue())));
-                roiFinder.process(image, taggedImage, logger, imageLogRunner, config);
+                roiFinder.process(image, new DefaultImage(taggedImage), logger, imageLogRunner, config);
                 imageLogRunner.display();
             }
         });

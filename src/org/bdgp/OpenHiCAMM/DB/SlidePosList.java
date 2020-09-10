@@ -1,8 +1,9 @@
 package org.bdgp.OpenHiCAMM.DB;
 
+import java.io.IOException;
+
 import org.bdgp.OpenHiCAMM.Util;
 import org.micromanager.PositionList;
-import org.micromanager.internal.utils.MMSerializationException;
 
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
@@ -41,8 +42,8 @@ public class SlidePosList {
     }
     public void setPosList(String posList) {
         this.positionList = new PositionList();
-        try { this.positionList.restore(posList); } 
-        catch (MMSerializationException e) { throw new RuntimeException(e); }
+        try { this.positionList.load(posList); } 
+        catch (IOException e) { throw new RuntimeException(e); }
         this.posList = posList;
     }
     public int getId() { return this.id; }
