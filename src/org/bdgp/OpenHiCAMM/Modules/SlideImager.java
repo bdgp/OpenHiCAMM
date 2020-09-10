@@ -234,7 +234,7 @@ public class SlideImager implements Module, ImageLogger {
     	        "Could not find imageLabel conf for task %s!", task));
     	String imageLabel = imageLabelConf.getValue();
         logger.fine(String.format("Using imageLabel: %s", imageLabel));
-        int[] indices = MDUtils.getIndices(imageLabel);
+        int[] indices = Image.getIndices(imageLabel);
         if (indices == null || indices.length < 4) throw new RuntimeException(String.format(
                 "Invalid indices parsed from imageLabel %s", imageLabel));
         
@@ -426,7 +426,7 @@ public class SlideImager implements Module, ImageLogger {
                                     taggedImages.size(),
                                     totalImages));
 
-                            int[] indices = MDUtils.getIndices(label);
+                            int[] indices = Image.getIndices(label);
                             if (indices == null || indices.length < 4) throw new RuntimeException(String.format(
                                     "Bad image label from MDUtils.getIndices(): %s", label));
                             // Don't eagerly dispatch the acquisition thread. This thread must not be set to success
@@ -563,7 +563,7 @@ public class SlideImager implements Module, ImageLogger {
                 // task completes.
                 for (String label : taggedImages) {
                     // make sure none of the taggedImage.pix values are null
-                    int[] idx = MDUtils.getIndices(label);
+                    int[] idx = Image.getIndices(label);
                     if (idx == null || idx.length < 4) throw new RuntimeException(String.format(
                             "Bad image label from MDUtils.getIndices(): %s", label));
 
@@ -875,7 +875,7 @@ public class SlideImager implements Module, ImageLogger {
                             TaskConfig imageLabel = new TaskConfig(
                                     task.getId(),
                                     "imageLabel", 
-                                    MDUtils.generateLabel(c, s, f, p));
+                                    Image.generateLabel(c, s, f, p));
                             taskConfigDao.insert(imageLabel);
                             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created task config: %s", 
                                     this.workflowModule.getName(), imageLabel));
@@ -1243,7 +1243,7 @@ public class SlideImager implements Module, ImageLogger {
     	if (imageLabelConf == null) throw new RuntimeException(String.format(
     	        "Could not find imageLabel conf for task %s!", task));
     	String imageLabel = imageLabelConf.getValue();
-        int[] indices = MDUtils.getIndices(imageLabel);
+        int[] indices = Image.getIndices(imageLabel);
         if (indices == null || indices.length < 4) throw new RuntimeException(String.format(
                 "Invalid indices parsed from imageLabel %s", imageLabel));
         

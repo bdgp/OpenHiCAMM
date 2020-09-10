@@ -687,7 +687,7 @@ public class SlideSurveyor implements Module {
             TaskConfig imageLabel = new TaskConfig(
                     task.getId(),
                     "imageLabel", 
-                    MDUtils.generateLabel(0, 0, 0, 0));
+                    Image.generateLabel(0, 0, 0, 0));
             taskConfigDao.insert(imageLabel);
             workflowRunner.getLogger().fine(String.format("%s: createTaskRecords: Created task config: %s", 
                     this.workflowModule.getName(), imageLabel));

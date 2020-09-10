@@ -109,7 +109,21 @@ public class Image {
     }
     
     public String getLabel() {
-        return MDUtils.generateLabel(this.channel, this.slice, this.frame, this.position);
+    	return Image.generateLabel(this.channel, this.slice, this.frame, this.position);
+    }
+
+    public static String generateLabel(int channel, int slice, int frame, int position) {
+        return String.format("%s_%s_%s_%s", channel, slice, frame, position);
+    }
+    
+    public static int[] getIndices(String label) {
+    	String[] split = label.split("_");
+    	return new int[] {
+    		Integer.parseInt(split[0]),
+    		Integer.parseInt(split[1]),
+    		Integer.parseInt(split[2]),
+    		Integer.parseInt(split[3]),
+    	};
     }
     
     public String toString() {

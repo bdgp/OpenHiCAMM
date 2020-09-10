@@ -651,7 +651,7 @@ public class WorkflowReport implements Report {
                                                 continue;
                                             }
                                             int[] indices;
-                                            try { indices = MDUtils.getIndices(imageLabelConf.getValue()); }
+                                            try { indices = Image.getIndices(imageLabelConf.getValue()); }
                                             catch (Throwable e) {
                                                 StringWriter sw = new StringWriter();
                                                 e.printStackTrace(new PrintWriter(sw));
@@ -659,7 +659,7 @@ public class WorkflowReport implements Report {
                                                 continue;
                                             }
                                             if (indices != null && indices.length >= 4) {
-                                                String imageLabel = MDUtils.generateLabel(indices[0], indices[1], indices[2], 0);
+                                                String imageLabel = Image.generateLabel(indices[0], indices[1], indices[2], 0);
                                                 if (!imagerTasks.containsKey(imageLabel)) {
                                                     imagerTasks.put(imageLabel, new ArrayList<Task>());
                                                 }
@@ -733,7 +733,7 @@ public class WorkflowReport implements Report {
                                         Tbody().with(()->{
                                             for (Map.Entry<String,List<Task>> imagerTaskEntry : imagerTasks.entrySet()) {
                                                 String imageLabel = imagerTaskEntry.getKey();
-                                                int[] indices = MDUtils.getIndices(imageLabel);
+                                                int[] indices = Image.getIndices(imageLabel);
                                                 int channel = indices[0], slice = indices[1], frame = indices[2];
                                                 log("Working on channel %d, slice %d, frame %d", channel, slice, frame);
 

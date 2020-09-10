@@ -485,7 +485,7 @@ public class ImageStitcher implements Module, ImageLogger {
             if (stitchGroup != null) {
                 // get the stitch group label: "stitch_group.channel_slice_frame"
                 TaskConfig imageLabel = taskConfigDao.selectOneOrDie(where("id", parentTask.getId()).and("key", "imageLabel"));
-                int[] indices = MDUtils.getIndices(imageLabel.getValue());
+                int[] indices = Image.getIndices(imageLabel.getValue());
                 if (indices == null || indices.length < 4) throw new RuntimeException(String.format(
                         "invalid indices in image label: %s", Util.escape(indices)));
                 int channel = indices[0];
