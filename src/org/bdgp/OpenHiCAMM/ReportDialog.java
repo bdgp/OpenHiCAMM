@@ -37,7 +37,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebErrorEvent;
 import javafx.scene.web.WebView;
-import netscape.javascript.JSObject;
+import jdk.nashorn.api.scripting.JSObject;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 

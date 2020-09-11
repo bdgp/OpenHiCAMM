@@ -36,12 +36,15 @@ import org.bdgp.OpenHiCAMM.Modules.SlideSurveyor;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
 import org.micromanager.internal.MMStudio;
-import org.micromanager.MMPlugin;
+import org.micromanager.MenuPlugin;
 import org.micromanager.Studio;
 import org.micromanager.internal.utils.JavaUtils;
 import org.micromanager.internal.utils.ReportingUtils;
+import org.scijava.plugin.Plugin;
+import org.scijava.plugin.SciJavaPlugin;
 
-public class OpenHiCAMM implements MMPlugin {
+@Plugin(type = MenuPlugin.class)
+public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 	public static final String MMSLIDEMODULESDIR = "lib/openhicamm_modules";
 	private Studio app;
 	private WorkflowDialog dialog;
@@ -50,6 +53,9 @@ public class OpenHiCAMM implements MMPlugin {
     private static Logger log = Logger.getLogger("org.bdgp.OpenHiCAMM");
     private static Boolean clientServerMode = false;
     private static OpenHiCAMM instance = null;
+
+    public static final String MENU_NAME = "OpenHiCAMM";
+    public static final String TOOL_TIP_DESCRIPTION = "OpenHiCAMM";
 
 	/**
 	 *  The menu name is stored in a static string, so Micro-Manager
@@ -230,7 +236,7 @@ public class OpenHiCAMM implements MMPlugin {
 	 * There is no specific required format for the version
 	 */
 	public String getVersion() {
-		return "1.0";
+		return "V1.0";
 	}
 
 	/**
@@ -393,11 +399,22 @@ public class OpenHiCAMM implements MMPlugin {
 
 	@Override
 	public String getName() {
-		return this.getClass().getSimpleName();
+		return MENU_NAME;
 	}
 
 	@Override
 	public String getHelpText() {
-		return this.getClass().getSimpleName();
+		return TOOL_TIP_DESCRIPTION;
+	}
+
+	@Override
+	public String getSubMenu() {
+		return "";
+	}
+
+	@Override
+	public void onPluginSelected() {
+	    loadModules();
+	    show();
 	}
 }

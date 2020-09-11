@@ -205,7 +205,8 @@ public class WorkflowDesignerDialog extends JDialog {
 	            wf.delete();
 	            // create the WorkflowModule records
 	            int priority = 1;
-	            for (Enumeration<TreeNode> enum_=treeRoot.breadthFirstEnumeration(); 
+	            for (@SuppressWarnings("unchecked")
+				Enumeration<TreeNode> enum_=treeRoot.breadthFirstEnumeration(); 
                     enum_.hasMoreElements();) 
 	            {
 	                WorkflowModuleNode node = (WorkflowModuleNode) enum_.nextElement();
@@ -269,7 +270,8 @@ public class WorkflowDesignerDialog extends JDialog {
 	 * workflow.
 	 */
 	private boolean moduleNameExists(String moduleName) {
-	    for (Enumeration<TreeNode> enum_= treeRoot.breadthFirstEnumeration(); 
+	    for (@SuppressWarnings("unchecked")
+		Enumeration<TreeNode> enum_= treeRoot.breadthFirstEnumeration(); 
             enum_.hasMoreElements();) 
 	    {
 	        WorkflowModuleNode node = (WorkflowModuleNode) enum_.nextElement();

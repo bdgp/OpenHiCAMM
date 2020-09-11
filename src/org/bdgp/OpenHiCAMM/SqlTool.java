@@ -3,6 +3,7 @@ package org.bdgp.OpenHiCAMM;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,7 +20,7 @@ public class SqlTool {
         File rcFile = new File(cwd, "sqltool.rc");
         PrintWriter pw = null;
         String defaultDb = null;
-        try (var paths = Files.newDirectoryStream(Paths.get(cwd), "*.db.properties")) {
+        try (DirectoryStream<Path> paths = Files.newDirectoryStream(Paths.get(cwd), "*.db.properties")) {
             for (Path file : paths) {
                 if (pw == null) pw = new PrintWriter(rcFile.getPath());
                 defaultDb = file.toFile().getName().replaceFirst("\\.db\\.properties$", "");
