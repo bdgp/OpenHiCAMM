@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
-mmdir=/Applications/Micro-Manager1.4
+mmdir=/Applications/Micro-Manager-2.0.0-gamma1-20200820
 fijidir=/Applications/Fiji.app
 arch=macosx
 updatesite=micromanager-"$arch"
 
 cd "$mmdir"
 mkdir -pv "$fijidir"/mm/"$arch"
-rsync -avR luts macros mmautofocus mmplugins plugins/Micro-Manager scripts "$fijidir"
+rsync -avR luts macros mmautofocus mmplugins natives plugins/Micro-Manager scripts "$fijidir"
 rsync -av MMConfig_demo.cfg "$fijidir"/mm
 rsync -av MMCorePy.py MMCoreWrapDemo.py _MMCorePy.so libMMCoreJ_wrap.jnilib libgphoto2 libmmgr_dal_* "$fijidir"/mm/"$arch"
 defaults write "$fijidir"/Contents/Info LSEnvironment -dict-add CAMLIBS mm/"$arch"/libgphoto2/libgphoto2 IOLIBS mm/"$arch"/libgphoto2/libgphoto2_port
 plutil -convert xml1 "$fijidir"/Contents/Info.plist
 
-cd "$fijidir"
+#cd "$fijidir"
 # remove the ssh plugin to work around bug in imagej updater
-rm -v jars/imagej-plugins-uploader-ssh-*.jar
+#rm -v jars/imagej-plugins-uploader-ssh-*.jar
 # create update site
-java -jar ./jars/imagej-updater-*.jar add-update-site "$updatesite" http://fruitfly.org/openhicamm/"$updatesite" bbooth@sina.lbl.gov /www/fruitfly.org_80/www/htdocs/openhicamm/"$updatesite"
+#java -jar ./jars/imagej-updater-*.jar add-update-site "$updatesite" http://fruitfly.org/openhicamm/"$updatesite" bbooth@sina.lbl.gov /www/fruitfly.org_80/www/htdocs/openhicamm/"$updatesite"
 # add files to update site
-./Contents/MacOS/Imagej-macosx --update upload-complete-site --force --force-shadow "$updatesite"
+#./Contents/MacOS/Imagej-macosx --update upload-complete-site --force --force-shadow "$updatesite"
