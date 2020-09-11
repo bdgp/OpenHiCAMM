@@ -70,17 +70,7 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 	}
 	
     // Add the AutoFocus plugin
-	public OpenHiCAMM() {
-		synchronized(OpenHiCAMM.instance) {
-            if (OpenHiCAMM.instance == null) OpenHiCAMM.instance = this;
-		}
-		synchronized(OpenHiCAMM.loadedAutofocus) {
-            if (!loadedAutofocus) {
-                 MMStudio.getInstance().getAutofocusManager().refresh();
-                loadedAutofocus = true;
-            }
-		}
-	}
+	public OpenHiCAMM() { }
 	
 	public static class Command { }
 	public static class SampleCommand extends Command {
@@ -414,6 +404,11 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 
 	@Override
 	public void onPluginSelected() {
+        if (OpenHiCAMM.instance == null) OpenHiCAMM.instance = this;
+        if (!loadedAutofocus) {
+             MMStudio.getInstance().getAutofocusManager().refresh();
+            loadedAutofocus = true;
+        }
 	    loadModules();
 	    show();
 	}
