@@ -102,14 +102,18 @@
                 </artifactItem>
                 <artifactItem>
                   <groupId>com.miglayout</groupId>
-                  <artifactId>miglayout</artifactId>
+                  <artifactId>miglayout-swing</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.mines.jtk</groupId>
+                  <artifactId>edu-mines-jtk</artifactId>
                 </artifactItem>
                 <artifactItem>
                   <groupId>sc.fiji</groupId>
                   <artifactId>Hough_Transform</artifactId>
                 </artifactItem>
                 <artifactItem>
-                  <groupId>org.sparkjava</groupId>
+                  <groupId>com.sparkjava</groupId>
                   <artifactId>spark-core</artifactId>
                 </artifactItem>
                 <artifactItem>
@@ -131,6 +135,10 @@
                 <artifactItem>
                   <groupId>org.openjfx</groupId>
                   <artifactId>javafx-controls</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.scijava</groupId>
+                  <artifactId>scijava-common</artifactId>
                 </artifactItem>
               </artifactItems>
               <outputDirectory>${fiji.dir}/jars</outputDirectory>
