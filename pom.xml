@@ -51,10 +51,11 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>2.3.2</version>
+        <version>3.8.1</version>
         <configuration>
           <source>8</source>
           <target>8</target>
+          <release>8</release>
           <encoding>UTF-8</encoding>
         </configuration>
       </plugin>
@@ -139,6 +140,14 @@
                 <artifactItem>
                   <groupId>org.scijava</groupId>
                   <artifactId>scijava-common</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.jprocesses</groupId>
+                  <artifactId>jProcesses</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>com.profesorfalken</groupId>
+                  <artifactId>WMI4Java</artifactId>
                 </artifactItem>
               </artifactItems>
               <outputDirectory>${fiji.dir}/jars</outputDirectory>
@@ -275,6 +284,16 @@
       <groupId>org.scijava</groupId>
       <artifactId>scijava-common</artifactId>
       <version>2.83.3</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jprocesses</groupId>
+      <artifactId>jProcesses</artifactId>
+      <version>1.6.5</version>
+    </dependency>
+    <dependency>
+      <groupId>com.profesorfalken</groupId>
+      <artifactId>WMI4Java</artifactId>
+      <version>1.6.3</version>
     </dependency>
   </dependencies>
 </project>
