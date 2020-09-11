@@ -4,10 +4,10 @@ import java.awt.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
-
-import mmcorej.TaggedImage;
 
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.ImageLog;
@@ -29,8 +29,7 @@ import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
-import mmcorej.org.json.JSONException;
-import org.micromanager.acquisition.internal.MMAcquisition;
+import org.micromanager.data.Coords;
 import org.micromanager.data.Datastore;
 import org.micromanager.Studio;
 
@@ -93,12 +92,15 @@ public abstract class PostProcessor implements Module, ImageLogger {
         Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
         Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
         logger.fine(String.format("%s: Using acquisition: %s", label, acquisition));
-        MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
+        Datastore datastore = acquisition.getDatastore();
 
         // Get the datastore object
-        Datastore datastore = mmacquisition.getDatastore();
         if (datastore == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
-        logger.fine(String.format("%s: Datastore has following images: %s", label, datastore.imageKeys()));
+        Set<String> imageLabels = new TreeSet<>();
+        for (Coords coords: datastore.getUnorderedImageCoords()) {
+        	imageLabels.add(Image.generateLabel(coords));
+        }
+        logger.fine(String.format("%s: Datastore has following images: %s", label, imageLabels));
         logger.fine(String.format("%s: Attempting to grab image %s from datastore", label, image));
         // Get the tagged image from the image cache
         org.micromanager.data.Image mmimage = image.getImage(datastore);
@@ -208,10 +210,9 @@ public abstract class PostProcessor implements Module, ImageLogger {
                     Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
                     Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
                     logger.info(String.format("Using acquisition: %s", acquisition));
-                    MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
+                    Datastore datastore = acquisition.getDatastore();
 
                     // Get the image cache object
-                    Datastore datastore = mmacquisition.getDatastore();
                     if (datastore == null) throw new RuntimeException("Acquisition was not initialized; datastore is null!");
                     // Get the tagged image from the image cache
                     org.micromanager.data.Image mmimage = image.getImage(datastore);

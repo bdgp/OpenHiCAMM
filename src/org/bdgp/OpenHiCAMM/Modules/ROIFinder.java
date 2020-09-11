@@ -7,10 +7,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
-
-import mmcorej.TaggedImage;
 
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.ImageLog;
@@ -37,14 +37,12 @@ import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
-import mmcorej.org.json.JSONException;
-import org.micromanager.acquisition.internal.MMAcquisition;
 import org.micromanager.data.Datastore;
+import org.micromanager.data.Coords;
 import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
 import org.micromanager.Studio;
 import org.micromanager.StagePosition;
-import org.micromanager.internal.utils.MMSerializationException;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
@@ -302,11 +300,11 @@ public abstract class ROIFinder implements Module, ImageLogger {
         logger.fine(String.format("%s: Using acquisition: %s", label, acquisition));
         int tries = 0;
         final int MAX_TRIES = 30;
-        MMAcquisition mmacquisition = null;
+        Datastore datastore = null;
         while (tries++ < MAX_TRIES) {
             try {
-                mmacquisition = acquisition.getAcquisition(acqDao);
-                if (mmacquisition != null) break;
+                datastore = acquisition.getDatastore();
+                if (datastore != null) break;
             }
             catch (Throwable e) {
                 StringWriter sw = new StringWriter();
@@ -316,14 +314,16 @@ public abstract class ROIFinder implements Module, ImageLogger {
             try { Thread.sleep(1000); } 
             catch (InterruptedException e) { }
         }
-        if (mmacquisition == null) {
-            throw new RuntimeException(String.format("Could not open acquisition %s!", acquisition));
+        if (datastore == null) {
+            throw new RuntimeException(String.format("Could not open datastore for acqusition %s!", acquisition));
         }
 
         // Get the image cache object
-        Datastore datastore = mmacquisition.getDatastore();
-        if (datastore == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
-        logger.fine(String.format("%s: ImageCache has following images: %s", label, datastore.imageKeys()));
+        Set<String> imageLabels = new TreeSet<>();
+        for (Coords coords: datastore.getUnorderedImageCoords()) {
+        	imageLabels.add(Image.generateLabel(coords));
+        }
+        logger.fine(String.format("%s: ImageCache has following images: %s", label, imageLabels));
         logger.fine(String.format("%s: Attempting to grab image %s from imageCache", label, image));
         // Get the tagged image from the image cache
         org.micromanager.data.Image mmimage = image.getImage(datastore);
@@ -561,10 +561,9 @@ public abstract class ROIFinder implements Module, ImageLogger {
                         Dao<Acquisition> acqDao = workflowRunner.getWorkflowDb().table(Acquisition.class);
                         Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
                         logger.info(String.format("Using acquisition: %s", acquisition));
-                        MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
+                        Datastore datastore = acquisition.getDatastore();
 
                         // Get the image cache object
-                        Datastore datastore = mmacquisition.getDatastore();
                         if (datastore == null) throw new RuntimeException("Acquisition was not initialized; imageCache is null!");
                         // Get the tagged image from the image cache
                         mmimage = image.getImage(datastore);

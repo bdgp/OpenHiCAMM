@@ -2,7 +2,7 @@ package org.bdgp.OpenHiCAMM.DB;
 
 import org.bdgp.OpenHiCAMM.Dao;
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
-import org.micromanager.acquisition.internal.MMAcquisition;
+import org.micromanager.data.Coords;
 import org.micromanager.data.Datastore;
 import org.micromanager.data.internal.DefaultCoords;
 
@@ -82,10 +82,9 @@ public class Image {
         }
         // Initialize the acquisition
         Acquisition acquisition = acqDao.selectOneOrDie(where("id",this.getAcquisitionId()));
-        MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
+        Datastore datastore = acquisition.getDatastore();
 
         // Get the image cache object
-        Datastore datastore = mmacquisition.getDatastore();
         if (datastore == null) throw new RuntimeException("Acquisition was not initialized; datastore is null!");
         // Get the tagged image from the image cache
         org.micromanager.data.Image image = this.getImage(datastore);
@@ -114,6 +113,10 @@ public class Image {
 
     public static String generateLabel(int channel, int slice, int frame, int position) {
         return String.format("%s_%s_%s_%s", channel, slice, frame, position);
+    }
+    
+    public static String generateLabel(Coords coords) {
+        return String.format("%s_%s_%s_%s", coords.getChannel(), coords.getZSlice(), coords.getTimePoint(), coords.getStagePosition());
     }
     
     public static int[] getIndices(String label) {

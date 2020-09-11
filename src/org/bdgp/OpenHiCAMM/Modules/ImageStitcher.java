@@ -37,7 +37,6 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import mmcorej.org.json.JSONArray;
 import mmcorej.org.json.JSONException;
-import org.micromanager.acquisition.internal.MMAcquisition;
 import org.micromanager.data.Datastore;
 import org.micromanager.internal.MMStudio;
 
@@ -246,9 +245,8 @@ public class ImageStitcher implements Module, ImageLogger {
 
             // Initialize the acquisition
             Acquisition acquisition = acqDao.selectOneOrDie(where("id",image.getAcquisitionId()));
-            MMAcquisition mmacquisition = acquisition.getAcquisition(acqDao);
+            Datastore datastore = acquisition.getDatastore();
             // Get the image cache object
-            Datastore datastore = mmacquisition.getDatastore();
             if (datastore == null) throw new RuntimeException("Acquisition was not initialized; datastore is null!");
             // Get the tagged image from the image cache
             org.micromanager.data.Image mmimage = image.getImage(datastore);
