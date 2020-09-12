@@ -141,14 +141,6 @@
                   <groupId>org.scijava</groupId>
                   <artifactId>scijava-common</artifactId>
                 </artifactItem>
-                <artifactItem>
-                  <groupId>org.jprocesses</groupId>
-                  <artifactId>jProcesses</artifactId>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>com.profesorfalken</groupId>
-                  <artifactId>WMI4Java</artifactId>
-                </artifactItem>
               </artifactItems>
               <outputDirectory>${fiji.dir}/jars</outputDirectory>
               <overWriteReleases>true</overWriteReleases>
@@ -284,16 +276,6 @@
       <groupId>org.scijava</groupId>
       <artifactId>scijava-common</artifactId>
       <version>2.83.3</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jprocesses</groupId>
-      <artifactId>jProcesses</artifactId>
-      <version>1.6.5</version>
-    </dependency>
-    <dependency>
-      <groupId>com.profesorfalken</groupId>
-      <artifactId>WMI4Java</artifactId>
-      <version>1.6.3</version>
     </dependency>
   </dependencies>
 </project>
