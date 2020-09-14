@@ -30,7 +30,7 @@ public class Processes {
 					String.format("%s\\system32\\tasklist.exe", System.getenv("SystemRoot")),
 					"/fo","csv",
 					String.format("/fi","PID eq %s", pid));
-			return result.out.matches("(?ims).*INFO: No tasks are running which match the specified criteria[.].*");
+			return !result.out.matches("(?ims).*INFO: No tasks are running which match the specified criteria[.].*");
 		}
 		else {
 			ExitStatus result = runCommandForOutput("ps","-f",Integer.toString(pid));
