@@ -3,13 +3,14 @@ package org.bdgp.OpenHiCAMM.Modules;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
+import org.scijava.plugin.SciJavaPlugin;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class CompareImager extends SlideImager {
+public class CompareImager extends SlideImager implements SciJavaPlugin {
     public CompareImager() { }
 
     public Status setTaskStatusOnResume(Task task) {

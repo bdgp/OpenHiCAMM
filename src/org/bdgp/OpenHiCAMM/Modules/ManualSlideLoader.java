@@ -29,9 +29,11 @@ import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
+import org.scijava.plugin.SciJavaPlugin;
+
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public class ManualSlideLoader implements Module {
+public class ManualSlideLoader implements Module, SciJavaPlugin {
     WorkflowRunner workflowRunner;
     WorkflowModule workflowModule;
     static boolean isInitialized = false;

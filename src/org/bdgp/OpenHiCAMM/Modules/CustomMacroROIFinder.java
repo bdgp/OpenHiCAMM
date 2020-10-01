@@ -16,6 +16,7 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.micromanager.internal.MMStudio;
+import org.scijava.plugin.SciJavaPlugin;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -26,7 +27,7 @@ import ij.process.ImageProcessor;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogger {
+public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogger, SciJavaPlugin {
 
     public CustomMacroROIFinder() {
         super();

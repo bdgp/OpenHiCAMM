@@ -52,6 +52,7 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import mmcorej.org.json.JSONException;
 import mmcorej.org.json.JSONObject;
 import org.micromanager.internal.dialogs.AcqControlDlg;
+import org.scijava.plugin.SciJavaPlugin;
 import org.micromanager.internal.MMStudio;
 import org.micromanager.acquisition.internal.AcquisitionWrapperEngine;
 import org.micromanager.data.Coords;
@@ -67,7 +68,7 @@ import com.google.common.eventbus.Subscribe;
 import static org.bdgp.OpenHiCAMM.Util.set;
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public class SlideImager implements Module, ImageLogger {
+public class SlideImager implements Module, ImageLogger, SciJavaPlugin {
 	private static final long DUMMY_SLEEP = 500;
 
 	WorkflowRunner workflowRunner;

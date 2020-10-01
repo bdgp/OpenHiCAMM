@@ -39,6 +39,7 @@ import org.micromanager.data.internal.DefaultImage;
 //import org.micromanager.graph.MultiChannelHistograms;
 //import org.micromanager.imagedisplay.VirtualAcquisitionDisplay;
 import org.micromanager.internal.utils.imageanalysis.ImageUtils;
+import org.scijava.plugin.SciJavaPlugin;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -51,7 +52,7 @@ import ij.process.ImageProcessor;
 import mmcorej.CMMCore;
 import mmcorej.TaggedImage;
 
-public class SlideSurveyor implements Module {
+public class SlideSurveyor implements Module, SciJavaPlugin {
     private static final String SURVEY_IMAGE_DIRECTORY_PREFIX = "survey";
 
 	WorkflowRunner workflowRunner;

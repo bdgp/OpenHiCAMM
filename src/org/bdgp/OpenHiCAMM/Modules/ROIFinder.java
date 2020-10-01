@@ -38,6 +38,7 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.micromanager.data.Datastore;
+import org.scijava.plugin.SciJavaPlugin;
 import org.micromanager.data.Coords;
 import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
@@ -49,7 +50,7 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 /**
  * Return x/y/len/width of bounding box surrounding the ROI
  */
-public abstract class ROIFinder implements Module, ImageLogger {
+public abstract class ROIFinder implements Module, ImageLogger, SciJavaPlugin {
     protected WorkflowRunner workflowRunner;
     protected WorkflowModule workflowModule;
     protected Studio script;

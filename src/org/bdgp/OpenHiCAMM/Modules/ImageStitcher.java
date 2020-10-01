@@ -39,6 +39,7 @@ import mmcorej.org.json.JSONArray;
 import mmcorej.org.json.JSONException;
 import org.micromanager.data.Datastore;
 import org.micromanager.internal.MMStudio;
+import org.scijava.plugin.SciJavaPlugin;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -49,7 +50,7 @@ import ij.process.ImageProcessor;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public class ImageStitcher implements Module, ImageLogger {
+public class ImageStitcher implements Module, ImageLogger, SciJavaPlugin {
     private static final String FUSION_METHOD = "Linear Blending";
     private static final int CHECK_PEAKS = 5;
     private static final boolean COMPUTE_OVERLAP = true;

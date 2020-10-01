@@ -27,6 +27,7 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
 import org.micromanager.StagePosition;
+import org.scijava.plugin.SciJavaPlugin;
 
 import bdgp.org.hough.GHT_Rawmatch;
 import ij.ImagePlus;
@@ -35,7 +36,7 @@ import ij.process.ImageConverter;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public class PosCalibrator implements Module {
+public class PosCalibrator implements Module, SciJavaPlugin {
     WorkflowModule workflowModule;
     WorkflowRunner workflow;
 

@@ -1,7 +1,12 @@
 package org.bdgp.OpenHiCAMM;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStreamReader;
+import java.lang.management.ManagementFactory;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
 import java.util.StringJoiner;
 
 public class Processes {
@@ -88,5 +93,18 @@ public class Processes {
 	    	throw new RuntimeException(e);
 	    }
 	}
-
+	
+//	public static Process fork(List<String> appendArgs, Map<String,String> appendEnv) {
+//		String java = isWindows()? 
+//				Paths.get(System.getProperty("java.home"),"bin","java.exe").toString() :
+//				Paths.get(System.getProperty("java.home"),"bin","java").toString();
+//		if (!new File(java).exists()) {
+//			throw new RuntimeException(String.format("Could not find java binary at %s!", java));
+//		}
+//		List<String> args = ManagementFactory.getRuntimeMXBean().getInputArguments();
+//		args.addAll(appendArgs);
+//		Map<String,String> env = System.getenv();
+//		env.putAll(appendEnv);
+//		ProcessBuilder p = 
+//	}
 }
