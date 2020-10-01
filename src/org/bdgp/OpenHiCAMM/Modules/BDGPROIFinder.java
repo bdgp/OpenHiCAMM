@@ -12,6 +12,8 @@ import org.bdgp.OpenHiCAMM.DB.ROI;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.micromanager.internal.MMStudio;
+import org.scijava.plugin.SciJavaPlugin;
+
 import ij.IJ;
 import ij.ImagePlus;
 import ij.measure.Measurements;
@@ -19,7 +21,7 @@ import ij.measure.ResultsTable;
 import ij.plugin.filter.ParticleAnalyzer;
 import ij.process.ImageProcessor;
 
-public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger {
+public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger, SciJavaPlugin {
     public BDGPROIFinder() {
         super();
     }
