@@ -1,23 +1,11 @@
 package org.bdgp.OpenHiCAMM;
 
 import java.awt.Dimension;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
-import java.util.jar.JarEntry;
-import java.util.jar.JarInputStream;
-import java.util.logging.Logger;
 
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
@@ -38,12 +26,8 @@ import org.micromanager.internal.MMStudio;
 import org.micromanager.internal.pluginmanagement.PluginFinder;
 import org.micromanager.MenuPlugin;
 import org.micromanager.Studio;
-import org.micromanager.internal.utils.JavaUtils;
-import org.micromanager.internal.utils.ReportingUtils;
 import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
-
-import ij.IJ;
 
 @Plugin(type = MenuPlugin.class)
 public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
@@ -52,7 +36,6 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 	private WorkflowDialog dialog;
 	private static List<String> moduleNames = null;
 	private static List<String> reportNames = null;
-    private static Logger log = Logger.getLogger("org.bdgp.OpenHiCAMM");
     private static OpenHiCAMM instance = null;
 
     public static final String MENU_NAME = "OpenHiCAMM";
