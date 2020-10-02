@@ -37,8 +37,12 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import mmcorej.org.json.JSONArray;
 import mmcorej.org.json.JSONException;
+
+import org.micromanager.MMPlugin;
+import org.micromanager.Studio;
 import org.micromanager.data.Datastore;
 import org.micromanager.internal.MMStudio;
+import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
 
 import ij.IJ;
@@ -50,7 +54,8 @@ import ij.process.ImageProcessor;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public class ImageStitcher implements Module, ImageLogger, SciJavaPlugin {
+@Plugin(type=MMPlugin.class)
+public class ImageStitcher implements Module, ImageLogger, SciJavaPlugin, MMPlugin {
     private static final String FUSION_METHOD = "Linear Blending";
     private static final int CHECK_PEAKS = 5;
     private static final boolean COMPUTE_OVERLAP = true;
@@ -618,4 +623,27 @@ public class ImageStitcher implements Module, ImageLogger, SciJavaPlugin {
         }
         return null;
     }
+
+	@Override
+	public void setContext(Studio studio) { }
+
+	@Override
+	public String getName() {
+		return this.getClass().getSimpleName();
+	}
+
+	@Override
+	public String getHelpText() {
+		return "";
+	}
+
+	@Override
+	public String getVersion() {
+		return "1.0";
+	}
+
+	@Override
+	public String getCopyright() {
+		return "";
+	}
 }

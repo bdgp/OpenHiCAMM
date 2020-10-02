@@ -52,6 +52,7 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import mmcorej.org.json.JSONException;
 import mmcorej.org.json.JSONObject;
 import org.micromanager.internal.dialogs.AcqControlDlg;
+import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
 import org.micromanager.internal.MMStudio;
 import org.micromanager.acquisition.internal.AcquisitionWrapperEngine;
@@ -60,15 +61,18 @@ import org.micromanager.data.Datastore;
 import org.micromanager.data.internal.DefaultNewImageEvent;
 import org.micromanager.AutofocusManager;
 import org.micromanager.AutofocusPlugin;
+import org.micromanager.MMPlugin;
 import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
+import org.micromanager.Studio;
 
 import com.google.common.eventbus.Subscribe;
 
 import static org.bdgp.OpenHiCAMM.Util.set;
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public class SlideImager implements Module, ImageLogger, SciJavaPlugin {
+@Plugin(type=MMPlugin.class)
+public class SlideImager implements Module, ImageLogger, SciJavaPlugin, MMPlugin {
 	private static final long DUMMY_SLEEP = 500;
 
 	WorkflowRunner workflowRunner;
@@ -1274,4 +1278,27 @@ public class SlideImager implements Module, ImageLogger, SciJavaPlugin {
         }
         return null;
     }
+
+	@Override
+	public void setContext(Studio studio) { }
+
+	@Override
+	public String getName() {
+		return this.getClass().getName();
+	}
+
+	@Override
+	public String getHelpText() {
+		return "";
+	}
+
+	@Override
+	public String getVersion() {
+		return "1.0";
+	}
+
+	@Override
+	public String getCopyright() {
+		return "";
+	}
 }

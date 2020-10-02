@@ -65,6 +65,32 @@
         <configuration>
           <forceCreation>true</forceCreation>
         </configuration>
+        <executions>
+          <execution>
+            <id>OpenHiCAMM</id>
+            <goals><goal>jar</goal></goals>
+            <phase>package</phase>
+            <configuration>
+              <classifier>lib</classifier>
+              <excludes>
+                <exclude>org/bdgp/OpenHiCAMM/mmplugin/**</exclude>
+                <exclude>META-INF/json/org.scijava.plugin.Plugin</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <execution>
+            <id>OpenHiCAMMPlugin</id>
+            <goals><goal>jar</goal></goals>
+            <phase>package</phase>
+            <configuration>
+              <classifier>mmplugin</classifier>
+              <includes>
+                <include>org/bdgp/OpenHiCAMM/mmplugin/**</include>
+                <include>META-INF/json/org.scijava.plugin.Plugin</include>
+              </includes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
          <groupId>org.apache.maven.plugins</groupId>
@@ -142,7 +168,7 @@
                   <artifactId>scijava-common</artifactId>
                 </artifactItem>
               </artifactItems>
-              <outputDirectory>${fiji.dir}/jars</outputDirectory>
+              <outputDirectory>${fiji.dir}/plugins/Micro-Manager</outputDirectory>
               <overWriteReleases>true</overWriteReleases>
               <overWriteSnapshots>true</overWriteSnapshots>
             </configuration>
@@ -154,12 +180,29 @@
         <version>1.7</version>
         <executions>
           <execution>
+            <id>lib</id>
+            <phase>install</phase>
+            <configuration>
+              <target>
+                <mkdir dir="${fiji.dir}/plugins/Micro-Manager"/>
+                <copy 
+                  file="${project.build.directory}/OpenHiCAMM-lib.${project.packaging}" 
+                  todir="${fiji.dir}/plugins/Micro-Manager"
+                  overwrite="true" verbose="true"/>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>mmplugin</id>
             <phase>install</phase>
             <configuration>
               <target>
                 <mkdir dir="${fiji.dir}/mmplugins"/>
                 <copy 
-                  file="${project.build.directory}/${project.build.finalName}.${project.packaging}" 
+                  file="${project.build.directory}/OpenHiCAMM-mmplugin.${project.packaging}" 
                   todir="${fiji.dir}/mmplugins"
                   overwrite="true" verbose="true"/>
               </target>

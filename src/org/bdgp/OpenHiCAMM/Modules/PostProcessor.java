@@ -31,12 +31,15 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import org.micromanager.data.Coords;
 import org.micromanager.data.Datastore;
+import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
+import org.micromanager.MMPlugin;
 import org.micromanager.Studio;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public abstract class PostProcessor implements Module, ImageLogger, SciJavaPlugin {
+@Plugin(type=MMPlugin.class)
+public abstract class PostProcessor implements Module, ImageLogger, SciJavaPlugin, MMPlugin {
     protected WorkflowRunner workflowRunner;
     protected WorkflowModule workflowModule;
     protected Studio script;

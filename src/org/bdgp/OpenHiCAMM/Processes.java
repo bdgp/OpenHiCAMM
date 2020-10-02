@@ -1,12 +1,7 @@
 package org.bdgp.OpenHiCAMM;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.InputStreamReader;
-import java.lang.management.ManagementFactory;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.Map;
 import java.util.StringJoiner;
 
 public class Processes {

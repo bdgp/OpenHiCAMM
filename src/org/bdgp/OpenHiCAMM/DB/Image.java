@@ -5,6 +5,7 @@ import org.bdgp.OpenHiCAMM.WorkflowRunner;
 import org.micromanager.data.Coords;
 import org.micromanager.data.Datastore;
 import org.micromanager.data.internal.DefaultCoords;
+import org.micromanager.internal.MMStudio;
 
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
@@ -102,7 +103,7 @@ public class Image {
         }
         org.micromanager.data.Image mmimage = this.getImage(runner);
 
-        ImageProcessor processor = runner.getOpenHiCAMM().getApp().getDataManager().getImageJConverter().createProcessor(mmimage);
+        ImageProcessor processor = MMStudio.getInstance().getDataManager().getImageJConverter().createProcessor(mmimage);
         ImagePlus imp = new ImagePlus(this.toString(), processor);
         return imp;
     }

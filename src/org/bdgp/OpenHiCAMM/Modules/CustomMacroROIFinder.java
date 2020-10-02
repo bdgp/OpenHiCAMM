@@ -15,7 +15,10 @@ import org.bdgp.OpenHiCAMM.DB.ROI;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
+import org.micromanager.MMPlugin;
+import org.micromanager.Studio;
 import org.micromanager.internal.MMStudio;
+import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
 
 import ij.IJ;
@@ -27,7 +30,8 @@ import ij.process.ImageProcessor;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogger, SciJavaPlugin {
+@Plugin(type=MMPlugin.class)
+public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogger, SciJavaPlugin, MMPlugin {
 
     public CustomMacroROIFinder() {
         super();
@@ -242,4 +246,27 @@ public class CustomMacroROIFinder extends ROIFinder implements Module, ImageLogg
         if (taskType == null) return CustomMacroROIFinderDialog.DEFAULT_TASK_TYPE;
         return taskType;
     }
+
+	@Override
+	public void setContext(Studio studio) { }
+
+	@Override
+	public String getName() {
+		return this.getClass().getSimpleName();
+	}
+
+	@Override
+	public String getHelpText() {
+		return "";
+	}
+
+	@Override
+	public String getVersion() {
+		return "1.0";
+	}
+
+	@Override
+	public String getCopyright() {
+		return "";
+	}
 }

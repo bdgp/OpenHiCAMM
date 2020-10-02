@@ -1,6 +1,10 @@
 package org.bdgp.OpenHiCAMM;
 
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
+import org.micromanager.MMPlugin;
+import org.micromanager.Studio;
+import org.scijava.plugin.Plugin;
+import org.scijava.plugin.SciJavaPlugin;
 
 import ij.IJ;
 import javafx.scene.web.WebEngine;
@@ -18,7 +22,8 @@ import java.nio.file.Paths;
 
 import static org.bdgp.OpenHiCAMM.Tag.T.*;
 
-public class ImageFileReport implements Report {
+@Plugin(type=Report.class)
+public class ImageFileReport implements Report, SciJavaPlugin, MMPlugin {
     WorkflowRunner workflowRunner;
     WebEngine webEngine;
     String reportDir;
@@ -84,4 +89,27 @@ public class ImageFileReport implements Report {
             });
         }).write(reportIndex);
     }
+
+	@Override
+	public void setContext(Studio studio) { }
+
+	@Override
+	public String getName() {
+		return this.getClass().getSimpleName();
+	}
+
+	@Override
+	public String getHelpText() {
+		return "";
+	}
+
+	@Override
+	public String getVersion() {
+		return "1.0";
+	}
+
+	@Override
+	public String getCopyright() {
+		return "";
+	}
 }

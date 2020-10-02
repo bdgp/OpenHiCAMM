@@ -29,14 +29,19 @@ import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
+import org.micromanager.MMPlugin;
+import org.micromanager.Studio;
+import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public class ManualSlideLoader implements Module, SciJavaPlugin {
+@Plugin(type=MMPlugin.class)
+public class ManualSlideLoader implements Module, SciJavaPlugin, MMPlugin {
     WorkflowRunner workflowRunner;
     WorkflowModule workflowModule;
     static boolean isInitialized = false;
+    Studio studio = null;
     
     @Override
     public synchronized void initialize(WorkflowRunner workflowRunner, WorkflowModule workflowModule) {
@@ -70,7 +75,7 @@ public class ManualSlideLoader implements Module, SciJavaPlugin {
 
         logger.info(String.format("Running in manual slide loading mode"));
         if (loadPoolSlide != null) {
-            JOptionPane.showMessageDialog(this.workflowRunner.getOpenHiCAMM().getDialog(),
+            JOptionPane.showMessageDialog(workflowRunner.getOpenHiCAMM().getDialog(),
                 loadPoolSlide != null? 
                         "Please load slide number "+
                             loadPoolSlide.getSlidePosition()+" from cartridge "+
@@ -232,4 +237,29 @@ public class ManualSlideLoader implements Module, SciJavaPlugin {
         }
         return null;
     }
+
+	@Override
+	public void setContext(Studio studio) { 
+		this.studio = studio;
+	}
+
+	@Override
+	public String getName() {
+		return this.getClass().getSimpleName();
+	}
+
+	@Override
+	public String getHelpText() {
+		return "";
+	}
+
+	@Override
+	public String getVersion() {
+		return "1.0";
+	}
+
+	@Override
+	public String getCopyright() {
+		return "";
+	}
 }

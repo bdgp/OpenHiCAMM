@@ -12,12 +12,12 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
-import org.bdgp.OpenHiCAMM.Modules.PosCalibrator;
 import org.bdgp.OpenHiCAMM.Modules.BDGPROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.CompareImager;
 import org.bdgp.OpenHiCAMM.Modules.CustomMacroROIFinder;
 import org.bdgp.OpenHiCAMM.Modules.ImageStitcher;
 import org.bdgp.OpenHiCAMM.Modules.ManualSlideLoader;
+import org.bdgp.OpenHiCAMM.Modules.PosCalibrator;
 import org.bdgp.OpenHiCAMM.Modules.SlideImager;
 import org.bdgp.OpenHiCAMM.Modules.SlideSurveyor;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
@@ -26,10 +26,8 @@ import org.micromanager.internal.MMStudio;
 import org.micromanager.internal.pluginmanagement.PluginFinder;
 import org.micromanager.MenuPlugin;
 import org.micromanager.Studio;
-import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
 
-@Plugin(type = MenuPlugin.class)
 public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 	public static final String OPENHICAMM_MODULES_DIR = "lib/openhicamm_modules";
 	private Studio app;
@@ -63,19 +61,6 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 	
 	public WorkflowDialog getDialog() {
 		return dialog;
-	}
-
-	/**
-	 * The main app passes its ScriptInterface to the module. This
-	 * method is typically called after the module is instantiated.
-	 * @param app - ScriptInterface implementation
-	 */
-	public void setApp(Studio app) {
-		this.app = app;
-	}
-
-	public Studio getApp() {
-		return this.app;
 	}
 
 	/**
@@ -211,6 +196,10 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 	@Override
 	public void setContext(Studio studio) {
 		this.app = studio;
+	}
+	
+	public Studio getApp() {
+		return this.app;
 	}
 
 	@Override

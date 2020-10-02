@@ -24,9 +24,12 @@ import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
+import org.micromanager.MMPlugin;
 import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
 import org.micromanager.StagePosition;
+import org.micromanager.Studio;
+import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
 
 import bdgp.org.hough.GHT_Rawmatch;
@@ -36,7 +39,8 @@ import ij.process.ImageConverter;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
-public class PosCalibrator implements Module, SciJavaPlugin {
+@Plugin(type=MMPlugin.class)
+public class PosCalibrator implements Module, SciJavaPlugin, MMPlugin {
     WorkflowModule workflowModule;
     WorkflowRunner workflow;
 
@@ -409,4 +413,27 @@ public class PosCalibrator implements Module, SciJavaPlugin {
         }
         return null;
     }
+
+	@Override
+	public void setContext(Studio studio) { }
+
+	@Override
+	public String getName() {
+		return this.getClass().getSimpleName();
+	}
+
+	@Override
+	public String getHelpText() {
+		return "";
+	}
+
+	@Override
+	public String getVersion() {
+		return "1.0";
+	}
+
+	@Override
+	public String getCopyright() {
+		return "";
+	}
 }

@@ -1,6 +1,8 @@
 package org.bdgp.OpenHiCAMM.Modules.Interfaces;
 
 import org.bdgp.OpenHiCAMM.WorkflowRunner;
+import org.micromanager.MMPlugin;
+import org.scijava.plugin.SciJavaPlugin;
 
 import javafx.scene.web.WebEngine;
 
@@ -8,7 +10,7 @@ import javafx.scene.web.WebEngine;
  * Interface for building HTML reports.
  *
  */
-public interface Report {
+public interface Report extends MMPlugin, SciJavaPlugin {
     /**
      * Initialize the report and set the workflow runner
      * @param workflowRunner

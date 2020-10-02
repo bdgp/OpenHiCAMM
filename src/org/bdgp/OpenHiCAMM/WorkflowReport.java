@@ -58,10 +58,14 @@ import mmcorej.org.json.JSONArray;
 import mmcorej.org.json.JSONException;
 import mmcorej.org.json.JSONObject;
 import org.micromanager.internal.MMStudio;
+import org.micromanager.MMPlugin;
 import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
 import org.micromanager.StagePosition;
+import org.micromanager.Studio;
 import org.micromanager.internal.utils.ImageLabelComparator;
+import org.scijava.plugin.Plugin;
+import org.scijava.plugin.SciJavaPlugin;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
@@ -91,7 +95,8 @@ import mmcorej.CMMCore;
 import static org.bdgp.OpenHiCAMM.Util.where;
 import static org.bdgp.OpenHiCAMM.Tag.T.*;
 
-public class WorkflowReport implements Report {
+@Plugin(type=Report.class)
+public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
     public static final int SLIDE_PREVIEW_WIDTH = 1280; 
     public static final int ROI_GRID_PREVIEW_WIDTH = 425; 
 
@@ -1752,4 +1757,27 @@ public class WorkflowReport implements Report {
         catch (ParseException e) {throw new RuntimeException(e);}
         return lastModified.getTime() <= timestampDate.getTime();
     }
+
+	@Override
+	public void setContext(Studio studio) { }
+
+	@Override
+	public String getName() {
+		return this.getClass().getName();
+	}
+
+	@Override
+	public String getHelpText() {
+		return "";
+	}
+
+	@Override
+	public String getVersion() {
+		return "1.0";
+	}
+
+	@Override
+	public String getCopyright() {
+		return "";
+	}
 }

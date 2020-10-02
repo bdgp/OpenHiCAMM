@@ -9,11 +9,13 @@ import org.bdgp.OpenHiCAMM.DB.Config;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
+import org.micromanager.MMPlugin;
+import org.scijava.plugin.SciJavaPlugin;
 
 /**
  * Interface for workflow modules.
  */
-public interface Module {
+public interface Module extends MMPlugin, SciJavaPlugin {
     public static enum TaskType {SERIAL, PARALLEL};
     
     /**

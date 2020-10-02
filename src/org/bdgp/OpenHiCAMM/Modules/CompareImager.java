@@ -3,6 +3,9 @@ package org.bdgp.OpenHiCAMM.Modules;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
+import org.micromanager.MMPlugin;
+import org.micromanager.Studio;
+import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
@@ -10,7 +13,8 @@ import static org.bdgp.OpenHiCAMM.Util.where;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CompareImager extends SlideImager implements SciJavaPlugin {
+@Plugin(type=MMPlugin.class)
+public class CompareImager extends SlideImager implements SciJavaPlugin, MMPlugin {
     public CompareImager() { }
 
     public Status setTaskStatusOnResume(Task task) {
@@ -42,4 +46,27 @@ public class CompareImager extends SlideImager implements SciJavaPlugin {
         }
         return null;
     }
+
+	@Override
+	public void setContext(Studio studio) { }
+
+	@Override
+	public String getName() {
+		return this.getClass().getSimpleName();
+	}
+
+	@Override
+	public String getHelpText() {
+		return "";
+	}
+
+	@Override
+	public String getVersion() {
+		return "1.0";
+	}
+
+	@Override
+	public String getCopyright() {
+		return "";
+	}
 }

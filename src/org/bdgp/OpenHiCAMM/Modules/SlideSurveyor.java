@@ -2,6 +2,7 @@ package org.bdgp.OpenHiCAMM.Modules;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 
+
 import java.awt.Component;
 import java.io.File;
 import java.io.IOException;
@@ -33,12 +34,15 @@ import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 import mmcorej.org.json.JSONException;
 import mmcorej.org.json.JSONObject;
 import org.micromanager.internal.MMStudio;
+import org.micromanager.MMPlugin;
 import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
+import org.micromanager.Studio;
 import org.micromanager.data.internal.DefaultImage;
 //import org.micromanager.graph.MultiChannelHistograms;
 //import org.micromanager.imagedisplay.VirtualAcquisitionDisplay;
 import org.micromanager.internal.utils.imageanalysis.ImageUtils;
+import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
 
 import ij.IJ;
@@ -52,7 +56,8 @@ import ij.process.ImageProcessor;
 import mmcorej.CMMCore;
 import mmcorej.TaggedImage;
 
-public class SlideSurveyor implements Module, SciJavaPlugin {
+@Plugin(type=MMPlugin.class)
+public class SlideSurveyor implements Module, SciJavaPlugin, MMPlugin {
     private static final String SURVEY_IMAGE_DIRECTORY_PREFIX = "survey";
 
 	WorkflowRunner workflowRunner;
@@ -827,4 +832,27 @@ public class SlideSurveyor implements Module, SciJavaPlugin {
         }
         return null;
     }
+
+	@Override
+	public void setContext(Studio studio) { }
+
+	@Override
+	public String getName() {
+		return this.getClass().getName();
+	}
+
+	@Override
+	public String getHelpText() {
+		return "";
+	}
+
+	@Override
+	public String getVersion() {
+		return "1.0";
+	}
+
+	@Override
+	public String getCopyright() {
+		return "";
+	}
 }

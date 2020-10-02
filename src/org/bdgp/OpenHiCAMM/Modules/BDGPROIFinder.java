@@ -11,7 +11,10 @@ import org.bdgp.OpenHiCAMM.DB.Image;
 import org.bdgp.OpenHiCAMM.DB.ROI;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.ImageLogger;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
+import org.micromanager.MMPlugin;
+import org.micromanager.Studio;
 import org.micromanager.internal.MMStudio;
+import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
 
 import ij.IJ;
@@ -21,7 +24,8 @@ import ij.measure.ResultsTable;
 import ij.plugin.filter.ParticleAnalyzer;
 import ij.process.ImageProcessor;
 
-public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger, SciJavaPlugin {
+@Plugin(type=MMPlugin.class)
+public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger, SciJavaPlugin, MMPlugin {
     public BDGPROIFinder() {
         super();
     }
@@ -180,4 +184,27 @@ public class BDGPROIFinder extends ROIFinder implements Module, ImageLogger, Sci
         imageLog.addImage(imp, "Adding ROIs to image");
         return rois;
     }
+
+	@Override
+	public void setContext(Studio studio) { }
+
+	@Override
+	public String getName() {
+		return this.getClass().getSimpleName();
+	}
+
+	@Override
+	public String getHelpText() {
+		return "";
+	}
+
+	@Override
+	public String getVersion() {
+		return "1.0";
+	}
+
+	@Override
+	public String getCopyright() {
+		return "";
+	}
 }
