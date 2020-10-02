@@ -1,5 +1,6 @@
 package org.bdgp.OpenHiCAMM.DB;
 
+import org.bdgp.OpenHiCAMM.OpenHiCAMM;
 import org.bdgp.OpenHiCAMM.Util;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Module;
 
@@ -56,17 +57,12 @@ public class WorkflowModule {
         this.className = className;
         
         // assign the module class
-        try {
-            Class<?> module = Class.forName(className);
-            if (!Module.class.isAssignableFrom(module)) {
-                throw new RuntimeException("Module "+className
-                        +" does not inherit Module interface.");
-            }
-            this.module = Module.class.getClass().cast(module);
-        } 
-        catch (ClassNotFoundException e) { 
-            throw new RuntimeException("Module "+className+" is an unknown module.", e);
+        Class<?> module = OpenHiCAMM.getModules().get(className);
+        if (!Module.class.isAssignableFrom(module)) {
+            throw new RuntimeException("Module "+className
+                    +" does not inherit Module interface.");
         }
+        this.module = Module.class.getClass().cast(module);
     }
     
     public Class<Module> getModule() {

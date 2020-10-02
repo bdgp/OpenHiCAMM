@@ -4,8 +4,9 @@ import java.awt.Dimension;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
@@ -32,8 +33,8 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 	public static final String OPENHICAMM_MODULES_DIR = "lib/openhicamm_modules";
 	private Studio app;
 	private WorkflowDialog dialog;
-	private static List<String> moduleNames = null;
-	private static List<String> reportNames = null;
+	private static LinkedHashMap<String,Class<?>> modules = null;
+	private static LinkedHashMap<String,Class<?>> reports = null;
     private static OpenHiCAMM instance = null;
 
     public static final String MENU_NAME = "OpenHiCAMM";
@@ -68,7 +69,7 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 	 */
 	public void show() {
 		// initialize the list of modules
-		getModuleNames();
+		getModules();
 
         // open the slide workflow dialog
         SwingUtilities.invokeLater(new Runnable() {
@@ -142,21 +143,21 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 	}
 	
 	private static void loadModules() {
-		if (moduleNames == null || reportNames == null) {
+		if (modules == null || reports == null) {
             // Add all the builtin modules to the modules list first
-            moduleNames = new ArrayList<String>();
-            moduleNames.add(ManualSlideLoader.class.getName());
-            moduleNames.add(SlideImager.class.getName());
-            moduleNames.add(SlideSurveyor.class.getName());
-            moduleNames.add(CompareImager.class.getName());
-            moduleNames.add(BDGPROIFinder.class.getName());
-            moduleNames.add(CustomMacroROIFinder.class.getName());
-            moduleNames.add(ImageStitcher.class.getName());
-            moduleNames.add(PosCalibrator.class.getName());
+            modules = new LinkedHashMap<String,Class<?>>();
+            modules.put(ManualSlideLoader.class.getName(), ManualSlideLoader.class);
+            modules.put(SlideImager.class.getName(), SlideImager.class);
+            modules.put(SlideSurveyor.class.getName(), SlideSurveyor.class);
+            modules.put(CompareImager.class.getName(), CompareImager.class);
+            modules.put(BDGPROIFinder.class.getName(), BDGPROIFinder.class);
+            modules.put(CustomMacroROIFinder.class.getName(), CustomMacroROIFinder.class);
+            modules.put(ImageStitcher.class.getName(), ImageStitcher.class);
+            modules.put(PosCalibrator.class.getName(), PosCalibrator.class);
             
-            reportNames = new ArrayList<String>();
-            reportNames.add(WorkflowReport.class.getName());
-            reportNames.add(ImageFileReport.class.getName());
+            reports = new LinkedHashMap<String, Class<?>>();
+            reports.put(WorkflowReport.class.getName(), WorkflowReport.class);
+            reports.put(ImageFileReport.class.getName(), ImageFileReport.class);
             
             // Look in the openhicamm_modules/ directory for any additional workflow modules.
             String pluginRootDir = System.getProperty("org.bdgp.OpenHiCAMM.modules_dir", OPENHICAMM_MODULES_DIR);
@@ -166,10 +167,10 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
                 if (!Modifier.isAbstract(clazz.getModifiers())) {
                     for (Class<?> iface : clazz.getInterfaces()) {
                         if (iface == Module.class) {
-                            moduleNames.add(clazz.getName());
+                            modules.put(clazz.getName(), clazz);
                         }
                         if (iface == Report.class) {
-                            reportNames.add(clazz.getName());
+                            reports.put(clazz.getName(), clazz);
                         }
                     }
                 }
@@ -180,17 +181,17 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 	/**
 	 * @return The list of registered modules
 	 */
-	public static List<String> getModuleNames() {
+	public static Map<String,Class<?>> getModules() {
 	    loadModules();
-        return moduleNames;
+        return modules;
     }
 	
 	/**
 	 * @return The list of registered reports
 	 */
-	public static List<String> getReportNames() {
+	public static Map<String,Class<?>> getReports() {
 	    loadModules();
-	    return reportNames;
+	    return reports;
 	}
 
 	@Override

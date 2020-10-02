@@ -6,8 +6,8 @@ import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.swing.JFrame;
 
@@ -60,9 +60,9 @@ public class ReportDialog {
 
         selectReport.getItems().clear();
         selectReport.getItems().add("- Select a report -");
-        List<String> reportNames = OpenHiCAMM.getReportNames();
-        for (String reportName : reportNames) {
-            selectReport.getItems().add(reportName);
+        Set<String> reports = OpenHiCAMM.getReports().keySet();
+        for (String report : reports) {
+            selectReport.getItems().add(report);
         }
         selectReport.getSelectionModel().select(0);
     }
@@ -78,9 +78,9 @@ public class ReportDialog {
         if (reportName != null && !reportName.equals("- Select a report -")) {
             Report report;
             try {
-				report = (Report)Class.forName(reportName).getDeclaredConstructor().newInstance();
+				report = (Report)OpenHiCAMM.getReports().get(reportName).getDeclaredConstructor().newInstance();
 			} 
-            catch (InstantiationException|IllegalAccessException|ClassNotFoundException|IllegalArgumentException|InvocationTargetException|NoSuchMethodException|SecurityException e) 
+            catch (InstantiationException|IllegalAccessException|IllegalArgumentException|InvocationTargetException|NoSuchMethodException|SecurityException e) 
             { 
                 throw new RuntimeException(e); 
             }
