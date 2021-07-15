@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
-mmdir=/Applications/Micro-Manager-2.0.0-gamma1-20200820
+mmdir=/Applications/Micro-Manager-2.0.0
 fijidir=/Applications/Fiji.app
 arch=macosx
 updatesite=micromanager-"$arch"

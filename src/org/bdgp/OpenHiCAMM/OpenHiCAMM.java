@@ -139,7 +139,7 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 	 * Returns copyright information
 	 */
 	public String getCopyright() {
-		return "Copyright (C) 2015 Lawrence Berkeley National Laboratory";
+		return "Copyright (C) 2020 Lawrence Berkeley National Laboratory";
 	}
 	
 	private static void loadModules() {
