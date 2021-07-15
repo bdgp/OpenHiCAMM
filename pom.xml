@@ -233,7 +233,7 @@
     <dependency>
       <groupId>net.imagej</groupId>
       <artifactId>ij</artifactId>
-      <version>1.53j</version>
+      <version>1.53c</version>
     </dependency>
     <dependency>
       <groupId>MicroManager</groupId>
