@@ -7,10 +7,10 @@ import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
 
 @Plugin(type = MenuPlugin.class)
-public class OpenHiCAMMPlugin implements MenuPlugin, SciJavaPlugin {
+public class MMPlugin implements MenuPlugin, SciJavaPlugin {
 	OpenHiCAMM openhicamm;
 	
-	public OpenHiCAMMPlugin() {
+	public MMPlugin() {
 		if (this.openhicamm == null) {
 			this.openhicamm = new OpenHiCAMM();
 		}

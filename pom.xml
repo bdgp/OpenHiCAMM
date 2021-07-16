@@ -74,18 +74,31 @@
               <classifier>lib</classifier>
               <excludes>
                 <exclude>org/bdgp/OpenHiCAMM/mmplugin/**</exclude>
+                <exclude>org/bdgp/OpenHiCAMM/ijplugin/**</exclude>
                 <exclude>META-INF/json/org.scijava.plugin.Plugin</exclude>
               </excludes>
             </configuration>
           </execution>
           <execution>
-            <id>OpenHiCAMMPlugin</id>
+            <id>MMPlugin</id>
             <goals><goal>jar</goal></goals>
             <phase>package</phase>
             <configuration>
               <classifier>mmplugin</classifier>
               <includes>
                 <include>org/bdgp/OpenHiCAMM/mmplugin/**</include>
+                <include>META-INF/json/org.scijava.plugin.Plugin</include>
+              </includes>
+            </configuration>
+          </execution>
+          <execution>
+            <id>IJPlugin</id>
+            <goals><goal>jar</goal></goals>
+            <phase>package</phase>
+            <configuration>
+              <classifier>ijplugin</classifier>
+              <includes>
+                <include>org/bdgp/OpenHiCAMM/ijplugin/**</include>
                 <include>META-INF/json/org.scijava.plugin.Plugin</include>
               </includes>
             </configuration>
@@ -204,6 +217,22 @@
                 <copy 
                   file="${project.build.directory}/OpenHiCAMM-mmplugin.${project.packaging}" 
                   todir="${fiji.dir}/mmplugins"
+                  overwrite="true" verbose="true"/>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>ijplugin</id>
+            <phase>install</phase>
+            <configuration>
+              <target>
+                <mkdir dir="${fiji.dir}/plugins"/>
+                <copy 
+                  file="${project.build.directory}/OpenHiCAMM-ijplugin.${project.packaging}" 
+                  todir="${fiji.dir}/plugins"
                   overwrite="true" verbose="true"/>
               </target>
             </configuration>
