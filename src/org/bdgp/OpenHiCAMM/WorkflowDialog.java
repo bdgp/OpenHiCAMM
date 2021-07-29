@@ -13,15 +13,20 @@ import javax.swing.JComboBox;
 import javax.swing.SwingUtilities;
 
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
+import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
+import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
 
+import ij.IJ;
 import ij.Prefs;
+import mmcorej.org.json.JSONArray;
 import net.miginfocom.swing.MigLayout;
 
+import java.awt.Desktop;
 import java.awt.Frame;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -30,7 +35,15 @@ import java.awt.event.ItemListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.lang.reflect.Method;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +51,8 @@ import java.util.logging.Level;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
 import javax.swing.JSpinner;
+
+import spark.Spark;
 
 /**
  * The main workflow dialog.
@@ -54,6 +69,7 @@ public class WorkflowDialog extends JDialog {
     JLabel lblConfigure;
     JButton btnConfigure;
     JButton btnCopyToNewProject;
+    JComboBox<String> selectReport;
 
     // The Micro-Manager plugin module
     OpenHiCAMM mmslide;
@@ -70,8 +86,6 @@ public class WorkflowDialog extends JDialog {
     JLabel lblNumberOfThreads;
     boolean active = true;
     boolean isDisposed = false;
-    JButton btnViewReport;
-    ReportDialog.Frame reportDialog;
     
     public boolean isDisposed() {
         return isDisposed;
@@ -265,21 +279,114 @@ public class WorkflowDialog extends JDialog {
         });
         getContentPane().add(btnShowDatabaseManager, "cell 1 6,alignx right");
         
-        btnViewReport = new JButton("View Reports");
-        btnViewReport.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent e) {
+        selectReport = new JComboBox<String>();
+        selectReport.setEnabled(false);
+        getContentPane().add(selectReport, "cell 1 6");
+        ArrayList<String> reports = new ArrayList<>();
+        reports.add("--Select Report--");
+        reports.addAll(OpenHiCAMM.getReports().keySet());
+        selectReport.setModel(new DefaultComboBoxModel<String>(reports.toArray(new String[0])));
+        selectReport.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
             	if (!active) return;
-        	    if (WorkflowDialog.this.workflowRunner != null) {
-        	        synchronized (this) {
-                        if (reportDialog == null) reportDialog = new ReportDialog.Frame(WorkflowDialog.this.workflowRunner);
-                        else reportDialog.setWorkflowRunner(WorkflowDialog.this.workflowRunner);
-                        reportDialog.setVisible(true);
-        	        }
-        	    }
-        	}
-        });
-        getContentPane().add(btnViewReport, "cell 1 6");
-        btnViewReport.setEnabled(false);
+                if (e.getStateChange() == ItemEvent.SELECTED && !e.getItem().equals("--Select Report--")) { 
+                	@SuppressWarnings("unchecked")
+					Class<Report> reportClass = (Class<Report>)OpenHiCAMM.getReports().get(e.getItem());
+                	Report report;
+                	try { report = reportClass.newInstance(); } 
+                	catch (InstantiationException | IllegalAccessException e1) {
+						throw new RuntimeException(e1);
+					}
+
+                    // get the time the workflow completed running
+                    Long workflowRunTime = null;
+                    for (WorkflowModule startModule : workflowRunner.getWorkflow().select(where("parentId", null))) {
+                        ModuleConfig startTimeConf = workflowRunner.getModuleConfig().selectOne(
+                                where("id",startModule.getId()).
+                                and("key", "startTime"));
+                        if (startTimeConf != null) {
+                            long startTime;
+                            try { startTime = WorkflowRunner.dateFormat.parse(startTimeConf.getValue()).getTime(); } 
+                            catch (ParseException e1) { throw new RuntimeException(e1); }
+                            if (workflowRunTime == null || workflowRunTime < startTime) workflowRunTime = startTime;
+                        }
+                        ModuleConfig endTimeConf = workflowRunner.getModuleConfig().selectOne(
+                                where("id",startModule.getId()).
+                                and("key", "endTime"));
+                        if (endTimeConf != null) {
+                            long endTime;
+							try { endTime = WorkflowRunner.dateFormat.parse(endTimeConf.getValue()).getTime(); } 
+							catch (ParseException e1) { throw new RuntimeException(e1); }
+                            if (workflowRunTime == null || workflowRunTime < endTime) workflowRunTime = endTime;
+                        }
+                    }
+        
+                    // get the report file path
+                    String reportName = report.getClass().getSimpleName();
+                    File reportDir = new File(new File(
+                        workflowRunner.getWorkflowDir(),
+                        "reports"),
+                        reportName);
+                    reportDir.mkdirs();
+                    String reportIndex = "index.html";
+                	report.initialize(workflowRunner, reportDir.toString(), reportIndex);
+
+                    // if the report file's timestamp is older than the workflow run time,
+                    // it needs to be regenerated
+                	File reportIndexFile = new File(reportDir, reportIndex);
+                    if (workflowRunTime == null || !reportIndexFile.exists() || reportIndexFile.lastModified() <= workflowRunTime) {
+                        if (JOptionPane.showConfirmDialog(null, 
+                                "Regenerate the report? This could take some time.",
+                                String.format("Report %s is outdated", reportName), 
+                                JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
+                        { 
+                            new Thread(()->{
+                                IJ.log(String.format("Generating report for %s", reportName));
+                                report.runReport();
+                                if (reportIndexFile.exists()) {
+                                	Spark.stop();
+                                	Spark.init();
+                                	int port = Spark.port();
+                                	Spark.ipAddress("127.0.0.1");
+                                	Spark.staticFiles.externalLocation(reportDir.toString());
+                                	Spark.get("/report/:name", (request, response)->{
+                                		try {
+                                            String name = request.params(":name");
+                                            String json = request.queryParams("args");
+                                            if (json == null) throw new RuntimeException("/report request given with no args query parameter!");
+                                            JSONArray argsJson = new JSONArray(json);
+                                            ArrayList<Object> args = new ArrayList<>();
+                                            for (int i=0; i<argsJson.length(); ++i) {
+                                                args.add(argsJson.get(i));
+                                            }
+                                            Method method = report.getClass().getDeclaredMethod(name);
+                                            Object result = method.invoke(report, args.toArray(new Object[0]));
+                                            return new JSONArray(Arrays.asList(result));
+                                	   }
+                                       catch (Exception e1) {
+                                           StringWriter sw = new StringWriter();
+                                           e1.printStackTrace(new PrintWriter(sw));
+                                    	   IJ.log(sw.toString());
+                                    	   throw e1;
+                                       }
+                                	});
+                                	IJ.log(String.format("Report is ready. Open browser and navigate to: http://localhost:%s/"+reportIndex, port));
+                                	if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                                	    try {
+											Desktop.getDesktop().browse(new URI(String.format("http://localhost:%s", port)));
+										} 
+                                	    catch (IOException | URISyntaxException e1) {throw new RuntimeException(e1);}
+                                	}
+                                }
+                                else {
+                                    throw new RuntimeException(String.format("Report index file %s was not created!", reportIndex));
+                                }
+                            }).start();
+                        }
+                    }
+                }
+            }});
         
         editWorkflowButton.addActionListener(new ActionListener() {
             @Override
@@ -387,7 +494,7 @@ public class WorkflowDialog extends JDialog {
                 startModule.setEnabled(true);
                 
                 initWorkflowRunner(false);
-                btnViewReport.setEnabled(this.workflowRunner != null);
+                selectReport.setEnabled(this.workflowRunner != null);
                     
                 if (startModules.size() > 0) {
                     btnConfigure.setEnabled(true);
