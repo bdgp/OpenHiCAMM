@@ -855,4 +855,15 @@ public class SlideSurveyor implements Module, SciJavaPlugin, MMPlugin {
 	public String getCopyright() {
 		return "";
 	}
+	
+	@Override
+	public boolean restartProcessIfTimeout() {
+		return true;
+	}
+
+	@Override
+	public Long getMaxAllowedDuration(Task task, Map<String,Config> config) {
+		return 60L * 60L;
+	}
 }
+

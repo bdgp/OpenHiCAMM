@@ -64,6 +64,7 @@ public class WorkflowDialog extends JDialog {
     JTextField workflowDir;
     JFileChooser directoryChooser;
     JComboBox<String> startModule;
+    String start_module;
     JButton editWorkflowButton;
     JButton startButton;
     JLabel lblConfigure;
@@ -72,7 +73,7 @@ public class WorkflowDialog extends JDialog {
     JComboBox<String> selectReport;
 
     // The Micro-Manager plugin module
-    OpenHiCAMM mmslide;
+    OpenHiCAMM openHiCAMM;
     // The workflow runner module
     WorkflowRunner workflowRunner;
     WorkflowRunnerDialog workflowRunnerDialog;
@@ -91,10 +92,14 @@ public class WorkflowDialog extends JDialog {
         return isDisposed;
     }
 
-    public WorkflowDialog(OpenHiCAMM mmslide) {
+    public WorkflowDialog(OpenHiCAMM openHiCAMM) {
+    	this(openHiCAMM, (String)null, (String)null, (Integer)null);
+	}
+
+	public WorkflowDialog(OpenHiCAMM openHiCAMM, String workflow_dir, String start_module, Integer num_threads) {
         super((Frame)null, "OpenHiCAMM");
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        this.mmslide = mmslide;
+        this.openHiCAMM = openHiCAMM;
         
         directoryChooser = new JFileChooser();
         directoryChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -114,6 +119,7 @@ public class WorkflowDialog extends JDialog {
         getContentPane().add(workflowDir, "flowx,cell 1 0,growx");
         JButton openWorkflowButton = new JButton("Choose");
         getContentPane().add(openWorkflowButton, "cell 1 0");
+        if (workflow_dir != null) workflowDir.setText(workflow_dir);
         
         JFileChooser newProjectChooser = new JFileChooser();
         newProjectChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -136,7 +142,7 @@ public class WorkflowDialog extends JDialog {
                     if (!newProjectPath.equals(oldWorkflowDir)) {
                         // init the new workflow runner
                         workflowDir.setText(newProjectPath);
-                        workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), Level.INFO, mmslide);
+                        workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), Level.INFO, openHiCAMM);
                         // init the workflow runner dialog
                         workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
                         workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -172,6 +178,7 @@ public class WorkflowDialog extends JDialog {
                 refresh();
             }});
         getContentPane().add(startModule, "cell 1 2,alignx trailing");
+        this.start_module = start_module;
         
         lblConfigure = new JLabel("Configure Modules");
         getContentPane().add(lblConfigure, "cell 0 3,alignx trailing");
@@ -221,7 +228,7 @@ public class WorkflowDialog extends JDialog {
         SpinnerNumberModel numThreadsModel = new SpinnerNumberModel();
         numThreadsModel.setMinimum(1);
         numThreads.setModel(numThreadsModel);
-        numThreads.setValue(Prefs.getThreads());
+        numThreads.setValue(num_threads != null? num_threads : Prefs.getThreads());
         getContentPane().add(numThreads, "cell 1 4,alignx right");
 
         startButton.setEnabled(false);
@@ -430,7 +437,7 @@ public class WorkflowDialog extends JDialog {
         refresh();
     }
     
-    @Override public void dispose() {
+	@Override public void dispose() {
         SwingUtilities.invokeLater(()->{
             if (workflowRunner != null) {
                 JDialog dialog = new JDialog();
@@ -486,7 +493,7 @@ public class WorkflowDialog extends JDialog {
                 }
                 startModule.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
                 if (startModuleName == null && startModules.size() > 0) {
-                	startModuleName = startModules.get(0);
+                	startModuleName = start_module != null? start_module : startModules.get(0);
                 }
                 if (startModuleName != null) {
                     startModule.setSelectedItem(startModuleName);
@@ -546,7 +553,7 @@ public class WorkflowDialog extends JDialog {
             if (workflowRunner != null) {
                 workflowRunner.shutdown();
             }
-            workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), Level.INFO, mmslide);
+            workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), Level.INFO, openHiCAMM);
 
             workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
             workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
