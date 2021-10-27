@@ -28,7 +28,7 @@ public class Logger extends java.util.logging.Logger {
         super(source, null);
         if (logfile != null) {
             try { 
-                FileHandler fh = new LogFileHandler(logfile, 0, 100, false);
+                FileHandler fh = new LogFileHandler(logfile, false);
                 this.addHandler(fh); 
             }
             catch (IOException e) {throw new RuntimeException(e);}

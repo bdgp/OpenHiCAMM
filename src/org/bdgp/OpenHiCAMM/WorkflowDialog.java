@@ -41,6 +41,8 @@ import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -558,6 +560,13 @@ public class WorkflowDialog extends JDialog {
             workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
             workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             workflowRunnerDialog.pack();
+
+            String logFile = new File(workflowRunner.getWorkflowDir(), WorkflowRunner.LOG_FILE).getPath();
+            try {
+				workflowRunnerDialog.text.append(new String(Files.readAllBytes(Paths.get(logFile))));
+			} 
+            catch (IOException e) {throw new RuntimeException(e);}
+            workflowRunnerDialog.text.setCaretPosition(workflowRunnerDialog.text.getDocument().getLength());
         }
     }
 

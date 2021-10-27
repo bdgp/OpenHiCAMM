@@ -1,6 +1,8 @@
 package org.bdgp.OpenHiCAMM;
 
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -34,6 +36,10 @@ import java.util.concurrent.TimeoutException;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
+
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.Timer;
 
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
 import org.bdgp.OpenHiCAMM.DB.Config;
@@ -847,70 +853,83 @@ public class WorkflowRunner {
             		}
                     // the task timed out more than max_retries times
             		else if (taskModule.restartProcessIfTimeout()) {
-            			// shut down the executor
-                        WorkflowRunner.this.logger.warning(String.format("%s: Task timed out %s times, re-starting engine in 60 seconds...", 
-                        		task.getName(workflow), retries));
+            			// set task status
                         status = Status.ERROR;
-                        WorkflowRunner.this.stop();
-                        WorkflowRunner.this.executor.shutdownNow();
+                        task.setStatus(status);
+                        taskStatus.update(task);
+
+                        // show a 60 second timer to cancel the re-start process
+                        WorkflowRunner.this.logger.warning(String.format(
+                        		"\n"+
+                        		"----------------------------------------------------------------\n"+
+                        		"%s: Task timed out %s times, re-starting engine in 60 seconds...\n"+
+                        		"----------------------------------------------------------------\n"+
+                                "\n", 
+                        		task.getName(workflow), retries));
                         
-                        // wait and see if the tasks terminate
-                        int activeCount = WorkflowRunner.this.executor.getActiveCount();
-                        int activeCountRetries = 0;
-                        int activeCountMaxRetries = 30;
-                        while (activeCount > 0 && activeCountRetries < activeCountMaxRetries) {
-                            WorkflowRunner.this.logger.info(String.format("Shutting down executor, %s tasks still running", 
-                            		activeCount));
-                            try { Thread.sleep(10000); } catch (InterruptedException e) { }
-                            activeCount = WorkflowRunner.this.executor.getActiveCount();
-                            ++activeCountRetries;
-                        }
-                        if (WorkflowRunner.this.executor.getActiveCount() > 0) {
-                            WorkflowRunner.this.logger.info(String.format("Shutting down executor, but %s tasks still running even after %s seconds. Terminating anyway.", 
-                            		activeCount, 10*activeCountRetries));
-                        }
+                        new CountdownDialog("Re-starting process in %s seconds...", 60, ()->{
+                            // shut down the executor
+                            WorkflowRunner.this.stop();
+                            WorkflowRunner.this.executor.shutdownNow();
+                            
+                            // wait and see if the tasks terminate
+                            int activeCount = WorkflowRunner.this.executor.getActiveCount();
+                            int activeCountRetries = 0;
+                            int activeCountMaxRetries = 30;
+                            while (activeCount > 0 && activeCountRetries < activeCountMaxRetries) {
+                                WorkflowRunner.this.logger.info(String.format("Shutting down executor, %s tasks still running", 
+                                        activeCount));
+                                try { Thread.sleep(10000); } catch (InterruptedException e) { }
+                                activeCount = WorkflowRunner.this.executor.getActiveCount();
+                                ++activeCountRetries;
+                            }
+                            if (WorkflowRunner.this.executor.getActiveCount() > 0) {
+                                WorkflowRunner.this.logger.info(String.format("Shutting down executor, but %s tasks still running even after %s seconds. Terminating anyway.", 
+                                        activeCount, 10*activeCountRetries));
+                            }
 
-                        // shut down the databae connection
-                        WorkflowRunner.this.logger.info(String.format("Shutting down database connection", 
-                                activeCount, 10*activeCountRetries));
-                        WorkflowRunner.this.shutdown();
+                            // shut down the database connection
+                            WorkflowRunner.this.logger.info(String.format("Shutting down database connection", 
+                                    activeCount, 10*activeCountRetries));
+                            WorkflowRunner.this.shutdown();
 
-                        // get executable used to launch this process
-                        String exe = System.getProperty("ij.executable");
-                        if (exe == null) throw new RuntimeException("System property ij.executable not found!");
+                            // get executable used to launch this process
+                            String exe = System.getProperty("ij.executable");
+                            if (exe == null) throw new RuntimeException("System property ij.executable not found!");
 
-                        // get the processes's PID
-                        int pid = Processes.getPid();
+                            // get the processes's PID
+                            int pid = Processes.getPid();
 
-                        // get list of micro-manager group/configs. These need to be set manually by the new process
-                        List<String> configs = new ArrayList<>();
-                        StrVector groups = WorkflowRunner.this.getOpenHiCAMM().getApp().getCMMCore().getAvailableConfigGroups();
-                        for (String group : groups) {
-                        	try {
-								String config = WorkflowRunner.this.getOpenHiCAMM().getApp().getCMMCore().getCurrentConfig(group);
-								configs.add(String.format("%s:%s", group, config));
-							} 
-                        	catch (Exception e) {throw new RuntimeException(e);}
-                        }
+                            // get list of micro-manager group/configs. These need to be set manually by the new process
+                            List<String> configs = new ArrayList<>();
+                            StrVector groups = WorkflowRunner.this.getOpenHiCAMM().getApp().getCMMCore().getAvailableConfigGroups();
+                            for (String group : groups) {
+                                try {
+                                    String config = WorkflowRunner.this.getOpenHiCAMM().getApp().getCMMCore().getCurrentConfig(group);
+                                    configs.add(String.format("%s:%s", group, config));
+                                } 
+                                catch (Exception e) {throw new RuntimeException(e);}
+                            }
 
-                        try {
-							 Runtime.getRuntime().exec(new String[] {
-							        exe,
-							        "--run","org.bdgp.OpenHiCAMM.ijplugin.IJPlugin",
-							        Integer.toString(pid),
-							        // mm user profile
-							        WorkflowRunner.this.getOpenHiCAMM().getApp().getUserProfile().getProfileName(),
-							        // camera group:preset, ...
-							        String.join(",", configs),
-							        // openhicamm workflow directory
-							        WorkflowRunner.this.getWorkflowDir().toString(),
-							        // openhicamm start task
-							        WorkflowRunner.this.startModule.getName(),
-							        // openhicamm number of threads
-							        Integer.toString(WorkflowRunner.this.maxThreads),
-							});
-						} 
-                        catch (IOException e) {throw new RuntimeException(e);}
+                            try {
+                                 Runtime.getRuntime().exec(new String[] {
+                                        exe,
+                                        "--run","org.bdgp.OpenHiCAMM.ijplugin.IJPlugin",
+                                        Integer.toString(pid),
+                                        // mm user profile
+                                        WorkflowRunner.this.getOpenHiCAMM().getApp().getUserProfile().getProfileName(),
+                                        // camera group:preset, ...
+                                        String.join(",", configs),
+                                        // openhicamm workflow directory
+                                        WorkflowRunner.this.getWorkflowDir().toString(),
+                                        // openhicamm start task
+                                        WorkflowRunner.this.startModule.getName(),
+                                        // openhicamm number of threads
+                                        Integer.toString(WorkflowRunner.this.maxThreads),
+                                });
+                            } 
+                            catch (IOException e) {throw new RuntimeException(e);}
+                        });
             		}
             		else {
                         WorkflowRunner.this.logger.warning(String.format("%s: Task timed out %s times, giving up", 
