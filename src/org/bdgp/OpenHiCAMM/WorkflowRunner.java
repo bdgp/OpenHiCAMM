@@ -1,8 +1,6 @@
 package org.bdgp.OpenHiCAMM;
 
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -36,10 +34,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
-
-import javax.swing.JDialog;
-import javax.swing.JFrame;
-import javax.swing.Timer;
 
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
 import org.bdgp.OpenHiCAMM.DB.Config;
@@ -868,67 +862,7 @@ public class WorkflowRunner {
                         		task.getName(workflow), retries));
                         
                         new CountdownDialog("Re-starting process in %s seconds...", 60, ()->{
-                            // shut down the executor
-                            WorkflowRunner.this.stop();
-                            WorkflowRunner.this.executor.shutdownNow();
-                            
-                            // wait and see if the tasks terminate
-                            int activeCount = WorkflowRunner.this.executor.getActiveCount();
-                            int activeCountRetries = 0;
-                            int activeCountMaxRetries = 30;
-                            while (activeCount > 0 && activeCountRetries < activeCountMaxRetries) {
-                                WorkflowRunner.this.logger.info(String.format("Shutting down executor, %s tasks still running", 
-                                        activeCount));
-                                try { Thread.sleep(10000); } catch (InterruptedException e) { }
-                                activeCount = WorkflowRunner.this.executor.getActiveCount();
-                                ++activeCountRetries;
-                            }
-                            if (WorkflowRunner.this.executor.getActiveCount() > 0) {
-                                WorkflowRunner.this.logger.info(String.format("Shutting down executor, but %s tasks still running even after %s seconds. Terminating anyway.", 
-                                        activeCount, 10*activeCountRetries));
-                            }
-
-                            // shut down the database connection
-                            WorkflowRunner.this.logger.info(String.format("Shutting down database connection", 
-                                    activeCount, 10*activeCountRetries));
-                            WorkflowRunner.this.shutdown();
-
-                            // get executable used to launch this process
-                            String exe = System.getProperty("ij.executable");
-                            if (exe == null) throw new RuntimeException("System property ij.executable not found!");
-
-                            // get the processes's PID
-                            int pid = Processes.getPid();
-
-                            // get list of micro-manager group/configs. These need to be set manually by the new process
-                            List<String> configs = new ArrayList<>();
-                            StrVector groups = WorkflowRunner.this.getOpenHiCAMM().getApp().getCMMCore().getAvailableConfigGroups();
-                            for (String group : groups) {
-                                try {
-                                    String config = WorkflowRunner.this.getOpenHiCAMM().getApp().getCMMCore().getCurrentConfig(group);
-                                    configs.add(String.format("%s:%s", group, config));
-                                } 
-                                catch (Exception e) {throw new RuntimeException(e);}
-                            }
-
-                            try {
-                                 Runtime.getRuntime().exec(new String[] {
-                                        exe,
-                                        "--run","org.bdgp.OpenHiCAMM.ijplugin.IJPlugin",
-                                        Integer.toString(pid),
-                                        // mm user profile
-                                        WorkflowRunner.this.getOpenHiCAMM().getApp().getUserProfile().getProfileName(),
-                                        // camera group:preset, ...
-                                        String.join(",", configs),
-                                        // openhicamm workflow directory
-                                        WorkflowRunner.this.getWorkflowDir().toString(),
-                                        // openhicamm start task
-                                        WorkflowRunner.this.startModule.getName(),
-                                        // openhicamm number of threads
-                                        Integer.toString(WorkflowRunner.this.maxThreads),
-                                });
-                            } 
-                            catch (IOException e) {throw new RuntimeException(e);}
+                        	WorkflowRunner.this.restartProcess();
                         });
             		}
             		else {
@@ -1079,6 +1013,70 @@ public class WorkflowRunner {
             throw new RuntimeException("Unknown task type: "+taskModule.getTaskType());
         }
         return future;
+    }
+    
+    public void restartProcess() {
+        // shut down the executor
+        this.stop();
+        this.executor.shutdownNow();
+        
+        // wait and see if the tasks terminate
+        int activeCount = this.executor.getActiveCount();
+        int activeCountRetries = 0;
+        int activeCountMaxRetries = 30;
+        while (activeCount > 0 && activeCountRetries < activeCountMaxRetries) {
+            this.logger.info(String.format("Shutting down executor, %s tasks still running", 
+                    activeCount));
+            try { Thread.sleep(10000); } catch (InterruptedException e) { }
+            activeCount = this.executor.getActiveCount();
+            ++activeCountRetries;
+        }
+        if (this.executor.getActiveCount() > 0) {
+            this.logger.info(String.format("Shutting down executor, but %s tasks still running even after %s seconds. Terminating anyway.", 
+                    activeCount, 10*activeCountRetries));
+        }
+
+        // shut down the database connection
+        this.logger.info(String.format("Shutting down database connection", 
+                activeCount, 10*activeCountRetries));
+        this.shutdown();
+
+        // get executable used to launch this process
+        String exe = System.getProperty("ij.executable");
+        if (exe == null) throw new RuntimeException("System property ij.executable not found!");
+
+        // get the processes's PID
+        int pid = Processes.getPid();
+
+        // get list of micro-manager group/configs. These need to be set manually by the new process
+        List<String> configs = new ArrayList<>();
+        StrVector groups = this.getOpenHiCAMM().getApp().getCMMCore().getAvailableConfigGroups();
+        for (String group : groups) {
+            try {
+                String config = this.getOpenHiCAMM().getApp().getCMMCore().getCurrentConfig(group);
+                configs.add(String.format("%s:%s", group, config));
+            } 
+            catch (Exception e) {throw new RuntimeException(e);}
+        }
+
+        try {
+             Runtime.getRuntime().exec(new String[] {
+                    exe,
+                    "--run","org.bdgp.OpenHiCAMM.ijplugin.IJPlugin",
+                    Integer.toString(pid),
+                    // mm user profile
+                    this.getOpenHiCAMM().getApp().getUserProfile().getProfileName(),
+                    // camera group:preset, ...
+                    String.join(",", configs),
+                    // openhicamm workflow directory
+                    this.getWorkflowDir().toString(),
+                    // openhicamm start task
+                    this.startModule.getName(),
+                    // openhicamm number of threads
+                    Integer.toString(WorkflowRunner.this.maxThreads),
+            });
+        } 
+        catch (IOException e) {throw new RuntimeException(e);}
     }
     
     public int getTaskCount(String startModuleName, boolean notify) {
