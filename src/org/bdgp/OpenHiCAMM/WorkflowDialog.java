@@ -98,10 +98,14 @@ public class WorkflowDialog extends JDialog {
     JButton btnShowImageLog;
     JButton btnShowDatabaseManager;
 
-    ServerSocket ss;
-    FtBasic webServer;
+    public static class WebServer {
+        ServerSocket ss;
+        FtBasic webServer;
+        Integer port;
+        Boolean webServerExit;
+    }
+    WebServer webServer;
     Report report;
-    Integer port;
 
     ImageLog imageLog;
     JButton btnResume;
@@ -150,6 +154,8 @@ public class WorkflowDialog extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (!active) return;
+                if (webServer != null) webServer.webServerExit = true;
+                webServer = null;
                 refresh();
             }});
 
@@ -378,11 +384,12 @@ public class WorkflowDialog extends JDialog {
                     IJ.log(String.format("Generating report for %s", reportName));
                     if (regenerate[0]) report.runReport();
                     if (reportIndexFile.exists()) {
-                    	if (port==null) port = ss.getLocalPort();
-                        IJ.log(String.format("Report is ready. Open browser and navigate to: http://localhost:%s/"+reportIndex, port));
+                    	if (webServer == null) throw new RuntimeException(String.format("web server not running!"));
+                    	if (webServer.port==null) webServer.port = webServer.ss.getLocalPort();
+                        IJ.log(String.format("Report is ready. Open browser and navigate to: http://localhost:%s/"+reportIndex, webServer.port));
                         if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
                             try {
-                                Desktop.getDesktop().browse(new URI(String.format("http://localhost:%s", port)));
+                                Desktop.getDesktop().browse(new URI(String.format("http://localhost:%s", webServer.port)));
                             } 
                             catch (IOException | URISyntaxException e1) {throw new RuntimeException(e1);}
                         }
@@ -536,12 +543,12 @@ public class WorkflowDialog extends JDialog {
                 }
             }
 
-            if (ss == null) {
-				try { ss = new ServerSocket(0, 0, InetAddress.getByAddress(new byte[]{127,0,0,1})); } 
-                catch (IOException e) {throw new RuntimeException(e);}
-            }
             if (webServer ==  null) {
-                webServer = new FtBasic(
+            	webServer = new WebServer();
+            	webServer.webServerExit = false;
+				try { webServer.ss = new ServerSocket(0, 0, InetAddress.getByAddress(new byte[]{127,0,0,1})); } 
+                catch (IOException e) {throw new RuntimeException(e);}
+                webServer.webServer = new FtBasic(
                         new BkSafe(new BkBasic(new TkFork(
                                 new FkRegex("/report/(?<name>[^/]*)/?", new TkRegex() {
                                     @Override public Response act(final RqRegex req) {
@@ -573,12 +580,12 @@ public class WorkflowDialog extends JDialog {
                                         }
                                     }}),
                                 new FkRegex("/.+", new TkFiles(workflowRunner.getWorkflowDir()))))),
-                        ss
+                        webServer.ss
                         );
                 try { 
-                	webServer.start(new Exit() {
+                	webServer.webServer.start(new Exit() {
                 		@Override public boolean ready() {
-                			return false;
+                			return webServer.webServerExit;
                 		}
                 	}); 
                 }
