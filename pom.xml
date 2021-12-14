@@ -148,12 +148,12 @@
                   <artifactId>Hough_Transform</artifactId>
                 </artifactItem>
                 <artifactItem>
-                  <groupId>com.sparkjava</groupId>
-                  <artifactId>spark-core</artifactId>
-                </artifactItem>
-                <artifactItem>
                   <groupId>org.scijava</groupId>
                   <artifactId>scijava-common</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.takes</groupId>
+                  <artifactId>takes</artifactId>
                 </artifactItem>
               </artifactItems>
               <outputDirectory>${fiji.dir}/plugins/Micro-Manager</outputDirectory>
@@ -290,14 +290,19 @@
       <version>1.0.0</version>
     </dependency>
     <dependency>
-      <groupId>com.sparkjava</groupId>
-      <artifactId>spark-core</artifactId>
-      <version>2.9.2</version>
-    </dependency>
-    <dependency>
       <groupId>org.scijava</groupId>
       <artifactId>scijava-common</artifactId>
       <version>2.83.3</version>
+    </dependency>
+    <dependency>
+      <groupId>org.takes</groupId>
+      <artifactId>takes</artifactId>
+      <version>1.19</version>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish</groupId>
+      <artifactId>javax.json</artifactId>
+      <version>1.1.4</version>
     </dependency>
   </dependencies>
 </project>

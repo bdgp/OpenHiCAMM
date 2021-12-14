@@ -58,6 +58,10 @@ public class WorkflowModule {
         
         // assign the module class
         Class<?> module = OpenHiCAMM.getModules().get(className);
+        if (module == null) {
+            throw new RuntimeException("Module "+className
+                    +" was not found in classpath!");
+        }
         if (!Module.class.isAssignableFrom(module)) {
             throw new RuntimeException("Module "+className
                     +" does not inherit Module interface.");

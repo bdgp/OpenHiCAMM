@@ -20,10 +20,26 @@ import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
+import org.takes.Response;
+import org.takes.facets.fork.FkRegex;
+import org.takes.facets.fork.RqRegex;
+import org.takes.facets.fork.TkFork;
+import org.takes.facets.fork.TkRegex;
+import org.takes.http.BkBasic;
+import org.takes.http.BkSafe;
+import org.takes.http.Exit;
+import org.takes.http.FtBasic;
+import org.takes.misc.Href;
+import org.takes.rq.RqHref;
+import org.takes.rs.RsJson;
+import org.takes.tk.TkFiles;
+
+import javax.json.Json;
 
 import ij.IJ;
 import ij.Prefs;
 import mmcorej.org.json.JSONArray;
+import mmcorej.org.json.JSONException;
 import net.miginfocom.swing.MigLayout;
 
 import java.awt.Desktop;
@@ -39,6 +55,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -54,13 +72,11 @@ import java.util.logging.Level;
 import static org.bdgp.OpenHiCAMM.Util.where;
 import javax.swing.JSpinner;
 
-import spark.Spark;
-
 /**
  * The main workflow dialog.
  * @author insitu
  */
-@SuppressWarnings("serial")
+@SuppressWarnings({ "serial" })
 public class WorkflowDialog extends JDialog {
 	// Swing widgets
     JTextField workflowDir;
@@ -81,6 +97,11 @@ public class WorkflowDialog extends JDialog {
     WorkflowRunnerDialog workflowRunnerDialog;
     JButton btnShowImageLog;
     JButton btnShowDatabaseManager;
+
+    ServerSocket ss;
+    FtBasic webServer;
+    Report report;
+    Integer port;
 
     ImageLog imageLog;
     JButton btnResume;
@@ -302,7 +323,6 @@ public class WorkflowDialog extends JDialog {
                 if (e.getStateChange() == ItemEvent.SELECTED && !e.getItem().equals("--Select Report--")) { 
                 	@SuppressWarnings("unchecked")
 					Class<Report> reportClass = (Class<Report>)OpenHiCAMM.getReports().get(e.getItem());
-                	Report report;
                 	try { report = reportClass.newInstance(); } 
                 	catch (InstantiationException | IllegalAccessException e1) {
 						throw new RuntimeException(e1);
@@ -344,55 +364,31 @@ public class WorkflowDialog extends JDialog {
                     // if the report file's timestamp is older than the workflow run time,
                     // it needs to be regenerated
                 	File reportIndexFile = new File(reportDir, reportIndex);
+                    boolean[] regenerate = {false};
                     if (workflowRunTime == null || !reportIndexFile.exists() || reportIndexFile.lastModified() <= workflowRunTime) {
                         if (JOptionPane.showConfirmDialog(null, 
                                 "Regenerate the report? This could take some time.",
                                 String.format("Report %s is outdated", reportName), 
                                 JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
                         { 
-                            new Thread(()->{
-                                IJ.log(String.format("Generating report for %s", reportName));
-                                report.runReport();
-                                if (reportIndexFile.exists()) {
-                                	Spark.stop();
-                                	Spark.init();
-                                	int port = Spark.port();
-                                	Spark.ipAddress("127.0.0.1");
-                                	Spark.staticFiles.externalLocation(reportDir.toString());
-                                	Spark.get("/report/:name", (request, response)->{
-                                		try {
-                                            String name = request.params(":name");
-                                            String json = request.queryParams("args");
-                                            if (json == null) throw new RuntimeException("/report request given with no args query parameter!");
-                                            JSONArray argsJson = new JSONArray(json);
-                                            ArrayList<Object> args = new ArrayList<>();
-                                            for (int i=0; i<argsJson.length(); ++i) {
-                                                args.add(argsJson.get(i));
-                                            }
-                                            Method method = report.getClass().getDeclaredMethod(name);
-                                            Object result = method.invoke(report, args.toArray(new Object[0]));
-                                            return new JSONArray(Arrays.asList(result));
-                                	   }
-                                       catch (Exception e1) {
-                                           StringWriter sw = new StringWriter();
-                                           e1.printStackTrace(new PrintWriter(sw));
-                                    	   IJ.log(sw.toString());
-                                    	   throw e1;
-                                       }
-                                	});
-                                	IJ.log(String.format("Report is ready. Open browser and navigate to: http://localhost:%s/"+reportIndex, port));
-                                	if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-                                	    try {
-											Desktop.getDesktop().browse(new URI(String.format("http://localhost:%s", port)));
-										} 
-                                	    catch (IOException | URISyntaxException e1) {throw new RuntimeException(e1);}
-                                	}
-                                }
-                                else {
-                                    throw new RuntimeException(String.format("Report index file %s was not created!", reportIndex));
-                                }
-                            }).start();
+                        	regenerate[0] = true;
                         }
+                    }
+
+                    IJ.log(String.format("Generating report for %s", reportName));
+                    if (regenerate[0]) report.runReport();
+                    if (reportIndexFile.exists()) {
+                    	if (port==null) port = ss.getLocalPort();
+                        IJ.log(String.format("Report is ready. Open browser and navigate to: http://localhost:%s/"+reportIndex, port));
+                        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                            try {
+                                Desktop.getDesktop().browse(new URI(String.format("http://localhost:%s", port)));
+                            } 
+                            catch (IOException | URISyntaxException e1) {throw new RuntimeException(e1);}
+                        }
+                    }
+                    else {
+                        throw new RuntimeException(String.format("Report index file %s was not created!", reportIndex));
                     }
                 }
             }});
@@ -507,8 +503,7 @@ public class WorkflowDialog extends JDialog {
                     
                 if (startModules.size() > 0) {
                     btnConfigure.setEnabled(true);
-                    startButton.setEnabled(true);
-                    btnCopyToNewProject.setEnabled(true);
+                    startButton.setEnabled(true); btnCopyToNewProject.setEnabled(true);
 
                     if (startModuleName != null && workflowRunner != null) {
                         // If there are any tasks with status not equal to SUCCESS or FAIL, then enable
@@ -539,6 +534,55 @@ public class WorkflowDialog extends JDialog {
                 else {
                     btnResume.setEnabled(false);
                 }
+            }
+
+            if (ss == null) {
+				try { ss = new ServerSocket(0, 0, InetAddress.getByAddress(new byte[]{127,0,0,1})); } 
+                catch (IOException e) {throw new RuntimeException(e);}
+            }
+            if (webServer ==  null) {
+                webServer = new FtBasic(
+                        new BkSafe(new BkBasic(new TkFork(
+                                new FkRegex("/report/(?<name>[^/]*)/?", new TkRegex() {
+                                    @Override public Response act(final RqRegex req) {
+                                        String name = req.matcher().group("name");
+                                        Href href;
+										try { href = new RqHref.Base(req).href(); } 
+										catch (IOException e) { throw new RuntimeException(e); }
+                                        Iterable<String> json = href.param("args");
+                                        if (json == null) throw new RuntimeException("/report request given with no args query parameter!");
+                                        ArrayList<Object> args = new ArrayList<>();
+                                        for (String a : json) {
+                                            JSONArray argsJson;
+											try { argsJson = new JSONArray(a); } 
+											catch (JSONException e) {throw new RuntimeException(e);}
+                                            for (int i=0; i<argsJson.length(); ++i) {
+                                                try { args.add(argsJson.get(i)); } 
+                                                catch (JSONException e) {throw new RuntimeException(e);}
+                                            }
+                                        }
+                                        try {
+                                            Method method = report.getClass().getDeclaredMethod(name);
+                                            Object result = method.invoke(report, args.toArray(new Object[0]));
+                                            return new RsJson(Json.createArrayBuilder(Arrays.asList(result)).build());
+                                        } catch (Exception e1) {
+                                            StringWriter sw = new StringWriter();
+                                            e1.printStackTrace(new PrintWriter(sw));
+                                            IJ.log(sw.toString());
+                                            throw new RuntimeException(e1);
+                                        }
+                                    }}),
+                                new FkRegex("/.+", new TkFiles(workflowRunner.getWorkflowDir()))))),
+                        ss
+                        );
+                try { 
+                	webServer.start(new Exit() {
+                		@Override public boolean ready() {
+                			return false;
+                		}
+                	}); 
+                }
+                catch (IOException e) {throw new RuntimeException(e);}
             }
     	}
     	finally {
