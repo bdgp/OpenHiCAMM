@@ -1301,14 +1301,4 @@ public class SlideImager implements Module, ImageLogger, SciJavaPlugin, MMPlugin
 	public String getCopyright() {
 		return "";
 	}
-
-	@Override
-	public boolean restartProcessIfTimeout() {
-		return true;
-	}
-
-	@Override
-	public Long getMaxAllowedDuration(Task task, Map<String,Config> config) {
-		return 120L * 60L;
-	}
 }

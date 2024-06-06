@@ -7,6 +7,7 @@ import org.scijava.plugin.Plugin;
 import org.scijava.plugin.SciJavaPlugin;
 
 import ij.IJ;
+import javafx.scene.web.WebEngine;
 
 import org.bdgp.OpenHiCAMM.DB.Acquisition;
 import org.bdgp.OpenHiCAMM.DB.Image;
@@ -24,14 +25,16 @@ import static org.bdgp.OpenHiCAMM.Tag.T.*;
 @Plugin(type=Report.class)
 public class ImageFileReport implements Report, SciJavaPlugin, MMPlugin {
     WorkflowRunner workflowRunner;
+    WebEngine webEngine;
     String reportDir;
     String reportIndex;
 
     public ImageFileReport() { }
 
-    @Override public void initialize(WorkflowRunner workflowRunner, String reportDir, String reportIndex) {
+    @Override public void initialize(WorkflowRunner workflowRunner, WebEngine webEngine, String reportDir, String reportIndex) {
         this.workflowRunner = workflowRunner;
         this.reportIndex = reportIndex;
+        this.webEngine = webEngine;
         this.reportDir = reportDir;
     }
 

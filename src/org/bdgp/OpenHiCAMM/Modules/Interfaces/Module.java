@@ -83,36 +83,4 @@ public interface Module extends MMPlugin, SciJavaPlugin {
         }
         return null;
     }
-    
-    /***
-     * How long is each task expected to run? Used for computing ETA.
-     * @return duration in seconds
-     */
-    public default Long getExpectedDuration(Task task, Map<String,Config> config) {
-    	return getMaxAllowedDuration(task, config);
-    }
-
-    /***
-     * How long is a task allowed to run before it is re-started?
-     * @return duration in seconds
-     */
-    public default Long getMaxAllowedDuration(Task task, Map<String,Config> config) {
-    	return null;
-    }
-    
-    /***
-     * Should Fiji/Micro-Manager/OpenHiCAMM process be re-started if a task times out?
-     * @return duration in seconds
-     */
-    public default boolean restartProcessIfTimeout() {
-    	return false;
-    }
-    
-    /***
-     * How many task run timeouts before re-starting process?
-     * @return duration in seconds
-     */
-    public default int numTimeoutsBeforeRestart() {
-    	return 1;
-    }
 }

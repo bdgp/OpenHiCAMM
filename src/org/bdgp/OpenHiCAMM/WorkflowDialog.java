@@ -13,36 +13,15 @@ import javax.swing.JComboBox;
 import javax.swing.SwingUtilities;
 
 import org.bdgp.OpenHiCAMM.ImageLog.ImageLogRecord;
-import org.bdgp.OpenHiCAMM.DB.ModuleConfig;
 import org.bdgp.OpenHiCAMM.DB.Task;
 import org.bdgp.OpenHiCAMM.DB.WorkflowModule;
 import org.bdgp.OpenHiCAMM.DB.Task.Status;
 import org.bdgp.OpenHiCAMM.DB.TaskDispatch;
 import org.bdgp.OpenHiCAMM.Modules.Interfaces.Configuration;
-import org.bdgp.OpenHiCAMM.Modules.Interfaces.Report;
-import org.takes.Response;
-import org.takes.facets.fork.FkRegex;
-import org.takes.facets.fork.RqRegex;
-import org.takes.facets.fork.TkFork;
-import org.takes.facets.fork.TkRegex;
-import org.takes.http.BkBasic;
-import org.takes.http.BkSafe;
-import org.takes.http.Exit;
-import org.takes.http.FtBasic;
-import org.takes.misc.Href;
-import org.takes.rq.RqHref;
-import org.takes.rs.RsJson;
-import org.takes.tk.TkFiles;
 
-import javax.json.Json;
-
-import ij.IJ;
 import ij.Prefs;
-import mmcorej.org.json.JSONArray;
-import mmcorej.org.json.JSONException;
 import net.miginfocom.swing.MigLayout;
 
-import java.awt.Desktop;
 import java.awt.Frame;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -51,19 +30,7 @@ import java.awt.event.ItemListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.lang.reflect.Method;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -76,36 +43,25 @@ import javax.swing.JSpinner;
  * The main workflow dialog.
  * @author insitu
  */
-@SuppressWarnings({ "serial" })
+@SuppressWarnings("serial")
 public class WorkflowDialog extends JDialog {
 	// Swing widgets
     JTextField workflowDir;
     JFileChooser directoryChooser;
     JComboBox<String> startModule;
-    String start_module;
     JButton editWorkflowButton;
     JButton startButton;
     JLabel lblConfigure;
     JButton btnConfigure;
     JButton btnCopyToNewProject;
-    JComboBox<String> selectReport;
 
     // The Micro-Manager plugin module
-    OpenHiCAMM openHiCAMM;
+    OpenHiCAMM mmslide;
     // The workflow runner module
     WorkflowRunner workflowRunner;
     WorkflowRunnerDialog workflowRunnerDialog;
     JButton btnShowImageLog;
     JButton btnShowDatabaseManager;
-
-    public static class WebServer {
-        ServerSocket ss;
-        FtBasic webServer;
-        Integer port;
-        Boolean webServerExit;
-    }
-    WebServer webServer;
-    Report report;
 
     ImageLog imageLog;
     JButton btnResume;
@@ -114,19 +70,17 @@ public class WorkflowDialog extends JDialog {
     JLabel lblNumberOfThreads;
     boolean active = true;
     boolean isDisposed = false;
+    JButton btnViewReport;
+    ReportDialog.Frame reportDialog;
     
     public boolean isDisposed() {
         return isDisposed;
     }
 
-    public WorkflowDialog(OpenHiCAMM openHiCAMM) {
-    	this(openHiCAMM, (String)null, (String)null, (Integer)null);
-	}
-
-	public WorkflowDialog(OpenHiCAMM openHiCAMM, String workflow_dir, String start_module, Integer num_threads) {
+    public WorkflowDialog(OpenHiCAMM mmslide) {
         super((Frame)null, "OpenHiCAMM");
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        this.openHiCAMM = openHiCAMM;
+        this.mmslide = mmslide;
         
         directoryChooser = new JFileChooser();
         directoryChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -146,7 +100,6 @@ public class WorkflowDialog extends JDialog {
         getContentPane().add(workflowDir, "flowx,cell 1 0,growx");
         JButton openWorkflowButton = new JButton("Choose");
         getContentPane().add(openWorkflowButton, "cell 1 0");
-        if (workflow_dir != null) workflowDir.setText(workflow_dir);
         
         JFileChooser newProjectChooser = new JFileChooser();
         newProjectChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -154,8 +107,6 @@ public class WorkflowDialog extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (!active) return;
-                if (webServer != null) webServer.webServerExit = true;
-                webServer = null;
                 refresh();
             }});
 
@@ -171,7 +122,7 @@ public class WorkflowDialog extends JDialog {
                     if (!newProjectPath.equals(oldWorkflowDir)) {
                         // init the new workflow runner
                         workflowDir.setText(newProjectPath);
-                        workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), Level.INFO, openHiCAMM);
+                        workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), Level.INFO, mmslide);
                         // init the workflow runner dialog
                         workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
                         workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -207,7 +158,6 @@ public class WorkflowDialog extends JDialog {
                 refresh();
             }});
         getContentPane().add(startModule, "cell 1 2,alignx trailing");
-        this.start_module = start_module;
         
         lblConfigure = new JLabel("Configure Modules");
         getContentPane().add(lblConfigure, "cell 0 3,alignx trailing");
@@ -257,7 +207,7 @@ public class WorkflowDialog extends JDialog {
         SpinnerNumberModel numThreadsModel = new SpinnerNumberModel();
         numThreadsModel.setMinimum(1);
         numThreads.setModel(numThreadsModel);
-        numThreads.setValue(num_threads != null? num_threads : Prefs.getThreads());
+        numThreads.setValue(Prefs.getThreads());
         getContentPane().add(numThreads, "cell 1 4,alignx right");
 
         startButton.setEnabled(false);
@@ -315,90 +265,21 @@ public class WorkflowDialog extends JDialog {
         });
         getContentPane().add(btnShowDatabaseManager, "cell 1 6,alignx right");
         
-        selectReport = new JComboBox<String>();
-        selectReport.setEnabled(false);
-        getContentPane().add(selectReport, "cell 1 6");
-        ArrayList<String> reports = new ArrayList<>();
-        reports.add("--Select Report--");
-        reports.addAll(OpenHiCAMM.getReports().keySet());
-        selectReport.setModel(new DefaultComboBoxModel<String>(reports.toArray(new String[0])));
-        selectReport.addItemListener(new ItemListener() {
-            @Override
-            public void itemStateChanged(ItemEvent e) {
+        btnViewReport = new JButton("View Reports");
+        btnViewReport.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
             	if (!active) return;
-                if (e.getStateChange() == ItemEvent.SELECTED && !e.getItem().equals("--Select Report--")) { 
-                	@SuppressWarnings("unchecked")
-					Class<Report> reportClass = (Class<Report>)OpenHiCAMM.getReports().get(e.getItem());
-                	try { report = reportClass.newInstance(); } 
-                	catch (InstantiationException | IllegalAccessException e1) {
-						throw new RuntimeException(e1);
-					}
-
-                    // get the time the workflow completed running
-                    Long workflowRunTime = null;
-                    for (WorkflowModule startModule : workflowRunner.getWorkflow().select(where("parentId", null))) {
-                        ModuleConfig startTimeConf = workflowRunner.getModuleConfig().selectOne(
-                                where("id",startModule.getId()).
-                                and("key", "startTime"));
-                        if (startTimeConf != null) {
-                            long startTime;
-                            try { startTime = WorkflowRunner.dateFormat.parse(startTimeConf.getValue()).getTime(); } 
-                            catch (ParseException e1) { throw new RuntimeException(e1); }
-                            if (workflowRunTime == null || workflowRunTime < startTime) workflowRunTime = startTime;
-                        }
-                        ModuleConfig endTimeConf = workflowRunner.getModuleConfig().selectOne(
-                                where("id",startModule.getId()).
-                                and("key", "endTime"));
-                        if (endTimeConf != null) {
-                            long endTime;
-							try { endTime = WorkflowRunner.dateFormat.parse(endTimeConf.getValue()).getTime(); } 
-							catch (ParseException e1) { throw new RuntimeException(e1); }
-                            if (workflowRunTime == null || workflowRunTime < endTime) workflowRunTime = endTime;
-                        }
-                    }
-        
-                    // get the report file path
-                    String reportName = report.getClass().getSimpleName();
-                    File reportDir = new File(new File(
-                        workflowRunner.getWorkflowDir(),
-                        "reports"),
-                        reportName);
-                    reportDir.mkdirs();
-                    String reportIndex = "index.html";
-                	report.initialize(workflowRunner, reportDir.toString(), reportIndex);
-
-                    // if the report file's timestamp is older than the workflow run time,
-                    // it needs to be regenerated
-                	File reportIndexFile = new File(reportDir, reportIndex);
-                    boolean[] regenerate = {false};
-                    if (workflowRunTime == null || !reportIndexFile.exists() || reportIndexFile.lastModified() <= workflowRunTime) {
-                        if (JOptionPane.showConfirmDialog(null, 
-                                "Regenerate the report? This could take some time.",
-                                String.format("Report %s is outdated", reportName), 
-                                JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
-                        { 
-                        	regenerate[0] = true;
-                        }
-                    }
-
-                    IJ.log(String.format("Generating report for %s", reportName));
-                    if (regenerate[0]) report.runReport();
-                    if (reportIndexFile.exists()) {
-                    	if (webServer == null) throw new RuntimeException(String.format("web server not running!"));
-                    	if (webServer.port==null) webServer.port = webServer.ss.getLocalPort();
-                        IJ.log(String.format("Report is ready. Open browser and navigate to: http://localhost:%s/"+reportIndex, webServer.port));
-                        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-                            try {
-                                Desktop.getDesktop().browse(new URI(String.format("http://localhost:%s", webServer.port)));
-                            } 
-                            catch (IOException | URISyntaxException e1) {throw new RuntimeException(e1);}
-                        }
-                    }
-                    else {
-                        throw new RuntimeException(String.format("Report index file %s was not created!", reportIndex));
-                    }
-                }
-            }});
+        	    if (WorkflowDialog.this.workflowRunner != null) {
+        	        synchronized (this) {
+                        if (reportDialog == null) reportDialog = new ReportDialog.Frame(WorkflowDialog.this.workflowRunner);
+                        else reportDialog.setWorkflowRunner(WorkflowDialog.this.workflowRunner);
+                        reportDialog.setVisible(true);
+        	        }
+        	    }
+        	}
+        });
+        getContentPane().add(btnViewReport, "cell 1 6");
+        btnViewReport.setEnabled(false);
         
         editWorkflowButton.addActionListener(new ActionListener() {
             @Override
@@ -442,7 +323,7 @@ public class WorkflowDialog extends JDialog {
         refresh();
     }
     
-	@Override public void dispose() {
+    @Override public void dispose() {
         SwingUtilities.invokeLater(()->{
             if (workflowRunner != null) {
                 JDialog dialog = new JDialog();
@@ -498,7 +379,7 @@ public class WorkflowDialog extends JDialog {
                 }
                 startModule.setModel(new DefaultComboBoxModel<String>(startModules.toArray(new String[0])));
                 if (startModuleName == null && startModules.size() > 0) {
-                	startModuleName = start_module != null? start_module : startModules.get(0);
+                	startModuleName = startModules.get(0);
                 }
                 if (startModuleName != null) {
                     startModule.setSelectedItem(startModuleName);
@@ -506,11 +387,12 @@ public class WorkflowDialog extends JDialog {
                 startModule.setEnabled(true);
                 
                 initWorkflowRunner(false);
-                selectReport.setEnabled(this.workflowRunner != null);
+                btnViewReport.setEnabled(this.workflowRunner != null);
                     
                 if (startModules.size() > 0) {
                     btnConfigure.setEnabled(true);
-                    startButton.setEnabled(true); btnCopyToNewProject.setEnabled(true);
+                    startButton.setEnabled(true);
+                    btnCopyToNewProject.setEnabled(true);
 
                     if (startModuleName != null && workflowRunner != null) {
                         // If there are any tasks with status not equal to SUCCESS or FAIL, then enable
@@ -542,55 +424,6 @@ public class WorkflowDialog extends JDialog {
                     btnResume.setEnabled(false);
                 }
             }
-
-            if (webServer ==  null) {
-            	webServer = new WebServer();
-            	webServer.webServerExit = false;
-				try { webServer.ss = new ServerSocket(0, 0, InetAddress.getByAddress(new byte[]{127,0,0,1})); } 
-                catch (IOException e) {throw new RuntimeException(e);}
-                webServer.webServer = new FtBasic(
-                        new BkSafe(new BkBasic(new TkFork(
-                                new FkRegex("/report/(?<name>[^/]*)/?", new TkRegex() {
-                                    @Override public Response act(final RqRegex req) {
-                                        String name = req.matcher().group("name");
-                                        Href href;
-										try { href = new RqHref.Base(req).href(); } 
-										catch (IOException e) { throw new RuntimeException(e); }
-                                        Iterable<String> json = href.param("args");
-                                        if (json == null) throw new RuntimeException("/report request given with no args query parameter!");
-                                        ArrayList<Object> args = new ArrayList<>();
-                                        for (String a : json) {
-                                            JSONArray argsJson;
-											try { argsJson = new JSONArray(a); } 
-											catch (JSONException e) {throw new RuntimeException(e);}
-                                            for (int i=0; i<argsJson.length(); ++i) {
-                                                try { args.add(argsJson.get(i)); } 
-                                                catch (JSONException e) {throw new RuntimeException(e);}
-                                            }
-                                        }
-                                        try {
-                                            Method method = report.getClass().getDeclaredMethod(name);
-                                            Object result = method.invoke(report, args.toArray(new Object[0]));
-                                            return new RsJson(Json.createArrayBuilder(Arrays.asList(result)).build());
-                                        } catch (Exception e1) {
-                                            StringWriter sw = new StringWriter();
-                                            e1.printStackTrace(new PrintWriter(sw));
-                                            IJ.log(sw.toString());
-                                            throw new RuntimeException(e1);
-                                        }
-                                    }}),
-                                new FkRegex("/.+", new TkFiles(workflowRunner.getWorkflowDir()))))),
-                        webServer.ss
-                        );
-                try { 
-                	webServer.webServer.start(new Exit() {
-                		@Override public boolean ready() {
-                			return webServer.webServerExit;
-                		}
-                	}); 
-                }
-                catch (IOException e) {throw new RuntimeException(e);}
-            }
     	}
     	finally {
     		active = true;
@@ -606,18 +439,11 @@ public class WorkflowDialog extends JDialog {
             if (workflowRunner != null) {
                 workflowRunner.shutdown();
             }
-            workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), Level.INFO, openHiCAMM);
+            workflowRunner = new WorkflowRunner(new File(workflowDir.getText()), Level.INFO, mmslide);
 
             workflowRunnerDialog = new WorkflowRunnerDialog(WorkflowDialog.this, workflowRunner);
             workflowRunnerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             workflowRunnerDialog.pack();
-
-            String logFile = new File(workflowRunner.getWorkflowDir(), WorkflowRunner.LOG_FILE).getPath();
-            try {
-				workflowRunnerDialog.text.append(new String(Files.readAllBytes(Paths.get(logFile))));
-			} 
-            catch (IOException e) {throw new RuntimeException(e);}
-            workflowRunnerDialog.text.setCaretPosition(workflowRunnerDialog.text.getDocument().getLength());
         }
     }
 

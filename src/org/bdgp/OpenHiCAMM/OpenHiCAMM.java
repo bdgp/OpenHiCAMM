@@ -39,10 +39,6 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 
     public static final String MENU_NAME = "OpenHiCAMM";
     public static final String TOOL_TIP_DESCRIPTION = "OpenHiCAMM";
-    
-    private String workflowDir;
-    private String startModule;
-    private Integer numThreads;
 
 	/**
 	 *  The menu name is stored in a static string, so Micro-Manager
@@ -52,17 +48,8 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 	public static String tooltipDescription = "Automated microscope imaging workflow tool";
 	private static Boolean loadedAutofocus = false;
 	
-	public OpenHiCAMM() { 
-        if (OpenHiCAMM.instance == null) OpenHiCAMM.instance = this;
-	}
+	public OpenHiCAMM() { }
 	
-	public OpenHiCAMM(String workflowDir, String startModule, int numThreads) { 
-		super();
-		this.workflowDir = workflowDir;
-		this.startModule = startModule;
-		this.numThreads = numThreads;
-	}
-
 	/**
 	 * The main app calls this method to remove the module window
 	 */
@@ -76,24 +63,18 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 	public WorkflowDialog getDialog() {
 		return dialog;
 	}
-	
-	public void show() {
-		show(null);
-	}
 
 	/**
 	 * Open the module window
 	 */
-	public void show(Boolean resume) {
+	public void show() {
 		// initialize the list of modules
 		getModules();
 
         // open the slide workflow dialog
         SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
-            	if (dialog == null || dialog.isDisposed()) {
-            		dialog = new WorkflowDialog(OpenHiCAMM.this, workflowDir, startModule, numThreads);
-            	}
+            	if (dialog == null || dialog.isDisposed()) dialog = new WorkflowDialog(OpenHiCAMM.this);
                 //dialog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 dialog.pack();
                 dialog.setVisible(true);
@@ -118,10 +99,6 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
                         JOptionPane.showMessageDialog(dialog, textScrollPane);
                     }
                 });
-                
-                if (resume != null) {
-                	dialog.start(resume);
-                }
             }
         });
 	}
@@ -243,15 +220,12 @@ public class OpenHiCAMM implements MenuPlugin, SciJavaPlugin {
 
 	@Override
 	public void onPluginSelected() {
-		onPluginSelected(null);
-	}
-
-	public void onPluginSelected(Boolean resume) {
+        if (OpenHiCAMM.instance == null) OpenHiCAMM.instance = this;
         if (!loadedAutofocus) {
              MMStudio.getInstance().getAutofocusManager().refresh();
             loadedAutofocus = true;
         }
 	    loadModules();
-	    show(resume);
+	    show();
 	}
 }

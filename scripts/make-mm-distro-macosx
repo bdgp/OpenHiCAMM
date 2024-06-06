@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eux -o pipefail
+set -eu -o pipefail
 mmdir=/Applications/Micro-Manager-2.0.0
 fijidir=/Applications/Fiji.app
 arch=macosx
@@ -9,7 +9,7 @@ cd "$mmdir"
 mkdir -pv "$fijidir"/mm/"$arch"
 rsync -avR luts macros mmautofocus mmplugins natives plugins/Micro-Manager scripts "$fijidir"
 rsync -av MMConfig_demo.cfg "$fijidir"/mm
-rsync -av libMMCoreJ_wrap.jnilib libgphoto2 libmmgr_dal_* "$fijidir"/mm/"$arch"
+rsync -av MMCorePy.py MMCoreWrapDemo.py _MMCorePy.so libMMCoreJ_wrap.jnilib libgphoto2 libmmgr_dal_* "$fijidir"/mm/"$arch"
 defaults write "$fijidir"/Contents/Info LSEnvironment -dict-add CAMLIBS mm/"$arch"/libgphoto2/libgphoto2 IOLIBS mm/"$arch"/libgphoto2/libgphoto2_port
 defaults write "$fijidir"/Contents/Info fiji -dict-add JVMOptions '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=4000'
 plutil -convert xml1 "$fijidir"/Contents/Info.plist

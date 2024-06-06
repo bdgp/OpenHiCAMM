@@ -1,8 +1,6 @@
 package org.bdgp.OpenHiCAMM;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.ByteArrayOutputStream;
@@ -11,6 +9,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -24,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
@@ -33,10 +33,7 @@ import java.util.concurrent.Future;
 import java.security.SecureRandom;
 
 import javax.imageio.ImageIO;
-import javax.swing.JFrame;
 import javax.swing.JOptionPane;
-import javax.swing.JScrollPane;
-import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
 
 import org.bdgp.OpenHiCAMM.DB.Config;
@@ -87,6 +84,12 @@ import ij.measure.ResultsTable;
 import ij.plugin.filter.ParticleAnalyzer;
 import ij.process.Blitter;
 import ij.process.ImageProcessor;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
+import javafx.stage.Modality;
 import mmcorej.CMMCore;
 
 import static org.bdgp.OpenHiCAMM.Util.where;
@@ -98,6 +101,7 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
     public static final int ROI_GRID_PREVIEW_WIDTH = 425; 
 
     private WorkflowRunner workflowRunner;
+    private WebEngine webEngine;
     private String reportDir;
     private String reportIndex;
     private Integer prevPoolSlideId;
@@ -105,8 +109,9 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
     private Map<Integer,MultiStagePosition> msps;
     private Map<Integer,Map<String,ModuleConfig>> moduleConfig;
     private Map<Integer,Map<String,TaskConfig>> taskConfig;
-    private JFrame helpWindow;
     
+    private Alert alert = null;
+
     public void jsLog(String message) {
         IJ.log(String.format("[WorkflowReport:js] %s", message));
     }
@@ -115,8 +120,9 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
         IJ.log(String.format("[WorkflowReport] %s", String.format(message, args)));
     }
     
-    @Override public void initialize(WorkflowRunner workflowRunner, String reportDir, String reportIndex) {
+    @Override public void initialize(WorkflowRunner workflowRunner, WebEngine webEngine, String reportDir, String reportIndex) {
         this.workflowRunner = workflowRunner;
+        this.webEngine = webEngine;
         this.reportDir = reportDir;
         this.reportIndex = reportIndex;
         isLoaderInitialized = new HashMap<Integer,Boolean>();
@@ -573,7 +579,7 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
                                    (int)Math.floor(roi.getXBase()+roi.getFloatWidth()), 
                                    (int)Math.floor(roi.getYBase()+roi.getFloatHeight()))).
                            //attr("title", roi.getName()).
-                           attr("onClick", String.format("await report.showImage(%d); return false", Integer.parseInt(roi.getProperty("id"))));
+                           attr("onClick", String.format("report.showImage(%d); return false", Integer.parseInt(roi.getProperty("id"))));
                 }
                 // now draw the ROI rois in red
                 for (Roi roiRoi : roiRois) {
@@ -766,7 +772,7 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
                                                             Double yPos_ = yPos / posCount;
                                                             P().with(()->{
                                                                 A().attr("onClick", 
-                                                                        String.format("await report.goToPosition(%d,%d,%f,%f); return false", 
+                                                                        String.format("report.goToPosition(%d,%d,%f,%f); return false", 
                                                                                 loaderModule.getId(),
                                                                                 poolSlide != null? poolSlide.getId() : -1, 
                                                                                         xPos_, 
@@ -777,7 +783,7 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
                                                             // add another link to put the slide back
                                                             if (poolSlide != null) {
                                                                 P().with(()->{
-                                                                    A().attr("onClick", String.format("await report.returnSlide(%d); return false",
+                                                                    A().attr("onClick", String.format("report.returnSlide(%d); return false",
                                                                                 loaderModule.getId())).
                                                                         text("Return slide to loader");
                                                                 });
@@ -808,7 +814,7 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
                                                             try { ImageIO.write(imp.getBufferedImage(), "jpg", baos2); } 
                                                             catch (IOException e) {throw new RuntimeException(e);}
                                                             ImagePlus imp_ = imp;
-                                                            A().attr("onClick", String.format("await report.showImage(%d); return false", image.getId())).
+                                                            A().attr("onClick", String.format("report.showImage(%d); return false", image.getId())).
                                                                 with(()->{
                                                                     Img().attr("src", String.format("data:image/jpg;base64,%s", 
                                                                                 Base64.getMimeEncoder().encodeToString(baos2.toByteArray()))).
@@ -868,11 +874,11 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
                                                                                         (int)Math.floor(tileRoi.getXBase()+tileRoi.getFloatWidth()),
                                                                                         (int)Math.floor(tileRoi.getYBase()+tileRoi.getFloatHeight()))).
                                                                                 attr("title", image2.getName()).
-                                                                                attr("onClick", String.format("await report.showImage(%d); return false", image2.getId()));
+                                                                                attr("onClick", String.format("report.showImage(%d); return false", image2.getId()));
                                                                         
                                                                         makeLinks.add(()->{
                                                                             P().with(()->{
-                                                                                A().attr("onClick",String.format("await report.checkPosCalibration(%d,%d,%f,%f,%f,%f,%f,%f,%f,%f); return false",
+                                                                                A().attr("onClick",String.format("report.checkPosCalibration(%d,%d,%f,%f,%f,%f,%f,%f,%f,%f); return false",
                                                                                         image.getId(), 
                                                                                         image2.getId(), 
                                                                                         pixelSize,
@@ -993,7 +999,7 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
                                                                 catch (IOException e) {
                                                                     throw new RuntimeException(e);
                                                                 }
-                                                                A().attr("onClick", String.format("await report.showImageFile(\"%s\"); return false",  
+                                                                A().attr("onClick", String.format("report.showImageFile(\"%s\"); return false",  
                                                                             Util.escapeJavaStyleString(stitchedImageRelPath))).
                                                                     with(()->{
                                                                         Img().attr("src", String.format("data:image/jpg;base64,%s", 
@@ -1008,11 +1014,11 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
                                                                                 attr("title", stitchedImageRelPath);
                                                                     });
                                                                 P().with(()->{
-                                                                    A().attr("onClick", String.format("await report.flip(\"%s\", true, false); return false",  
+                                                                    A().attr("onClick", String.format("report.flip(\"%s\", true, false); return false",  
                                                                                 Util.escapeJavaStyleString(stitchedImageRelPath))).
                                                                         text("Flip Horizontally");
                                                                     text(" ");
-                                                                    A().attr("onClick", String.format("await report.flip(\"%s\", false, true); return false",  
+                                                                    A().attr("onClick", String.format("report.flip(\"%s\", false, true); return false",  
                                                                                 Util.escapeJavaStyleString(stitchedImageRelPath))).
                                                                         text("Flip Vertically");
                                                                     });
@@ -1043,7 +1049,7 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
                                                                             Td().with(()->{
                                                                                 StringBuilder sb = new StringBuilder();
                                                                                 for (String stitchedImageFile : stitchedImageFiles) {
-                                                                                    sb.append(String.format("await report.curate(\"%s\",\"%s\",\"%s\",\"%s\");", 
+                                                                                    sb.append(String.format("report.curate(\"%s\",\"%s\",\"%s\",\"%s\");", 
                                                                                             Util.escapeJavaStyleString(stitchedImageFile),
                                                                                             Util.escapeJavaStyleString(experimentId), 
                                                                                             Util.escapeJavaStyleString(orientation), 
@@ -1226,7 +1232,7 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
     }
     
     public void showInstructions() {
-        if (helpWindow == null) {
+        if (alert == null) {
             String instructions = Div().with(()->{
                 H1("Manual Curation Instructions:");
                 Ul().with(()->{
@@ -1262,20 +1268,16 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
                     Li("The updated image should now appear in the report page. Press a curation button to transfer the file into the database");
                 });
             }).toString();
-            
-            JTextPane jta = new JTextPane();
-            jta.setContentType("text/html");
-            jta.setText(instructions);
-            JScrollPane jsp = new JScrollPane(jta);
-            jsp.setPreferredSize(new Dimension(1280, 1024));
-            helpWindow = new JFrame("Manual Curation Instructions");
-            helpWindow.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            helpWindow.setLayout(new BorderLayout());
-            helpWindow.add(jsp, BorderLayout.CENTER);
-            helpWindow.setLocation(100, 100);
-            helpWindow.pack();
+
+            alert = new Alert(AlertType.INFORMATION);
+            alert.initModality(Modality.NONE);
+            alert.setHeaderText("Manual Curation Instructions");
+            WebView webView = new WebView();
+            webView.getEngine().loadContent(instructions);
+            webView.setPrefSize(1280, 1024);
+            alert.getDialogPane().setContent(webView);
         }
-        helpWindow.setVisible(true);
+        alert.show();
     }
     
     private Map<String,Boolean> changedImages = new HashMap<>();
@@ -1348,11 +1350,14 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
                 throw new RuntimeException(String.format("Could not find image file %s!", imagePath));
             }
             if (editedImageFile.exists()) {
-                if (JOptionPane.showConfirmDialog(null, 
-                		String.format("Edited file %s already exists, keep your edits?", editedImagePath),
-                		"Confirmation Dialog",
-                		JOptionPane.YES_NO_OPTION) == JOptionPane.NO_OPTION) 
-                {
+                Alert alert = new Alert(AlertType.CONFIRMATION);
+                alert.setTitle("Confirmation Dialog");
+                alert.setHeaderText("Keep your edits?");
+                alert.setContentText(String.format("Edited file %s already exists, keep your edits?", editedImagePath));
+                alert.getButtonTypes().clear();
+                alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.NO) {
                     try { Files.copy(imageFile, editedImageFile); } 
                     catch (IOException e) {throw new RuntimeException(e);}
                 }
@@ -1425,13 +1430,22 @@ public class WorkflowReport implements Report, SciJavaPlugin, MMPlugin {
         cropImage(imp);
 
         if (new FileSaver(imp).saveAsJpeg(outputFile)) {
-        	IJ.log(String.format("Image %s was created in \"%s\".", 
-        			fileName, Paths.get(imagesFolder, stageFolderName).toString()));
+            this.webEngine.executeScript(String.format(
+                    "(function(f,d){$.notify('Image \"'+f+'\" was created in \"'+d+'\".','success')})(\"%s\",\"%s\")", 
+                    Util.escapeJavaStyleString(fileName),
+                    Util.escapeJavaStyleString(Paths.get(imagesFolder, stageFolderName).toString())));
         }
         else {
-        	IJ.log(String.format("Failed to write image \"%s\". Make sure shared folder \"%s\" has been mounted!", 
-        			outputFile, imagesFolder));
+            this.webEngine.executeScript(String.format(
+                    "(function(f,d){$.notify('Failed to write image \"'+f+'\"! Make sure shared folder \"'+d+'\" has been mounted!','error')})(\"%s\",\"%s\")", 
+                    Util.escapeJavaStyleString(outputFile), Util.escapeJavaStyleString(imagesFolder)));
         }
+    }
+    
+    public void goToURL(String url) {
+        try { url = Paths.get(this.reportDir).resolve(url).toUri().toURL().toString(); } 
+        catch (MalformedURLException e) {throw new RuntimeException(e);}
+        this.webEngine.load(url);
     }
     
     public void checkPosCalibration(

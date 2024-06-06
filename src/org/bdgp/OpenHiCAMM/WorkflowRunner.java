@@ -23,14 +23,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -57,8 +54,6 @@ import com.j256.ormlite.stmt.StatementBuilder.StatementType;
 import com.j256.ormlite.support.CompiledStatement;
 import com.j256.ormlite.support.DatabaseConnection;
 
-import mmcorej.StrVector;
-
 import static org.bdgp.OpenHiCAMM.Util.set;
 import static org.bdgp.OpenHiCAMM.Util.where;
 
@@ -73,7 +68,7 @@ public class WorkflowRunner {
     public static final String MODULECONFIG_FILE = "ModuleConfig.txt";
     public static final String DEFAULT_MODULECONFIG_FILE = "DefaultModuleConfig.txt";
     public static final String WORKFLOW_FILE = "Workflow.txt";
-    
+
     private Connection workflowDb;
     
     private File workflowDirectory;
@@ -798,84 +793,29 @@ public class WorkflowRunner {
                         "%s: Previous status was: %s", task.getName(workflow), status));
 
             	if (status == Status.NEW || status == Status.IN_PROGRESS) {
-                    // run the task up to max_tries attempts in case task times out
-            		int retries = 0;
-            		int max_retries = taskModule.numTimeoutsBeforeRestart();
-            		while (retries < max_retries) {
-            			if (retries > 0) {
-                            WorkflowRunner.this.logger.warning(String.format("Task %s timed, out, retrying %s times", 
-                                    task.getName(workflow), retries));
-            			}
-                        WorkflowRunner.this.logger.info(String.format("%s: Running task", task.getName(workflow)));
-                        Logger taskLogger = WorkflowRunner.this.makeLogger(task.getName(workflow));
-                        try {
-                            ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-                            Long maxDuration = taskModule.getMaxAllowedDuration(task, config);
-                            Future<Status> future = executor.submit(new Callable<Status>() {
-                                @Override public Status call() {
-                                    return taskModule.run(task, config, taskLogger);
-                                }});
-                            try {
-                                status = maxDuration != null? future.get(maxDuration, TimeUnit.SECONDS) : future.get();
-                            }
-                            catch (TimeoutException e) {
-                                ++retries;
-                                continue;
-                            }
-                            finally {
-                                executor.shutdown();
-                            }
-                        } 
-                        // Uncaught exceptions set the status to ERROR
-                        catch (Throwable e) {
-                            StringWriter sw = new StringWriter();
-                            e.printStackTrace(new PrintWriter(sw));
-                            WorkflowRunner.this.logger.severe(String.format("%s: Error reported during task:%n%s", 
-                                    task.getName(workflow), sw.toString()));
-                            status = Status.ERROR;
-                        }
-                        finally {
-                            WorkflowRunner.this.logger.fine(String.format("%s: Calling cleanup", task.getName(workflow)));
-                            taskModule.cleanup(task, config, taskLogger); 
-                        }
-            		}
-            		if (retries < max_retries) {
-                        WorkflowRunner.this.logger.fine(String.format("%s: Finished running task", task.getName(workflow)));
-                        WorkflowRunner.this.logger.info(String.format("%s: Setting task status to %s", task.getName(workflow), status));
-                        task.setStatus(status);
-                        taskStatus.update(task, "id");
-            		}
-                    // the task timed out more than max_retries times
-            		else if (taskModule.restartProcessIfTimeout()) {
-            			// set task status
+                    // run the task
+                    WorkflowRunner.this.logger.info(String.format("%s: Running task", task.getName(workflow)));
+                    Logger taskLogger = WorkflowRunner.this.makeLogger(task.getName(workflow));
+                    try {
+                        status = taskModule.run(task, config, taskLogger);
+                    } 
+                    // Uncaught exceptions set the status to ERROR
+                    catch (Throwable e) {
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        WorkflowRunner.this.logger.severe(String.format("%s: Error reported during task:%n%s", 
+                                task.getName(workflow), sw.toString()));
                         status = Status.ERROR;
-                        task.setStatus(status);
-                        taskStatus.update(task);
-
-                        // show a 60 second timer to cancel the re-start process
-                        WorkflowRunner.this.logger.warning(String.format(
-                        		"\n"+
-                        		"----------------------------------------------------------------\n"+
-                        		"%s: Task timed out %s times, re-starting engine in 60 seconds...\n"+
-                        		"----------------------------------------------------------------\n"+
-                                "\n", 
-                        		task.getName(workflow), retries));
-                        
-                        new CountdownDialog("Re-starting process in %s seconds...", 60, ()->{
-                        	WorkflowRunner.this.restartProcess();
-                        });
-            		}
-            		else {
-                        WorkflowRunner.this.logger.warning(String.format("%s: Task timed out %s times, giving up", 
-                        		task.getName(workflow), retries));
-                        task.setStatus(status);
-                        taskStatus.update(task, "id");
-            		}
+                    }
+                    finally {
+                        WorkflowRunner.this.logger.fine(String.format("%s: Calling cleanup", task.getName(workflow)));
+                        taskModule.cleanup(task, config, taskLogger); 
+                    }
+                    WorkflowRunner.this.logger.fine(String.format("%s: Finished running task", task.getName(workflow)));
+                    WorkflowRunner.this.logger.info(String.format("%s: Setting task status to %s", task.getName(workflow), status));
             	}
-            	else {
-                    task.setStatus(status);
-                    taskStatus.update(task, "id");
-            	}
+                task.setStatus(status);
+                taskStatus.update(task, "id");
 
                 // notify any task listeners
                 notifyTaskListeners(task);
@@ -1013,70 +953,6 @@ public class WorkflowRunner {
             throw new RuntimeException("Unknown task type: "+taskModule.getTaskType());
         }
         return future;
-    }
-    
-    public void restartProcess() {
-        // shut down the executor
-        this.stop();
-        this.executor.shutdownNow();
-        
-        // wait and see if the tasks terminate
-        int activeCount = this.executor.getActiveCount();
-        int activeCountRetries = 0;
-        int activeCountMaxRetries = 30;
-        while (activeCount > 0 && activeCountRetries < activeCountMaxRetries) {
-            this.logger.info(String.format("Shutting down executor, %s tasks still running", 
-                    activeCount));
-            try { Thread.sleep(10000); } catch (InterruptedException e) { }
-            activeCount = this.executor.getActiveCount();
-            ++activeCountRetries;
-        }
-        if (this.executor.getActiveCount() > 0) {
-            this.logger.info(String.format("Shutting down executor, but %s tasks still running even after %s seconds. Terminating anyway.", 
-                    activeCount, 10*activeCountRetries));
-        }
-
-        // shut down the database connection
-        this.logger.info(String.format("Shutting down database connection", 
-                activeCount, 10*activeCountRetries));
-        this.shutdown();
-
-        // get executable used to launch this process
-        String exe = System.getProperty("ij.executable");
-        if (exe == null) throw new RuntimeException("System property ij.executable not found!");
-
-        // get the processes's PID
-        int pid = Processes.getPid();
-
-        // get list of micro-manager group/configs. These need to be set manually by the new process
-        List<String> configs = new ArrayList<>();
-        StrVector groups = this.getOpenHiCAMM().getApp().getCMMCore().getAvailableConfigGroups();
-        for (String group : groups) {
-            try {
-                String config = this.getOpenHiCAMM().getApp().getCMMCore().getCurrentConfig(group);
-                configs.add(String.format("%s:%s", group, config));
-            } 
-            catch (Exception e) {throw new RuntimeException(e);}
-        }
-
-        try {
-             Runtime.getRuntime().exec(new String[] {
-                    exe,
-                    "--run","org.bdgp.OpenHiCAMM.ijplugin.IJPlugin",
-                    Integer.toString(pid),
-                    // mm user profile
-                    this.getOpenHiCAMM().getApp().getUserProfile().getProfileName(),
-                    // camera group:preset, ...
-                    String.join(",", configs),
-                    // openhicamm workflow directory
-                    this.getWorkflowDir().toString(),
-                    // openhicamm start task
-                    this.startModule.getName(),
-                    // openhicamm number of threads
-                    Integer.toString(WorkflowRunner.this.maxThreads),
-            });
-        } 
-        catch (IOException e) {throw new RuntimeException(e);}
     }
     
     public int getTaskCount(String startModuleName, boolean notify) {

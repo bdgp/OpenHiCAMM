@@ -26,6 +26,11 @@
     <finalName>OpenHiCAMM</finalName>
     <plugins>
       <plugin>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-maven-plugin</artifactId>
+        <version>0.0.4</version>
+      </plugin>
+      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>properties-maven-plugin</artifactId>
         <version>1.0-alpha-2</version>
@@ -69,31 +74,18 @@
               <classifier>lib</classifier>
               <excludes>
                 <exclude>org/bdgp/OpenHiCAMM/mmplugin/**</exclude>
-                <exclude>org/bdgp/OpenHiCAMM/ijplugin/**</exclude>
                 <exclude>META-INF/json/org.scijava.plugin.Plugin</exclude>
               </excludes>
             </configuration>
           </execution>
           <execution>
-            <id>MMPlugin</id>
+            <id>OpenHiCAMMPlugin</id>
             <goals><goal>jar</goal></goals>
             <phase>package</phase>
             <configuration>
               <classifier>mmplugin</classifier>
               <includes>
                 <include>org/bdgp/OpenHiCAMM/mmplugin/**</include>
-                <include>META-INF/json/org.scijava.plugin.Plugin</include>
-              </includes>
-            </configuration>
-          </execution>
-          <execution>
-            <id>IJPlugin</id>
-            <goals><goal>jar</goal></goals>
-            <phase>package</phase>
-            <configuration>
-              <classifier>ijplugin</classifier>
-              <includes>
-                <include>org/bdgp/OpenHiCAMM/ijplugin/**</include>
                 <include>META-INF/json/org.scijava.plugin.Plugin</include>
               </includes>
             </configuration>
@@ -148,12 +140,32 @@
                   <artifactId>Hough_Transform</artifactId>
                 </artifactItem>
                 <artifactItem>
-                  <groupId>org.scijava</groupId>
-                  <artifactId>scijava-common</artifactId>
+                  <groupId>com.sparkjava</groupId>
+                  <artifactId>spark-core</artifactId>
                 </artifactItem>
                 <artifactItem>
-                  <groupId>org.takes</groupId>
-                  <artifactId>takes</artifactId>
+                  <groupId>org.openjfx</groupId>
+                  <artifactId>javafx-base</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.openjfx</groupId>
+                  <artifactId>javafx-fxml</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.openjfx</groupId>
+                  <artifactId>javafx-web</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.openjfx</groupId>
+                  <artifactId>javafx-swing</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.openjfx</groupId>
+                  <artifactId>javafx-controls</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.scijava</groupId>
+                  <artifactId>scijava-common</artifactId>
                 </artifactItem>
               </artifactItems>
               <outputDirectory>${fiji.dir}/plugins/Micro-Manager</outputDirectory>
@@ -192,22 +204,6 @@
                 <copy 
                   file="${project.build.directory}/OpenHiCAMM-mmplugin.${project.packaging}" 
                   todir="${fiji.dir}/mmplugins"
-                  overwrite="true" verbose="true"/>
-              </target>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>ijplugin</id>
-            <phase>install</phase>
-            <configuration>
-              <target>
-                <mkdir dir="${fiji.dir}/plugins"/>
-                <copy 
-                  file="${project.build.directory}/OpenHiCAMM-ijplugin.${project.packaging}" 
-                  todir="${fiji.dir}/plugins"
                   overwrite="true" verbose="true"/>
               </target>
             </configuration>
@@ -290,19 +286,39 @@
       <version>1.0.0</version>
     </dependency>
     <dependency>
+      <groupId>com.sparkjava</groupId>
+      <artifactId>spark-core</artifactId>
+      <version>2.9.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openjfx</groupId>
+      <artifactId>javafx-controls</artifactId>
+      <version>14</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openjfx</groupId>
+      <artifactId>javafx-base</artifactId>
+      <version>14</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openjfx</groupId>
+      <artifactId>javafx-fxml</artifactId>
+      <version>14</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openjfx</groupId>
+      <artifactId>javafx-web</artifactId>
+      <version>14</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openjfx</groupId>
+      <artifactId>javafx-swing</artifactId>
+      <version>14</version>
+    </dependency>
+    <dependency>
       <groupId>org.scijava</groupId>
       <artifactId>scijava-common</artifactId>
       <version>2.83.3</version>
-    </dependency>
-    <dependency>
-      <groupId>org.takes</groupId>
-      <artifactId>takes</artifactId>
-      <version>1.19</version>
-    </dependency>
-    <dependency>
-      <groupId>org.glassfish</groupId>
-      <artifactId>javax.json</artifactId>
-      <version>1.1.4</version>
     </dependency>
   </dependencies>
 </project>

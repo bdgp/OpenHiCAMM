@@ -17,7 +17,6 @@ import javax.swing.JTextArea;
 import javax.swing.JButton;
 import javax.swing.JProgressBar;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 import org.bdgp.OpenHiCAMM.DB.Task;
@@ -77,21 +76,7 @@ public class WorkflowRunnerDialog extends JDialog {
                 workflowRunner.stop();
             }
         });
-        
-        btnRestartProcess = new JButton("Restart Process");
-        btnRestartProcess.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent arg0) {
-        		if (JOptionPane.showConfirmDialog(null, 
-        				"Are you sure you want to re-start the process?",
-        				"Re-starrt Process Confirmation",
-        				JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) 
-                {
-        			workflowRunner.restartProcess();
-                }
-        	}
-        });
-        getContentPane().add(btnRestartProcess, "flowx,cell 1 2");
-        getContentPane().add(btnStop, "cell 1 2,alignx trailing");
+        getContentPane().add(btnStop, "flowx,cell 1 2,alignx trailing");
         
         seen = new HashSet<Task>();
         progressBar.setIndeterminate(false);
@@ -215,7 +200,6 @@ public class WorkflowRunnerDialog extends JDialog {
     }
     
     final int MAX_LENGTH = 100;
-    private JButton btnRestartProcess;
     public void setProgressBarText(String message) {
         progressBar.setString(String.format("%s%s%s",
                 message.length() < MAX_LENGTH? 
